@@ -10,7 +10,7 @@ AI 的默认失败模式是"看起来做完了"——跑没跑不知道、边界
 
 ## 开工前
 
-1. 读：`docs/README.md` → `docs/engineering/discipline.md` → 相关 ADR → 再读要改的文件本身。项目级操作手册见 `.agents/skills/omora-project/`。
+1. 读：`docs/README.md` → `docs/engineering/discipline.md` → 相关 ADR → 再读要改的文件本身。项目级操作手册见 `.agents/skills/`（`omora-project` / `omora-testing`）。
 2. 复述任务边界，列出准备改动的文件；有歧义先问，**不猜需求**。
 3. 非平凡改动先给计划：改什么、为什么、怎么验证。
 
