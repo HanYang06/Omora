@@ -92,6 +92,7 @@ uv run python scripts/check.py
 
 ## 7. Git 与版本
 
+- 完整规则见 `.agents/skills/omora-git/SKILL.md`（格式、字数、分支、PR、合并方式）。
 - 主干始终可运行；分支短命。
 - 提交信息：`type(scope): subject`，type ∈ `feat` `fix` `refactor` `test` `docs` `chore` `contract`。
 - 提交前自查 diff：有没有无关改动、有没有调试残留。

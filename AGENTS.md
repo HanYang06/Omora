@@ -29,6 +29,8 @@ Omora：本地优先的灵感与项目管理工具。灵感、项目、需求互
 - `web/pnpm-workspace.yaml` 里放行了 esbuild 的构建脚本，不要删。
 - 仓库统一 LF；不要制造"只改一行、整文件都变"的 diff。
 - 不提交：`.venv/`、`node_modules/`、`dist/`、`.build/`、各类缓存。
+- 钩子已启用（`git config core.hooksPath .githooks`）；新克隆需要执行一次。
+- 仓库规则集要求 `main` 只能经 PR 合并（merge commit），且 PR 分支需有 CodeQL 扫描结果；CodeQL 默认扫描已启用。
 
 ## 常用命令
 
@@ -100,9 +102,10 @@ Omora：本地优先的灵感与项目管理工具。灵感、项目、需求互
 
 ## 提交与版本
 
-- 格式：`type(scope): subject`；type ∈ `feat` `fix` `refactor` `test` `docs` `chore` `contract`。
+- 完整规则见 [omora-git](.agents/skills/omora-git/SKILL.md)：格式、字数、分支、PR、合并方式。
+- 格式：`type(scope): subject`；标题 ≤ 72 字符，subject 4–50 字符。
 - 一次提交一件事；提交前自查 diff。
-- 默认不推送、不强推，除非明确要求。
+- `main` 只经 PR 合并，使用 merge commit（非线性）；禁止 squash / rebase / 本地合并。
 - 版本单一来源 `VERSION`；仓库内所有包同号。
 
 ## 停下来问的情况
@@ -134,7 +137,7 @@ Omora：本地优先的灵感与项目管理工具。灵感、项目、需求互
 - [ADR-0001 技术栈](docs/decisions/0001-stack-and-runtime.md)
 - [ADR-0002 核心边界](docs/decisions/0002-core-boundary.md)
 - [ADR-0003 统一版本](docs/decisions/0003-unified-versioning.md)
-- 项目 skill：`omora-project`、`omora-testing`
+- 项目 skill：`omora-project`、`omora-testing`、`omora-git`
 
 ## 维护本文件
 

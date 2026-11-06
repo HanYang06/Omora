@@ -34,7 +34,7 @@ LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)")
 
 
 SKILLS_ROOT = ROOT / ".agents" / "skills"
-PROJECT_SKILLS = ("omora-project", "omora-testing")
+PROJECT_SKILLS = ("omora-project", "omora-testing", "omora-git")
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 
 

@@ -1,0 +1,9 @@
+#!/bin/sh
+protected="refs/heads/main"
+while read -r local_ref local_sha remote_ref remote_sha; do
+    if [ "$remote_ref" = "$protected" ]; then
+        echo "禁止直接推送到 main。请推送分支并通过 PR 合并。" >&2
+        exit 1
+    fi
+done
+exit 0
