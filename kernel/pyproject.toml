@@ -1,0 +1,19 @@
+[project]
+name = "omora-kernel"
+version = "0.1.0"
+description = "Omora kernel"
+requires-python = ">=3.12"
+dependencies = ["omora-sdk"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/omora_kernel"]
+
+[tool.uv.sources]
+omora-sdk = { workspace = true }
+
+[tool.uv]
+package = true
