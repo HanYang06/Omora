@@ -30,6 +30,7 @@ Omora：本地优先的灵感与项目管理工具。灵感、项目、需求互
 - 仓库统一 LF；不要制造"只改一行、整文件都变"的 diff。
 - 不提交：`.venv/`、`node_modules/`、`dist/`、`.build/`、各类缓存。
 - 钩子已启用（`git config core.hooksPath .githooks`）；新克隆需要执行一次。
+- 仓库规则集要求 `main` 只能经 PR 合并（merge commit），且 PR 分支需有 CodeQL 扫描结果；CodeQL 默认扫描已启用。
 
 ## 常用命令
 
