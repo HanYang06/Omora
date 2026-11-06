@@ -1,0 +1,5 @@
+{
+  "type": "Stack",
+  "props": { "direction": "vertical" },
+  "children": [{ "type": "Text", "props": { "text": "hello" } }]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omora.dev/protocol/c3-node.schema.json",
+  "title": "C3 UI node",
+  "type": "object",
+  "required": ["type"],
+  "additionalProperties": false,
+  "properties": {
+    "type": { "type": "string", "minLength": 1 },
+    "props": { "type": "object" },
+    "children": { "type": "array", "items": { "$ref": "#" } },
+    "on": { "type": "object" }
+  }
+}
