@@ -19,6 +19,7 @@
   "paths": {
     "scripts": { "fileLines": 400, "functionLines": 80, "complexity": 15, "imports": 25 },
     "docs": { "fileLines": 400 },
-    ".agents/skills/omora-project": { "fileLines": 500 }
+    ".agents/skills/omora-project": { "fileLines": 500 },
+    ".agents/skills/omora-testing": { "fileLines": 500 }
   }
 }

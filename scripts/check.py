@@ -14,6 +14,7 @@ from typing import TextIO, cast
 
 from budget import Budget, check_file_budget, check_python_structure
 from common import CODE_SUFFIXES, ROOT, TEXT_SUFFIXES, Problem, iter_files, read_text
+from test_quality import check_test_quality
 
 
 def _force_utf8(stream: TextIO) -> None:
@@ -32,7 +33,8 @@ BREAKPOINT_RE = re.compile(r"\bbreakpoint\s*\(")
 LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)")
 
 
-SKILL_DIR = ROOT / ".agents" / "skills" / "omora-project"
+SKILLS_ROOT = ROOT / ".agents" / "skills"
+PROJECT_SKILLS = ("omora-project", "omora-testing")
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 
 
@@ -155,24 +157,25 @@ def check_secrets() -> list[Problem]:
     return problems
 
 
-def _check_skill_frontmatter(skill: Path, text: str) -> list[Problem]:
+def _check_skill_frontmatter(skill: Path, expected: str) -> list[Problem]:
+    text = read_text(skill)
     match = FRONTMATTER_RE.match(text)
     if match is None:
         return [Problem(skill, "缺少 YAML frontmatter")]
     front = match.group(1)
     problems: list[Problem] = []
     name = first_match(r"^name:\s*(\S+)\s*$", front)
-    if name != SKILL_DIR.name:
-        problems.append(Problem(skill, f"name 必须是 {SKILL_DIR.name}，实际 {name}"))
+    if name != expected:
+        problems.append(Problem(skill, f"name 必须是 {expected}，实际 {name}"))
     description = first_match(r"^description:\s*(.+)$", front)
     if description is None or len(description) < 40:
         problems.append(Problem(skill, "description 太短，无法可靠触发"))
     return problems
 
 
-def _check_skill_links() -> list[Problem]:
+def _check_skill_links(skill_dir: Path) -> list[Problem]:
     problems: list[Problem] = []
-    for path in sorted(SKILL_DIR.rglob("*.md")):
+    for path in sorted(skill_dir.rglob("*.md")):
         for lineno, line in enumerate(read_text(path).splitlines(), 1):
             for found in LINK_RE.finditer(line):
                 target = found.group(1)
@@ -184,25 +187,35 @@ def _check_skill_links() -> list[Problem]:
     return problems
 
 
+def _check_one_skill(name: str, budget: Budget) -> list[Problem]:
+    skill_dir = SKILLS_ROOT / name
+    skill = skill_dir / "SKILL.md"
+    if not skill.exists():
+        return [Problem(skill, "项目 skill 缺失")]
+    text = read_text(skill)
+    problems = _check_skill_frontmatter(skill, name)
+    limit = budget.limits_for(skill).get("fileLines")
+    if limit is not None and len(text.splitlines()) > limit:
+        problems.append(Problem(skill, f"{len(text.splitlines())} 行，超过预算 {limit}"))
+    problems.extend(_check_skill_links(skill_dir))
+    return problems
+
+
 def _check_adr_drift() -> list[Problem]:
     problems: list[Problem] = []
-    skill_text = "\n".join(read_text(path) for path in SKILL_DIR.rglob("*.md"))
+    text = "\n".join(
+        read_text(path) for name in PROJECT_SKILLS for path in (SKILLS_ROOT / name).rglob("*.md")
+    )
     for adr in sorted((ROOT / "docs" / "decisions").glob("*.md")):
-        if adr.name not in skill_text:
+        if adr.name not in text:
             problems.append(Problem(adr, "新增 ADR 未同步到项目 skill"))
     return problems
 
 
-def check_project_skill(budget: Budget) -> list[Problem]:
-    skill = SKILL_DIR / "SKILL.md"
-    if not skill.exists():
-        return [Problem(skill, "项目规范 skill 缺失")]
-    text = read_text(skill)
-    problems = _check_skill_frontmatter(skill, text)
-    limit = budget.limits_for(skill).get("fileLines")
-    if limit is not None and len(text.splitlines()) > limit:
-        problems.append(Problem(skill, f"{len(text.splitlines())} 行，超过预算 {limit}"))
-    problems.extend(_check_skill_links())
+def check_project_skills(budget: Budget) -> list[Problem]:
+    problems: list[Problem] = []
+    for name in PROJECT_SKILLS:
+        problems.extend(_check_one_skill(name, budget))
     problems.extend(_check_adr_drift())
     return problems
 
@@ -217,7 +230,8 @@ def all_checks() -> list[tuple[str, Callable[[], list[Problem]]]]:
         ("hygiene.versions", check_versions),
         ("hygiene.docs-links", check_docs_links),
         ("hygiene.secrets", check_secrets),
-        ("skill.project", lambda: check_project_skill(budget)),
+        ("skill.project", lambda: check_project_skills(budget)),
+        ("tests.behavior", check_test_quality),
         ("budget.files", lambda: check_file_budget(budget)),
         ("budget.python", lambda: check_python_structure(budget)),
     ]
