@@ -80,3 +80,4 @@ description: Omora 仓库的开发规范与操作手册。只要任务落在 Omo
 - `references/workflow.md` —— 门禁阶段、预算、完成定义、提交规范
 - `references/traps.md` —— 已知反模式与真实翻车
 - 测试规范：`.agents/skills/omora-testing/SKILL.md`
+- 提交与推送规范：`.agents/skills/omora-git/SKILL.md`
