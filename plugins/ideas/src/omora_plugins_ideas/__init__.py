@@ -74,9 +74,11 @@ def _fold_assigned(state: dict[str, object], data: Mapping[str, object]) -> None
 
 
 def _title(args: Mapping[str, object]) -> str:
-    """命令参数里的标题;不是字符串时退回空串,保证事件形状稳定。"""
+    """命令参数里的标题;空标题直接拒绝,不往库里塞垃圾条目。"""
     value = args.get("title")
-    return value if isinstance(value, str) else ""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("灵感不能没有标题")
+    return value.strip()
 
 
 def _create_command(ctx: PluginContext) -> Handler:

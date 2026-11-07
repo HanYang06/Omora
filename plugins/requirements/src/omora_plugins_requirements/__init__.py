@@ -16,6 +16,7 @@ from omora_sdk import (
     PluginContext,
     button,
     card,
+    input_,
     list_,
     stack,
     text,
@@ -162,13 +163,16 @@ def _create_command(ctx: PluginContext) -> Handler:
     """requirements.create:新建需求,初始状态 todo。"""
 
     async def create(args: Mapping[str, object]) -> object:
+        title = _string_arg(args, "title").strip()
+        if not title:
+            raise ValueError("需求不能没有标题")
         requirement_id = ctx.ids.next()
         project_id = _string_arg(args, "projectId")
         await ctx.events.emit(
             CREATED_EVENT,
             {
                 "id": requirement_id,
-                "title": _string_arg(args, "title"),
+                "title": title,
                 "projectId": project_id,
                 "projectTitle": await _project_title(ctx, project_id),
                 "status": STATUS_TODO,
@@ -209,6 +213,11 @@ def _view(_state: Mapping[str, object]) -> Sequence[Node]:
             [
                 text("需求", variant="title"),
                 text("$focusLabel", variant="caption"),
+                input_(
+                    "新需求",
+                    submit=CREATE_COMMAND,
+                    args={"title": "$value", "projectId": "$focusedProjectId"},
+                ),
                 list_(
                     "$visible",
                     [

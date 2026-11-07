@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import cast
 
-from omora_sdk import Handler, Node, Plugin, PluginContext, button, list_, stack, text
+from omora_sdk import Handler, Node, Plugin, PluginContext, button, input_, list_, stack, text
 
 PLUGIN_ID = "omora.projects"
 SIDEBAR_CONTRIBUTION_ID = "projects.sidebar"
@@ -110,16 +110,25 @@ def _string_arg(args: Mapping[str, object], key: str) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _required_title(args: Mapping[str, object]) -> str:
+    """项目标题必须有内容,空标题直接拒绝。"""
+    title = _string_arg(args, "title").strip()
+    if not title:
+        raise ValueError("项目不能没有名字")
+    return title
+
+
 def _create_command(ctx: PluginContext) -> Handler:
     """projects.create:只发事件,状态由 reducer 折叠。"""
 
     async def create(args: Mapping[str, object]) -> object:
+        title = _required_title(args)
         project_id = ctx.ids.next()
         await ctx.events.emit(
             CREATED_EVENT,
             {
                 "id": project_id,
-                "title": _string_arg(args, "title"),
+                "title": title,
                 "at": ctx.clock.now().isoformat(),
             },
         )
@@ -166,6 +175,7 @@ def _view(_state: Mapping[str, object]) -> Sequence[Node]:
         stack(
             [
                 text("项目", variant="title"),
+                input_("新项目叫什么", submit=CREATE_COMMAND, args={"title": "$value"}),
                 list_(
                     "$items",
                     [
