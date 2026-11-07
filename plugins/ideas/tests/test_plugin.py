@@ -7,6 +7,7 @@ import copy
 from typing import cast
 
 import jsonschema
+import pytest
 from omora_sdk import Node
 from support import NOW, ROOT, activated, find_nodes, load_json, manifest
 
@@ -135,3 +136,12 @@ def test_manifest_version_matches_repository_version() -> None:
     expected = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
     assert manifest()["version"] == expected
+
+
+def test_create_rejects_blank_title() -> None:
+    context = activated()
+
+    with pytest.raises(ValueError):
+        asyncio.run(context.fake_commands.invoke("ideas.create", {"title": "   "}))
+
+    assert context.fake_events.emitted == [], "空标题不该产生任何事件"

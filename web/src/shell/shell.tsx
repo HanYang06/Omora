@@ -15,6 +15,7 @@ export interface ShellProps {
   commands?: readonly ShellCommand[];
   revision?: number;
   status?: ConnectionStatus;
+  notice?: string | undefined;
   onCommand?: ((command: CmdInvokeParams) => void) | undefined;
 }
 
@@ -32,6 +33,7 @@ export function Shell({
   commands = [],
   revision = 0,
   status = "closed",
+  notice,
   onCommand,
 }: ShellProps): ReactElement {
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -67,6 +69,7 @@ export function Shell({
         onCommand={onCommand}
         revision={revision}
         status={status}
+        notice={notice}
       />
       <MainArea
         contributions={contributions.main}

@@ -149,9 +149,11 @@ def test_sidebar_view_passes_c3_schema() -> None:
 def test_sidebar_lists_project_titles_with_empty_state_text() -> None:
     rows = _children(_nodes(_activated())[0])
 
-    assert [node["type"] for node in rows] == ["Text", "List"]
-    assert rows[1]["props"] == {"items": "$items", "emptyText": "还没有项目"}
-    row = _children(rows[1])[0]
+    assert [node["type"] for node in rows] == ["Text", "Input", "List"]
+    capture = cast("dict[str, object]", rows[1]["on"])
+    assert cast("dict[str, object]", capture["submit"])["command"] == "projects.create"
+    assert rows[2]["props"] == {"items": "$items", "emptyText": "还没有项目"}
+    row = _children(rows[2])[0]
     assert row["type"] == "Stack"
     leaves = _children(row)
     assert [leaf["type"] for leaf in leaves] == ["Button", "Text"]
@@ -236,3 +238,12 @@ def test_focus_command_emits_the_project_that_is_now_in_view() -> None:
         "projects.focused",
         {"id": "project-1", "title": "写作台"},
     ), "别的插件靠这条事件知道该过滤成什么"
+
+
+def test_create_rejects_blank_title() -> None:
+    context = _activated()
+
+    with pytest.raises(ValueError):
+        asyncio.run(context.fake_commands.invoke("projects.create", {"title": "  "}))
+
+    assert context.fake_events.emitted == [], "空标题不该产生任何事件"

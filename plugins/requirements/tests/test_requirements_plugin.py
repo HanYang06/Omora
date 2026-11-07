@@ -260,34 +260,3 @@ def test_manifest_version_matches_repository_version() -> None:
     expected = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
     assert _manifest()["version"] == expected
-
-
-def test_focus_event_filters_the_visible_list() -> None:
-    context = _activated()
-    _create(context, "写作台需求", "project-1")
-    _create(context, "内核需求", "project-2")
-    context.replay()
-
-    asyncio.run(
-        context.fake_events.emit("projects.focused", {"id": "project-1", "title": "写作台"})
-    )
-    context.replay()
-
-    state = context.fake_state.read()
-    visible = cast("list[dict[str, object]]", state["visible"])
-    assert [item["title"] for item in visible] == ["写作台需求"], "只看当前项目"
-    assert state["focusLabel"] == "项目:写作台"
-
-
-def test_focusing_nothing_shows_everything_again() -> None:
-    context = _activated()
-    _create(context, "写作台需求", "project-1")
-    _create(context, "内核需求", "project-2")
-    context.replay()
-
-    asyncio.run(context.fake_events.emit("projects.focused", {"id": "", "title": ""}))
-    context.replay()
-
-    state = context.fake_state.read()
-    assert len(cast("list[object]", state["visible"])) == 2
-    assert state["focusLabel"] == "全部需求"

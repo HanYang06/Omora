@@ -24,6 +24,7 @@ function App(): ReactElement {
   const clientRef = useRef<C1Client | null>(null);
   const [projection, setProjection] = useState<Projection>(emptyProjection);
   const [status, setStatus] = useState<C1Status>("connecting");
+  const [notice, setNotice] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const client = new C1Client({
@@ -58,7 +59,11 @@ function App(): ReactElement {
     if (client === null) {
       return;
     }
-    void client.cmdInvoke(command).catch(() => undefined);
+    setNotice(undefined);
+    void client.cmdInvoke(command).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      setNotice("命令失败:" + message);
+    });
   };
 
   return (
@@ -67,6 +72,7 @@ function App(): ReactElement {
       commands={projection.ui.commands ?? []}
       revision={projection.revision}
       status={status}
+      notice={notice}
       onCommand={handleCommand}
     />
   );
