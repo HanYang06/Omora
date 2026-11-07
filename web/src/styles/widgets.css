@@ -1,6 +1,7 @@
 /* 原语控件的主题外观。widgets/ 只产出标记，这里只负责视觉，不改行为。 */
 [data-widget="Button"] {
   display: inline-flex;
+  align-self: flex-start;
   align-items: center;
   justify-content: center;
   gap: var(--omora-space-xs);

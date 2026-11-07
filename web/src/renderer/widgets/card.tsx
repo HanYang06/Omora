@@ -8,8 +8,9 @@ const CARD_STYLE: CSSProperties = {
   flexDirection: "column",
   gap: "var(--omora-space-sm)",
   padding: "var(--omora-space-md)",
-  border: "1px solid currentColor",
+  border: "1px solid var(--omora-color-border)",
   borderRadius: "var(--omora-radius-md)",
+  background: "var(--omora-color-surface-raised)",
 };
 
 const HEADER_STYLE: CSSProperties = { fontWeight: 600 };
