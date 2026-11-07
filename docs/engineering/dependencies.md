@@ -20,6 +20,9 @@
 | import-linter | Python | 架构边界机器校验 |
 | jsonschema | Python | 契约 schema 校验 |
 | hatchling | Python | 构建后端 |
+| react / react-dom | Web | 渲染层框架；被渲染器隔离在内部，业务代码不直接依赖 |
+| vite / @vitejs/plugin-react | Web | 开发服务器与 Vite 的 React 支持；构建仍由 tsc 负责 |
+| @types/react / @types/react-dom | Web | React 类型声明 |
 | typescript | Web | 类型检查与构建 |
 | eslint / @eslint/js / typescript-eslint | Web | lint 与边界规则 |
 | prettier | Web | 格式化 |
