@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import cast
 
-from omora_sdk import Handler, Node, Plugin, PluginContext, list_, stack, text
+from omora_sdk import Handler, Node, Plugin, PluginContext, button, list_, stack, text
 
 PLUGIN_ID = "omora.projects"
 SIDEBAR_CONTRIBUTION_ID = "projects.sidebar"
@@ -19,6 +19,8 @@ LOOKUP_SERVICE = "projects.lookup"
 CREATED_EVENT = "projects.created"
 ARCHIVED_EVENT = "projects.archived"
 IDEA_ASSIGNED_EVENT = "ideas.assigned"
+FOCUS_COMMAND = "projects.focus"
+FOCUSED_EVENT = "projects.focused"
 
 
 def _item_list(state: dict[str, object]) -> list[dict[str, object]]:
@@ -84,6 +86,22 @@ def _fold_idea_assigned(state: dict[str, object], data: Mapping[str, object]) ->
             item["ideas"] = ideas
         cast("list[object]", ideas).append({"id": idea_id, "title": data.get("ideaTitle", "")})
         item["ideaCountLabel"] = f"{len(cast('list[object]', ideas))} 条灵感"
+
+
+def _focus_command(ctx: PluginContext) -> Handler:
+    """projects.focus:广播「当前看哪个项目」;别的插件据此过滤自己的数据。"""
+
+    async def focus(args: Mapping[str, object]) -> object:
+        project_id = _string_arg(args, "id")
+        title = ""
+        for item in _project_items(ctx.state.read()):
+            if item.get("id") == project_id:
+                value = item.get("title")
+                title = value if isinstance(value, str) else ""
+        await ctx.events.emit(FOCUSED_EVENT, {"id": project_id, "title": title})
+        return None
+
+    return focus
 
 
 def _string_arg(args: Mapping[str, object], key: str) -> str:
@@ -153,7 +171,12 @@ def _view(_state: Mapping[str, object]) -> Sequence[Node]:
                     [
                         stack(
                             [
-                                text("$item.title", variant="subtitle"),
+                                button(
+                                    "$item.title",
+                                    command=FOCUS_COMMAND,
+                                    args={"id": "$item.id"},
+                                    variant="ghost",
+                                ),
                                 text("$item.ideaCountLabel", variant="caption"),
                             ],
                             gap=2,
@@ -176,6 +199,7 @@ class ProjectsPlugin:
         ctx.state.register(IDEA_ASSIGNED_EVENT, _fold_idea_assigned)
         ctx.commands.register(CREATE_COMMAND, _create_command(ctx))
         ctx.commands.register(ARCHIVE_COMMAND, _archive_command(ctx))
+        ctx.commands.register(FOCUS_COMMAND, _focus_command(ctx))
         ctx.queries.register(LIST_QUERY, _list_query(ctx))
         ctx.services.provide(LOOKUP_SERVICE, _lookup_service(ctx))
         ctx.ui.contribute(SIDEBAR_CONTRIBUTION_ID, _view)
@@ -192,6 +216,8 @@ __all__ = [
     "ARCHIVE_COMMAND",
     "CREATED_EVENT",
     "CREATE_COMMAND",
+    "FOCUSED_EVENT",
+    "FOCUS_COMMAND",
     "IDEA_ASSIGNED_EVENT",
     "LIST_QUERY",
     "LOOKUP_SERVICE",

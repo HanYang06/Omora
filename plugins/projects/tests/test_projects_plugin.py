@@ -46,7 +46,11 @@ def _children(node: Node) -> list[Node]:
 def test_activate_registers_commands_query_service_and_contribution() -> None:
     context = _activated()
 
-    assert set(context.fake_commands.handlers) == {"projects.create", "projects.archive"}
+    assert set(context.fake_commands.handlers) == {
+        "projects.create",
+        "projects.archive",
+        "projects.focus",
+    }
     assert set(context.fake_queries.handlers) == {"projects.list"}
     assert set(context.fake_services.providers) == {"projects.lookup"}
     assert set(context.fake_ui.contributions) == {"projects.sidebar"}
@@ -149,10 +153,12 @@ def test_sidebar_lists_project_titles_with_empty_state_text() -> None:
     assert rows[1]["props"] == {"items": "$items", "emptyText": "还没有项目"}
     row = _children(rows[1])[0]
     assert row["type"] == "Stack"
-    assert [leaf["props"]["text"] for leaf in _children(row)] == [
-        "$item.title",
-        "$item.ideaCountLabel",
-    ]
+    leaves = _children(row)
+    assert [leaf["type"] for leaf in leaves] == ["Button", "Text"]
+    label = cast("dict[str, object]", leaves[0]["props"])["label"]
+    assert label == "$item.title", "点标题就是看这个项目"
+    count = cast("dict[str, object]", leaves[1]["props"])["text"]
+    assert count == "$item.ideaCountLabel"
 
 
 def test_registered_commands_and_slots_match_manifest() -> None:
@@ -217,3 +223,16 @@ def test_idea_assigned_to_unknown_project_is_ignored() -> None:
 
     items = cast("list[dict[str, object]]", context.fake_state.read()["items"])
     assert items[0]["ideaCountLabel"] == "0 条灵感", "不认识的项目不该被凭空创建"
+
+
+def test_focus_command_emits_the_project_that_is_now_in_view() -> None:
+    context = _activated()
+    asyncio.run(context.fake_commands.invoke("projects.create", {"title": "写作台"}))
+    context.replay()
+
+    asyncio.run(context.fake_commands.invoke("projects.focus", {"id": "project-1"}))
+
+    assert context.fake_events.emitted[-1] == (
+        "projects.focused",
+        {"id": "project-1", "title": "写作台"},
+    ), "别的插件靠这条事件知道该过滤成什么"
