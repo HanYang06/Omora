@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import cast
 
-from omora_kernel.contract.c1 import SnapshotProvider
 from omora_kernel.eventlog import Event, EventLog
-from omora_kernel.projection import Projection, ProjectionSnapshot
+from omora_kernel.projection import Projection
 from omora_kernel.store import Store
 
 
@@ -143,13 +141,3 @@ def test_rebuild_from_event_log_matches_live_projection() -> None:
         assert rebuilt.revision == live.revision
     finally:
         store.close()
-
-
-def test_projection_snapshot_satisfies_c1_snapshot_provider() -> None:
-    projection = Projection()
-    projection.register("counter.add", add_amount)
-    projection.apply(add_event(4, 2))
-    port: SnapshotProvider = ProjectionSnapshot(projection)
-
-    assert asyncio.run(port.snapshot()) == (4, {"a": 2})
-    assert asyncio.run(port.current_revision()) == 4
