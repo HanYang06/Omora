@@ -27,6 +27,7 @@ CREATE_COMMAND = "requirements.create"
 SET_STATUS_COMMAND = "requirements.setStatus"
 LIST_QUERY = "requirements.list"
 PROJECT_LOOKUP_SERVICE = "projects.lookup"
+FOCUSED_EVENT = "projects.focused"
 CREATED_EVENT = "requirements.created"
 STATUS_CHANGED_EVENT = "requirements.statusChanged"
 
@@ -85,6 +86,7 @@ def _fold_created(state: dict[str, object], data: Mapping[str, object]) -> None:
             "at": data.get("at"),
         }
     )
+    _recompute(state)
 
 
 def _fold_status_changed(state: dict[str, object], data: Mapping[str, object]) -> None:
@@ -98,6 +100,33 @@ def _fold_status_changed(state: dict[str, object], data: Mapping[str, object]) -
             item["status"] = status
             item["statusLabel"] = _label(status)
             item["nextStatus"] = NEXT_STATUS.get(status, STATUS_DONE)
+    _recompute(state)
+
+
+def _recompute(state: dict[str, object]) -> None:
+    """按当前聚焦的项目重算可见列表;没聚焦就是全部。前端只渲染 visible。"""
+    focused = state.get("focusedProjectId")
+    selected = focused if isinstance(focused, str) and focused else None
+    items = _requirement_items(state)
+    state["visible"] = [
+        item for item in items if selected is None or item.get("projectId") == selected
+    ]
+    title = state.get("focusedProjectTitle")
+    if selected is None:
+        state["focusLabel"] = "全部需求"
+    elif isinstance(title, str) and title:
+        state["focusLabel"] = f"项目:{title}"
+    else:
+        state["focusLabel"] = "这个项目"
+
+
+def _fold_focus(state: dict[str, object], data: Mapping[str, object]) -> None:
+    """别的插件广播「看哪个项目」,这里据此过滤自己的列表。"""
+    identifier = data.get("id")
+    state["focusedProjectId"] = identifier if isinstance(identifier, str) else ""
+    title = data.get("title")
+    state["focusedProjectTitle"] = title if isinstance(title, str) else ""
+    _recompute(state)
 
 
 def _string_arg(args: Mapping[str, object], key: str) -> str:
@@ -179,8 +208,9 @@ def _view(_state: Mapping[str, object]) -> Sequence[Node]:
         stack(
             [
                 text("需求", variant="title"),
+                text("$focusLabel", variant="caption"),
                 list_(
-                    "$items",
+                    "$visible",
                     [
                         card(
                             [
@@ -216,6 +246,7 @@ class RequirementsPlugin:
         """登记两条折叠规则、两个命令、一个查询与一个 main 贡献。"""
         ctx.state.register(CREATED_EVENT, _fold_created)
         ctx.state.register(STATUS_CHANGED_EVENT, _fold_status_changed)
+        ctx.state.register(FOCUSED_EVENT, _fold_focus)
         ctx.commands.register(CREATE_COMMAND, _create_command(ctx))
         ctx.commands.register(SET_STATUS_COMMAND, _set_status_command(ctx))
         ctx.queries.register(LIST_QUERY, _list_query(ctx))

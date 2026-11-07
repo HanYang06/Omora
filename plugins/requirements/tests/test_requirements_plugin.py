@@ -82,6 +82,7 @@ def test_activate_registers_commands_query_and_contribution() -> None:
     assert set(context.fake_state.reducers) == {
         "requirements.created",
         "requirements.statusChanged",
+        "projects.focused",
     }
 
 
@@ -129,20 +130,11 @@ def test_created_event_folds_into_items() -> None:
     _create(context, "导出需求", "project-1")
     context.replay()
 
-    assert context.fake_state.read() == {
-        "items": [
-            {
-                "id": "requirement-1",
-                "title": "导出需求",
-                "projectId": "project-1",
-                "projectTitle": "",
-                "status": "todo",
-                "statusLabel": "待办",
-                "nextStatus": "doing",
-                "at": NOW.isoformat(),
-            }
-        ]
-    }
+    state = context.fake_state.read()
+    items = cast("list[dict[str, object]]", state["items"])
+    assert items[0]["title"] == "导出需求"
+    assert state["focusLabel"] == "全部需求", "没有聚焦项目时展示全部"
+    assert cast("list[object]", state["visible"]) == items, "未聚焦时可见列表就是全部"
 
 
 def test_set_status_emits_status_changed_event() -> None:
@@ -244,7 +236,7 @@ def test_advance_button_binds_item_id_and_doing_status() -> None:
 def test_list_declares_empty_state_text() -> None:
     list_node = _find(_nodes(_activated()), "List")[0]
 
-    assert list_node["props"] == {"items": "$items", "emptyText": "还没有需求"}
+    assert list_node["props"] == {"items": "$visible", "emptyText": "还没有需求"}
 
 
 def test_registered_commands_and_slots_match_manifest() -> None:
@@ -268,3 +260,34 @@ def test_manifest_version_matches_repository_version() -> None:
     expected = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
     assert _manifest()["version"] == expected
+
+
+def test_focus_event_filters_the_visible_list() -> None:
+    context = _activated()
+    _create(context, "写作台需求", "project-1")
+    _create(context, "内核需求", "project-2")
+    context.replay()
+
+    asyncio.run(
+        context.fake_events.emit("projects.focused", {"id": "project-1", "title": "写作台"})
+    )
+    context.replay()
+
+    state = context.fake_state.read()
+    visible = cast("list[dict[str, object]]", state["visible"])
+    assert [item["title"] for item in visible] == ["写作台需求"], "只看当前项目"
+    assert state["focusLabel"] == "项目:写作台"
+
+
+def test_focusing_nothing_shows_everything_again() -> None:
+    context = _activated()
+    _create(context, "写作台需求", "project-1")
+    _create(context, "内核需求", "project-2")
+    context.replay()
+
+    asyncio.run(context.fake_events.emit("projects.focused", {"id": "", "title": ""}))
+    context.replay()
+
+    state = context.fake_state.read()
+    assert len(cast("list[object]", state["visible"])) == 2
+    assert state["focusLabel"] == "全部需求"

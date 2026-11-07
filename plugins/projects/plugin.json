@@ -26,6 +26,10 @@
       {
         "id": "projects.archive",
         "title": "归档项目"
+      },
+      {
+        "id": "projects.focus",
+        "title": "查看项目"
       }
     ],
     "slots": [
