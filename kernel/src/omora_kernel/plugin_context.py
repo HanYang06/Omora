@@ -11,6 +11,7 @@ from typing import Protocol
 
 import omora_sdk
 
+from .capabilities import Capabilities
 from .context import Context
 from .providers import ServiceProviders
 from .registry import CommandRegistry, QueryRegistry
@@ -65,16 +66,17 @@ class PluginEnvironment:
     clock: omora_sdk.ClockApi
     declared: Mapping[str, tuple[str, int]]
     views: dict[str, omora_sdk.View]
+    capabilities: Capabilities
 
     def context(self) -> omora_sdk.PluginContext:
         return _Context(
             plugin_id=self.plugin_id,
-            commands=_Commands(self.commands, self.scope),
-            queries=_Queries(self.queries, self.scope),
-            events=_Events(self.runtime, self.scope),
+            commands=_Commands(self.commands, self.scope, self.capabilities),
+            queries=_Queries(self.queries, self.scope, self.capabilities),
+            events=_Events(self.runtime, self.scope, self.capabilities),
             state=_State(self.runtime, self.plugin_id, self.scope),
-            services=_Services(self.services, self.scope),
-            ui=_Ui(self.plugin_id, self.declared, self.views),
+            services=_Services(self.services, self.scope, self.capabilities),
+            ui=_Ui(self.plugin_id, self.declared, self.views, self.capabilities),
             log=_Log(self.plugin_id, self.sink),
             ids=self.ids,
             clock=self.clock,
@@ -85,8 +87,10 @@ class PluginEnvironment:
 class _Commands:
     registry: CommandRegistry
     scope: Context
+    capabilities: Capabilities
 
     def register(self, name: str, handler: omora_sdk.Handler) -> None:
+        self.capabilities.require("commands", f"注册命令 {name}")
         self.registry.register(self.scope, name, handler)
 
 
@@ -94,8 +98,10 @@ class _Commands:
 class _Queries:
     registry: QueryRegistry
     scope: Context
+    capabilities: Capabilities
 
     def register(self, name: str, handler: omora_sdk.Handler) -> None:
+        self.capabilities.require("queries", f"注册查询 {name}")
         self.registry.register(self.scope, name, handler)
 
 
@@ -103,11 +109,14 @@ class _Queries:
 class _Events:
     runtime: HostRuntime
     scope: Context
+    capabilities: Capabilities
 
     async def emit(self, event_type: str, data: Mapping[str, object]) -> None:
+        self.capabilities.require("events", f"发布事件 {event_type}")
         await self.runtime.emit(event_type, data)
 
     def subscribe(self, event_type: str, listener: omora_sdk.Listener) -> None:
+        self.capabilities.require("events", f"订阅事件 {event_type}")
         unsubscribe = self.runtime.subscribe(event_type, listener)
 
         async def remove() -> None:
@@ -144,11 +153,14 @@ class _State:
 class _Services:
     providers: ServiceProviders
     scope: Context
+    capabilities: Capabilities
 
     def provide(self, name: str, handler: omora_sdk.Handler) -> None:
+        self.capabilities.require("services", f"提供服务 {name}")
         self.providers.provide(self.scope, name, handler)
 
     async def call(self, name: str, args: Mapping[str, object]) -> object:
+        self.capabilities.require("services", f"调用服务 {name}")
         return await self.providers.call(name, args)
 
 
@@ -157,8 +169,10 @@ class _Ui:
     plugin_id: str
     declared: Mapping[str, tuple[str, int]]
     views: dict[str, omora_sdk.View]
+    capabilities: Capabilities
 
     def contribute(self, contribution_id: str, view: omora_sdk.View) -> None:
+        self.capabilities.require("ui", f"贡献界面 {contribution_id}")
         if contribution_id not in self.declared:
             raise ValueError(f"插件 {self.plugin_id} 的贡献 {contribution_id!r} 未在清单中声明")
         self.views[contribution_id] = view
@@ -166,6 +180,8 @@ class _Ui:
 
 @dataclass
 class _Log:
+    """日志不受能力限制:用来诊断拒绝的工具不能被拒绝。"""
+
     plugin_id: str
     sink: HostLog
 

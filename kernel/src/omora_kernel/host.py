@@ -14,6 +14,7 @@ from typing import cast
 
 import omora_sdk
 
+from .capabilities import Capabilities
 from .context import Context, UnavailableError
 from .contract.c2 import EngineIncompatibleError, InvalidManifestError, validate_manifest
 from .plugin_context import Activation, HostLog, HostRuntime, PluginEnvironment
@@ -93,6 +94,7 @@ class PluginHost:
             clock=self._clock,
             declared=declared,
             views=views,
+            capabilities=Capabilities(manifest.capabilities),
         )
         try:
             await plugin.activate(environment.context())
