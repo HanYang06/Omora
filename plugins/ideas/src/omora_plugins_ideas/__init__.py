@@ -8,7 +8,8 @@ from typing import cast
 from omora_sdk import Handler, Node, Plugin, PluginContext, button, card, input_, list_, stack, text
 
 PLUGIN_ID = "omora.ideas"
-SIDEBAR_CONTRIBUTION_ID = "ideas.sidebar"
+CAPTURE_CONTRIBUTION_ID = "ideas.capture"
+INBOX_CONTRIBUTION_ID = "ideas.inbox"
 CREATE_COMMAND = "ideas.create"
 ARCHIVE_COMMAND = "ideas.archive"
 CREATED_EVENT = "ideas.created"
@@ -28,13 +29,28 @@ def _item_list(state: dict[str, object]) -> list[dict[str, object]]:
     return items
 
 
+def _short_time(value: object) -> str:
+    """把 ISO 时间裁成给人看的短格式;不是字符串就留空。"""
+    if not isinstance(value, str) or len(value) < 16:
+        return ""
+    return f"{value[5:10]} {value[11:16]}"
+
+
 def _fold_created(state: dict[str, object], data: Mapping[str, object]) -> None:
     """把 ideas.created 折叠成一条新条目。"""
     identifier = data.get("id")
     title = data.get("title")
     if not isinstance(identifier, str) or not isinstance(title, str):
         return
-    _item_list(state).append({"id": identifier, "title": title, "at": data.get("at")})
+    _item_list(state).append(
+        {
+            "id": identifier,
+            "title": title,
+            "at": data.get("at"),
+            "atLabel": _short_time(data.get("at")),
+            "projectTitle": "",
+        }
+    )
 
 
 def _fold_archived(state: dict[str, object], data: Mapping[str, object]) -> None:
@@ -109,8 +125,13 @@ def _assign_command(ctx: PluginContext) -> Handler:
     return assign
 
 
-def _view(state: Mapping[str, object]) -> Sequence[Node]:
-    """sidebar 贡献:标题、灵感列表与记录输入框;绑定在本插件自己的切片里求值。"""
+def _capture_view(state: Mapping[str, object]) -> Sequence[Node]:
+    """侧边栏贡献:只放输入框,捕捉要永远在手边。"""
+    return [input_("记一句,回车即存", submit=CREATE_COMMAND, args={"title": "$value"})]
+
+
+def _inbox_view(state: Mapping[str, object]) -> Sequence[Node]:
+    """主区贡献:灵感收件箱;绑定在本插件自己的切片里求值。"""
     return [
         stack(
             [
@@ -120,21 +141,26 @@ def _view(state: Mapping[str, object]) -> Sequence[Node]:
                     [
                         card(
                             [
-                                text("$item.projectTitle", variant="caption"),
-                                text("$item.at", variant="caption"),
-                                button(
-                                    "归档",
-                                    command=ARCHIVE_COMMAND,
-                                    args={"id": "$item.id"},
-                                    variant="ghost",
-                                ),
+                                stack(
+                                    [
+                                        text("$item.projectTitle", variant="caption"),
+                                        text("$item.atLabel", variant="caption"),
+                                        button(
+                                            "归档",
+                                            command=ARCHIVE_COMMAND,
+                                            args={"id": "$item.id"},
+                                            variant="ghost",
+                                        ),
+                                    ],
+                                    direction="horizontal",
+                                    gap=12,
+                                )
                             ],
                             title="$item.title",
                         )
                     ],
-                    empty_text="还没有内容",
+                    empty_text="收件箱是空的",
                 ),
-                input_("记一句", submit=CREATE_COMMAND, args={"title": "$value"}),
             ]
         )
     ]
@@ -151,7 +177,8 @@ class IdeasPlugin:
         ctx.commands.register(CREATE_COMMAND, _create_command(ctx))
         ctx.commands.register(ARCHIVE_COMMAND, _archive_command(ctx))
         ctx.commands.register(ASSIGN_COMMAND, _assign_command(ctx))
-        ctx.ui.contribute(SIDEBAR_CONTRIBUTION_ID, _view)
+        ctx.ui.contribute(CAPTURE_CONTRIBUTION_ID, _capture_view)
+        ctx.ui.contribute(INBOX_CONTRIBUTION_ID, _inbox_view)
 
     async def deactivate(self) -> None:
         """登记项随宿主作用域回收,插件没有需要手动清理的东西。"""
@@ -165,10 +192,11 @@ __all__ = [
     "ARCHIVE_COMMAND",
     "ASSIGNED_EVENT",
     "ASSIGN_COMMAND",
+    "CAPTURE_CONTRIBUTION_ID",
     "CREATED_EVENT",
     "CREATE_COMMAND",
+    "INBOX_CONTRIBUTION_ID",
     "PLUGIN_ID",
-    "SIDEBAR_CONTRIBUTION_ID",
     "IdeasPlugin",
     "plugin",
 ]

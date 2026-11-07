@@ -19,7 +19,7 @@ def test_activate_registers_commands_contribution_and_reducers() -> None:
         "ideas.archive",
         "ideas.assign",
     }
-    assert set(context.fake_ui.contributions) == {"ideas.sidebar"}
+    assert set(context.fake_ui.contributions) == {"ideas.capture", "ideas.inbox"}
     assert set(context.fake_state.reducers) == {
         "ideas.created",
         "ideas.archived",
@@ -53,7 +53,15 @@ def test_created_event_folds_into_items() -> None:
     context.replay()
 
     assert context.fake_state.read() == {
-        "items": [{"id": "idea-1", "title": "写协议", "at": NOW.isoformat()}]
+        "items": [
+            {
+                "id": "idea-1",
+                "title": "写协议",
+                "at": NOW.isoformat(),
+                "atLabel": "04-05 06:07",
+                "projectTitle": "",
+            }
+        ]
     }
 
 
@@ -67,9 +75,8 @@ def test_archived_event_removes_only_that_item() -> None:
     assert context.fake_events.emitted[-1] == ("ideas.archived", {"id": "idea-2"})
     context.replay()
 
-    assert context.fake_state.read() == {
-        "items": [{"id": "idea-1", "title": "保留", "at": NOW.isoformat()}]
-    }
+    items = cast("list[dict[str, object]]", context.fake_state.read()["items"])
+    assert [item["title"] for item in items] == ["保留"]
 
 
 def test_unknown_event_leaves_items_unchanged() -> None:
@@ -86,7 +93,7 @@ def test_unknown_event_leaves_items_unchanged() -> None:
 
 def test_sidebar_view_passes_c3_schema() -> None:
     context = activated()
-    view = context.fake_ui.contributions["ideas.sidebar"]
+    view = context.fake_ui.contributions["ideas.inbox"]
 
     nodes: list[Node] = list(view(context.fake_state.read()))
 
@@ -98,7 +105,7 @@ def test_sidebar_view_passes_c3_schema() -> None:
 
 def test_sidebar_input_passes_typed_text_as_title() -> None:
     context = activated()
-    view = context.fake_ui.contributions["ideas.sidebar"]
+    view = context.fake_ui.contributions["ideas.capture"]
 
     inputs = find_nodes(list(view(context.fake_state.read())), "Input")
 

@@ -117,6 +117,7 @@ def test_created_event_folds_into_items() -> None:
                 "title": "导出需求",
                 "projectId": "project-1",
                 "status": "todo",
+                "statusLabel": "待办",
                 "at": NOW.isoformat(),
             }
         ]
@@ -200,7 +201,7 @@ def test_requirement_row_shows_title_and_status() -> None:
     texts = _find(_rows(_activated()), "Text")
 
     props = [cast("dict[str, object]", node["props"]) for node in texts]
-    assert [entry["text"] for entry in props] == ["$item.title", "$item.status"]
+    assert [entry["text"] for entry in props] == ["$item.title", "$item.statusLabel"]
 
 
 def test_advance_button_binds_item_id_and_doing_status() -> None:

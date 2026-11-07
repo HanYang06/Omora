@@ -30,7 +30,8 @@
     "slots": [
       {
         "id": "requirements.main",
-        "slot": "main"
+        "slot": "main",
+        "order": 20
       }
     ]
   }

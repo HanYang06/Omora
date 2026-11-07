@@ -57,6 +57,14 @@ def _requirement_items(state: Mapping[str, object]) -> list[dict[str, object]]:
     ]
 
 
+STATUS_LABELS = {"todo": "待办", "doing": "进行中", "done": "已完成"}
+
+
+def _label(status: object) -> str:
+    """状态是数据,标签是展示;给前端一个能直接渲染的短词。"""
+    return STATUS_LABELS.get(status, "") if isinstance(status, str) else ""
+
+
 def _fold_created(state: dict[str, object], data: Mapping[str, object]) -> None:
     """把 requirements.created 折叠成一条新条目。"""
     identifier = data.get("id")
@@ -69,6 +77,7 @@ def _fold_created(state: dict[str, object], data: Mapping[str, object]) -> None:
             "title": title,
             "projectId": data.get("projectId"),
             "status": data.get("status"),
+            "statusLabel": _label(data.get("status")),
             "at": data.get("at"),
         }
     )
@@ -83,6 +92,7 @@ def _fold_status_changed(state: dict[str, object], data: Mapping[str, object]) -
     for item in _item_list(state):
         if item.get("id") == identifier:
             item["status"] = status
+            item["statusLabel"] = _label(status)
 
 
 def _string_arg(args: Mapping[str, object], key: str) -> str:
@@ -153,11 +163,18 @@ def _view(_state: Mapping[str, object]) -> Sequence[Node]:
                         card(
                             [
                                 text("$item.title", variant="subtitle"),
-                                text("$item.status", variant="caption"),
-                                button(
-                                    "推进",
-                                    command=SET_STATUS_COMMAND,
-                                    args={"id": "$item.id", "status": STATUS_DOING},
+                                stack(
+                                    [
+                                        text("$item.statusLabel", variant="caption"),
+                                        button(
+                                            "推进",
+                                            command=SET_STATUS_COMMAND,
+                                            args={"id": "$item.id", "status": STATUS_DOING},
+                                            variant="ghost",
+                                        ),
+                                    ],
+                                    direction="horizontal",
+                                    gap=12,
                                 ),
                             ]
                         )

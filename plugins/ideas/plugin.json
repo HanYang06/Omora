@@ -33,8 +33,14 @@
     ],
     "slots": [
       {
-        "id": "ideas.sidebar",
-        "slot": "sidebar"
+        "id": "ideas.capture",
+        "slot": "sidebar",
+        "order": 10
+      },
+      {
+        "id": "ideas.inbox",
+        "slot": "main",
+        "order": 10
       }
     ]
   }
