@@ -190,6 +190,16 @@ JSON-RPC 的响应帧不带方法名，因此 `Response.result` 在帧 schema �
 - `$` 开头是数据绑定，作用域由宿主按槽位提供；
 - `on` 只能指向命令，不能内联逻辑。
 
+#### 3.1.1 绑定作用域
+
+| 位置 | `$x` 解析为 |
+|---|---|
+| 槽位贡献的根 | `state[贡献者 id].x` |
+| `List` 的 children 内 | 在上面的基础上多一层 `item`：`$item.x` |
+| `Input` 的提交参数内 | 在上面的基础上多一层 `value`：输入框当前文本 |
+
+绑定在事件触发的那一刻求值；解析不到时该节点降级为占位符，不抛错。
+
 ### 3.2 槽位
 
 `sidebar` `main` `panel` `detail` `statusbar` `commandPalette` `settings` `onboarding` `modal`
