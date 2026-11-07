@@ -10,6 +10,7 @@
 - C3 节点从最小骨架扩到六节点：`Stack` `Text` `Button` `Input` `List` `Card`；事件只允许指向命令，`$` 前缀表示数据绑定，未知字段一律拒绝。
 - 新增 C2 清单 schema：`id` `version` `engines` `runtime` `entry` `activation` `capabilities` `contributes`。
 - 新增 C1 帧 schema：`state.snapshot` `cmd.invoke` `query.invoke` `event.subscribe` `ping`，以及下行 `event` 通知；错误码收敛为 `E_INVALID` `E_DENIED` `E_UNAVAILABLE` `E_INTERNAL`。
+- `state.snapshot` 的返回补上 `ui` 槽位投影：槽位名 → 贡献列表（`owner` + 节点树）；`state` 明确以插件 id 为键。
 - 新增生成物 `protocol/generated/contract.ts`，门禁新增 `contract.types` 阶段：重新生成后 diff 必须为空。
 
 ### 工程

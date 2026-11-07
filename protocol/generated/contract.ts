@@ -52,6 +52,7 @@ export type Response =
 export interface SnapshotResult {
   revision: number;
   state: Record<string, unknown>;
+  ui: UiSnapshot;
 }
 
 export interface CmdResult {
@@ -70,6 +71,15 @@ export interface SubscribeResult {
 
 export interface PingResult {
   revision: number;
+}
+
+export interface SlotContribution {
+  owner: string;
+  nodes: Record<string, unknown>[];
+}
+
+export interface UiSnapshot {
+  slots: Record<string, SlotContribution[]>;
 }
 
 export interface C2Manifest {

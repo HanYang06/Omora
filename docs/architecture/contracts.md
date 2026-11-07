@@ -65,13 +65,22 @@
 
 | 方法 | result |
 |---|---|
-| `state.snapshot` | `{ revision, state }` — `state` 是投影数据，对 C1 不透明 |
+| `state.snapshot` | `{ revision, state, ui }` — 数据投影 + 槽位投影 |
 | `cmd.invoke` | `{ revision, result? }` — 命令落地后的 revision |
 | `query.invoke` | `{ items, cursor? }` — `cursor` 为 null 表示没有更多 |
 | `event.subscribe` | `{ revision }` — 订阅起点，之后只推送更大的 revision |
 | `ping` | `{ revision }` — 当前 revision，客户端据此发现缺口 |
 
 JSON-RPC 的响应帧不带方法名，因此 `Response.result` 在帧 schema 里只约束到 JSON 值；按方法收敛类型是调用方的责任，生成物提供 `SnapshotResult` `CmdResult` `QueryResult` `SubscribeResult` `PingResult` 五个类型。
+
+快照里的两份投影：
+
+- `state` 以插件 id 为键：`{ "omora.ideas": { ... } }`。每个切片对该插件不透明，内核只负责折叠事件、原样投影出去。
+- `ui` 是槽位投影：槽位名 → 贡献列表，每条贡献带 `owner`（插件 id）与节点树。
+
+节点里的 `$` 绑定在**贡献者自己的切片**里解析（`state[owner]`），列表项内部再多一层 `$item` 作用域。插件看不见别人的状态，这是能力隔离在数据层的体现。
+
+增量更新靠事件：节点树是结构，`state` 是数据，绑定把两者连起来。事件到达后前端只需合并 `state` 并重新求值绑定，不必重新拉节点树。
 
 ### 1.3 示例
 
@@ -203,7 +212,8 @@ JSON-RPC 的响应帧不带方法名，因此 `Response.result` 在帧 schema �
 
 - 禁止注入 HTML / CSS / 脚本；
 - 禁止直接访问存储与内核状态，只能通过绑定与命令；
-- 表达式保持无副作用，复杂计算回内核做。
+- 表达式保持无副作用，复杂计算回内核做；
+- 绑定只在贡献者自己的状态切片内解析，插件看不见别人的状态。
 
 ## 4. P0 最小集合
 
