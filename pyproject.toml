@@ -18,7 +18,7 @@ dev = [
 package = false
 
 [tool.uv.workspace]
-members = ["sdk", "kernel", "plugins/ideas"]
+members = ["sdk", "kernel", "plugins/*"]
 
 [tool.ruff]
 line-length = 100
@@ -34,33 +34,51 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 "**/tests/**" = ["T20"]
 
 [tool.pytest.ini_options]
-testpaths = ["kernel/tests", "plugins/ideas/tests"]
+testpaths = ["kernel/tests", "plugins"]
 addopts = "-q"
 
 [tool.pyright]
-include = ["sdk/src", "kernel/src", "kernel/tests", "plugins/ideas/src", "plugins/ideas/tests", "scripts"]
+include = [
+    "sdk/src",
+    "kernel/src",
+    "kernel/tests",
+    "plugins/*/src",
+    "plugins/*/tests",
+    "scripts",
+]
 typeCheckingMode = "strict"
 pythonVersion = "3.12"
 reportMissingTypeStubs = false
 extraPaths = ["scripts"]
 
 [tool.importlinter]
-root_packages = ["omora_kernel", "omora_sdk", "omora_plugins_ideas"]
+root_packages = [
+    "omora_kernel",
+    "omora_sdk",
+    "omora_plugins_ideas",
+    "omora_plugins_projects",
+    "omora_plugins_requirements",
+]
 
 [[tool.importlinter.contracts]]
 name = "SDK 不得依赖内核或插件"
 type = "forbidden"
 source_modules = ["omora_sdk"]
-forbidden_modules = ["omora_kernel", "omora_plugins_ideas"]
+forbidden_modules = [
+    "omora_kernel",
+    "omora_plugins_ideas",
+    "omora_plugins_projects",
+    "omora_plugins_requirements",
+]
 
 [[tool.importlinter.contracts]]
 name = "内核不得依赖插件"
 type = "forbidden"
 source_modules = ["omora_kernel"]
-forbidden_modules = ["omora_plugins_ideas"]
+forbidden_modules = ["omora_plugins_ideas", "omora_plugins_projects", "omora_plugins_requirements"]
 
 [[tool.importlinter.contracts]]
 name = "插件不得依赖内核"
 type = "forbidden"
 source_modules = ["omora_plugins_ideas"]
-forbidden_modules = ["omora_kernel"]
+forbidden_modules = ["omora_kernel", "omora_plugins_projects", "omora_plugins_requirements"]

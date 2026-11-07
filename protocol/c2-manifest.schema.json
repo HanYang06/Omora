@@ -38,6 +38,7 @@
           "storage",
           "events",
           "ui",
+          "services",
           "commands",
           "settings",
           "fs",

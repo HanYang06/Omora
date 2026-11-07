@@ -92,7 +92,7 @@ export interface C2Manifest {
   runtime: "python";
   entry: string;
   activation: string[];
-  capabilities: ("storage" | "events" | "ui" | "commands" | "settings" | "fs" | "net" | "secrets" | "clipboard" | "notifications" | "jobs" | "log")[];
+  capabilities: ("storage" | "events" | "ui" | "services" | "commands" | "settings" | "fs" | "net" | "secrets" | "clipboard" | "notifications" | "jobs" | "log")[];
   contributes?: { commands?: { id: string; title: string; description?: string }[]; slots?: ({ id: string; slot: "sidebar" | "main" | "panel" | "detail" | "statusbar" | "commandPalette" | "settings" | "onboarding" | "modal"; order?: number })[] };
 }
 

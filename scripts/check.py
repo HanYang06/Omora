@@ -99,12 +99,13 @@ def first_match(pattern: str, text: str) -> str | None:
 def check_versions() -> list[Problem]:
     problems: list[Problem] = []
     expected = read_text(ROOT / "VERSION").strip()
-    toml_sources = [
+    toml_sources: list[tuple[Path, str]] = [
         (ROOT / "pyproject.toml", "根 pyproject"),
         (ROOT / "sdk" / "pyproject.toml", "sdk"),
         (ROOT / "kernel" / "pyproject.toml", "kernel"),
-        (ROOT / "plugins" / "ideas" / "pyproject.toml", "plugins/ideas"),
     ]
+    plugin_tomls = sorted((ROOT / "plugins").glob("*/pyproject.toml"))
+    toml_sources.extend((path, str(path.parent.relative_to(ROOT))) for path in plugin_tomls)
     for path, label in toml_sources:
         if not path.exists():
             continue
