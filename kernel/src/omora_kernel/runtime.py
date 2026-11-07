@@ -16,7 +16,6 @@ from .contract.c1 import Event
 from .eventlog import Event as LogEvent
 from .eventlog import EventLog
 from .projection import Projection
-from .registry import CommandRegistry, QueryRegistry
 from .store import Store
 
 Reducer = Callable[[dict[str, object], Mapping[str, object]], None]
@@ -44,8 +43,6 @@ class Runtime:
         self._store = store
         self._log = EventLog(store)
         self._projection = Projection()
-        self._commands = CommandRegistry()
-        self._queries = QueryRegistry()
         self._listeners: list[Listener] = []
         self._owners: dict[str, str] = {}
         self._root = Context("kernel")
@@ -55,14 +52,6 @@ class Runtime:
     @property
     def root(self) -> Context:
         return self._root
-
-    @property
-    def commands(self) -> CommandRegistry:
-        return self._commands
-
-    @property
-    def queries(self) -> QueryRegistry:
-        return self._queries
 
     @property
     def revision(self) -> int:
@@ -94,6 +83,10 @@ class Runtime:
             reducer(cast("dict[str, object]", target), event.data)
 
         self._projection.register(event_type, fold)
+
+    def state(self) -> dict[str, object]:
+        """整份投影状态的副本,快照用。"""
+        return self._projection.state()
 
     def state_slice(self, plugin_id: str) -> Mapping[str, object]:
         """返回插件切片的副本；拿不到时给空映射，调用方不必判空。"""

@@ -19,7 +19,9 @@ web/dist/
 *.tsbuildinfo
 
 # 本地数据
+.omora/
 *.sqlite3
+*.sqlite
 *.db
 
 # 密钥与环境
