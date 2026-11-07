@@ -20,6 +20,7 @@ SKIP_DIRS = {
     ".import_linter_cache",
     "build",
     ".agents",
+    ".omora",
 }
 SKIP_NAMES = {"uv.lock", "pnpm-lock.yaml", "skills-lock.json"}
 CODE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".mjs", ".cjs"}

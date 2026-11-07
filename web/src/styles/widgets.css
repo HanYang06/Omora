@@ -1,0 +1,78 @@
+/* 原语控件的主题外观。widgets/ 只产出标记，这里只负责视觉，不改行为。 */
+[data-widget="Button"] {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  justify-content: center;
+  gap: var(--omora-space-xs);
+  min-height: 30px;
+  padding: var(--omora-space-xs) var(--omora-space-md);
+  border: 1px solid var(--omora-color-border-strong);
+  border-radius: var(--omora-radius-md);
+  background: var(--omora-color-surface-raised);
+  color: var(--omora-color-fg);
+  font-size: 0.8125rem;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+[data-widget="Button"]:hover:not(:disabled) {
+  border-color: var(--omora-color-fg-faint);
+  background: var(--omora-color-surface);
+}
+
+[data-widget="Button"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-widget="Button"][data-variant="primary"] {
+  border-color: var(--omora-color-primary);
+  background: var(--omora-color-primary);
+  color: var(--omora-color-on-primary);
+}
+
+[data-widget="Button"][data-variant="primary"]:hover:not(:disabled) {
+  border-color: var(--omora-color-primary-hover);
+  background: var(--omora-color-primary-hover);
+}
+
+[data-widget="Button"][data-variant="ghost"] {
+  border-color: transparent;
+  background: transparent;
+}
+
+[data-widget="Button"][data-variant="ghost"]:hover:not(:disabled) {
+  background: var(--omora-color-surface-muted);
+}
+
+[data-widget="Button"][data-variant="danger"] {
+  border-color: var(--omora-color-danger);
+  background: var(--omora-color-danger);
+  color: var(--omora-color-on-primary);
+}
+
+[data-widget="Input"] {
+  width: 100%;
+  min-height: 32px;
+  padding: var(--omora-space-xs) var(--omora-space-md);
+  border: 1px solid var(--omora-color-border-strong);
+  border-radius: var(--omora-radius-md);
+  background: var(--omora-color-surface-raised);
+  color: var(--omora-color-fg);
+  font-size: 0.875rem;
+}
+
+[data-widget="Input"]::placeholder {
+  color: var(--omora-color-fg-faint);
+}
+
+[data-widget="Input"]:hover:not(:disabled) {
+  border-color: var(--omora-color-fg-faint);
+}
+
+[data-palette-input="true"]:focus-visible {
+  outline: 2px solid var(--omora-color-primary);
+  outline-offset: -2px;
+}

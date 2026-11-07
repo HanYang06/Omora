@@ -6,6 +6,8 @@ requires-python = ">=3.12"
 members = [
     "omora-kernel",
     "omora-plugin-ideas",
+    "omora-plugin-projects",
+    "omora-plugin-requirements",
     "omora-sdk",
     "omora-workspace",
 ]
@@ -222,6 +224,28 @@ requires-dist = [
 name = "omora-plugin-ideas"
 version = "0.1.0"
 source = { editable = "plugins/ideas" }
+dependencies = [
+    { name = "omora-sdk" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "omora-sdk", editable = "sdk" }]
+
+[[package]]
+name = "omora-plugin-projects"
+version = "0.1.0"
+source = { editable = "plugins/projects" }
+dependencies = [
+    { name = "omora-sdk" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "omora-sdk", editable = "sdk" }]
+
+[[package]]
+name = "omora-plugin-requirements"
+version = "0.1.0"
+source = { editable = "plugins/requirements" }
 dependencies = [
     { name = "omora-sdk" },
 ]

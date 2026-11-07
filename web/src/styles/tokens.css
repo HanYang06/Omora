@@ -1,0 +1,48 @@
+/* Omora 设计 token。C3 插件只能引用这些变量，不能自带颜色值与样式表。 */
+:root {
+  color-scheme: light;
+
+  /* 颜色：暖中性底 + 松墨绿主色，避免纯黑/纯白的通用工具感 */
+  --omora-color-bg: #f3f4f1;
+  --omora-color-surface: #fbfbf9;
+  --omora-color-surface-raised: #ffffff;
+  --omora-color-surface-muted: #e9ebe6;
+  --omora-color-fg: #1f241f;
+  --omora-color-fg-muted: #5b6259;
+  --omora-color-fg-faint: #8b9186;
+  --omora-color-border: #d5d9d1;
+  --omora-color-border-strong: #b6bcb2;
+  --omora-color-primary: #2d5c4e;
+  --omora-color-primary-hover: #244a3f;
+  --omora-color-primary-soft: #dde9e3;
+  --omora-color-on-primary: #f7faf7;
+  --omora-color-danger: #a13b30;
+  --omora-color-danger-soft: #f3e1de;
+  --omora-color-warning: #8a6b24;
+  --omora-color-focus: #2d5c4e;
+  --omora-color-scrim: rgba(25, 30, 25, 0.32);
+
+  /* 间距 */
+  --omora-space-xs: 4px;
+  --omora-space-sm: 8px;
+  --omora-space-md: 12px;
+  --omora-space-lg: 16px;
+  --omora-space-xl: 24px;
+
+  /* 圆角 */
+  --omora-radius-sm: 4px;
+  --omora-radius-md: 6px;
+  --omora-radius-lg: 10px;
+  --omora-radius-full: 999px;
+
+  /* 字体：正文用系统 UI 无衬线，元信息用等宽 */
+  --omora-font-body:
+    "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Noto Sans SC", sans-serif;
+  --omora-font-mono:
+    "Cascadia Code", "Cascadia Mono", "SFMono-Regular", Consolas, "Noto Sans Mono", monospace;
+
+  /* 阴影：只在浮层使用 */
+  --omora-shadow-sm: 0 1px 2px rgba(25, 30, 25, 0.06);
+  --omora-shadow-md: 0 10px 30px rgba(25, 30, 25, 0.12), 0 1px 2px rgba(25, 30, 25, 0.08);
+  --omora-shadow-lg: 0 28px 70px rgba(25, 30, 25, 0.22);
+}

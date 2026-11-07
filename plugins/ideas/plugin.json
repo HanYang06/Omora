@@ -13,6 +13,7 @@
   "capabilities": [
     "commands",
     "events",
+    "services",
     "ui"
   ],
   "contributes": {
@@ -24,12 +25,22 @@
       {
         "id": "ideas.archive",
         "title": "归档灵感"
+      },
+      {
+        "id": "ideas.assign",
+        "title": "分诊到项目"
       }
     ],
     "slots": [
       {
-        "id": "ideas.sidebar",
-        "slot": "sidebar"
+        "id": "ideas.capture",
+        "slot": "sidebar",
+        "order": 10
+      },
+      {
+        "id": "ideas.inbox",
+        "slot": "main",
+        "order": 10
       }
     ]
   }

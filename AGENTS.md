@@ -10,7 +10,7 @@ Omora：本地优先的灵感与项目管理工具。灵感、项目、需求互
 - 内核：Python（逻辑、存储、事件、权限、插件宿主）
 - 渲染层：TypeScript（声明式渲染器 + 槽位 + 壳）
 - 两者之间只有协议：C1（内部）/ C2（插件）/ C3（UI 数据）
-- 当前阶段：P0 垂直切片完成（M0.0–M0.6）。一个 Python 插件能通过 C1/C3 在界面上画出面板，数据来自内核；下一步 P1 扩官方插件
+- 当前阶段：P1 进行中。官方插件有 ideas / projects / requirements，支持捕捉、分诊、需求状态流转与命令面板；内核只管机制，领域词汇全部在 `plugins/`
 - 版本：`0.1.0`，统一版本发布（见 [ADR-0003](docs/decisions/0003-unified-versioning.md)）
 
 ## 工作方式
@@ -136,10 +136,11 @@ Omora：本地优先的灵感与项目管理工具。灵感、项目、需求互
 - [核心边界](docs/architecture/core-surface.md)
 - [工程纪律](docs/engineering/discipline.md)
 - [依赖登记](docs/engineering/dependencies.md)
-- [P0 计划](docs/roadmap/p0.md)
+- [P0 计划](docs/roadmap/p0.md) · [P1 计划](docs/roadmap/p1.md)
 - [ADR-0001 技术栈](docs/decisions/0001-stack-and-runtime.md)
 - [ADR-0002 核心边界](docs/decisions/0002-core-boundary.md)
 - [ADR-0003 统一版本](docs/decisions/0003-unified-versioning.md)
+- [ADR-0004 插件边界](docs/decisions/0004-plugin-boundary.md)
 - 项目 skill：`omora-project`、`omora-testing`、`omora-git`
 
 ## 维护本文件

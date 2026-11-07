@@ -85,8 +85,8 @@ def test_activation_exposes_command_contribution_and_emitted_event(
 
     assert asyncio.run(host.start()) == ("note.good",)
     assert asyncio.run(host.commands.invoke("note.create", {})) == {"items": [{"count": 1}]}
-    assert host.snapshot_ui() == {
-        "slots": {"sidebar": [{"owner": "note.good", "nodes": [text("note")]}]}
+    assert host.snapshot_ui()["slots"] == {
+        "sidebar": [{"owner": "note.good", "nodes": [text("note")]}]
     }
     assert runtime.emitted == [("note.ready", {"plugin": "note.good"})]
 
@@ -114,7 +114,7 @@ def test_deactivation_removes_command_and_contribution(
 
     assert host.commands.names() == ()
     assert host.queries.names() == ()
-    assert host.snapshot_ui() == {"slots": {}}
+    assert host.snapshot_ui()["slots"] == {}
     assert any("[note.good] deactivated" in message for message in log.messages)
     try:
         asyncio.run(host.commands.invoke("note.create", {}))
@@ -192,5 +192,26 @@ def test_close_deactivates_all_plugins(tmp_path: Path, monkeypatch: pytest.Monke
     asyncio.run(host.close())
 
     assert host.commands.names() == ()
-    assert host.snapshot_ui() == {"slots": {}}
+    assert host.snapshot_ui()["slots"] == {}
     assert any("[note.good] deactivated" in message for message in log.messages)
+
+
+def test_snapshot_lists_declared_commands(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    host = make_host(FakeRuntime(), RecordingLog())
+    write_plugin(
+        tmp_path,
+        PluginSpec(
+            directory="note",
+            module="note_plugin",
+            plugin_id="note.good",
+            source=NOTE_SOURCE,
+            slots=({"id": "note.panel", "slot": "sidebar"},),
+            commands=({"id": "note.create", "title": "新建"},),
+        ),
+        monkeypatch,
+    )
+    host.discover(tmp_path)
+    asyncio.run(host.start())
+    assert host.snapshot_ui()["commands"] == [
+        {"owner": "note.good", "id": "note.create", "title": "新建"}
+    ], "命令面板靠快照里的命令清单工作"

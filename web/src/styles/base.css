@@ -1,0 +1,39 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--omora-color-bg);
+  color: var(--omora-color-fg);
+  font-family: var(--omora-font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: var(--omora-color-primary-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--omora-color-focus);
+  outline-offset: 2px;
+}

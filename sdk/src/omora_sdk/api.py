@@ -20,6 +20,12 @@ class CommandApi(Protocol):
     def register(self, name: str, handler: Handler) -> None: ...
 
 
+class QueryApi(Protocol):
+    """向查询命名空间登记 handler；返回值必须是 {"items": [...]} 形状。"""
+
+    def register(self, name: str, handler: Handler) -> None: ...
+
+
 class EventApi(Protocol):
     """发布事件与订阅事件;事件是插件间唯一的通信方式。"""
 
@@ -34,6 +40,14 @@ class StateApi(Protocol):
     def register(self, event_type: str, reducer: Reducer) -> None: ...
 
     def read(self) -> Mapping[str, object]: ...
+
+
+class ServiceApi(Protocol):
+    """跨插件服务：提供方登记,消费方按名字调用;核心只做路由,不实现任何服务。"""
+
+    def provide(self, name: str, handler: Handler) -> None: ...
+
+    async def call(self, name: str, args: Mapping[str, object]) -> object: ...
 
 
 class UiApi(Protocol):
@@ -69,7 +83,9 @@ class PluginContext(Protocol):
 
     plugin_id: str
     commands: CommandApi
+    queries: QueryApi
     events: EventApi
+    services: ServiceApi
     state: StateApi
     ui: UiApi
     log: LogApi

@@ -9,7 +9,7 @@ Omora 是一个把「灵感」与「项目」连成一条线的本地优先工�
 1. [架构总览](architecture/overview.md) —— 先建立全貌
 2. [三份契约](architecture/contracts.md) —— 这是整个产品的核心资产
 3. [核心边界](architecture/core-surface.md) —— 写任何代码之前先看
-4. [P0 计划](roadmap/p0.md) —— 现在要动手的部分
+4. [P0 计划](roadmap/p0.md) · [P1 计划](roadmap/p1.md) —— 已完成与现在要做的
 5. [工程纪律](engineering/discipline.md) —— 动手前必读：门禁、架构测试、完成定义
 
 ## 文档索引
@@ -24,7 +24,9 @@ Omora 是一个把「灵感」与「项目」连成一条线的本地优先工�
 | [decisions/0001-stack-and-runtime.md](decisions/0001-stack-and-runtime.md) | ADR：Python 内核 + TS 渲染层 | 已接受 |
 | [decisions/0002-core-boundary.md](decisions/0002-core-boundary.md) | ADR：核心与插件的边界 | 已接受 |
 | [decisions/0003-unified-versioning.md](decisions/0003-unified-versioning.md) | ADR：统一版本发布 | 已接受 |
-| [roadmap/p0.md](roadmap/p0.md) | P0 垂直切片：模块、目录、验收 | 计划 |
+| [roadmap/p0.md](roadmap/p0.md) | P0 垂直切片：模块、目录、验收 | 已完成 |
+| [roadmap/p1.md](roadmap/p1.md) | P1：捕获、分诊、项目、需求、命令面板 | 进行中 |
+| [decisions/0004-plugin-boundary.md](decisions/0004-plugin-boundary.md) | ADR：插件间只有事件与服务 | 已接受 |
 
 ## 文档约定
 
@@ -42,6 +44,7 @@ Omora 是一个把「灵感」与「项目」连成一条线的本地优先工�
 | 本地 SQLite 为规范主副本 + 事件日志 | 已定 |
 | 核心边界与三道测试 | 已定 |
 | 官方功能无后门 | 已定 |
+| 插件之间只有事件与服务，无共享数据 | 已定（ADR-0004） |
 | 统一版本发布（仓库内所有包同号） | 已定 |
 | 工程纪律与门禁 | 已定 |
 | 插件默认 Python，异语言走进程 / WASM | 已定 |
