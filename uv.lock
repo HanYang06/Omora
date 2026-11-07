@@ -206,12 +206,14 @@ name = "omora-kernel"
 version = "0.1.0"
 source = { editable = "kernel" }
 dependencies = [
+    { name = "jsonschema" },
     { name = "omora-sdk" },
     { name = "websockets" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "jsonschema", specifier = ">=4.23" },
     { name = "omora-sdk", editable = "sdk" },
     { name = "websockets", specifier = ">=15" },
 ]

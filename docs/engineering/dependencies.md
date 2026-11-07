@@ -7,6 +7,7 @@
 | 依赖 | 位置 | 理由 |
 |---|---|---|
 | websockets | kernel | C1 传输：本机回环 WebSocket。标准库无 WS 服务端，手写握手与帧解析没有收益 |
+| jsonschema | kernel | 运行期按 `protocol/` 校验 C2 清单与 C3 节点。手写校验逻辑等于给 schema 造一个会漂移的镜像 |
 | （其余） | — | 存储用标准库 `sqlite3`；契约校验用 jsonschema（开发期已登记） |
 
 ## 开发期依赖
