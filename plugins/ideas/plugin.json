@@ -1,0 +1,36 @@
+{
+  "id": "omora.ideas",
+  "name": "Ideas",
+  "version": "0.1.0",
+  "engines": {
+    "omora": "^0.1.0"
+  },
+  "runtime": "python",
+  "entry": "omora_plugins_ideas:plugin",
+  "activation": [
+    "onStartup"
+  ],
+  "capabilities": [
+    "commands",
+    "events",
+    "ui"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "id": "ideas.create",
+        "title": "新建灵感"
+      },
+      {
+        "id": "ideas.archive",
+        "title": "归档灵感"
+      }
+    ],
+    "slots": [
+      {
+        "id": "ideas.sidebar",
+        "slot": "sidebar"
+      }
+    ]
+  }
+}
