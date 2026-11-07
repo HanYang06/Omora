@@ -86,3 +86,4 @@ Kernel · Python
 - `../../../../docs/decisions/0001-stack-and-runtime.md`
 - `../../../../docs/decisions/0002-core-boundary.md`
 - `../../../../docs/decisions/0003-unified-versioning.md`
+- `../../../../docs/decisions/0004-plugin-boundary.md`
