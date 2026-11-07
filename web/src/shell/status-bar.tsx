@@ -5,6 +5,7 @@ import type { ConnectionStatus } from "./types";
 export interface StatusBarProps {
   revision: number;
   status: ConnectionStatus;
+  notice?: string | undefined;
 }
 
 const STATUS_LABEL: Record<ConnectionStatus, string> = {
@@ -46,18 +47,38 @@ const DOT_STYLE: CSSProperties = {
   flexShrink: 0,
 };
 
-export function StatusBar({ revision, status }: StatusBarProps): ReactElement {
+const NOTICE_STYLE: CSSProperties = {
+  padding: "var(--omora-space-sm) 0",
+  borderTop: "1px solid var(--omora-color-border)",
+  color: "var(--omora-color-danger)",
+  fontSize: "0.75rem",
+  lineHeight: 1.5,
+};
+
+export function StatusBar({ revision, status, notice }: StatusBarProps): ReactElement {
   return (
-    <footer data-status-bar="true" data-status={status} data-revision={revision} style={BAR_STYLE}>
-      <span style={STATUS_STYLE}>
-        <span
-          aria-hidden="true"
-          data-status-dot="true"
-          style={{ ...DOT_STYLE, background: STATUS_COLOR[status] }}
-        />
-        {STATUS_LABEL[status]}
-      </span>
-      <span>rev {revision}</span>
-    </footer>
+    <>
+      {notice === undefined ? null : (
+        <p data-status-notice="true" role="status" style={NOTICE_STYLE}>
+          {notice}
+        </p>
+      )}
+      <footer
+        data-status-bar="true"
+        data-status={status}
+        data-revision={revision}
+        style={BAR_STYLE}
+      >
+        <span style={STATUS_STYLE}>
+          <span
+            aria-hidden="true"
+            data-status-dot="true"
+            style={{ ...DOT_STYLE, background: STATUS_COLOR[status] }}
+          />
+          {STATUS_LABEL[status]}
+        </span>
+        <span>rev {revision}</span>
+      </footer>
+    </>
   );
 }

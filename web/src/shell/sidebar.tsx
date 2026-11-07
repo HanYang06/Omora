@@ -10,6 +10,7 @@ export interface SidebarProps {
   onCommand: ((command: CmdInvokeParams) => void) | undefined;
   revision: number;
   status: ConnectionStatus;
+  notice?: string | undefined;
 }
 
 const SIDEBAR_STYLE: CSSProperties = {
@@ -66,6 +67,7 @@ export function Sidebar({
   onCommand,
   revision,
   status,
+  notice,
 }: SidebarProps): ReactElement {
   return (
     <aside data-slot="sidebar" style={SIDEBAR_STYLE}>
@@ -83,7 +85,7 @@ export function Sidebar({
           emptyHint="插件注册的入口会显示在这里。"
         />
       </div>
-      <StatusBar revision={revision} status={status} />
+      <StatusBar revision={revision} status={status} notice={notice} />
     </aside>
   );
 }
