@@ -324,6 +324,90 @@
           }
         }
       ]
+    },
+    "SnapshotResult": {
+      "type": "object",
+      "required": [
+        "revision",
+        "state"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "快照对应的当前 revision"
+        },
+        "state": {
+          "type": "object",
+          "description": "投影数据;对 C1 不透明,键名由内核投影约定"
+        }
+      }
+    },
+    "CmdResult": {
+      "type": "object",
+      "required": [
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "命令落地后的 revision"
+        },
+        "result": {
+          "description": "命令的返回值,可为任意 JSON 值"
+        }
+      }
+    },
+    "QueryResult": {
+      "type": "object",
+      "required": [
+        "items"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array"
+        },
+        "cursor": {
+          "type": [
+            "string",
+            "integer",
+            "null"
+          ],
+          "description": "下一页游标;为 null 表示没有更多"
+        }
+      }
+    },
+    "SubscribeResult": {
+      "type": "object",
+      "required": [
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "订阅起点的 revision,之后只推送更大的 revision"
+        }
+      }
+    },
+    "PingResult": {
+      "type": "object",
+      "required": [
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "当前 revision;客户端据此发现乱序或缺口"
+        }
+      }
     }
   }
 }

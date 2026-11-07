@@ -49,6 +49,29 @@ export type Response =
   | { jsonrpc: "2.0"; id: RequestId; result: Record<string, unknown> | unknown[] | string | number | boolean | null }
   | { jsonrpc: "2.0"; id: RequestId; error: { code: ErrorCode; message: string; data?: Record<string, unknown> } };
 
+export interface SnapshotResult {
+  revision: number;
+  state: Record<string, unknown>;
+}
+
+export interface CmdResult {
+  revision: number;
+  result?: unknown;
+}
+
+export interface QueryResult {
+  items: unknown[];
+  cursor?: string | number | null;
+}
+
+export interface SubscribeResult {
+  revision: number;
+}
+
+export interface PingResult {
+  revision: number;
+}
+
 export interface C2Manifest {
   id: string;
   name: string;

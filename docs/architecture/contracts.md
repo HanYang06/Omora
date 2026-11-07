@@ -59,7 +59,21 @@
 | event.subscribe | UI → 内核 | 订阅增量事件流 |
 | ping | 双向 | 存活检测 |
 
-### 1.2 示例
+### 1.2 返回
+
+每个方法的 `result` 形状在 `protocol/c1-frames.schema.json` 里以 `$defs` 声明，前端按调用的方法取对应类型：
+
+| 方法 | result |
+|---|---|
+| `state.snapshot` | `{ revision, state }` — `state` 是投影数据，对 C1 不透明 |
+| `cmd.invoke` | `{ revision, result? }` — 命令落地后的 revision |
+| `query.invoke` | `{ items, cursor? }` — `cursor` 为 null 表示没有更多 |
+| `event.subscribe` | `{ revision }` — 订阅起点，之后只推送更大的 revision |
+| `ping` | `{ revision }` — 当前 revision，客户端据此发现缺口 |
+
+JSON-RPC 的响应帧不带方法名，因此 `Response.result` 在帧 schema 里只约束到 JSON 值；按方法收敛类型是调用方的责任，生成物提供 `SnapshotResult` `CmdResult` `QueryResult` `SubscribeResult` `PingResult` 五个类型。
+
+### 1.3 示例
 
 ```json
 { "jsonrpc": "2.0", "id": 1, "method": "cmd.invoke",
@@ -67,7 +81,7 @@
 ```
 
 ```json
-{ "jsonrpc": "2.0", "id": 1, "result": { "id": "01J..." } }
+{ "jsonrpc": "2.0", "id": 1, "result": { "revision": 42, "result": { "id": "01J..." } } }
 ```
 
 ```json
@@ -76,7 +90,7 @@
               "data": { "id": "01J...", "title": "..." } } }
 ```
 
-### 1.3 规则
+### 1.4 规则
 
 - 命令必须幂等，或携带幂等键；
 - 事件必须带单调递增 `revision`，UI 用它做去重与断线追赶；
