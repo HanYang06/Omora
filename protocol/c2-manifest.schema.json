@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omora.dev/protocol/c2-manifest.schema.json",
+  "title": "C2Manifest",
+  "description": "插件清单。engines.omora 用语义化版本范围声明兼容的宿主版本;未知字段一律拒绝。",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "version",
+    "engines",
+    "runtime",
+    "entry",
+    "activation",
+    "capabilities"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(\\.[a-z0-9][a-z0-9-]*)+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "engines": {
+      "type": "object",
+      "required": [
+        "omora"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "omora": {
+          "type": "string",
+          "pattern": "^[\\^~<>=0-9xX*.\\-\\s]+$"
+        }
+      }
+    },
+    "runtime": {
+      "enum": [
+        "python"
+      ]
+    },
+    "entry": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][\\w.]*:[A-Za-z_][\\w.]*$"
+    },
+    "activation": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^(onStartup|onCommand:[a-z0-9][\\w.-]*|onEvent:[a-z0-9][\\w.-]*|onSlot:[a-z0-9][\\w.-]*)$"
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "storage",
+          "events",
+          "ui",
+          "commands",
+          "settings",
+          "fs",
+          "net",
+          "secrets",
+          "clipboard",
+          "notifications",
+          "jobs",
+          "log"
+        ]
+      }
+    },
+    "contributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "title"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][\\w.-]*$"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "slots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "slot"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][\\w.-]*$"
+              },
+              "slot": {
+                "enum": [
+                  "sidebar",
+                  "main",
+                  "panel",
+                  "detail",
+                  "statusbar",
+                  "commandPalette",
+                  "settings",
+                  "onboarding",
+                  "modal"
+                ]
+              },
+              "order": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

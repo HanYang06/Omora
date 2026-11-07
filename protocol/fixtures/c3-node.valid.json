@@ -1,5 +1,67 @@
 {
   "type": "Stack",
-  "props": { "direction": "vertical" },
-  "children": [{ "type": "Text", "props": { "text": "hello" } }]
+  "props": {
+    "direction": "vertical",
+    "gap": 12
+  },
+  "children": [
+    {
+      "type": "Text",
+      "props": {
+        "text": "灵感",
+        "variant": "title"
+      }
+    },
+    {
+      "type": "List",
+      "props": {
+        "items": "$ideas",
+        "emptyText": "还没有内容"
+      },
+      "children": [
+        {
+          "type": "Card",
+          "props": {
+            "title": "$item.title"
+          },
+          "children": [
+            {
+              "type": "Text",
+              "props": {
+                "text": "$item.body",
+                "variant": "body"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Input",
+      "props": {
+        "placeholder": "记一句",
+        "value": ""
+      },
+      "on": {
+        "submit": {
+          "command": "ideas.create",
+          "args": {
+            "title": "$value"
+          }
+        }
+      }
+    },
+    {
+      "type": "Button",
+      "props": {
+        "label": "保存",
+        "variant": "primary"
+      },
+      "on": {
+        "click": {
+          "command": "ideas.flush"
+        }
+      }
+    }
+  ]
 }

@@ -1,0 +1,17 @@
+{
+  "id": "omora.ideas",
+  "name": "Ideas",
+  "version": "0.1.0",
+  "engines": {
+    "omora": "^0.1.0"
+  },
+  "runtime": "python",
+  "entry": "omora_plugins_ideas:plugin",
+  "activation": [
+    "onStartup"
+  ],
+  "capabilities": [
+    "storage",
+    "teleport"
+  ]
+}

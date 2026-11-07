@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "cmd.invoke",
+  "params": {
+    "name": "ideas.create",
+    "args": {
+      "title": "把协议写下来"
+    },
+    "idempotencyKey": "3f2b9c1a"
+  }
+}
