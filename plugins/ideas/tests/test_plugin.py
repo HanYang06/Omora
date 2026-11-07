@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import jsonschema
+import pytest
 from omora_plugins_ideas import plugin
 from omora_sdk import (
     ClockApi,
@@ -25,7 +26,9 @@ from omora_sdk import (
     Listener,
     LogApi,
     Node,
+    QueryApi,
     Reducer,
+    ServiceApi,
     StateApi,
     UiApi,
     View,
@@ -66,6 +69,32 @@ class FakeCommandApi:
 
     async def invoke(self, name: str, args: Mapping[str, object]) -> object:
         return await self.handlers[name](args)
+
+
+class FakeQueryApi:
+    def __init__(self) -> None:
+        self.handlers: dict[str, Handler] = {}
+
+    def register(self, name: str, handler: Handler) -> None:
+        self.handlers[name] = handler
+
+
+class FakeServiceApi:
+    """记录调用,按测试预置的回复返回;没预置就报错,避免静默通过。"""
+
+    def __init__(self) -> None:
+        self.provided: dict[str, Handler] = {}
+        self.calls: list[tuple[str, Mapping[str, object]]] = []
+        self.replies: dict[str, object] = {}
+
+    def provide(self, name: str, handler: Handler) -> None:
+        self.provided[name] = handler
+
+    async def call(self, name: str, args: Mapping[str, object]) -> object:
+        self.calls.append((name, dict(args)))
+        if name not in self.replies:
+            raise RuntimeError(f"测试没有为服务 {name} 准备回复")
+        return self.replies[name]
 
 
 class FakeEventApi:
@@ -128,7 +157,9 @@ class FakeContext:
 
     plugin_id: str
     commands: CommandApi
+    queries: QueryApi
     events: EventApi
+    services: ServiceApi
     state: StateApi
     ui: UiApi
     log: LogApi
@@ -141,8 +172,12 @@ class FakeContext:
         self.fake_events = FakeEventApi()
         self.fake_state = FakeStateApi()
         self.fake_ui = FakeUiApi()
+        self.fake_queries = FakeQueryApi()
+        self.fake_services = FakeServiceApi()
         self.commands = self.fake_commands
+        self.queries = self.fake_queries
         self.events = self.fake_events
+        self.services = self.fake_services
         self.state = self.fake_state
         self.ui = self.fake_ui
         self.log = FakeLogApi()
@@ -184,9 +219,17 @@ def _find(nodes: Sequence[Node], node_type: str) -> list[Node]:
 def test_activate_registers_commands_contribution_and_reducers() -> None:
     context = _activated()
 
-    assert set(context.fake_commands.handlers) == {"ideas.create", "ideas.archive"}
+    assert set(context.fake_commands.handlers) == {
+        "ideas.create",
+        "ideas.archive",
+        "ideas.assign",
+    }
     assert set(context.fake_ui.contributions) == {"ideas.sidebar"}
-    assert set(context.fake_state.reducers) == {"ideas.created", "ideas.archived"}
+    assert set(context.fake_state.reducers) == {
+        "ideas.created",
+        "ideas.archived",
+        "ideas.assigned",
+    }
 
 
 def test_create_emits_created_event_with_title_and_injected_id() -> None:
@@ -290,3 +333,40 @@ def test_manifest_version_matches_repository_version() -> None:
     expected = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
     assert _manifest()["version"] == expected
+
+
+def test_assign_asks_projects_service_and_emits_event() -> None:
+    context = _activated()
+    context.fake_services.replies["projects.lookup"] = {"id": "p1", "title": "Omora"}
+
+    asyncio.run(context.fake_commands.invoke("ideas.assign", {"id": "idea-1", "projectId": "p1"}))
+
+    assert context.fake_services.calls == [("projects.lookup", {"id": "p1"})], (
+        "分诊前必须向 projects 服务确认项目存在"
+    )
+    assert context.fake_events.emitted == [
+        ("ideas.assigned", {"id": "idea-1", "projectId": "p1", "projectTitle": "Omora"})
+    ]
+
+
+def test_assigned_event_folds_project_into_item() -> None:
+    context = _activated()
+    asyncio.run(context.fake_commands.invoke("ideas.create", {"title": "写协议"}))
+    context.fake_services.replies["projects.lookup"] = {"id": "p1", "title": "Omora"}
+    asyncio.run(context.fake_commands.invoke("ideas.assign", {"id": "idea-1", "projectId": "p1"}))
+    context.replay()
+
+    items = cast("list[dict[str, object]]", context.fake_state.read()["items"])
+    assert items[0]["projectId"] == "p1"
+    assert items[0]["projectTitle"] == "Omora"
+
+
+def test_assign_emits_nothing_when_service_is_unavailable() -> None:
+    context = _activated()
+
+    with pytest.raises(RuntimeError):
+        asyncio.run(
+            context.fake_commands.invoke("ideas.assign", {"id": "idea-1", "projectId": "p1"})
+        )
+
+    assert context.fake_events.emitted == [], "服务不可用时不能留下归属事件"
