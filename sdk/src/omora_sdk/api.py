@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Mapping, Sequence
+from datetime import datetime
 from typing import Protocol
 
 from .ui import Node
 
 Handler = Callable[[Mapping[str, object]], Awaitable[object]]
 Listener = Callable[[Mapping[str, object]], Awaitable[None]]
+Reducer = Callable[[dict[str, object], Mapping[str, object]], None]
 View = Callable[[Mapping[str, object]], Sequence[Node]]
 
 
@@ -19,11 +21,19 @@ class CommandApi(Protocol):
 
 
 class EventApi(Protocol):
-    """发布事件与订阅事件;事件是唯一的跨插件通信方式。"""
+    """发布事件与订阅事件;事件是插件间唯一的通信方式。"""
 
     def emit(self, event_type: str, data: Mapping[str, object]) -> None: ...
 
     def subscribe(self, event_type: str, listener: Listener) -> None: ...
+
+
+class StateApi(Protocol):
+    """本插件的状态切片:登记折叠规则,只读回自己的投影。"""
+
+    def register(self, event_type: str, reducer: Reducer) -> None: ...
+
+    def read(self) -> Mapping[str, object]: ...
 
 
 class UiApi(Protocol):
@@ -42,11 +52,26 @@ class LogApi(Protocol):
     def error(self, message: str) -> None: ...
 
 
+class IdApi(Protocol):
+    """标识符生成器;由宿主注入,测试里可替换为确定序列。"""
+
+    def next(self) -> str: ...
+
+
+class ClockApi(Protocol):
+    """时钟;由宿主注入,插件不许直接读系统时间。"""
+
+    def now(self) -> datetime: ...
+
+
 class PluginContext(Protocol):
     """宿主交给插件的全部东西,不多不少。"""
 
     plugin_id: str
     commands: CommandApi
     events: EventApi
+    state: StateApi
     ui: UiApi
     log: LogApi
+    ids: IdApi
+    clock: ClockApi
