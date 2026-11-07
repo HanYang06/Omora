@@ -58,6 +58,7 @@ def test_activate_registers_commands_query_service_and_contribution() -> None:
         "projects.created",
         "projects.archived",
         "ideas.assigned",
+        "projects.focused",
     }
 
 
@@ -85,6 +86,7 @@ def test_created_event_folds_into_items() -> None:
                 "at": NOW.isoformat(),
                 "ideas": [],
                 "ideaCountLabel": "0 条灵感",
+                "label": "写作台",
             }
         ]
     }
@@ -158,7 +160,7 @@ def test_sidebar_lists_project_titles_with_empty_state_text() -> None:
     leaves = _children(row)
     assert [leaf["type"] for leaf in leaves] == ["Button", "Text"]
     label = cast("dict[str, object]", leaves[0]["props"])["label"]
-    assert label == "$item.title", "点标题就是看这个项目"
+    assert label == "$item.label", "点标题就是看这个项目"
     count = cast("dict[str, object]", leaves[1]["props"])["text"]
     assert count == "$item.ideaCountLabel"
 
@@ -247,3 +249,17 @@ def test_create_rejects_blank_title() -> None:
         asyncio.run(context.fake_commands.invoke("projects.create", {"title": "  "}))
 
     assert context.fake_events.emitted == [], "空标题不该产生任何事件"
+
+
+def test_focused_project_is_marked_in_the_list() -> None:
+    context = _activated()
+    asyncio.run(context.fake_commands.invoke("projects.create", {"title": "写作台"}))
+    context.replay()
+
+    asyncio.run(
+        context.fake_events.emit("projects.focused", {"id": "project-1", "title": "写作台"})
+    )
+    context.replay()
+
+    items = cast("list[dict[str, object]]", context.fake_state.read()["items"])
+    assert items[0]["label"] == "▸ 写作台", "当前项目要在列表里看得出来"

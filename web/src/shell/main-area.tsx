@@ -14,12 +14,20 @@ export interface MainAreaProps {
 const MAIN_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "var(--omora-space-xl)",
   minWidth: 0,
   minHeight: 0,
   overflowY: "auto",
   padding: "var(--omora-space-xl)",
   background: "var(--omora-color-bg)",
+};
+
+const COLUMN_STYLE: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "var(--omora-space-xl)",
+  width: "100%",
+  maxWidth: "68rem",
+  margin: "0 auto",
 };
 
 export function MainArea({
@@ -30,13 +38,15 @@ export function MainArea({
 }: MainAreaProps): ReactElement {
   return (
     <main data-slot="main" style={MAIN_STYLE}>
-      <SlotContent
-        contributions={contributions}
-        onCommand={onCommand}
-        emptyTitle={emptyTitle}
-        emptyHint={emptyHint}
-        fill
-      />
+      <div style={COLUMN_STYLE}>
+        <SlotContent
+          contributions={contributions}
+          onCommand={onCommand}
+          emptyTitle={emptyTitle}
+          emptyHint={emptyHint}
+          fill
+        />
+      </div>
     </main>
   );
 }
