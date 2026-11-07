@@ -26,6 +26,10 @@
       {
         "id": "requirements.setStatus",
         "title": "推进需求状态"
+      },
+      {
+        "id": "requirements.remove",
+        "title": "删除需求"
       }
     ],
     "slots": [

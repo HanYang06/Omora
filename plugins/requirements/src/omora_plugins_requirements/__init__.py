@@ -6,36 +6,29 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from typing import cast
 
-from omora_sdk import (
-    Handler,
-    Node,
-    Plugin,
-    PluginContext,
-    button,
-    card,
-    input_,
-    list_,
-    stack,
-    text,
+from omora_sdk import Handler, Plugin, PluginContext
+
+from .constants import (
+    CREATE_COMMAND,
+    CREATED_EVENT,
+    FOCUSED_EVENT,
+    LIST_QUERY,
+    MAIN_CONTRIBUTION_ID,
+    PLUGIN_ID,
+    PROJECT_LOOKUP_SERVICE,
+    REMOVE_COMMAND,
+    REMOVED_EVENT,
+    SET_STATUS_COMMAND,
+    STATUS_CHANGED_EVENT,
+    STATUS_DOING,
+    STATUS_DONE,
+    STATUS_TODO,
+    STATUSES,
 )
-
-PLUGIN_ID = "omora.requirements"
-MAIN_CONTRIBUTION_ID = "requirements.main"
-CREATE_COMMAND = "requirements.create"
-SET_STATUS_COMMAND = "requirements.setStatus"
-LIST_QUERY = "requirements.list"
-PROJECT_LOOKUP_SERVICE = "projects.lookup"
-FOCUSED_EVENT = "projects.focused"
-CREATED_EVENT = "requirements.created"
-STATUS_CHANGED_EVENT = "requirements.statusChanged"
-
-STATUS_TODO = "todo"
-STATUS_DOING = "doing"
-STATUS_DONE = "done"
-STATUSES = frozenset({STATUS_TODO, STATUS_DOING, STATUS_DONE})
+from .views import build_view
 
 
 def _item_list(state: dict[str, object]) -> list[dict[str, object]]:
@@ -101,6 +94,16 @@ def _fold_status_changed(state: dict[str, object], data: Mapping[str, object]) -
             item["status"] = status
             item["statusLabel"] = _label(status)
             item["nextStatus"] = NEXT_STATUS.get(status, STATUS_DONE)
+    _recompute(state)
+
+
+def _fold_removed(state: dict[str, object], data: Mapping[str, object]) -> None:
+    """把 requirements.removed 对应的条目移除;其余条目不受影响。"""
+    identifier = data.get("id")
+    if not isinstance(identifier, str):
+        return
+    items = _item_list(state)
+    items[:] = [item for item in items if item.get("id") != identifier]
     _recompute(state)
 
 
@@ -197,6 +200,19 @@ def _set_status_command(ctx: PluginContext) -> Handler:
     return set_status
 
 
+def _remove_command(ctx: PluginContext) -> Handler:
+    """requirements.remove:删掉一条需求。"""
+
+    async def remove(args: Mapping[str, object]) -> object:
+        identifier = _string_arg(args, "id")
+        if not identifier:
+            raise ValueError("删除需求需要 id")
+        await ctx.events.emit(REMOVED_EVENT, {"id": identifier})
+        return None
+
+    return remove
+
+
 def _list_query(ctx: PluginContext) -> Handler:
     """requirements.list:按 QueryResult 的要求返回 {"items": [...]}。"""
 
@@ -204,48 +220,6 @@ def _list_query(ctx: PluginContext) -> Handler:
         return {"items": [dict(item) for item in _requirement_items(ctx.state.read())]}
 
     return list_requirements
-
-
-def _view(_state: Mapping[str, object]) -> Sequence[Node]:
-    """main 贡献:需求列表,每条显示标题、状态与「推进」按钮。"""
-    return [
-        stack(
-            [
-                text("需求", variant="title"),
-                text("$focusLabel", variant="caption"),
-                input_(
-                    "新需求",
-                    submit=CREATE_COMMAND,
-                    args={"title": "$value", "projectId": "$focusedProjectId"},
-                ),
-                list_(
-                    "$visible",
-                    [
-                        card(
-                            [
-                                text("$item.title", variant="subtitle"),
-                                stack(
-                                    [
-                                        text("$item.projectTitle", variant="caption"),
-                                        text("$item.statusLabel", variant="caption"),
-                                        button(
-                                            "推进",
-                                            command=SET_STATUS_COMMAND,
-                                            args={"id": "$item.id", "status": "$item.nextStatus"},
-                                            variant="ghost",
-                                        ),
-                                    ],
-                                    direction="horizontal",
-                                    gap=12,
-                                ),
-                            ]
-                        )
-                    ],
-                    empty_text="还没有需求",
-                ),
-            ]
-        )
-    ]
 
 
 class RequirementsPlugin:
@@ -256,10 +230,12 @@ class RequirementsPlugin:
         ctx.state.register(CREATED_EVENT, _fold_created)
         ctx.state.register(STATUS_CHANGED_EVENT, _fold_status_changed)
         ctx.state.register(FOCUSED_EVENT, _fold_focus)
+        ctx.state.register(REMOVED_EVENT, _fold_removed)
         ctx.commands.register(CREATE_COMMAND, _create_command(ctx))
         ctx.commands.register(SET_STATUS_COMMAND, _set_status_command(ctx))
+        ctx.commands.register(REMOVE_COMMAND, _remove_command(ctx))
         ctx.queries.register(LIST_QUERY, _list_query(ctx))
-        ctx.ui.contribute(MAIN_CONTRIBUTION_ID, _view)
+        ctx.ui.contribute(MAIN_CONTRIBUTION_ID, build_view)
 
     async def deactivate(self) -> None:
         """登记项随宿主作用域回收,插件没有需要手动清理的东西。"""
