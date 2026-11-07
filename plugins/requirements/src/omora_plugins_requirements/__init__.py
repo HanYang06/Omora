@@ -26,6 +26,7 @@ MAIN_CONTRIBUTION_ID = "requirements.main"
 CREATE_COMMAND = "requirements.create"
 SET_STATUS_COMMAND = "requirements.setStatus"
 LIST_QUERY = "requirements.list"
+PROJECT_LOOKUP_SERVICE = "projects.lookup"
 CREATED_EVENT = "requirements.created"
 STATUS_CHANGED_EVENT = "requirements.statusChanged"
 
@@ -58,6 +59,7 @@ def _requirement_items(state: Mapping[str, object]) -> list[dict[str, object]]:
 
 
 STATUS_LABELS = {"todo": "待办", "doing": "进行中", "done": "已完成"}
+NEXT_STATUS = {"todo": STATUS_DOING, "doing": STATUS_DONE, "done": STATUS_DONE}
 
 
 def _label(status: object) -> str:
@@ -76,8 +78,10 @@ def _fold_created(state: dict[str, object], data: Mapping[str, object]) -> None:
             "id": identifier,
             "title": title,
             "projectId": data.get("projectId"),
+            "projectTitle": data.get("projectTitle", ""),
             "status": data.get("status"),
             "statusLabel": _label(data.get("status")),
+            "nextStatus": NEXT_STATUS.get(str(data.get("status")), STATUS_DONE),
             "at": data.get("at"),
         }
     )
@@ -93,6 +97,7 @@ def _fold_status_changed(state: dict[str, object], data: Mapping[str, object]) -
         if item.get("id") == identifier:
             item["status"] = status
             item["statusLabel"] = _label(status)
+            item["nextStatus"] = NEXT_STATUS.get(status, STATUS_DONE)
 
 
 def _string_arg(args: Mapping[str, object], key: str) -> str:
@@ -109,17 +114,34 @@ def _status_arg(args: Mapping[str, object]) -> str:
     return value
 
 
+async def _project_title(ctx: PluginContext, project_id: str) -> str:
+    """问 projects 要项目名;没装或查不到就留空,不让建需求失败。"""
+    if not project_id:
+        return ""
+    try:
+        found = await ctx.services.call(PROJECT_LOOKUP_SERVICE, {"id": project_id})
+    except Exception:
+        ctx.log.warn(f"无法解析项目 {project_id},需求将不显示项目名")
+        return ""
+    if not isinstance(found, Mapping):
+        return ""
+    title = cast("Mapping[str, object]", found).get("title")
+    return title if isinstance(title, str) else ""
+
+
 def _create_command(ctx: PluginContext) -> Handler:
     """requirements.create:新建需求,初始状态 todo。"""
 
     async def create(args: Mapping[str, object]) -> object:
         requirement_id = ctx.ids.next()
+        project_id = _string_arg(args, "projectId")
         await ctx.events.emit(
             CREATED_EVENT,
             {
                 "id": requirement_id,
                 "title": _string_arg(args, "title"),
-                "projectId": _string_arg(args, "projectId"),
+                "projectId": project_id,
+                "projectTitle": await _project_title(ctx, project_id),
                 "status": STATUS_TODO,
                 "at": ctx.clock.now().isoformat(),
             },
@@ -165,11 +187,12 @@ def _view(_state: Mapping[str, object]) -> Sequence[Node]:
                                 text("$item.title", variant="subtitle"),
                                 stack(
                                     [
+                                        text("$item.projectTitle", variant="caption"),
                                         text("$item.statusLabel", variant="caption"),
                                         button(
                                             "推进",
                                             command=SET_STATUS_COMMAND,
-                                            args={"id": "$item.id", "status": STATUS_DOING},
+                                            args={"id": "$item.id", "status": "$item.nextStatus"},
                                             variant="ghost",
                                         ),
                                     ],

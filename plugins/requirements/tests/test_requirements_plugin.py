@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -85,8 +85,16 @@ def test_activate_registers_commands_query_and_contribution() -> None:
     }
 
 
+def _provide_project_lookup(context: FakeContext, title: str) -> None:
+    async def lookup(args: Mapping[str, object]) -> object:
+        return {"id": args.get("id"), "title": title}
+
+    context.fake_services.provide("projects.lookup", lookup)
+
+
 def test_create_emits_created_event_with_project_and_initial_todo_status() -> None:
     context = _activated()
+    _provide_project_lookup(context, "Omora P1")
 
     result = _create(context, "导出需求", "project-1")
 
@@ -98,11 +106,22 @@ def test_create_emits_created_event_with_project_and_initial_todo_status() -> No
                 "id": "requirement-1",
                 "title": "导出需求",
                 "projectId": "project-1",
+                "projectTitle": "Omora P1",
                 "status": "todo",
                 "at": NOW.isoformat(),
             },
         )
     ]
+
+
+def test_create_still_works_when_projects_plugin_is_absent() -> None:
+    context = _activated()
+
+    asyncio.run(context.fake_commands.invoke("requirements.create", {"title": "独立需求"}))
+
+    event_type, data = context.fake_events.emitted[-1]
+    assert event_type == "requirements.created"
+    assert data["projectTitle"] == "", "拿不到项目名时留空,而不是让建需求失败"
 
 
 def test_created_event_folds_into_items() -> None:
@@ -116,8 +135,10 @@ def test_created_event_folds_into_items() -> None:
                 "id": "requirement-1",
                 "title": "导出需求",
                 "projectId": "project-1",
+                "projectTitle": "",
                 "status": "todo",
                 "statusLabel": "待办",
+                "nextStatus": "doing",
                 "at": NOW.isoformat(),
             }
         ]
@@ -201,7 +222,11 @@ def test_requirement_row_shows_title_and_status() -> None:
     texts = _find(_rows(_activated()), "Text")
 
     props = [cast("dict[str, object]", node["props"]) for node in texts]
-    assert [entry["text"] for entry in props] == ["$item.title", "$item.statusLabel"]
+    assert [entry["text"] for entry in props] == [
+        "$item.title",
+        "$item.projectTitle",
+        "$item.statusLabel",
+    ]
 
 
 def test_advance_button_binds_item_id_and_doing_status() -> None:
@@ -209,7 +234,10 @@ def test_advance_button_binds_item_id_and_doing_status() -> None:
 
     assert len(buttons) == 1
     assert buttons[0]["on"] == {
-        "click": {"command": SET_STATUS_COMMAND, "args": {"id": "$item.id", "status": "doing"}}
+        "click": {
+            "command": SET_STATUS_COMMAND,
+            "args": {"id": "$item.id", "status": "$item.nextStatus"},
+        }
     }
 
 
