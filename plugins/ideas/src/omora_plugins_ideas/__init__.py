@@ -96,14 +96,13 @@ def _assign_command(ctx: PluginContext) -> Handler:
         if not isinstance(idea_id, str) or not isinstance(project_id, str):
             raise ValueError("ideas.assign 需要 id 与 projectId")
         found = await ctx.services.call(PROJECT_LOOKUP_SERVICE, {"id": project_id})
-        project_title = found.get("title") if isinstance(found, Mapping) else None
+        title = ""
+        if isinstance(found, Mapping):
+            raw = cast("Mapping[str, object]", found).get("title")
+            title = raw if isinstance(raw, str) else ""
         await ctx.events.emit(
             ASSIGNED_EVENT,
-            {
-                "id": idea_id,
-                "projectId": project_id,
-                "projectTitle": project_title if isinstance(project_title, str) else "",
-            },
+            {"id": idea_id, "projectId": project_id, "projectTitle": title},
         )
         return None
 

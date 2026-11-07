@@ -6,11 +6,11 @@ import asyncio
 from typing import cast
 
 import pytest
-from support import _activated
+from support import activated
 
 
 def test_assign_asks_projects_service_and_emits_event() -> None:
-    context = _activated()
+    context = activated()
     context.fake_services.replies["projects.lookup"] = {"id": "p1", "title": "Omora"}
 
     asyncio.run(context.fake_commands.invoke("ideas.assign", {"id": "idea-1", "projectId": "p1"}))
@@ -24,7 +24,7 @@ def test_assign_asks_projects_service_and_emits_event() -> None:
 
 
 def test_assigned_event_folds_project_into_item() -> None:
-    context = _activated()
+    context = activated()
     asyncio.run(context.fake_commands.invoke("ideas.create", {"title": "写协议"}))
     context.fake_services.replies["projects.lookup"] = {"id": "p1", "title": "Omora"}
     asyncio.run(context.fake_commands.invoke("ideas.assign", {"id": "idea-1", "projectId": "p1"}))
@@ -36,7 +36,7 @@ def test_assigned_event_folds_project_into_item() -> None:
 
 
 def test_assign_emits_nothing_when_service_is_unavailable() -> None:
-    context = _activated()
+    context = activated()
 
     with pytest.raises(RuntimeError):
         asyncio.run(

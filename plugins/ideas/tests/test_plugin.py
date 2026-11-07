@@ -8,11 +8,11 @@ from typing import cast
 
 import jsonschema
 from omora_sdk import Node
-from support import NOW, ROOT, _activated, _find, _load, _manifest
+from support import NOW, ROOT, activated, find_nodes, load_json, manifest
 
 
 def test_activate_registers_commands_contribution_and_reducers() -> None:
-    context = _activated()
+    context = activated()
 
     assert set(context.fake_commands.handlers) == {
         "ideas.create",
@@ -28,7 +28,7 @@ def test_activate_registers_commands_contribution_and_reducers() -> None:
 
 
 def test_create_emits_created_event_with_title_and_injected_id() -> None:
-    context = _activated()
+    context = activated()
 
     asyncio.run(context.fake_commands.invoke("ideas.create", {"title": "把协议写下来"}))
 
@@ -38,7 +38,7 @@ def test_create_emits_created_event_with_title_and_injected_id() -> None:
 
 
 def test_create_ids_follow_injected_sequence() -> None:
-    context = _activated()
+    context = activated()
 
     asyncio.run(context.fake_commands.invoke("ideas.create", {"title": "第一"}))
     asyncio.run(context.fake_commands.invoke("ideas.create", {"title": "第二"}))
@@ -47,7 +47,7 @@ def test_create_ids_follow_injected_sequence() -> None:
 
 
 def test_created_event_folds_into_items() -> None:
-    context = _activated()
+    context = activated()
 
     asyncio.run(context.fake_commands.invoke("ideas.create", {"title": "写协议"}))
     context.replay()
@@ -58,7 +58,7 @@ def test_created_event_folds_into_items() -> None:
 
 
 def test_archived_event_removes_only_that_item() -> None:
-    context = _activated()
+    context = activated()
     asyncio.run(context.fake_commands.invoke("ideas.create", {"title": "保留"}))
     asyncio.run(context.fake_commands.invoke("ideas.create", {"title": "归档"}))
     context.replay()
@@ -73,7 +73,7 @@ def test_archived_event_removes_only_that_item() -> None:
 
 
 def test_unknown_event_leaves_items_unchanged() -> None:
-    context = _activated()
+    context = activated()
     asyncio.run(context.fake_commands.invoke("ideas.create", {"title": "写协议"}))
     context.replay()
     before = copy.deepcopy(context.fake_state.read())
@@ -85,31 +85,31 @@ def test_unknown_event_leaves_items_unchanged() -> None:
 
 
 def test_sidebar_view_passes_c3_schema() -> None:
-    context = _activated()
+    context = activated()
     view = context.fake_ui.contributions["ideas.sidebar"]
 
     nodes: list[Node] = list(view(context.fake_state.read()))
 
     assert [node["type"] for node in nodes] == ["Stack"]
-    schema = _load(ROOT / "protocol" / "c3-node.schema.json")
+    schema = load_json(ROOT / "protocol" / "c3-node.schema.json")
     for node in nodes:
         jsonschema.validate(instance=node, schema=schema)
 
 
 def test_sidebar_input_passes_typed_text_as_title() -> None:
-    context = _activated()
+    context = activated()
     view = context.fake_ui.contributions["ideas.sidebar"]
 
-    inputs = _find(list(view(context.fake_state.read())), "Input")
+    inputs = find_nodes(list(view(context.fake_state.read())), "Input")
 
     assert len(inputs) == 1
     actions = cast("dict[str, object]", inputs[0]["on"])
     assert actions["submit"] == {"command": "ideas.create", "args": {"title": "$value"}}
 
 
-def test_registered_commands_and_slots_match_manifest() -> None:
-    context = _activated()
-    payload = _manifest()
+def test_registered_commands_and_slots_matchmanifest() -> None:
+    context = activated()
+    payload = manifest()
 
     declared_commands = {entry["id"] for entry in payload["contributes"]["commands"]}
     declared_slots = {entry["id"] for entry in payload["contributes"]["slots"]}
@@ -120,11 +120,11 @@ def test_registered_commands_and_slots_match_manifest() -> None:
 
 def test_manifest_passes_c2_schema() -> None:
     jsonschema.validate(
-        instance=_manifest(), schema=_load(ROOT / "protocol" / "c2-manifest.schema.json")
+        instance=manifest(), schema=load_json(ROOT / "protocol" / "c2-manifest.schema.json")
     )
 
 
 def test_manifest_version_matches_repository_version() -> None:
     expected = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
-    assert _manifest()["version"] == expected
+    assert manifest()["version"] == expected

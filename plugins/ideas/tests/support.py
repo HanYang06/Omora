@@ -188,25 +188,25 @@ class FakeContext:
         self._folded = len(self.fake_events.emitted)
 
 
-def _activated() -> FakeContext:
+def activated() -> FakeContext:
     context = FakeContext()
     asyncio.run(plugin.activate(context))
     return context
 
 
-def _load(path: Path) -> dict[str, Any]:
+def load_json(path: Path) -> dict[str, Any]:
     return cast("dict[str, Any]", json.loads(path.read_text(encoding="utf-8")))
 
 
-def _manifest() -> dict[str, Any]:
-    return _load(ROOT / "plugins" / "ideas" / "plugin.json")
+def manifest() -> dict[str, Any]:
+    return load_json(ROOT / "plugins" / "ideas" / "plugin.json")
 
 
-def _find(nodes: Sequence[Node], node_type: str) -> list[Node]:
+def find_nodes(nodes: Sequence[Node], node_type: str) -> list[Node]:
     """递归找出指定类型的节点。"""
     found = [node for node in nodes if node["type"] == node_type]
     for node in nodes:
         children = node.get("children")
         if isinstance(children, list):
-            found.extend(_find(cast("list[Node]", children), node_type))
+            found.extend(find_nodes(cast("list[Node]", children), node_type))
     return found
