@@ -33,19 +33,24 @@ export function applyEvent(projection: Projection, event: C1Event): ApplyResult 
   }
   const next: Projection = {
     revision: event.revision,
-    state: replaceOwnerSlice(projection.state, event),
+    state: applySliceUpdates(projection.state, event),
     ui: projection.ui,
     events: [...projection.events, event],
   };
   return { status: "applied", projection: next };
 }
 
-function replaceOwnerSlice(
+function applySliceUpdates(
   state: Record<string, unknown>,
   event: C1Event,
 ): Record<string, unknown> {
-  if (event.owner === undefined || event.state === undefined) {
+  const updates = event.updates;
+  if (updates === undefined || updates.length === 0) {
     return state;
   }
-  return { ...state, [event.owner]: event.state };
+  const next: Record<string, unknown> = { ...state };
+  for (const update of updates) {
+    next[update.owner] = update.state;
+  }
+  return next;
 }
