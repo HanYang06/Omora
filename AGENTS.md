@@ -136,10 +136,11 @@ Omora：本地优先的灵感与项目管理工具。灵感、项目、需求互
 - [核心边界](docs/architecture/core-surface.md)
 - [工程纪律](docs/engineering/discipline.md)
 - [依赖登记](docs/engineering/dependencies.md)
-- [P0 计划](docs/roadmap/p0.md)
+- [P0 计划](docs/roadmap/p0.md) · [P1 计划](docs/roadmap/p1.md)
 - [ADR-0001 技术栈](docs/decisions/0001-stack-and-runtime.md)
 - [ADR-0002 核心边界](docs/decisions/0002-core-boundary.md)
 - [ADR-0003 统一版本](docs/decisions/0003-unified-versioning.md)
+- [ADR-0004 插件边界](docs/decisions/0004-plugin-boundary.md)
 - 项目 skill：`omora-project`、`omora-testing`、`omora-git`
 
 ## 维护本文件
