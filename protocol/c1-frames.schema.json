@@ -143,7 +143,7 @@
           "additionalProperties": false,
           "properties": {
             "jsonrpc": { "const": "2.0" },
-            "id": { "$ref": "#/$defs/RequestId" },
+            "id": { "$ref": "#/$defs/ResponseId" },
             "error": {
               "type": "object",
               "required": ["code", "message"],
@@ -232,6 +232,10 @@
           }
         }
       }
+    },
+    "ResponseId": {
+      "type": ["string", "integer", "null"],
+      "description": "错误响应在请求 id 无法解析时用 null"
     }
   }
 }

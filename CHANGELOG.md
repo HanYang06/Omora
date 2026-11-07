@@ -11,6 +11,7 @@
 - 新增 C2 清单 schema：`id` `version` `engines` `runtime` `entry` `activation` `capabilities` `contributes`。
 - 新增 C1 帧 schema：`state.snapshot` `cmd.invoke` `query.invoke` `event.subscribe` `ping`，以及下行 `event` 通知；错误码收敛为 `E_INVALID` `E_DENIED` `E_UNAVAILABLE` `E_INTERNAL`。
 - `state.snapshot` 的返回补上 `ui` 槽位投影：槽位名 → 贡献列表（`owner` + 节点树）；`state` 明确以插件 id 为键。
+- 错误响应的 `id` 允许 `null`（请求 id 无法解析时），成功响应仍必须是字符串或整数。
 - 下行 `event` 通知可携带 `owner` 与 `state`（折叠后的完整切片），让前端不必懂业务规则就能更新投影；补发事件不带这两项。
 - 新增生成物 `protocol/generated/contract.ts`，门禁新增 `contract.types` 阶段：重新生成后 diff 必须为空。
 

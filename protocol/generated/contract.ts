@@ -47,7 +47,7 @@ export type ErrorCode = "E_INVALID" | "E_DENIED" | "E_UNAVAILABLE" | "E_INTERNAL
 
 export type Response =
   | { jsonrpc: "2.0"; id: RequestId; result: Record<string, unknown> | unknown[] | string | number | boolean | null }
-  | { jsonrpc: "2.0"; id: RequestId; error: { code: ErrorCode; message: string; data?: Record<string, unknown> } };
+  | { jsonrpc: "2.0"; id: ResponseId; error: { code: ErrorCode; message: string; data?: Record<string, unknown> } };
 
 export interface SnapshotResult {
   revision: number;
@@ -81,6 +81,8 @@ export interface SlotContribution {
 export interface UiSnapshot {
   slots: Record<string, SlotContribution[]>;
 }
+
+export type ResponseId = string | number | null;
 
 export interface C2Manifest {
   id: string;
