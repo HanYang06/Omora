@@ -160,7 +160,9 @@ JSON-RPC 的响应帧不带方法名，因此 `Response.result` 在帧 schema �
 
 ### 2.5 能力目录（内核授予）
 
-`storage` `events` `ui` `commands` `settings` `fs` `net` `secrets` `clipboard` `notifications` `jobs` `log`
+`storage` `events` `ui` `commands` `queries` `services` `settings` `fs` `net` `secrets` `clipboard` `notifications` `jobs` `log`
+
+能力在激活时一次性授予，运行期不可扩权：清单没声明的能力，插件调用时返回 `E_DENIED`，而不是静默成功。`log` 不受限制——用来诊断拒绝的工具不能被拒绝。
 
 ### 2.6 服务目录（插件提供）
 

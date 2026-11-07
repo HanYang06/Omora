@@ -14,6 +14,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import cast
 
+from omora_kernel.capabilities import DeniedError
 from omora_kernel.context import UnavailableError
 from omora_kernel.contract.c1 import (
     CommandHandler,
@@ -153,6 +154,8 @@ class _Connection:
     async def _handle(self, frame: RequestFrame) -> None:
         try:
             result = await self._dispatch(frame)
+        except DeniedError as error:
+            self._send_frame(_error_frame(frame.id, "E_DENIED", str(error) or "能力未授予"))
         except UnavailableError as error:
             self._send_frame(_error_frame(frame.id, "E_UNAVAILABLE", str(error) or "依赖不可用"))
         except ValueError as error:
