@@ -1,75 +1,84 @@
-import type { CSSProperties, ReactElement } from "react";
+import { useEffect, useState, type CSSProperties, type ReactElement } from "react";
 
-import type { C3Node, CmdInvokeParams } from "../contract";
-import { NodeRenderer } from "../renderer";
-import type { BindingScope } from "../renderer/binding";
+import type { CmdInvokeParams } from "../contract";
+import { CommandPalette } from "./command-palette";
+import { MainArea } from "./main-area";
+import { isPaletteShortcut } from "./palette-logic";
+import { Sidebar } from "./sidebar";
+import type { ConnectionStatus, ShellCommand, SlotContribution, SlotName } from "./types";
 
-export const SLOT_NAMES = ["sidebar", "main"] as const;
-
-export type SlotName = (typeof SLOT_NAMES)[number];
-
-export interface SlotContribution {
-  nodes: readonly C3Node[];
-  scope?: BindingScope;
-}
+export { SLOT_NAMES } from "./types";
+export type { SlotContribution, SlotName } from "./types";
 
 export interface ShellProps {
   contributions: Partial<Record<SlotName, readonly SlotContribution[]>>;
+  commands?: readonly ShellCommand[];
+  revision?: number;
+  status?: ConnectionStatus;
   onCommand?: ((command: CmdInvokeParams) => void) | undefined;
 }
 
 const SHELL_STYLE: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "minmax(12rem, 16rem) minmax(0, 1fr)",
+  gridTemplateColumns: "280px minmax(0, 1fr)",
   height: "100vh",
-  boxSizing: "border-box",
+  overflow: "hidden",
+  background: "var(--omora-color-bg)",
+  color: "var(--omora-color-fg)",
 };
 
-const SIDEBAR_STYLE: CSSProperties = {
-  minHeight: 0,
-  overflowY: "auto",
-  padding: "var(--omora-space-md, 16px)",
-  borderRight: "1px solid currentColor",
-};
+export function Shell({
+  contributions,
+  commands = [],
+  revision = 0,
+  status = "closed",
+  onCommand,
+}: ShellProps): ReactElement {
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
-const MAIN_STYLE: CSSProperties = {
-  minHeight: 0,
-  overflowY: "auto",
-  padding: "var(--omora-space-lg, 24px)",
-};
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        setPaletteOpen(false);
+        return;
+      }
+      if (!isPaletteShortcut(event)) {
+        return;
+      }
+      event.preventDefault();
+      setPaletteOpen((open) => !open);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
-export function Shell({ contributions, onCommand }: ShellProps): ReactElement {
+  const closePalette = (): void => {
+    setPaletteOpen(false);
+  };
+
+  const online = status === "online";
+
   return (
     <div data-shell="omora" style={SHELL_STYLE}>
-      <aside data-slot="sidebar" style={SIDEBAR_STYLE}>
-        <SlotContent contributions={contributions.sidebar} onCommand={onCommand} />
-      </aside>
-      <main data-slot="main" style={MAIN_STYLE}>
-        <SlotContent contributions={contributions.main} onCommand={onCommand} />
-      </main>
+      <Sidebar
+        contributions={contributions.sidebar}
+        onCommand={onCommand}
+        revision={revision}
+        status={status}
+      />
+      <MainArea
+        contributions={contributions.main}
+        onCommand={onCommand}
+        emptyTitle={online ? "主区还没有内容" : "未连接内核"}
+        emptyHint={
+          online ? "插件激活后，它的界面会出现在这里。" : "启动内核后，插件贡献的界面会出现在这里。"
+        }
+      />
+      {paletteOpen ? (
+        <CommandPalette commands={commands} onClose={closePalette} onInvoke={onCommand} />
+      ) : null}
     </div>
-  );
-}
-
-interface SlotContentProps {
-  contributions: readonly SlotContribution[] | undefined;
-  onCommand: ((command: CmdInvokeParams) => void) | undefined;
-}
-
-function SlotContent({ contributions, onCommand }: SlotContentProps): ReactElement | null {
-  if (contributions === undefined) {
-    return null;
-  }
-  return (
-    <>
-      {contributions.map((contribution, index) => (
-        <NodeRenderer
-          key={index}
-          nodes={contribution.nodes}
-          scope={contribution.scope ?? {}}
-          onCommand={onCommand}
-        />
-      ))}
-    </>
   );
 }
