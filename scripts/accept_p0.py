@@ -52,10 +52,19 @@ async def check_command(client: Client, revision: int) -> None:
     await client.call("cmd.invoke", {"name": "ideas.create", "args": {"title": "验收脚本写入"}})
     event = await client.next_event()
     require(cast("int", event.get("revision", 0)) > revision, "命令之后没有收到更大的 revision")
+    updates = event.get("updates")
     require(
-        event.get("owner") == "omora.ideas", f"事件没有归属到 ideas 插件，实际 {event.get('owner')}"
+        isinstance(updates, list) and len(cast("list[Any]", updates)) > 0, "事件没有携带切片更新"
     )
-    state = event.get("state")
+    slices = {
+        cast("dict[str, Any]", update).get("owner"): cast("dict[str, Any]", update).get("state")
+        for update in cast("list[Any]", updates)
+    }
+    require(
+        "omora.ideas" in slices,
+        f"事件没有更新 ideas 的切片，实际 {sorted(str(key) for key in slices)}",
+    )
+    state = slices["omora.ideas"]
     require(isinstance(state, dict), "实时事件没有携带折叠后的切片")
     items = cast("dict[str, Any]", state).get("items")
     require(isinstance(items, list), "切片里没有 items")

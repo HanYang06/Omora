@@ -24,6 +24,7 @@ Omora 是一个把「灵感」与「项目」连成一条线的本地优先工�
 | [decisions/0001-stack-and-runtime.md](decisions/0001-stack-and-runtime.md) | ADR：Python 内核 + TS 渲染层 | 已接受 |
 | [decisions/0002-core-boundary.md](decisions/0002-core-boundary.md) | ADR：核心与插件的边界 | 已接受 |
 | [decisions/0003-unified-versioning.md](decisions/0003-unified-versioning.md) | ADR：统一版本发布 | 已接受 |
+| [plugins/authoring.md](plugins/authoring.md) | 写一个插件：最小示例、能力面、四条硬规则 | 已定 |
 | [roadmap/p0.md](roadmap/p0.md) | P0 垂直切片：模块、目录、验收 | 已完成 |
 | [roadmap/p1.md](roadmap/p1.md) | P1：捕获、分诊、项目、需求、命令面板 | 进行中 |
 | [decisions/0004-plugin-boundary.md](decisions/0004-plugin-boundary.md) | ADR：插件间只有事件与服务 | 已接受 |

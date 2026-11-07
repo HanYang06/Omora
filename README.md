@@ -51,6 +51,8 @@ uv run python scripts/accept_p1.py --url ws://127.0.0.1:8765   # 捕捉 → 分�
 
 灵感、项目、需求这些词，只出现在 `plugins/` 里。官方插件与第三方插件走同一扇门，没有后门——`plugins/ideas` 和 `plugins/projects` 之间也只能通过事件与服务通信。
 
+想加功能？[写一个插件](docs/plugins/authoring.md)——两个文件、三十行，不需要改内核。
+
 细节：[架构总览](docs/architecture/overview.md) · [三份契约](docs/architecture/contracts.md) · [核心边界](docs/architecture/core-surface.md)
 
 ## 写代码之前

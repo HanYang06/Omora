@@ -66,8 +66,11 @@ async def check_loop(client: Client) -> None:
     state = cast("dict[str, Any]", snapshot["state"])
 
     projects = items_of(state, "omora.projects")
+    project_rows = [item for item in projects if item.get("id") == project_id]
+    require(bool(project_rows), "项目没有出现在 projects 切片里")
     require(
-        any(item.get("id") == project_id for item in projects), "项目没有出现在 projects 切片里"
+        project_rows[0].get("ideaCountLabel") == "1 条灵感",
+        "分诊之后项目切片里应该留下这条灵感(跨插件只读共享)",
     )
 
     requirements = items_of(state, "omora.requirements")
