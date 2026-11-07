@@ -140,7 +140,21 @@ class PluginHost:
         ):
             nodes = [dict(node) for node in view(self._runtime.state_slice(plugin_id))]
             slots.setdefault(slot, []).append({"owner": plugin_id, "nodes": nodes})
-        return {"slots": slots}
+        return {"slots": slots, "commands": self._active_commands()}
+
+    def _active_commands(self) -> list[dict[str, object]]:
+        """已激活插件在清单里声明的命令，供命令面板之类的前端入口使用。"""
+        commands: list[dict[str, object]] = []
+        for plugin_id in sorted(self._active):
+            raw = self._discovered[plugin_id].contributes.get("commands")
+            if not isinstance(raw, list):
+                continue
+            for entry in cast("list[dict[str, object]]", raw):
+                command_id = entry.get("id")
+                title = entry.get("title")
+                if isinstance(command_id, str) and isinstance(title, str):
+                    commands.append({"owner": plugin_id, "id": command_id, "title": title})
+        return commands
 
     def _read_manifest(self, path: Path) -> omora_sdk.Manifest | None:
         try:

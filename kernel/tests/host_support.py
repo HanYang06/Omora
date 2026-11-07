@@ -92,6 +92,7 @@ class PluginSpec:
     engines: str = "^0.1.0"
     capabilities: tuple[str, ...] = ("events", "ui", "commands")
     slots: tuple[dict[str, object], ...] = ()
+    commands: tuple[dict[str, object], ...] = ()
 
 
 def write_plugin(root: Path, spec: PluginSpec, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -108,8 +109,13 @@ def write_plugin(root: Path, spec: PluginSpec, monkeypatch: pytest.MonkeyPatch) 
         "activation": list(spec.activation),
         "capabilities": list(spec.capabilities),
     }
+    contributes: dict[str, object] = {}
     if spec.slots:
-        manifest["contributes"] = {"slots": [dict(slot) for slot in spec.slots]}
+        contributes["slots"] = [dict(slot) for slot in spec.slots]
+    if spec.commands:
+        contributes["commands"] = [dict(command) for command in spec.commands]
+    if contributes:
+        manifest["contributes"] = contributes
     (directory / "plugin.json").write_text(json.dumps(manifest), encoding="utf-8")
     (directory / f"{spec.module}.py").write_text(spec.source, encoding="utf-8")
     monkeypatch.setattr(sys, "path", [str(directory), *sys.path])

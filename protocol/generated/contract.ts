@@ -80,9 +80,16 @@ export interface SlotContribution {
 
 export interface UiSnapshot {
   slots: Record<string, SlotContribution[]>;
+  commands?: CommandEntry[];
 }
 
 export type ResponseId = string | number | null;
+
+export interface CommandEntry {
+  owner: string;
+  id: string;
+  title: string;
+}
 
 export interface C2Manifest {
   id: string;
@@ -92,7 +99,7 @@ export interface C2Manifest {
   runtime: "python";
   entry: string;
   activation: string[];
-  capabilities: ("storage" | "events" | "ui" | "services" | "commands" | "settings" | "fs" | "net" | "secrets" | "clipboard" | "notifications" | "jobs" | "log")[];
+  capabilities: ("storage" | "events" | "ui" | "services" | "queries" | "commands" | "settings" | "fs" | "net" | "secrets" | "clipboard" | "notifications" | "jobs" | "log")[];
   contributes?: { commands?: { id: string; title: string; description?: string }[]; slots?: ({ id: string; slot: "sidebar" | "main" | "panel" | "detail" | "statusbar" | "commandPalette" | "settings" | "onboarding" | "modal"; order?: number })[] };
 }
 

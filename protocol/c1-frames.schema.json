@@ -230,12 +230,27 @@
             "type": "array",
             "items": { "$ref": "#/$defs/SlotContribution" }
           }
+        },
+        "commands": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/CommandEntry" },
+          "description": "可执行的命令清单,供命令面板等入口使用"
         }
       }
     },
     "ResponseId": {
       "type": ["string", "integer", "null"],
       "description": "错误响应在请求 id 无法解析时用 null"
+    },
+    "CommandEntry": {
+      "type": "object",
+      "required": ["owner", "id", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "owner": { "type": "string", "minLength": 1, "description": "提供该命令的插件 id" },
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 }
+      }
     }
   }
 }

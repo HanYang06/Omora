@@ -39,6 +39,7 @@
           "events",
           "ui",
           "services",
+          "queries",
           "commands",
           "settings",
           "fs",

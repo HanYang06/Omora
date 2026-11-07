@@ -158,11 +158,9 @@ def test_slot_contributions_are_ordered_by_manifest_order(
     host.discover(tmp_path)
     asyncio.run(host.start())
 
-    assert host.snapshot_ui() == {
-        "slots": {
-            "sidebar": [
-                {"owner": "note.first", "nodes": [text("first")]},
-                {"owner": "note.second", "nodes": [text("second")]},
-            ]
-        }
+    assert host.snapshot_ui()["slots"] == {
+        "sidebar": [
+            {"owner": "note.first", "nodes": [text("first")]},
+            {"owner": "note.second", "nodes": [text("second")]},
+        ]
     }
