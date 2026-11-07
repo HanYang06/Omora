@@ -44,11 +44,20 @@ def button(
     }
 
 
-def input_(placeholder: str = "", *, value: str = "", submit: str | None = None) -> Node:
-    """单行输入;提交时发命令。"""
+def input_(
+    placeholder: str = "",
+    *,
+    value: str = "",
+    submit: str | None = None,
+    args: dict[str, object] | None = None,
+) -> Node:
+    """单行输入;提交时发命令,args 里的绑定在提交那一刻求值($value 是当前文本)。"""
     node: Node = {"type": "Input", "props": {"placeholder": placeholder, "value": value}}
     if submit is not None:
-        node["on"] = {"submit": {"command": submit}}
+        action: dict[str, object] = {"command": submit}
+        if args is not None:
+            action["args"] = args
+        node["on"] = {"submit": action}
     return node
 
 
