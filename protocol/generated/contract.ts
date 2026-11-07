@@ -40,7 +40,7 @@ export type Request =
 export interface Notification {
   jsonrpc: "2.0";
   method: "event";
-  params: { type: string; revision: number; data?: Record<string, unknown> };
+  params: { type: string; revision: number; data?: Record<string, unknown>; owner?: string; state?: Record<string, unknown> };
 }
 
 export type ErrorCode = "E_INVALID" | "E_DENIED" | "E_UNAVAILABLE" | "E_INTERNAL";

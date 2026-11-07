@@ -113,7 +113,9 @@
           "properties": {
             "type": { "type": "string", "minLength": 1 },
             "revision": { "type": "integer", "minimum": 1 },
-            "data": { "type": "object" }
+            "data": { "type": "object" },
+            "owner": { "type": "string", "minLength": 1, "description": "该事件折叠进哪个插件的状态切片;与 state 同时出现" },
+            "state": { "type": "object", "description": "折叠后该切片的完整内容;客户端直接整体替换 state[owner]" }
           }
         }
       }
