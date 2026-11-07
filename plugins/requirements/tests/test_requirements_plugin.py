@@ -76,10 +76,12 @@ def test_activate_registers_commands_query_and_contribution() -> None:
     assert set(context.fake_commands.handlers) == {
         "requirements.create",
         "requirements.setStatus",
+        "requirements.remove",
     }
     assert set(context.fake_queries.handlers) == {"requirements.list"}
     assert set(context.fake_ui.contributions) == {"requirements.main"}
     assert set(context.fake_state.reducers) == {
+        "requirements.removed",
         "requirements.created",
         "requirements.statusChanged",
         "projects.focused",
@@ -224,12 +226,15 @@ def test_requirement_row_shows_title_and_status() -> None:
 def test_advance_button_binds_item_id_and_doing_status() -> None:
     buttons = _find(_rows(_activated()), "Button")
 
-    assert len(buttons) == 1
+    assert len(buttons) == 2, "一条需求一行:推进与删除"
     assert buttons[0]["on"] == {
         "click": {
             "command": SET_STATUS_COMMAND,
             "args": {"id": "$item.id", "status": "$item.nextStatus"},
         }
+    }
+    assert buttons[1]["on"] == {
+        "click": {"command": "requirements.remove", "args": {"id": "$item.id"}}
     }
 
 
@@ -260,3 +265,28 @@ def test_manifest_version_matches_repository_version() -> None:
     expected = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
     assert _manifest()["version"] == expected
+
+
+def test_removed_event_drops_the_requirement() -> None:
+    context = _activated()
+    _create(context, "留着", "project-1")
+    _create(context, "删掉", "project-1")
+    context.replay()
+
+    asyncio.run(context.fake_commands.invoke("requirements.remove", {"id": "requirement-2"}))
+    context.replay()
+
+    state = context.fake_state.read()
+    titles = [item["title"] for item in cast("list[dict[str, object]]", state["items"])]
+    assert titles == ["留着"], "只删目标那一条"
+    visible = [item["title"] for item in cast("list[dict[str, object]]", state["visible"])]
+    assert visible == ["留着"], "可见列表也要跟着更新"
+
+
+def test_remove_rejects_missing_id() -> None:
+    context = _activated()
+
+    with pytest.raises(ValueError):
+        asyncio.run(context.fake_commands.invoke("requirements.remove", {}))
+
+    assert context.fake_events.emitted == []
