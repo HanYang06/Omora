@@ -100,6 +100,7 @@ class PluginHost:
             await plugin.activate(environment.context())
         except Exception:
             await scope.dispose()
+            self._runtime.drop_plugin(plugin_id)
             raise
         self._active[plugin_id] = Activation(plugin, scope, declared, views)
         self._log.info(f"插件已激活: {plugin_id}")
@@ -115,6 +116,7 @@ class PluginHost:
             await activation.plugin.deactivate()
         finally:
             await activation.scope.dispose()
+            self._runtime.drop_plugin(plugin_id)
             del self._active[plugin_id]
             self._log.info(f"插件已卸载: {plugin_id}")
 

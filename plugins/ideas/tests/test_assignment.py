@@ -11,6 +11,8 @@ from support import activated
 
 def test_assign_asks_projects_service_and_emits_event() -> None:
     context = activated()
+    asyncio.run(context.fake_commands.invoke("ideas.create", {"title": "写协议"}))
+    context.replay()
     context.fake_services.replies["projects.lookup"] = {"id": "p1", "title": "Omora"}
 
     asyncio.run(context.fake_commands.invoke("ideas.assign", {"id": "idea-1", "projectId": "p1"}))
@@ -18,9 +20,15 @@ def test_assign_asks_projects_service_and_emits_event() -> None:
     assert context.fake_services.calls == [("projects.lookup", {"id": "p1"})], (
         "分诊前必须向 projects 服务确认项目存在"
     )
-    assert context.fake_events.emitted == [
-        ("ideas.assigned", {"id": "idea-1", "projectId": "p1", "projectTitle": "Omora"})
-    ]
+    assert context.fake_events.emitted[-1] == (
+        "ideas.assigned",
+        {
+            "id": "idea-1",
+            "ideaTitle": "写协议",
+            "projectId": "p1",
+            "projectTitle": "Omora",
+        },
+    ), "事件里要带上灵感标题,别的插件才能展示它"
 
 
 def test_assigned_event_folds_project_into_item() -> None:

@@ -13,6 +13,7 @@
 - `state.snapshot` 的返回补上 `ui` 槽位投影：槽位名 → 贡献列表（`owner` + 节点树）；`state` 明确以插件 id 为键。
 - C2 能力在运行期强制：清单未声明的能力被调用时返回 `E_DENIED`（此前只校验声明、不拦截调用）。
 - C2 能力目录新增 `services`：提供或消费跨插件服务的插件必须声明。
+- 下行 `event` 的切片更新从单数 `owner` / `state` 改为复数 `updates: [{owner, state}]`：一条事件可以同时被多个插件折叠。
 - 错误响应的 `id` 允许 `null`（请求 id 无法解析时），成功响应仍必须是字符串或整数。
 - 下行 `event` 通知可携带 `owner` 与 `state`（折叠后的完整切片），让前端不必懂业务规则就能更新投影；补发事件不带这两项。
 - 新增生成物 `protocol/generated/contract.ts`，门禁新增 `contract.types` 阶段：重新生成后 diff 必须为空。

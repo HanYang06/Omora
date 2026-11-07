@@ -30,6 +30,8 @@ class HostRuntime(Protocol):
 
     def state_slice(self, plugin_id: str) -> Mapping[str, object]: ...
 
+    def drop_plugin(self, plugin_id: str) -> None: ...
+
 
 class HostLog(Protocol):
     """宿主日志出口，由集成层注入。"""

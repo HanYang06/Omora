@@ -87,15 +87,21 @@ def test_revision_follows_event_revision() -> None:
     assert projection.revision == 7
 
 
-def test_duplicate_reducer_registration_is_rejected() -> None:
+def test_multiple_reducers_for_same_event_fold_in_registration_order() -> None:
     projection = Projection()
-    projection.register("counter.add", add_amount)
 
-    try:
-        projection.register("counter.add", add_amount)
-    except ValueError:
-        return
-    raise AssertionError("同一事件类型重复登记 reducer 应被拒绝")
+    def first(state: dict[str, object], event: Event) -> None:
+        state["order"] = ["first"]
+
+    def second(state: dict[str, object], event: Event) -> None:
+        cast("list[str]", state["order"]).append("second")
+
+    projection.register("counter.add", first)
+    projection.register("counter.add", second)
+    folded = projection.apply(add_event(1, 1))
+
+    assert folded is True
+    assert projection.state() == {"order": ["first", "second"]}
 
 
 def test_state_snapshot_is_detached_from_projection() -> None:

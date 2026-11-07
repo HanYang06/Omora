@@ -103,6 +103,18 @@ def _archive_command(ctx: PluginContext) -> Handler:
     return archive
 
 
+def _idea_title(ctx: PluginContext, idea_id: str) -> str:
+    """从自己的切片里取标题;找不到就留空,分诊不能因此失败。"""
+    items = ctx.state.read().get("items")
+    if not isinstance(items, list):
+        return ""
+    for entry in cast("list[object]", items):
+        if isinstance(entry, dict) and cast("dict[str, object]", entry).get("id") == idea_id:
+            title = cast("dict[str, object]", entry).get("title")
+            return title if isinstance(title, str) else ""
+    return ""
+
+
 def _assign_command(ctx: PluginContext) -> Handler:
     """ideas.assign:先向 projects 服务确认项目存在,再发事件。"""
 
@@ -118,7 +130,12 @@ def _assign_command(ctx: PluginContext) -> Handler:
             title = raw if isinstance(raw, str) else ""
         await ctx.events.emit(
             ASSIGNED_EVENT,
-            {"id": idea_id, "projectId": project_id, "projectTitle": title},
+            {
+                "id": idea_id,
+                "ideaTitle": _idea_title(ctx, idea_id),
+                "projectId": project_id,
+                "projectTitle": title,
+            },
         )
         return None
 

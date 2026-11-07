@@ -18,6 +18,7 @@ LIST_QUERY = "projects.list"
 LOOKUP_SERVICE = "projects.lookup"
 CREATED_EVENT = "projects.created"
 ARCHIVED_EVENT = "projects.archived"
+IDEA_ASSIGNED_EVENT = "ideas.assigned"
 
 
 def _item_list(state: dict[str, object]) -> list[dict[str, object]]:
@@ -48,7 +49,15 @@ def _fold_created(state: dict[str, object], data: Mapping[str, object]) -> None:
     title = data.get("title")
     if not isinstance(identifier, str) or not isinstance(title, str):
         return
-    _item_list(state).append({"id": identifier, "title": title, "at": data.get("at")})
+    _item_list(state).append(
+        {
+            "id": identifier,
+            "title": title,
+            "at": data.get("at"),
+            "ideas": [],
+            "ideaCountLabel": "0 条灵感",
+        }
+    )
 
 
 def _fold_archived(state: dict[str, object], data: Mapping[str, object]) -> None:
@@ -58,6 +67,23 @@ def _fold_archived(state: dict[str, object], data: Mapping[str, object]) -> None
         return
     items = _item_list(state)
     items[:] = [item for item in items if item.get("id") != identifier]
+
+
+def _fold_idea_assigned(state: dict[str, object], data: Mapping[str, object]) -> None:
+    """别的插件把灵感分诊到本项目时,在自己的切片里留一份副本用于展示。"""
+    project_id = data.get("projectId")
+    idea_id = data.get("id")
+    if not isinstance(project_id, str) or not isinstance(idea_id, str):
+        return
+    for item in _item_list(state):
+        if item.get("id") != project_id:
+            continue
+        ideas = item.get("ideas")
+        if not isinstance(ideas, list):
+            ideas = []
+            item["ideas"] = ideas
+        cast("list[object]", ideas).append({"id": idea_id, "title": data.get("ideaTitle", "")})
+        item["ideaCountLabel"] = f"{len(cast('list[object]', ideas))} 条灵感"
 
 
 def _string_arg(args: Mapping[str, object], key: str) -> str:
@@ -122,7 +148,19 @@ def _view(_state: Mapping[str, object]) -> Sequence[Node]:
         stack(
             [
                 text("项目", variant="title"),
-                list_("$items", [text("$item.title")], empty_text="还没有项目"),
+                list_(
+                    "$items",
+                    [
+                        stack(
+                            [
+                                text("$item.title", variant="subtitle"),
+                                text("$item.ideaCountLabel", variant="caption"),
+                            ],
+                            gap=2,
+                        )
+                    ],
+                    empty_text="还没有项目",
+                ),
             ]
         )
     ]
@@ -135,6 +173,7 @@ class ProjectsPlugin:
         """登记两条折叠规则、两个命令、一个查询、一个服务与一个 sidebar 贡献。"""
         ctx.state.register(CREATED_EVENT, _fold_created)
         ctx.state.register(ARCHIVED_EVENT, _fold_archived)
+        ctx.state.register(IDEA_ASSIGNED_EVENT, _fold_idea_assigned)
         ctx.commands.register(CREATE_COMMAND, _create_command(ctx))
         ctx.commands.register(ARCHIVE_COMMAND, _archive_command(ctx))
         ctx.queries.register(LIST_QUERY, _list_query(ctx))
@@ -153,6 +192,7 @@ __all__ = [
     "ARCHIVE_COMMAND",
     "CREATED_EVENT",
     "CREATE_COMMAND",
+    "IDEA_ASSIGNED_EVENT",
     "LIST_QUERY",
     "LOOKUP_SERVICE",
     "PLUGIN_ID",

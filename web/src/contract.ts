@@ -9,6 +9,7 @@ export type {
   PingResult,
   QueryInvokeParams,
   QueryResult,
+  SliceUpdate,
   SlotContribution,
   Request,
   RequestId,

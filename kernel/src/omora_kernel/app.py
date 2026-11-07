@@ -60,6 +60,9 @@ class HostRuntimeAdapter:
     def state_slice(self, plugin_id: str) -> Mapping[str, object]:
         return self._runtime.state_slice(plugin_id)
 
+    def drop_plugin(self, plugin_id: str) -> None:
+        self._runtime.drop_plugin(plugin_id)
+
 
 class KernelApp:
     """一台完整的内核：存储、运行时、插件宿主与 C1 入口。"""

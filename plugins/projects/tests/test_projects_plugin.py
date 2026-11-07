@@ -50,7 +50,11 @@ def test_activate_registers_commands_query_service_and_contribution() -> None:
     assert set(context.fake_queries.handlers) == {"projects.list"}
     assert set(context.fake_services.providers) == {"projects.lookup"}
     assert set(context.fake_ui.contributions) == {"projects.sidebar"}
-    assert set(context.fake_state.reducers) == {"projects.created", "projects.archived"}
+    assert set(context.fake_state.reducers) == {
+        "projects.created",
+        "projects.archived",
+        "ideas.assigned",
+    }
 
 
 def test_create_emits_created_event_with_injected_id_and_title() -> None:
@@ -70,7 +74,15 @@ def test_created_event_folds_into_items() -> None:
     context.replay()
 
     assert context.fake_state.read() == {
-        "items": [{"id": "project-1", "title": "写作台", "at": NOW.isoformat()}]
+        "items": [
+            {
+                "id": "project-1",
+                "title": "写作台",
+                "at": NOW.isoformat(),
+                "ideas": [],
+                "ideaCountLabel": "0 条灵感",
+            }
+        ]
     }
 
 
@@ -84,9 +96,8 @@ def test_archived_event_removes_only_that_item() -> None:
 
     assert context.fake_events.emitted[-1] == ("projects.archived", {"id": "project-2"})
     context.replay()
-    assert context.fake_state.read() == {
-        "items": [{"id": "project-1", "title": "保留", "at": NOW.isoformat()}]
-    }
+    items = cast("list[dict[str, object]]", context.fake_state.read()["items"])
+    assert [item["title"] for item in items] == ["保留"], "只移除被归档的那一个"
 
 
 def test_list_returns_items_shape_before_any_project() -> None:
@@ -136,8 +147,11 @@ def test_sidebar_lists_project_titles_with_empty_state_text() -> None:
 
     assert [node["type"] for node in rows] == ["Text", "List"]
     assert rows[1]["props"] == {"items": "$items", "emptyText": "还没有项目"}
-    assert _children(rows[1]) == [
-        {"type": "Text", "props": {"text": "$item.title", "variant": "body"}}
+    row = _children(rows[1])[0]
+    assert row["type"] == "Stack"
+    assert [leaf["props"]["text"] for leaf in _children(row)] == [
+        "$item.title",
+        "$item.ideaCountLabel",
     ]
 
 
@@ -162,3 +176,44 @@ def test_manifest_version_matches_repository_version() -> None:
     expected = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
     assert _manifest()["version"] == expected
+
+
+def test_idea_assigned_event_shows_up_on_the_project() -> None:
+    context = _activated()
+    asyncio.run(context.fake_commands.invoke("projects.create", {"title": "写作台"}))
+    context.replay()
+
+    asyncio.run(
+        context.fake_events.emit(
+            "ideas.assigned",
+            {
+                "id": "idea-1",
+                "ideaTitle": "先定素材的粒度",
+                "projectId": "project-1",
+                "projectTitle": "写作台",
+            },
+        )
+    )
+    context.replay()
+
+    items = cast("list[dict[str, object]]", context.fake_state.read()["items"])
+    assert items[0]["ideaCountLabel"] == "1 条灵感"
+    assert items[0]["ideas"] == [{"id": "idea-1", "title": "先定素材的粒度"}], (
+        "别的插件的事件折进了自己的切片,这是跨插件只读共享的唯一方式"
+    )
+
+
+def test_idea_assigned_to_unknown_project_is_ignored() -> None:
+    context = _activated()
+    asyncio.run(context.fake_commands.invoke("projects.create", {"title": "写作台"}))
+    context.replay()
+
+    asyncio.run(
+        context.fake_events.emit(
+            "ideas.assigned", {"id": "idea-1", "ideaTitle": "x", "projectId": "project-9"}
+        )
+    )
+    context.replay()
+
+    items = cast("list[dict[str, object]]", context.fake_state.read()["items"])
+    assert items[0]["ideaCountLabel"] == "0 条灵感", "不认识的项目不该被凭空创建"

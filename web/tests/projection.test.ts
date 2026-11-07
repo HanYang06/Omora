@@ -4,14 +4,22 @@ import type { SnapshotResult } from "../src/contract";
 import { applyEvent, fromSnapshot, type C1Event } from "../src/store/projection";
 
 function snapshot(revision: number): SnapshotResult {
-  return { revision, state: { "plugin.a": { items: ["x"] } }, ui: { slots: {} } };
+  return {
+    revision,
+    state: {
+      "plugin.a": { items: ["x"] },
+      "plugin.b": { items: ["x"] },
+      "plugin.c": { keep: true },
+    },
+    ui: { slots: {} },
+  };
 }
 
 function event(revision: number): C1Event {
   return { type: "state.changed", revision, data: { revision } };
 }
 
-describe("projection revision handling", () => {
+describe("projection snapshot and slices", () => {
   it("carries the ui snapshot into the projection", () => {
     const ui = { slots: { main: [{ owner: "plugin.a", nodes: [] }] } };
 
@@ -20,21 +28,25 @@ describe("projection revision handling", () => {
     expect(projection.ui).toBe(ui);
   });
 
-  it("replaces only the owner slice when a live event carries the folded slice", () => {
+  it("replaces every updated owner slice and leaves the other slices alone", () => {
     const base = fromSnapshot(snapshot(3));
-    const slice = { items: ["y"] };
+    const sliceA = { items: ["a"] };
+    const sliceB = { items: ["b"] };
 
     const result = applyEvent(base, {
       type: "state.changed",
       revision: 4,
       data: { id: "y" },
-      owner: "plugin.a",
-      state: slice,
+      updates: [
+        { owner: "plugin.a", state: sliceA },
+        { owner: "plugin.b", state: sliceB },
+      ],
     });
 
     expect(result.status).toBe("applied");
-    expect(result.projection.state["plugin.a"]).toBe(slice);
-    expect(result.projection.state["plugin.b"]).toBe(base.state["plugin.b"]);
+    expect(result.projection.state["plugin.a"]).toBe(sliceA);
+    expect(result.projection.state["plugin.b"]).toBe(sliceB);
+    expect(result.projection.state["plugin.c"]).toBe(base.state["plugin.c"]);
   });
 
   it("advances revision without touching state for catch-up events", () => {
@@ -46,7 +58,9 @@ describe("projection revision handling", () => {
     expect(result.projection.state).toBe(base.state);
     expect(result.projection.revision).toBe(4);
   });
+});
 
+describe("projection revision handling", () => {
   it("applies the next revision and keeps the snapshot state", () => {
     const base = fromSnapshot(snapshot(3));
 

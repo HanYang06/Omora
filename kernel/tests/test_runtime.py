@@ -101,7 +101,7 @@ def test_state_slice_is_detached_from_projection(tmp_path: Path) -> None:
     assert runtime.state_slice("plugin.a")["value"] == "original", "外部修改不得影响投影"
 
 
-def test_live_event_carries_owner_and_slice(tmp_path: Path) -> None:
+def test_live_event_carries_updates_for_every_owning_plugin(tmp_path: Path) -> None:
     runtime = _runtime(tmp_path)
     captured: list[Event] = []
 
@@ -111,14 +111,17 @@ def test_live_event_carries_owner_and_slice(tmp_path: Path) -> None:
     def keep(state: dict[str, object], data: Mapping[str, object]) -> None:
         state["value"] = data["value"]
 
-    runtime.register_reducer("plugin.a", "a.set", keep)
+    runtime.register_reducer("plugin.a", "note.shared", keep)
+    runtime.register_reducer("plugin.b", "note.shared", keep)
     runtime.subscribe(listener)
-    _emit(runtime, "a.set", {"value": "shown"})
+    _emit(runtime, "note.shared", {"value": "shown"})
     _emit(runtime, "free.form", {})
-    assert captured[0].owner == "plugin.a", "登记过 reducer 的事件必须带所属插件"
-    assert dict(captured[0].state or {}) == {"value": "shown"}, "实时推送要带上折叠后的完整切片"
-    assert captured[1].owner is None, "未被任何插件认领的事件不带 owner"
-    assert captured[1].state is None, "没有切片可推时不能编造空状态"
+
+    assert runtime.state_slice("plugin.a") == {"value": "shown"}, "两个插件都要折叠到自己的切片"
+    assert runtime.state_slice("plugin.b") == {"value": "shown"}, "两个插件都要折叠到自己的切片"
+    updates = [(update.owner, dict(update.state)) for update in captured[0].updates]
+    assert updates == [("plugin.a", {"value": "shown"}), ("plugin.b", {"value": "shown"})]
+    assert list(captured[1].updates) == [], "未登记 reducer 的事件不带任何切片更新"
 
 
 def test_rebuild_restores_projection_after_restart(tmp_path: Path) -> None:
@@ -139,3 +142,47 @@ def test_rebuild_restores_projection_after_restart(tmp_path: Path) -> None:
     assert second.state_slice("plugin.a") == before, "重放出来的状态必须与关闭前一致"
     assert second.revision == 1, "重放后 revision 要追到最后一条事件"
     second.close()
+
+
+def test_two_plugins_fold_the_same_event(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    captured: list[Event] = []
+
+    async def listener(event: Event) -> None:
+        captured.append(event)
+
+    def bump(state: dict[str, object], data: Mapping[str, object]) -> None:
+        state["count"] = int(str(state.get("count", 0))) + 1
+
+    runtime.register_reducer("plugin.a", "shared.bumped", bump)
+    runtime.register_reducer("plugin.b", "shared.bumped", bump)
+    runtime.subscribe(listener)
+
+    _emit(runtime, "shared.bumped", {})
+
+    assert [update.owner for update in captured[-1].updates] == ["plugin.a", "plugin.b"], (
+        "一条事件可以被多个插件折叠,updates 要把它们都带上"
+    )
+    assert runtime.state_slice("plugin.a") == {"count": 1}
+    assert runtime.state_slice("plugin.b") == {"count": 1}
+
+
+def test_dropping_a_plugin_removes_its_slice_and_stops_folding(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    captured: list[Event] = []
+
+    async def listener(event: Event) -> None:
+        captured.append(event)
+
+    def keep(state: dict[str, object], data: Mapping[str, object]) -> None:
+        state["value"] = data["value"]
+
+    runtime.register_reducer("plugin.a", "a.set", keep)
+    runtime.subscribe(listener)
+    _emit(runtime, "a.set", {"value": "before"})
+
+    runtime.drop_plugin("plugin.a")
+
+    assert runtime.state_slice("plugin.a") == {}, "卸载后不能留下幽灵切片"
+    _emit(runtime, "a.set", {"value": "after"})
+    assert list(captured[-1].updates) == [], "卸载后的插件不该再出现在 updates 里"
