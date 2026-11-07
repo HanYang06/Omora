@@ -17,16 +17,14 @@ class Projection:
     """可登记 reducer 的事件投影；状态对内核不透明。"""
 
     def __init__(self) -> None:
-        self._reducers: dict[str, Reducer] = {}
+        self._reducers: dict[str, list[Reducer]] = {}
         self._state: dict[str, object] = {}
         self._revision = 0
         self._skipped = 0
 
     def register(self, event_type: str, reducer: Reducer) -> None:
-        """登记事件类型的 reducer；同一类型重复登记视为错误。"""
-        if event_type in self._reducers:
-            raise ValueError(f"事件类型 {event_type!r} 的 reducer 已登记")
-        self._reducers[event_type] = reducer
+        """登记事件类型的 reducer；同一事件类型可登记多个，按登记顺序依次折叠。"""
+        self._reducers.setdefault(event_type, []).append(reducer)
 
     def apply(self, event: Event) -> bool:
         """折叠一条事件；未知类型跳过并返回 False，revision 始终跟随事件。
@@ -36,12 +34,13 @@ class Projection:
         """
         if event.revision <= self._revision:
             raise ValueError(f"事件 revision {event.revision} 未大于当前 revision {self._revision}")
-        reducer = self._reducers.get(event.type)
-        if reducer is None:
+        reducers = self._reducers.get(event.type)
+        if reducers is None:
             self._skipped += 1
             folded = False
         else:
-            reducer(self._state, event)
+            for reducer in reducers:
+                reducer(self._state, event)
             folded = True
         self._revision = event.revision
         return folded
@@ -54,6 +53,20 @@ class Projection:
         for event in events:
             self.apply(event)
         return self._skipped
+
+    def unregister(self, event_type: str, reducer: Reducer) -> None:
+        """移除某个折叠规则；不存在时什么也不做。"""
+        reducers = self._reducers.get(event_type)
+        if reducers is None:
+            return
+        if reducer in reducers:
+            reducers.remove(reducer)
+        if not reducers:
+            self._reducers.pop(event_type, None)
+
+    def forget(self, key: str) -> None:
+        """丢弃某个顶层 key 下的状态；顶层 key 由调用方约定（运行时要按插件 id 清理）。"""
+        self._state.pop(key, None)
 
     def state(self) -> dict[str, object]:
         """返回状态快照；修改返回值不影响投影内部状态。"""

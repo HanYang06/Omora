@@ -22,6 +22,7 @@ class FakeRuntime:
         self.emitted: list[tuple[str, Mapping[str, object]]] = []
         self.listeners: list[tuple[str, Listener, list[bool]]] = []
         self.reducers: list[tuple[str, str, Reducer]] = []
+        self.dropped: list[str] = []
 
     async def emit(self, event_type: str, data: Mapping[str, object]) -> None:
         self.emitted.append((event_type, data))
@@ -40,6 +41,10 @@ class FakeRuntime:
 
     def state_slice(self, plugin_id: str) -> Mapping[str, object]:
         return self.slices.get(plugin_id, {})
+
+    def drop_plugin(self, plugin_id: str) -> None:
+        self.dropped.append(plugin_id)
+        self.slices.pop(plugin_id, None)
 
 
 class RecordingLog:

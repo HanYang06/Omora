@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from typing import cast
 
 from .context import Context
-from .contract.c1 import Event
+from .contract.c1 import Event, SliceUpdate
 from .eventlog import Event as LogEvent
 from .eventlog import EventLog
 from .projection import Projection
@@ -44,7 +44,8 @@ class Runtime:
         self._log = EventLog(store)
         self._projection = Projection()
         self._listeners: list[Listener] = []
-        self._owners: dict[str, str] = {}
+        self._owners: dict[str, list[str]] = {}
+        self._owned: dict[str, list[tuple[str, Callable[[dict[str, object], LogEvent], None]]]] = {}
         self._root = Context("kernel")
         self.ids = UuidGenerator()
         self.clock = SystemClock()
@@ -58,16 +59,21 @@ class Runtime:
         return self._projection.revision
 
     async def emit(self, event_type: str, data: Mapping[str, object]) -> int:
-        """写入一条事件：落库、折叠投影、按注册顺序通知监听者，返回 revision。"""
+        """写入一条事件：落库、折叠投影、通知监听者并返回 revision。
+
+        每个登记过该事件类型的插件各产出一条 SliceUpdate，按登记顺序排列。
+        """
         event = self._log.append(event_type, dict(data))
         self._projection.apply(event)
-        owner = self._owners.get(event_type)
+        updates = [
+            SliceUpdate(owner=owner, state=self.state_slice(owner))
+            for owner in self._owners.get(event_type, [])
+        ]
         wire = Event(
             type=event.type,
             revision=event.revision,
             data=dict(event.data),
-            owner=owner,
-            state=self.state_slice(owner) if owner is not None else None,
+            updates=updates,
         )
         for listener in tuple(self._listeners):
             await listener(wire)
@@ -75,14 +81,27 @@ class Runtime:
 
     def register_reducer(self, plugin_id: str, event_type: str, reducer: Reducer) -> None:
         """把插件的折叠规则登记到投影里，折叠目标固定是该插件自己的切片。"""
-
-        self._owners[event_type] = plugin_id
+        owners = self._owners.setdefault(event_type, [])
+        if plugin_id not in owners:
+            owners.append(plugin_id)
 
         def fold(state: dict[str, object], event: LogEvent) -> None:
             target = state.setdefault(plugin_id, {})
             reducer(cast("dict[str, object]", target), event.data)
 
         self._projection.register(event_type, fold)
+        self._owned.setdefault(plugin_id, []).append((event_type, fold))
+
+    def drop_plugin(self, plugin_id: str) -> None:
+        """插件卸载后清干净：切片、owner 记录与它登记的折叠规则一起移除。"""
+        for event_type, fold in reversed(self._owned.pop(plugin_id, [])):
+            self._projection.unregister(event_type, fold)
+            owners = self._owners.get(event_type, [])
+            if plugin_id in owners:
+                owners.remove(plugin_id)
+            if not owners:
+                self._owners.pop(event_type, None)
+        self._projection.forget(plugin_id)
 
     def state(self) -> dict[str, object]:
         """整份投影状态的副本,快照用。"""

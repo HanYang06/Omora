@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 
-from omora_kernel.contract.c1 import Event
+from omora_kernel.contract.c1 import Event, SliceUpdate
 from omora_kernel.transport.ws import C1Handlers
 
 from .support import (
@@ -114,20 +114,26 @@ def test_disconnect_unsubscribes_from_event_source() -> None:
     asyncio.run(scenario())
 
 
-def test_live_event_carries_owner_and_state_when_present() -> None:
+def test_live_event_carries_slice_updates_when_present() -> None:
     async def scenario() -> None:
         source = FakeEventSource()
         async with connected(_handlers(source)) as client:
             await send_request(client, 1, "event.subscribe", {"since": 0})
             assert (await receive(client))["result"] == {"revision": 0}
-            await source.emit("note.updated", 1, {"id": "a"}, owner="notes", state={"items": []})
+            updates = (
+                SliceUpdate(owner="notes", state={"items": []}),
+                SliceUpdate(owner="tags", state={"count": 2}),
+            )
+            await source.emit("note.updated", 1, {"id": "a"}, updates=updates)
             notification = await receive(client)
             assert notification["params"] == {
                 "type": "note.updated",
                 "revision": 1,
                 "data": {"id": "a"},
-                "owner": "notes",
-                "state": {"items": []},
+                "updates": [
+                    {"owner": "notes", "state": {"items": []}},
+                    {"owner": "tags", "state": {"count": 2}},
+                ],
             }
 
     asyncio.run(scenario())

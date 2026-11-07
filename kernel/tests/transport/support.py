@@ -8,7 +8,7 @@ from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping, Sequen
 from contextlib import asynccontextmanager
 from typing import cast
 
-from omora_kernel.contract.c1 import Event, Snapshot
+from omora_kernel.contract.c1 import Event, SliceUpdate, Snapshot
 from omora_kernel.transport.ws import C1Handlers, C1Server
 from websockets.asyncio.client import ClientConnection, connect
 
@@ -56,15 +56,13 @@ class FakeEventSource:
         event_type: str,
         revision: int,
         data: Mapping[str, object] | None = None,
-        owner: str | None = None,
-        state: Mapping[str, object] | None = None,
+        updates: Sequence[SliceUpdate] = (),
     ) -> None:
         event = Event(
             type=event_type,
             revision=revision,
             data=dict(data or {}),
-            owner=owner,
-            state=dict(state) if state is not None else None,
+            updates=tuple(updates),
         )
         for listener in list(self._listeners):
             await listener(event)

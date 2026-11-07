@@ -114,8 +114,11 @@
             "type": { "type": "string", "minLength": 1 },
             "revision": { "type": "integer", "minimum": 1 },
             "data": { "type": "object" },
-            "owner": { "type": "string", "minLength": 1, "description": "该事件折叠进哪个插件的状态切片;与 state 同时出现" },
-            "state": { "type": "object", "description": "折叠后该切片的完整内容;客户端直接整体替换 state[owner]" }
+            "updates": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/SliceUpdate" },
+              "description": "这次事件影响到的插件切片;一条事件可以同时被多个插件折叠"
+            }
           }
         }
       }
@@ -250,6 +253,15 @@
         "owner": { "type": "string", "minLength": 1, "description": "提供该命令的插件 id" },
         "id": { "type": "string", "minLength": 1 },
         "title": { "type": "string", "minLength": 1 }
+      }
+    },
+    "SliceUpdate": {
+      "type": "object",
+      "required": ["owner", "state"],
+      "additionalProperties": false,
+      "properties": {
+        "owner": { "type": "string", "minLength": 1 },
+        "state": { "type": "object", "description": "折叠之后该切片的完整内容" }
       }
     }
   }

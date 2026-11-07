@@ -225,9 +225,10 @@ class _Connection:
             "revision": event.revision,
             "data": dict(event.data),
         }
-        if event.owner is not None and event.state is not None:
-            params["owner"] = event.owner
-            params["state"] = dict(event.state)
+        if event.updates:
+            params["updates"] = [
+                {"owner": item.owner, "state": dict(item.state)} for item in event.updates
+            ]
         self._send_frame({"jsonrpc": "2.0", "method": "event", "params": params})
 
     def _send_frame(self, frame: dict[str, object]) -> None:

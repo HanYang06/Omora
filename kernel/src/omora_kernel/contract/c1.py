@@ -12,19 +12,26 @@ from typing import Protocol, cast
 
 
 @dataclass(frozen=True, slots=True)
+class SliceUpdate:
+    """一条事件折叠后某个插件切片的完整内容;客户端整体替换即可。"""
+
+    owner: str
+    state: Mapping[str, object]
+
+
+@dataclass(frozen=True, slots=True)
 class Event:
     """一条下行事件。revision 单调递增，客户端据此去重与断线追赶。
 
-    owner 与 state 只出现在实时推送里：owner 是这条事件折叠进的插件切片，
-    state 是折叠后的完整切片，客户端整体替换即可，不需要懂业务规则。
-    补发与追赶不带这两项，重连一律先取快照。
+    updates 只出现在实时推送里:一条事件可以同时被多个插件折叠,每个 owner 对应折叠后
+    的完整切片,客户端整体替换即可,不需要懂业务规则。补发与追赶不带 updates,重连时
+    一律先取快照。
     """
 
     type: str
     revision: int
     data: Mapping[str, object]
-    owner: str | None = None
-    state: Mapping[str, object] | None = None
+    updates: Sequence[SliceUpdate] = ()
 
 
 class CommandHandler(Protocol):
