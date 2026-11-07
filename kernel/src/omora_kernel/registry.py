@@ -7,12 +7,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 
 from .context import Context, UnavailableError
 
-Handler = Callable[[dict[str, object]], Awaitable[object]]
+Handler = Callable[[Mapping[str, object]], Awaitable[object]]
 
 
 @dataclass(frozen=True)
@@ -40,7 +40,7 @@ class _HandlerRegistry:
         scope.on_dispose(remove)
         self._handlers[name] = entry
 
-    async def dispatch(self, name: str, args: dict[str, object]) -> object:
+    async def invoke(self, name: str, args: Mapping[str, object]) -> object:
         """按名字分发；未登记的名字抛出语义为 E_UNAVAILABLE 的错误。"""
         entry = self._handlers.get(name)
         if entry is None:

@@ -66,3 +66,17 @@ class Projection:
     @property
     def skipped(self) -> int:
         return self._skipped
+
+
+class ProjectionSnapshot:
+    """把同步投影适配成 C1 的异步快照端口。"""
+
+    def __init__(self, projection: Projection) -> None:
+        self._projection = projection
+
+    async def snapshot(self) -> tuple[int, dict[str, object]]:
+        """返回 (revision, 状态快照)。"""
+        return (self._projection.revision, self._projection.state())
+
+    async def current_revision(self) -> int:
+        return self._projection.revision
