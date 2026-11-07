@@ -6,7 +6,9 @@
 
 | 依赖 | 位置 | 理由 |
 |---|---|---|
-| （暂无） | — | 内核 P0 只用标准库；SQLite 用 `sqlite3` |
+| websockets | kernel | C1 传输：本机回环 WebSocket。标准库无 WS 服务端，手写握手与帧解析没有收益 |
+| jsonschema | kernel | 运行期按 `protocol/` 校验 C2 清单与 C3 节点。手写校验逻辑等于给 schema 造一个会漂移的镜像 |
+| （其余） | — | 存储用标准库 `sqlite3`；契约校验用 jsonschema（开发期已登记） |
 
 ## 开发期依赖
 
@@ -19,6 +21,9 @@
 | import-linter | Python | 架构边界机器校验 |
 | jsonschema | Python | 契约 schema 校验 |
 | hatchling | Python | 构建后端 |
+| react / react-dom | Web | 渲染层框架；被渲染器隔离在内部，业务代码不直接依赖 |
+| vite / @vitejs/plugin-react | Web | 开发服务器与 Vite 的 React 支持；构建仍由 tsc 负责 |
+| @types/react / @types/react-dom | Web | React 类型声明 |
 | typescript | Web | 类型检查与构建 |
 | eslint / @eslint/js / typescript-eslint | Web | lint 与边界规则 |
 | prettier | Web | 格式化 |

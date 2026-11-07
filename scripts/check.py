@@ -259,6 +259,11 @@ def tool_stages() -> list[tuple[str, list[str], Path]]:
     if uv is None:
         raise SystemExit("缺少 uv")
     stages: list[tuple[str, list[str], Path]] = [
+        (
+            "contract.types",
+            [sys.executable, str(ROOT / "scripts" / "gen_contract.py"), "--check"],
+            ROOT,
+        ),
         ("py.format", [venv_tool("ruff"), "format", "--check", "."], ROOT),
         ("py.lint", [venv_tool("ruff"), "check", "."], ROOT),
         ("py.types", [venv_tool("pyright")], ROOT),

@@ -3,7 +3,7 @@ name = "omora-kernel"
 version = "0.1.0"
 description = "Omora kernel"
 requires-python = ">=3.12"
-dependencies = ["omora-sdk"]
+dependencies = ["jsonschema>=4.23", "omora-sdk", "websockets>=15"]
 
 [build-system]
 requires = ["hatchling"]

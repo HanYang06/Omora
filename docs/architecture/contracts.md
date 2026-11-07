@@ -59,7 +59,30 @@
 | event.subscribe | UI → 内核 | 订阅增量事件流 |
 | ping | 双向 | 存活检测 |
 
-### 1.2 示例
+### 1.2 返回
+
+每个方法的 `result` 形状在 `protocol/c1-frames.schema.json` 里以 `$defs` 声明，前端按调用的方法取对应类型：
+
+| 方法 | result |
+|---|---|
+| `state.snapshot` | `{ revision, state, ui }` — 数据投影 + 槽位投影 |
+| `cmd.invoke` | `{ revision, result? }` — 命令落地后的 revision |
+| `query.invoke` | `{ items, cursor? }` — `cursor` 为 null 表示没有更多 |
+| `event.subscribe` | `{ revision }` — 订阅起点，之后只推送更大的 revision |
+| `ping` | `{ revision }` — 当前 revision，客户端据此发现缺口 |
+
+JSON-RPC 的响应帧不带方法名，因此 `Response.result` 在帧 schema 里只约束到 JSON 值；按方法收敛类型是调用方的责任，生成物提供 `SnapshotResult` `CmdResult` `QueryResult` `SubscribeResult` `PingResult` 五个类型。
+
+快照里的两份投影：
+
+- `state` 以插件 id 为键：`{ "omora.ideas": { ... } }`。每个切片对该插件不透明，内核只负责折叠事件、原样投影出去。
+- `ui` 是槽位投影：槽位名 → 贡献列表，每条贡献带 `owner`（插件 id）与节点树。
+
+节点里的 `$` 绑定在**贡献者自己的切片**里解析（`state[owner]`），列表项内部再多一层 `$item` 作用域。插件看不见别人的状态，这是能力隔离在数据层的体现。
+
+增量更新靠事件：节点树是结构，`state` 是数据，绑定把两者连起来。事件到达后前端只需合并 `state` 并重新求值绑定，不必重新拉节点树。
+
+### 1.3 示例
 
 ```json
 { "jsonrpc": "2.0", "id": 1, "method": "cmd.invoke",
@@ -67,7 +90,7 @@
 ```
 
 ```json
-{ "jsonrpc": "2.0", "id": 1, "result": { "id": "01J..." } }
+{ "jsonrpc": "2.0", "id": 1, "result": { "revision": 42, "result": { "id": "01J..." } } }
 ```
 
 ```json
@@ -76,8 +99,9 @@
               "data": { "id": "01J...", "title": "..." } } }
 ```
 
-### 1.3 规则
+### 1.4 规则
 
+- 实时推送的事件可以带 `owner` 与 `state`：`owner` 是这条事件折叠进的插件切片，`state` 是折叠后的完整切片，客户端整体替换即可；补发与追赶**不带**这两项，重连一律先取快照；
 - 命令必须幂等，或携带幂等键；
 - 事件必须带单调递增 `revision`，UI 用它做去重与断线追赶；
 - 大批量读取走分页，不走聊天式往返；
@@ -167,6 +191,16 @@
 - `$` 开头是数据绑定，作用域由宿主按槽位提供；
 - `on` 只能指向命令，不能内联逻辑。
 
+#### 3.1.1 绑定作用域
+
+| 位置 | `$x` 解析为 |
+|---|---|
+| 槽位贡献的根 | `state[贡献者 id].x` |
+| `List` 的 children 内 | 在上面的基础上多一层 `item`：`$item.x` |
+| `Input` 的提交参数内 | 在上面的基础上多一层 `value`：输入框当前文本 |
+
+绑定在事件触发的那一刻求值；解析不到时该节点降级为占位符，不抛错。
+
 ### 3.2 槽位
 
 `sidebar` `main` `panel` `detail` `statusbar` `commandPalette` `settings` `onboarding` `modal`
@@ -189,7 +223,8 @@
 
 - 禁止注入 HTML / CSS / 脚本；
 - 禁止直接访问存储与内核状态，只能通过绑定与命令；
-- 表达式保持无副作用，复杂计算回内核做。
+- 表达式保持无副作用，复杂计算回内核做；
+- 绑定只在贡献者自己的状态切片内解析，插件看不见别人的状态。
 
 ## 4. P0 最小集合
 

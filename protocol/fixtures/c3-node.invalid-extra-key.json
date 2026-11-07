@@ -1,0 +1,9 @@
+{
+  "type": "Text",
+  "props": {
+    "text": "多余的顶层字段"
+  },
+  "style": {
+    "color": "red"
+  }
+}

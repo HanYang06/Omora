@@ -10,7 +10,7 @@ Omora：本地优先的灵感与项目管理工具。灵感、项目、需求互
 - 内核：Python（逻辑、存储、事件、权限、插件宿主）
 - 渲染层：TypeScript（声明式渲染器 + 槽位 + 壳）
 - 两者之间只有协议：C1（内部）/ C2（插件）/ C3（UI 数据）
-- 当前阶段：P0-0 完成（门禁全绿），P0-1 未开始（context / services）
+- 当前阶段：P0 垂直切片完成（M0.0–M0.6）。一个 Python 插件能通过 C1/C3 在界面上画出面板，数据来自内核；下一步 P1 扩官方插件
 - 版本：`0.1.0`，统一版本发布（见 [ADR-0003](docs/decisions/0003-unified-versioning.md)）
 
 ## 工作方式
@@ -44,6 +44,9 @@ Omora：本地优先的灵感与项目管理工具。灵感、项目、需求互
 | 测试 | `uv run pytest -q` |
 | 架构边界 | `uv run lint-imports` |
 | 前端检查 | `cd web; pnpm exec eslint .; pnpm exec tsc --noEmit; pnpm exec vitest run` |
+| 启动内核 | `uv run python -m omora_kernel --database .omora/dev.sqlite --plugins plugins` |
+| 前端开发 | `cd web; pnpm dev` |
+| 端到端验收 | 内核起着时 `uv run python scripts/accept_p0.py --url ws://127.0.0.1:8765` |
 
 ## 仓库结构
 

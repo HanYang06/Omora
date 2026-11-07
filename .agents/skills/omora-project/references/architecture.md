@@ -56,6 +56,31 @@ Kernel · Python
 
 三条都不满足，一律插件。核心里出现业务概念就是边界破了。
 
+## P0 模块地图
+
+新增文件前先回答"它在哪一层"，再动手写。
+
+| 位置 | 职责 | 一句话 |
+|---|---|---|
+| `kernel/context.py` | 作用域 | provide / inject / 生命周期，dispose 逆序 |
+| `kernel/services.py` | 服务注册 | 按注册序拓扑解析，环在创建任何实例之前失败 |
+| `kernel/store.py` | 存储 | SQLite + WAL + 嵌套事务 + 按模块版本化迁移 |
+| `kernel/eventlog.py` | 事件日志 | append 分配单调 revision，范围读取与追赶 |
+| `kernel/projection.py` | 投影 | 按类型折叠；未知事件跳过但 revision 照常前进 |
+| `kernel/registry.py` | 命令表 | 命令与查询两个命名空间，随 scope 回收，零残留 |
+| `kernel/runtime.py` | 装配 | `emit` 是唯一写入口：落库 → 折叠 → 扇出 |
+| `kernel/host.py` | 插件宿主 | 发现 / 校验 / 激活 / 贡献 / 卸载 |
+| `kernel/contract/c1.py` | C1 面 | 传输层只依赖这里的窄 Protocol |
+| `kernel/contract/c2.py` | C2 面 | 清单校验与引擎版本兼容 |
+| `kernel/transport/ws.py` | 传输 | JSON-RPC 2.0 over 本机 WebSocket |
+| `kernel/ui/validate.py` | C3 校验 | 校验与降级两件事分开 |
+| `web/rpc/` | C1 客户端 | 连接、重连、revision 追赶 |
+| `web/store/projection.ts` | 投影 | 纯函数合并快照与事件 |
+| `web/renderer/` | 渲染器 | type → 控件映射，未知类型降级 |
+| `web/shell/` | 壳 | 两个槽位，只接收贡献 |
+
+判据：**能在插件里做的，就不要放内核；能靠数据表达的，就不要写代码。**
+
 ## 相关 ADR
 
 - `../../../../docs/decisions/0001-stack-and-runtime.md`

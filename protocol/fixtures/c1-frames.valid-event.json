@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "method": "event",
+  "params": {
+    "type": "idea.created",
+    "revision": 42,
+    "data": {
+      "id": "01J",
+      "title": "把协议写下来"
+    }
+  }
+}
