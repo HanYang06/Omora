@@ -58,6 +58,7 @@ def _fold_created(state: dict[str, object], data: Mapping[str, object]) -> None:
             "at": data.get("at"),
             "ideas": [],
             "ideaCountLabel": "0 条灵感",
+            "label": title,
         }
     )
 
@@ -86,6 +87,15 @@ def _fold_idea_assigned(state: dict[str, object], data: Mapping[str, object]) ->
             item["ideas"] = ideas
         cast("list[object]", ideas).append({"id": idea_id, "title": data.get("ideaTitle", "")})
         item["ideaCountLabel"] = f"{len(cast('list[object]', ideas))} 条灵感"
+
+
+def _fold_focused(state: dict[str, object], data: Mapping[str, object]) -> None:
+    """记住当前看的是哪个项目,列表上用一个小标记显示出来。"""
+    focused = data.get("id")
+    for item in _item_list(state):
+        title = item.get("title")
+        marker = "▸ " if isinstance(focused, str) and item.get("id") == focused else ""
+        item["label"] = f"{marker}{title if isinstance(title, str) else ''}"
 
 
 def _focus_command(ctx: PluginContext) -> Handler:
@@ -182,7 +192,7 @@ def _view(_state: Mapping[str, object]) -> Sequence[Node]:
                         stack(
                             [
                                 button(
-                                    "$item.title",
+                                    "$item.label",
                                     command=FOCUS_COMMAND,
                                     args={"id": "$item.id"},
                                     variant="ghost",
@@ -207,6 +217,7 @@ class ProjectsPlugin:
         ctx.state.register(CREATED_EVENT, _fold_created)
         ctx.state.register(ARCHIVED_EVENT, _fold_archived)
         ctx.state.register(IDEA_ASSIGNED_EVENT, _fold_idea_assigned)
+        ctx.state.register(FOCUSED_EVENT, _fold_focused)
         ctx.commands.register(CREATE_COMMAND, _create_command(ctx))
         ctx.commands.register(ARCHIVE_COMMAND, _archive_command(ctx))
         ctx.commands.register(FOCUS_COMMAND, _focus_command(ctx))
