@@ -1,7 +1,7 @@
 [project]
 name = "omora"
 version = "0.1.0"
-description = "Add your description here"
+description = "本地优先的灵感与项目管理工具"
 readme = "README.md"
 authors = [
     { name = "HanYang06", email = "206431259+HanYang06@users.noreply.github.com" }
@@ -12,16 +12,12 @@ dependencies = [
     "rich>=15.0.0",
 ]
 
-[project.scripts]
-omora = "omora:main"
-
-[build-system]
-requires = ["uv_build>=0.12.22,<0.13.0"]
-build-backend = "uv_build"
-
 [dependency-groups]
 dev = [
     "mypy>=2.4.1",
     "pytest>=9.2.0",
     "ruff>=0.17.4",
 ]
+
+[tool.uv]
+package = false
