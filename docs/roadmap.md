@@ -8,6 +8,9 @@
 - **闭环已通**：内核 → boot + 配置 → sdk → store / ui / net / inbox → 渲染引擎。
 - 测试：Python 49 条、TS 25 条，全绿。
 - 设计：`docs/design/core.md`、`config.md`、`protocol.md`、`versioning.md`、`packages.md`、`ui-engine.md`。
+- 门禁：`uv run python scripts/check.py`（体量预算 + 测试 + lint + 类型 + 前端构建）。
+- 版本同步：`scripts/sync_version.py`；`VERSION` 与各 package 同号的断言测试。
+- 发布构建：`scripts/build.py`，产物 `dist/omora-<version>.zip`。
 
 ## 已完成：闭环
 
@@ -19,7 +22,7 @@
 - 插件：store / ui / net / inbox
 - 渲染引擎：React + Vite + vitest
 
-验收：`pwsh scripts/check.ps1` 全绿；Python 端到端测试真连 WebSocket 走通闭环。
+验收：`uv run python scripts/check.py` 全绿；Python 端到端测试真连 WebSocket 走通闭环。
 
 ## 下一刀：能起来
 
@@ -59,7 +62,6 @@
 
 ## 之后（顺序待定）
 
-- 版本同步脚本：扫描 `VERSION`，同步所有 package 的版本字段；再加一条断言测试。
 - 持久化：store 换 SQLite，接口不动。
 - 捕捉：输入框 + 新增条目。
 - 生态开放时才需要：运行后插件目录 + 安装器。在这之前不做。

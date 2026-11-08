@@ -1,0 +1,14 @@
+{
+  "//": "体量预算：唯一真相。scripts/budget.py 读它；超了就拆，不改预算。",
+  "defaults": {
+    "fileLines": 300
+  },
+  "suffixes": {
+    ".md": { "fileLines": 400 },
+    ".tsx": { "fileLines": 220 }
+  },
+  "paths": {
+    "docs": { "fileLines": 400 },
+    "scripts": { "fileLines": 400 }
+  }
+}
