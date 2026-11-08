@@ -1,22 +1,28 @@
 # 插件设计
 
-插件是内核唯一的扩展单位。这篇写插件是什么、两个内核级插件（store、ui）和一个业务插件（inbox）怎么设计。
-位置：`app/packages/` 与 `app/plugins/`。
+插件是内核唯一的扩展单位。这篇写插件是什么，以及 store、ui、inbox 三个插件怎么设计。
+位置：`app/packages/`（系统插件）；运行后插件目录待定。
 
 ## 1. 插件是什么
 
 - 一个对象：`name: str` + `apply(ctx)`。
+- 按语言分三种形态：Python、TS、混合。各自能碰多深的界面见 `ARCHITECTURE.md` §5.2。
 - `apply` 里只做登记：`ctx.provide(...)`、`ctx.effect(...)`、`ui.view(ctx, ...)`。
 - 插件之间不 import；要说话就按服务名。
 
 ## 2. 两类插件
 
-| | 内核级 | 业务 |
+分类轴是**来源**，不是产出。
+
+| | 系统插件 | 运行后插件 |
 |---|---|---|
-| 位置 | `app/packages/` | `app/plugins/` |
-| 产出 | 只给服务 | 服务 + 界面 |
-| 例子 | store、ui | inbox |
-| 缺了会怎样 | 应用跑不起来 | 少一个功能 |
+| 位置 | `app/packages/` | 待定 |
+| 来源 | 随包 | 单独装 |
+| 开关 | 启动期的配置决定 | 用户装 |
+| 例子 | store、ui、net | —（现在一个都没有） |
+| 缺了会怎样 | 应用降级；后果由插件自己说清 | 少一个功能 |
+
+产出页面不是分类轴：两种插件都可能产出页面，都可能只是给服务。
 
 ## 3. sdk：插件唯一可以 import 的东西
 
@@ -27,7 +33,7 @@
 
 插件 import 它；它不 import 任何插件。内核也不 import 它。
 
-## 4. store（内核级）
+## 4. store（系统插件）
 
 - 职责：条目的存储与查询。
 - 服务接口：
@@ -43,7 +49,7 @@ class Store:
 - 为什么先内存：这一版验证的是「插件 → 节点 → 界面 → 事件」的闭环。换成 SQLite 时只改这个插件的内部，接口不动。
 - 卸载：数据随插件消失（v0 内存）。持久化之后，卸载不删数据。
 
-## 5. ui（内核级）
+## 5. ui（系统插件）
 
 - 职责：视图登记、渲染、事件派发。它不碰 socket，也不认识任何业务。
 - 服务接口：
@@ -69,7 +75,7 @@ class Ui:
 ### 5.3 派发
 
 - 找 handler → 执行 → 重画它所属的视图 → 返回新节点。
-- 找不到 → `LookupError`，由 Router 包成 `call_failed`。
+- 找不到 → `LookupError`，由 net 插件包成错误帧。
 
 ### 5.4 节点
 
@@ -77,7 +83,7 @@ class Ui:
 - v0：`Column`、`Row`、`Text`、`Button`。
 - `Button.on_click` 是回调；序列化时变成 handler id。
 
-## 6. inbox（业务）
+## 6. inbox（系统插件，产出页面）
 
 - 依赖 `store`、`ui`，按名字取；缺了就让 `apply` 抛错（v0 不降级）。
 - 视图 `main`：标题 + 条目行（标题 + 归档按钮）。
@@ -88,5 +94,5 @@ class Ui:
 
 - `packages` 不 import `core`；只 import `sdk`。
 - `sdk` 不 import `packages`。
-- store 与 ui 互不 import。
+- store、ui、net 互不 import。
 - 界面不是插件关心的事：插件只产出节点，不碰 DOM / CSS。

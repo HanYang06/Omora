@@ -19,7 +19,7 @@ src/
 
 ## 3. 连接
 
-- 连 `ws://127.0.0.1:8765`。
+- 连 net 插件提供的端点；地址由 net 的配置决定。
 - 请求 `{id, target, method, args}`；响应按 `id` 配对成 Promise。
 - 未连接或断开：页面显示状态，不发请求。
 - v0 不做重连与超时。
@@ -59,6 +59,7 @@ src/
 - 不做业务判断：点按钮就发事件，不自己改数据。
 - 不 import Python 侧任何东西。
 - 只认 `{type, props, children}` 与 handler id。
+- 只跟 net 插件说话；net 是系统插件，不属于内核。
 
 ## 9. 没做的
 
