@@ -21,3 +21,16 @@ dev = [
 
 [tool.uv]
 package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["app"]
+testpaths = ["app/core/tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+exclude = [".agents", ".venv"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
