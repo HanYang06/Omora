@@ -8,7 +8,7 @@
 - **闭环已通**：内核 → boot + 配置 → sdk → store / ui / net / inbox → 渲染引擎。
 - 测试：Python 49 条、TS 25 条，全绿。
 - 设计：`docs/design/core.md`、`config.md`、`protocol.md`、`versioning.md`、`packages.md`、`ui-engine.md`。
-- 门禁：`uv run python scripts/check.py`（体量预算 + 测试 + lint + 类型 + 前端构建）。
+- 门禁：`uv run python scripts/check.py`（体量预算 + 文档断链 + 测试 + lint + 类型 + 前端构建）。
 - 版本同步：`scripts/sync_version.py`；`VERSION` 与各 package 同号的断言测试。
 - 发布构建：`scripts/build.py`，产物 `dist/omora-<version>.zip`。
 - CI：`ci.yml`（门禁）、`commit-msg.yml`（提交信息）、`release.yml`（tag 发布）。

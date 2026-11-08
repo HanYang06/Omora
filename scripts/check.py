@@ -25,6 +25,7 @@ def stages() -> list[tuple[str, list[str]]]:
         raise SystemExit("缺少 pnpm；先安装 pnpm")
     return [
         ("budget", [sys.executable, str(ROOT / "scripts" / "budget.py")]),
+        ("docs.links", [sys.executable, str(ROOT / "scripts" / "docs_links.py")]),
         ("py.test", [sys.executable, "-m", "pytest", "-q"]),
         ("py.lint", [sys.executable, "-m", "ruff", "check", "."]),
         ("py.types", [sys.executable, "-m", "mypy", "app"]),

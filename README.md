@@ -54,6 +54,7 @@ uv run python scripts/check.py
 |---|---|
 | `scripts/check.py` | 统一门禁：体量预算、测试、lint、类型、前端测试与构建 |
 | `scripts/budget.py` | 体量预算：文档与代码的文件行数上限，读 `budget.json` |
+| `scripts/docs_links.py` | 文档相对链接检查：README、AGENTS、docs 与项目 skill |
 | `scripts/sync_version.py` | 把 `VERSION` 同步到各 package 元数据 |
 | `scripts/build.py` | 发布构建，产物在 `dist/omora-<version>.zip` |
 | `scripts/commit_msg.py` | 提交信息校验，由 `commit-msg` 钩子调用 |
