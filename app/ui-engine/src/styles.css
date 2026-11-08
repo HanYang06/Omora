@@ -1,0 +1,70 @@
+:root {
+  color-scheme: light dark;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.omora-status {
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  opacity: 0.7;
+}
+
+.omora-status[data-status="failed"],
+.omora-status[data-status="closed"] {
+  color: #b91c1c;
+  opacity: 1;
+}
+
+.omora-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.omora-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.omora-text--title {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.omora-button {
+  align-self: flex-start;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.omora-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.omora-unknown {
+  border: 1px dashed #b45309;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  color: #b45309;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.8125rem;
+}
