@@ -1,11 +1,14 @@
 """体量预算：文档与代码的文件行数上限。
 
 唯一真相是仓库根的 budget.json；scripts/check.py 与 CI 都只读这一份。
+合并顺序是 defaults < suffixes < paths < names，最后按文件名兜底，
+所以测试文件不会被按目录的预算压回去。
 """
 
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -42,7 +45,7 @@ class Problem:
 
 
 class Budget:
-    """budget.json 的解析结果，按 defaults < suffixes < paths 合并。"""
+    """budget.json 的解析结果。"""
 
     def __init__(self, config: Path = CONFIG) -> None:
         raw: Any = json.loads(config.read_text(encoding="utf-8"))
@@ -57,6 +60,10 @@ class Budget:
             str(key).strip("/"): _limits(value, f"paths.{key}")
             for key, value in _mapping(raw.get("paths"), "paths").items()
         }
+        self.names = {
+            str(key): _limits(value, f"names.{key}")
+            for key, value in _mapping(raw.get("names"), "names").items()
+        }
 
     def limit(self, relative: str, suffix: str) -> int | None:
         merged = dict(self.defaults)
@@ -64,6 +71,10 @@ class Budget:
         for prefix in sorted(self.paths):
             if relative == prefix or relative.startswith(prefix + "/"):
                 merged.update(self.paths[prefix])
+        name = Path(relative).name
+        for pattern in sorted(self.names):
+            if fnmatch.fnmatch(name, pattern):
+                merged.update(self.names[pattern])
         return merged.get("fileLines")
 
 
