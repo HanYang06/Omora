@@ -47,7 +47,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 - 前端依赖走 `pnpm`。
 - 仓库统一 LF；不提交 `.venv/`、`node_modules/`、`dist/`、本地数据。
 
-门禁：`pwsh scripts/check.ps1`（pytest / ruff / mypy / ui-engine 测试与构建）。交付必须附上实际跑过的命令和输出。
+门禁：`uv run python scripts/check.py`（体量预算 / 文档断链 / pytest / ruff / mypy / ui-engine 测试与构建）；CI 跑同一条。交付必须附上实际跑过的命令和输出。
 
 ## 停下来问
 

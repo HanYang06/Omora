@@ -29,9 +29,8 @@
 
 - 仓库根的 `VERSION` 是唯一手写版本号的地方。
 - 其他 package 的版本字段由**脚本**同步：扫描 `VERSION` → 写进每个 package 的元数据。插件多到一定程度，人工手写不现实，也不该手写。
-- 脚本待写（`scripts/`）。现在还没有插件 package 落地，写出来也是空转。
-- 脚本之外再加一条断言式测试：所有 package 的版本 == `VERSION`。**约定会破，测试不会。**
-- 现状是三处手写：`VERSION`、`pyproject.toml`、`package.json`，目前都是 `0.1.0`。脚本落地时一并收口。
+- 脚本：`scripts/sync_version.py`；断言测试：`app/boot/tests/test_version.py`。**约定会破，测试不会。**
+- 现在只有 `VERSION` 是手写的；`pyproject.toml`、`package.json`、`app/ui-engine/package.json` 由脚本同步。
 
 ## 4. 协议和数据格式
 
