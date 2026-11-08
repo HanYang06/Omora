@@ -1,182 +1,171 @@
-"""体量预算：读取 budget.json，检查文件行数、函数体量、类方法数与复杂度。"""
+"""体量预算：文档与代码的文件行数上限。
+
+唯一真相是仓库根的 budget.json；scripts/check.py 与 CI 都只读这一份。
+合并顺序是 defaults < suffixes < paths < names，最后按文件名兜底，
+所以测试文件不会被按目录的预算压回去。
+"""
 
 from __future__ import annotations
 
-import ast
+import argparse
+import fnmatch
 import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import Any
 
-from common import ROOT, TEXT_SUFFIXES, Problem, iter_files, read_text
+ROOT = Path(__file__).resolve().parent.parent
+CONFIG = ROOT / "budget.json"
 
-BUDGET_PATH = ROOT / "budget.json"
-REQUIRED_KEYS = ("fileLines", "functionLines", "classMethods", "params", "complexity", "imports")
-PY_ROOTS = ("kernel/", "sdk/", "plugins/", "scripts/")
-PY_SUFFIXES = {".py"}
-
-LimitMap = dict[str, int]
-
-COMPLEXITY_NODES = (
-    ast.If,
-    ast.IfExp,
-    ast.For,
-    ast.AsyncFor,
-    ast.While,
-    ast.ExceptHandler,
-    ast.Assert,
-    ast.ListComp,
-    ast.SetComp,
-    ast.DictComp,
-    ast.GeneratorExp,
-)
+SKIP_DIRS = {
+    ".git",
+    ".venv",
+    ".agents",
+    "node_modules",
+    "dist",
+    "build",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
+}
+DOC_FILES = ("README.md", "AGENTS.md")
+DOC_ROOT = Path("docs")
+CODE_ROOTS = ("app", "scripts")
+CODE_SUFFIXES = {".py", ".ts", ".tsx"}
 
 
-def _parse_limits(raw: object, where: str) -> LimitMap:
-    if not isinstance(raw, dict):
-        raise SystemExit(f"budget.json 的 {where} 必须是对象")
-    parsed: LimitMap = {}
-    entries = cast(dict[object, object], raw)
-    for key, value in entries.items():
-        if not isinstance(key, str) or not isinstance(value, int):
-            raise SystemExit(f"budget.json 的 {where} 含非法条目: {key!r}")
-        parsed[key] = value
-    return parsed
+@dataclass(frozen=True)
+class Problem:
+    path: str
+    message: str
 
-
-def _as_mapping(raw: object) -> dict[str, object]:
-    if raw is None:
-        return {}
-    if not isinstance(raw, dict):
-        raise SystemExit("budget.json 期望对象")
-    entries = cast(dict[object, object], raw)
-    return {str(key): value for key, value in entries.items()}
+    def __str__(self) -> str:
+        return f"{self.path}: {self.message}"
 
 
 class Budget:
-    def __init__(self) -> None:
-        payload: object = json.loads(read_text(BUDGET_PATH))
-        if not isinstance(payload, dict):
+    """budget.json 的解析结果。"""
+
+    def __init__(self, config: Path = CONFIG) -> None:
+        raw: Any = json.loads(config.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
             raise SystemExit("budget.json 顶层必须是对象")
-        data = cast(dict[str, object], payload)
-        defaults = _parse_limits(data.get("defaults"), "defaults")
-        missing = [key for key in REQUIRED_KEYS if key not in defaults]
-        if missing:
-            raise SystemExit(f"budget.json 缺少默认项: {', '.join(missing)}")
-        self.defaults: LimitMap = defaults
-        self.suffixes: dict[str, LimitMap] = {
-            str(key).lower(): _parse_limits(value, f"suffixes.{key}")
-            for key, value in _as_mapping(data.get("suffixes")).items()
+        self.defaults = _limits(raw.get("defaults"), "defaults")
+        self.suffixes = {
+            str(key).lower(): _limits(value, f"suffixes.{key}")
+            for key, value in _mapping(raw.get("suffixes"), "suffixes").items()
         }
-        self.paths: dict[str, LimitMap] = {
-            str(key).strip("/"): _parse_limits(value, f"paths.{key}")
-            for key, value in _as_mapping(data.get("paths")).items()
+        self.paths = {
+            str(key).strip("/"): _limits(value, f"paths.{key}")
+            for key, value in _mapping(raw.get("paths"), "paths").items()
+        }
+        self.names = {
+            str(key): _limits(value, f"names.{key}")
+            for key, value in _mapping(raw.get("names"), "names").items()
         }
 
-    def limits_for(self, path: Path) -> LimitMap:
-        merged: LimitMap = dict(self.defaults)
-        merged.update(self.suffixes.get(path.suffix.lower(), {}))
-        rel = path.relative_to(ROOT).as_posix()
-        for prefix, override in self.paths.items():
-            if rel.startswith(prefix + "/"):
-                merged.update(override)
-        return merged
+    def limit(self, relative: str, suffix: str) -> int | None:
+        merged = dict(self.defaults)
+        merged.update(self.suffixes.get(suffix.lower(), {}))
+        for prefix in sorted(self.paths):
+            if relative == prefix or relative.startswith(prefix + "/"):
+                merged.update(self.paths[prefix])
+        name = Path(relative).name
+        for pattern in sorted(self.names):
+            if fnmatch.fnmatch(name, pattern):
+                merged.update(self.names[pattern])
+        return merged.get("fileLines")
 
 
-def check_file_budget(budget: Budget) -> list[Problem]:
+def _mapping(raw: Any, where: str) -> dict[str, Any]:
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise SystemExit(f"budget.json 的 {where} 必须是对象")
+    return {str(key): value for key, value in raw.items()}
+
+
+def _limits(raw: Any, where: str) -> dict[str, int]:
+    if not isinstance(raw, dict) or not raw:
+        raise SystemExit(f"budget.json 的 {where} 必须是非空对象")
+    limits: dict[str, int] = {}
+    for key, value in raw.items():
+        if not isinstance(key, str) or not isinstance(value, int) or value <= 0:
+            raise SystemExit(f"budget.json 的 {where} 含非法条目: {key!r}")
+        limits[key] = value
+    return limits
+
+
+def _relative(path: Path) -> str:
+    return path.relative_to(ROOT).as_posix()
+
+
+def _docs_files() -> list[Path]:
+    found = [ROOT / name for name in DOC_FILES if (ROOT / name).is_file()]
+    docs = ROOT / DOC_ROOT
+    if docs.is_dir():
+        found.extend(sorted(docs.rglob("*.md")))
+    return found
+
+
+def _code_files() -> list[Path]:
+    found: list[Path] = []
+    for root in CODE_ROOTS:
+        base = ROOT / root
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(ROOT)
+            if any(part in SKIP_DIRS for part in relative.parts):
+                continue
+            if path.suffix.lower() in CODE_SUFFIXES:
+                found.append(path)
+    return sorted(found)
+
+
+def check(files: list[Path], budget: Budget) -> list[Problem]:
     problems: list[Problem] = []
-    for path in iter_files(TEXT_SUFFIXES):
-        limits = budget.limits_for(path)
-        limit = limits.get("fileLines")
+    for path in files:
+        relative = _relative(path)
+        limit = budget.limit(relative, path.suffix)
         if limit is None:
             continue
-        lines = len(read_text(path).splitlines())
+        lines = len(path.read_text(encoding="utf-8", errors="replace").splitlines())
         if lines > limit:
-            problems.append(Problem(path, f"{lines} 行，超过预算 {limit}"))
+            problems.append(Problem(relative, f"{lines} 行，超过预算 {limit}"))
     return problems
 
 
-def _param_count(node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
-    args = node.args
-    count = len(args.posonlyargs) + len(args.args) + len(args.kwonlyargs)
-    if args.vararg is not None:
-        count += 1
-    if args.kwarg is not None:
-        count += 1
-    positional = [*args.posonlyargs, *args.args]
-    if positional and positional[0].arg in {"self", "cls"}:
-        count -= 1
-    return max(count, 0)
+def _report(name: str, problems: list[Problem]) -> bool:
+    if not problems:
+        print(f"PASS {name}")
+        return True
+    print(f"FAIL {name} ({len(problems)})")
+    for problem in problems[:50]:
+        print(f"  {problem}")
+    if len(problems) > 50:
+        print(f"  ... 还有 {len(problems) - 50} 条")
+    return False
 
 
-def _complexity(node: ast.AST) -> int:
-    score = 1
-    for child in ast.walk(node):
-        if isinstance(child, COMPLEXITY_NODES):
-            score += 1
-        elif isinstance(child, ast.BoolOp):
-            score += len(child.values) - 1
-    return score
+def main() -> int:
+    parser = argparse.ArgumentParser(description="体量预算：文档与代码的文件行数上限")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--docs", action="store_true", help="只查文档")
+    group.add_argument("--code", action="store_true", help="只查代码")
+    args = parser.parse_args()
+
+    budget = Budget()
+    passed = True
+    if not args.code:
+        passed = _report("budget.docs", check(_docs_files(), budget)) and passed
+    if not args.docs:
+        passed = _report("budget.code", check(_code_files(), budget)) and passed
+    return 0 if passed else 1
 
 
-def _check_function(
-    path: Path,
-    node: ast.FunctionDef | ast.AsyncFunctionDef,
-    limits: LimitMap,
-    problems: list[Problem],
-) -> None:
-    if node.end_lineno is None:
-        return
-    length = node.end_lineno - node.lineno + 1
-    if length > limits["functionLines"]:
-        problems.append(
-            Problem(
-                path,
-                f"函数 {node.name} 有 {length} 行，超过预算 {limits['functionLines']}",
-                node.lineno,
-            )
-        )
-    params = _param_count(node)
-    if params > limits["params"]:
-        problems.append(
-            Problem(
-                path,
-                f"函数 {node.name} 有 {params} 个参数，超过预算 {limits['params']}",
-                node.lineno,
-            )
-        )
-    score = _complexity(node)
-    if score > limits["complexity"]:
-        problems.append(
-            Problem(
-                path,
-                f"函数 {node.name} 复杂度 {score}，超过预算 {limits['complexity']}",
-                node.lineno,
-            )
-        )
-
-
-def check_python_structure(budget: Budget) -> list[Problem]:
-    problems: list[Problem] = []
-    for path in iter_files(PY_SUFFIXES):
-        rel = path.relative_to(ROOT).as_posix()
-        if not rel.startswith(PY_ROOTS):
-            continue
-        limits = budget.limits_for(path)
-        tree = ast.parse(read_text(path), filename=str(path))
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                _check_function(path, node, limits, problems)
-            elif isinstance(node, ast.ClassDef):
-                methods = sum(
-                    isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
-                    for child in node.body
-                )
-                if methods > limits["classMethods"]:
-                    message = (
-                        f"类 {node.name} 有 {methods} 个方法，超过预算 {limits['classMethods']}"
-                    )
-                    problems.append(Problem(path, message, node.lineno))
-        imports = sum(isinstance(node, (ast.Import, ast.ImportFrom)) for node in tree.body)
-        if imports > limits["imports"]:
-            problems.append(Problem(path, f"{imports} 个 import，超过预算 {limits['imports']}"))
-    return problems
+if __name__ == "__main__":
+    raise SystemExit(main())

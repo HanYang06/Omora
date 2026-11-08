@@ -90,11 +90,10 @@ def test_creating_idea_persists_and_emits_event(fake_store: FakeStore) -> None:
 
 | 层 | 证明什么 | 位置 |
 |---|---|---|
-| 行为单测 | 输入输出、异常、事件 | kernel/tests |
-| 契约测试 | 消息符合 C1 / C2 / C3 | kernel/tests/contract |
-| 架构测试 | 边界没破、核心无领域词 | kernel/tests/architecture |
-| 集成测试 | 内核 + 假客户端 | P0-1 起 |
-| 前端行为测试 | 输入 → 节点树 / 交互结果 | web/tests |
+| 内核行为 | 加持 / 卸载 / 引用、消息转发 | 与 `app/core/` 同包 |
+| 插件行为 | 装上能用、卸了干净、服务取得到 | 与插件同包 |
+| 协议 | 两种语言的消息形状一致 | 待定 |
+| 渲染引擎 | 节点树 → 界面、事件回传 | `app/ui-engine/` |
 
 ## 写法约定
 
@@ -120,9 +119,4 @@ def test_creating_idea_persists_and_emits_event(fake_store: FakeStore) -> None:
 
 ## 机器能拦的部分
 
-门禁里的 `tests.behavior` 会拦：
-
-- 一个测试里所有断言都只是 `isinstance` 或 `is not None`；
-- 测试里出现 `sleep`。
-
-机器拦不住"这个测试有没有意义"，那部分只能靠三问和评审。
+还没有自动化护栏。先靠三问和评审；等代码落地再补。

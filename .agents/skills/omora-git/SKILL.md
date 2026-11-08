@@ -32,12 +32,12 @@ footer（可选：BREAKING CHANGE / Refs / Contract）
 | build | 构建、依赖、工具链 |
 | ci | CI 配置 |
 | chore | 杂项、仓库维护 |
-| contract | 契约（C1 / C2 / C3）变更 |
+| contract | 协议 / 契约变更 |
 | revert | 回滚 |
 
 ### scope（可选，小写 kebab）
 
-建议：`kernel` `sdk` `plugins` `web` `protocol` `gate` `ci` `docs` `skill` `repo`
+建议：`core` `packages` `ui-engine` `docs` `ci` `skill` `repo`
 
 ### 字数（硬限制，钩子会拦）
 
@@ -93,7 +93,7 @@ fix: 修改了一些问题，更新了相关逻辑，并且调整了测试
 ## 3. 分支
 
 - 从 `main` 拉出；命名 `type/short-slug`，小写 kebab，≤ 50 字符。
-  例：`feat/idea-capture`、`fix/event-replay`、`contract/c3-slots`。
+  例：`feat/idea-capture`、`fix/event-replay`、`docs/architecture`。
 - 分支短命，合并后删除。
 - **禁止直接向 `main` 提交或推送。**
 - **禁止本地合并到 `main`。** 主分支只能通过 PR 更新。
@@ -119,7 +119,7 @@ fix: 修改了一些问题，更新了相关逻辑，并且调整了测试
 2. 为什么
 3. 怎么验证（命令 + 输出摘要）
 4. 风险与回滚
-5. 契约影响（有 / 无）
+5. 协议影响（有 / 无）
 
 ### 合并方式
 
@@ -133,7 +133,7 @@ fix: 修改了一些问题，更新了相关逻辑，并且调整了测试
 
 ### 合并前置条件
 
-- 门禁全绿；
+- 验证通过；
 - 测试通过；
 - 基础安全检查通过（secret scanning、依赖变更审查）；
 - 有评审时，评审通过；
@@ -171,6 +171,6 @@ fix: 修改了一些问题，更新了相关逻辑，并且调整了测试
 - [ ] 标题 ≤ 72，subject 4–50
 - [ ] 类型与 scope 正确
 - [ ] 正文解释了 what / why，每行 ≤ 72
-- [ ] 门禁全绿
+- [ ] 验证通过
 - [ ] 没有密钥与本地生成物
 - [ ] 分支名符合 `type/slug`

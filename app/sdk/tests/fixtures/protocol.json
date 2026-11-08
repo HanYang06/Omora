@@ -1,0 +1,41 @@
+[
+  {
+    "name": "render",
+    "ok": true,
+    "frame": {"id": "1", "type": "call", "target": "ui", "method": "render", "args": {"view": "main"}}
+  },
+  {
+    "name": "event",
+    "ok": true,
+    "frame": {"id": "2", "type": "call", "target": "ui", "method": "event", "args": {"handler": "main:1:0", "payload": {}}}
+  },
+  {
+    "name": "no-args-key",
+    "ok": true,
+    "frame": {"id": "3", "type": "call", "target": "store", "method": "items"}
+  },
+  {
+    "name": "not-an-object",
+    "ok": false,
+    "code": "bad_frame",
+    "frame": [1, 2]
+  },
+  {
+    "name": "missing-id",
+    "ok": false,
+    "code": "bad_frame",
+    "frame": {"type": "call", "target": "ui", "method": "render"}
+  },
+  {
+    "name": "wrong-type",
+    "ok": false,
+    "code": "bad_frame",
+    "frame": {"id": "4", "type": "result", "value": 1}
+  },
+  {
+    "name": "args-not-object",
+    "ok": false,
+    "code": "bad_frame",
+    "frame": {"id": "5", "type": "call", "target": "ui", "method": "render", "args": []}
+  }
+]

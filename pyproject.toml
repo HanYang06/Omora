@@ -1,84 +1,42 @@
 [project]
-name = "omora-workspace"
+name = "omora"
 version = "0.1.0"
-description = "Omora monorepo workspace"
-requires-python = ">=3.12"
-dependencies = []
+description = "本地优先的灵感与项目管理工具"
+readme = "README.md"
+authors = [
+    { name = "HanYang06", email = "206431259+HanYang06@users.noreply.github.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "pyyaml>=6.0.3",
+    "rich>=15.0.0",
+    "websockets>=15,<16",
+]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.3",
-    "ruff>=0.7",
-    "pyright>=1.1.390",
-    "import-linter>=2.1",
-    "jsonschema>=4.23",
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+    "types-pyyaml>=6.0.12.20261103",
 ]
 
 [tool.uv]
 package = false
 
-[tool.uv.workspace]
-members = ["sdk", "kernel", "plugins/*"]
+[tool.pytest.ini_options]
+pythonpath = ["app"]
+testpaths = ["app"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
-exclude = [".agents", ".venv", "node_modules", "dist", ".build"]
+target-version = "py314"
+exclude = [".agents", ".venv"]
 
-[tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "T20"]
-ignore = ["RUF001", "RUF002", "RUF003"]
+[tool.ruff.lint.isort]
+known-first-party = ["boot", "core", "packages", "sdk"]
 
-[tool.ruff.lint.per-file-ignores]
-"scripts/**" = ["T20"]
-"**/tests/**" = ["T20"]
-
-[tool.pytest.ini_options]
-testpaths = ["kernel/tests", "plugins"]
-addopts = "-q"
-
-[tool.pyright]
-include = [
-    "sdk/src",
-    "kernel/src",
-    "kernel/tests",
-    "plugins/*/src",
-    "plugins/*/tests",
-    "scripts",
-]
-typeCheckingMode = "strict"
-pythonVersion = "3.12"
-reportMissingTypeStubs = false
-extraPaths = ["scripts"]
-
-[tool.importlinter]
-root_packages = [
-    "omora_kernel",
-    "omora_sdk",
-    "omora_plugins_ideas",
-    "omora_plugins_projects",
-    "omora_plugins_requirements",
-]
-
-[[tool.importlinter.contracts]]
-name = "SDK 不得依赖内核或插件"
-type = "forbidden"
-source_modules = ["omora_sdk"]
-forbidden_modules = [
-    "omora_kernel",
-    "omora_plugins_ideas",
-    "omora_plugins_projects",
-    "omora_plugins_requirements",
-]
-
-[[tool.importlinter.contracts]]
-name = "内核不得依赖插件"
-type = "forbidden"
-source_modules = ["omora_kernel"]
-forbidden_modules = ["omora_plugins_ideas", "omora_plugins_projects", "omora_plugins_requirements"]
-
-[[tool.importlinter.contracts]]
-name = "插件不得依赖内核"
-type = "forbidden"
-source_modules = ["omora_plugins_ideas"]
-forbidden_modules = ["omora_kernel", "omora_plugins_projects", "omora_plugins_requirements"]
+[tool.mypy]
+python_version = "3.14"
+strict = true
+mypy_path = "app"
