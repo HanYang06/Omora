@@ -27,4 +27,23 @@
 
 ## 跑起来
 
-代码落地后补。
+Python 侧（内核 + 系统插件）：
+
+```
+uv run python app/main.py
+```
+
+TS 侧（渲染引擎），另开一个终端：
+
+```
+pnpm --dir app/ui-engine install
+pnpm --dir app/ui-engine dev
+```
+
+浏览器打开 Vite 给的地址：看到收件箱，点"归档"，条目消失。
+
+## 门禁
+
+```
+pwsh scripts/check.ps1
+```

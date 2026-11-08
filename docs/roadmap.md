@@ -4,13 +4,24 @@
 
 ## 现在
 
-- 架构定稿。
-- 内核的 Context / Kernel 已落，带行为测试。
-- `sdk` 与第一个底层插件 `store`（内存）已落，带行为测试。
-- 四份设计：`docs/design/core.md`、`config.md`、`packages.md`、`ui-engine.md`。
-- boot、配置、net 插件都还没写。
+- 架构定稿，四条设计线（内核 / 配置 / 版本 / 插件形态）已收。
+- **闭环已通**：内核 → boot + 配置 → sdk → store / ui / net / inbox → 渲染引擎。
+- 测试：Python 49 条、TS 25 条，全绿。
+- 设计：`docs/design/core.md`、`config.md`、`protocol.md`、`versioning.md`、`packages.md`、`ui-engine.md`。
 
-## 第一刀：能起来
+## 已完成：闭环
+
+证明了「插件 → 节点 → 界面 → 事件 → 回插件」。
+
+- 内核：四个词 + 句柄 + 撤销容错
+- boot：读两份配置、按序装、报没人认领的段
+- 协议：call / result / error，两侧各一份，同一份 fixture 钉住
+- 插件：store / ui / net / inbox
+- 渲染引擎：React + Vite + vitest
+
+验收：`pwsh scripts/check.ps1` 全绿；Python 端到端测试真连 WebSocket 走通闭环。
+
+## 下一刀：能起来
 
 **要证明**：代码里的有序列表 → 读两份配置 → 构造插件 → 装进内核 → 报没人认领的段。
 

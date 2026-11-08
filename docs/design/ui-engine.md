@@ -11,15 +11,20 @@ TypeScript + React + Vite。
 ```
 src/
   main.tsx        挂载
-  connection.ts   WebSocket：请求 / 响应按 id 配对
-  renderer.tsx    节点树 → React
+  app.tsx         默认母页面：持有当前节点数组与连接状态
+  connection.ts   WebSocket：请求 / 响应按 id 配对；未连接不发请求
+  protocol.ts     帧的类型与校验（读同一份 fixture）
+  renderer.tsx    节点树 → React；未知 type 画占位框
   components.tsx  组件表（v0：column / row / text / button）
-  types.ts        帧与节点类型
+  types.ts        节点类型
+  *.test.ts(x)    vitest：协议、连接、渲染
 ```
+
+测试：`pnpm --dir app/ui-engine test --run`。协议测试读 `app/sdk/tests/fixtures/protocol.json`——Python 与 TS 用同一份帧样例。
 
 ## 3. 连接
 
-- 连 net 插件提供的端点；地址由 net 的配置决定。
+- 连 net 插件提供的端点；默认 `ws://127.0.0.1:8765`（`connection.ts` 的 `DEFAULT_URL`），由 net 的配置决定实际地址。
 - 请求 `{id, target, method, args}`；响应按 `id` 配对成 Promise。
 - 未连接或断开：页面显示状态，不发请求。
 - v0 不做重连与超时。
