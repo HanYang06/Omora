@@ -53,13 +53,27 @@ class Context:
         self._effects.append(fn)
 
     def dispose(self) -> None:
-        """逆序撤销登记的全部动作。可重复调用。"""
+        """逆序撤销登记的全部动作。可重复调用。
+
+        一次撤销抛错不会挡住后面的撤销：全部跑完之后再抛。
+        只有一个错误就原样重抛，多个包成 ExceptionGroup。
+        """
         if self._disposed:
             return
         self._disposed = True
-        for fn in reversed(self._effects):
-            fn()
-        self._effects.clear()
+        errors: list[BaseException] = []
+        try:
+            for fn in reversed(self._effects):
+                try:
+                    fn()
+                except BaseException as exc:  # noqa: BLE001 — 一个撤销失败不能挡住后面的
+                    errors.append(exc)
+        finally:
+            self._effects.clear()
+        if len(errors) == 1:
+            raise errors[0]
+        if errors:
+            raise BaseExceptionGroup(f"撤销时出错 {len(errors)} 次", errors)
 
     def _assert_live(self) -> None:
         if self._disposed:

@@ -89,6 +89,53 @@ def test_unknown_plugin_is_not_running() -> None:
     assert kernel.names() == ()
 
 
+def test_install_returns_a_handle_that_uninstalls_the_plugin() -> None:
+    kernel = Kernel()
+    handle = kernel.install(_Plugin("store", lambda ctx: ctx.provide("store", {})))
+
+    assert handle.name == "store"
+
+    handle.dispose()
+
+    assert not kernel.running("store")
+    with pytest.raises(LookupError, match="服务未提供: store"):
+        kernel.resolve("store")
+
+
+def test_failed_install_notes_the_plugin_name() -> None:
+    def boom(ctx: Context) -> None:
+        raise RuntimeError("boom")
+
+    kernel = Kernel()
+
+    with pytest.raises(RuntimeError, match="boom") as info:
+        kernel.install(_Plugin("broken", boom))
+
+    notes = "\n".join(info.value.__notes__ or [])
+    assert '插件 "broken" 装载失败' in notes
+
+
+def test_one_failing_effect_does_not_stop_the_rest() -> None:
+    order: list[str] = []
+
+    def apply(ctx: Context) -> None:
+        ctx.effect(lambda: order.append("first"))
+
+        def failing() -> None:
+            raise RuntimeError("undo boom")
+
+        ctx.effect(failing)
+        ctx.effect(lambda: order.append("third"))
+
+    kernel = Kernel()
+    kernel.install(_Plugin("p", apply))
+
+    with pytest.raises(RuntimeError, match="undo boom"):
+        kernel.uninstall("p")
+
+    assert order == ["third", "first"]
+
+
 def test_glue_plugin_only_wires_two_capabilities() -> None:
     kernel = Kernel()
     calls: list[str] = []
