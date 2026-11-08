@@ -1,12 +1,12 @@
 # 路线图
 
-> 这里是计划：先做什么、怎么算做完。设计在各目录的 `DESIGN.md` 里，架构在 `ARCHITECTURE.md` 里。
+> 这里是计划：先做什么、怎么算做完。设计在 `docs/design/` 里，架构在 `ARCHITECTURE.md` 里。
 
 ## 现在
 
 - 架构定稿。
 - 内核的 Context / Kernel 已落，带行为测试；Router 待写。
-- 三份设计：`app/core/`、`app/packages/`、`app/ui-engine/`。
+- 三份设计：`docs/design/core.md`、`packages.md`、`ui-engine.md`。
 
 ## 第一刀：闭环
 
