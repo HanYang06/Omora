@@ -7,21 +7,14 @@ build/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
-.pyright/
-
-# 构建与工具缓存
-.build/
-.import_linter_cache/
 
 # Node
 node_modules/
-web/dist/
 *.tsbuildinfo
 
 # 本地数据
 .omora/
-*.sqlite3
-*.sqlite
+*.sqlite*
 *.db
 
 # 密钥与环境
