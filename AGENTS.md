@@ -8,7 +8,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 本地优先的灵感与项目管理工具：灵感、项目、需求互相可追溯；默认本地跑，也能部署成网页。
 
-当前状态：闭环已通，母 UI（浅色）+ 界面库 v1 + 灵感页 + 音频捕获 + uv workspace 已落——`omora-core` / `omora-sdk` / `omora-plugin-*`、boot / 配置、store（SQLite）/ media / ui / ideas / projects / requirements / net 插件、渲染引擎（`app/ui-engine/`）。深色主题、视频、转写、AI 待做。
+当前状态：闭环已通，母 UI（浅色）+ 界面库 v1 + 灵感页 + 传统搜索 + 音频 / 视频捕获（两个独立插件、客户端设备门禁）+ uv workspace 已落——`omora-core` / `omora-sdk` / `omora-plugin-*`、boot / 配置、store（SQLite）/ media / ui / audio / video / ideas / projects / requirements / net 插件、渲染引擎（`app/ui-engine/`）。深色主题、转写、AI 待做。
 
 ## 结构
 
