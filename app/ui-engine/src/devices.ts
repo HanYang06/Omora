@@ -129,6 +129,14 @@ export function captureErrorReason(error: unknown, kind: DeviceKind): string {
   return `打不开${noun}`;
 }
 
+/** 浏览器给的设备来源；没有 mediaDevices（SSR、老浏览器、非安全上下文）就是 undefined。 */
+export function defaultDeviceSource(): DeviceSource | undefined {
+  if (typeof navigator === "undefined") {
+    return undefined;
+  }
+  return navigator.mediaDevices as unknown as DeviceSource | undefined;
+}
+
 /** 打开设备。只在用户点了按钮之后调：浏览器只认手势里的权限请求。 */
 export function openMediaStream(
   source: DeviceSource | undefined,
@@ -137,11 +145,27 @@ export function openMediaStream(
   if (source?.getUserMedia !== undefined) {
     return source.getUserMedia(constraints);
   }
-  const devices = typeof navigator === "undefined" ? undefined : navigator.mediaDevices;
-  if (devices === undefined) {
+  const devices = defaultDeviceSource();
+  if (devices?.getUserMedia === undefined) {
     return Promise.reject(new Error("这个环境没有媒体设备接口"));
   }
   return devices.getUserMedia(constraints);
+}
+
+/**
+ * 一次性问本机有什么能力：给 manager 的 report_capabilities 用（上报一次，不在别处再报）。
+ * 只枚举、不要权限：用户没点过就不该弹窗。没有 mediaDevices 或没有设备就返回空——
+ * 没上报等于没有能力，manager 会据此关掉对应插件。
+ */
+export async function detectCapabilities(
+  source?: DeviceSource,
+): Promise<readonly Capability[]> {
+  const tracker = createDeviceTracker(source ?? defaultDeviceSource());
+  try {
+    return capabilitiesOf(await tracker.refresh());
+  } finally {
+    tracker.stop();
+  }
 }
 
 export interface DeviceTracker {

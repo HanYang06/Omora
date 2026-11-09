@@ -21,7 +21,7 @@ src/
   capture.tsx     老录音条 / 音频播放（v0 形状，保留）
   audio-capture.tsx  音频捕捉：设备门禁、多设备、录音
   video-capture.tsx  视频捕捉：设备门禁、预览、重录、上传；加视频播放器
-  devices.ts      设备检测：枚举、门禁、热插拔（纯函数，可直接测）
+  devices.ts      设备检测：枚举、门禁、热插拔、能力上报（纯函数，可直接测）
   use-devices.ts  设备状态的 React 胶水
   device-select.tsx  多设备时的选择器
   media.ts        取媒体（media.load）+ 上传（HTTP 媒体通道）
@@ -119,6 +119,8 @@ src/
 ## 9. 状态
 
 - 只持有三样：当前快照、连接状态、本机的设备状态（设备清单 / 枚举到没有）。
+- 设备能力上报一次：连接 open 后把 `detectCapabilities()` 的结果交给 manager 的
+  `report_capabilities`（谁上报、怎么报是 manager 那边的事；引擎只给检测结果，不重复报）。
   设备状态是本机事实，不上报成真相：它只决定这一台机器上的按钮能不能按。
 - 不缓存真相：数据在 Python 侧，这里只有当前这一份快照。
 - 媒体按需取、按需播；不把字节塞进快照。

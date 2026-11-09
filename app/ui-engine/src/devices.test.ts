@@ -4,6 +4,7 @@ import {
   captureGate,
   capabilitiesOf,
   createDeviceTracker,
+  detectCapabilities,
   deviceLabel,
   groupDevices,
   pendingState,
@@ -205,6 +206,21 @@ describe("设备词表", () => {
         videoinput: [{ deviceId: "v", label: "" }],
       }),
     ).toEqual(["microphone", "camera"]);
+  });
+
+  it("上报能力：有麦克风和摄像头就报两个", async () => {
+    const source = new FakeDevices();
+    source.devices = [MIC, CAM];
+
+    expect(await detectCapabilities(source)).toEqual(["microphone", "camera"]);
+  });
+
+  it("上报能力：没有设备就报空，不猜", async () => {
+    expect(await detectCapabilities(new FakeDevices())).toEqual([]);
+  });
+
+  it("上报能力：环境里没有媒体接口也报空", async () => {
+    expect(await detectCapabilities()).toEqual([]);
   });
 
   it("getUserMedia 的错翻成人话", () => {
