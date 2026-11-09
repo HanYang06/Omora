@@ -20,6 +20,8 @@ src/
   capture.tsx     录音 / 播放
   media.ts        取媒体（media.load，参数名 media_id）
   shared.ts       组件共用的 props 与工具
+  search.tsx      搜索框、建议、结果
+  searchText.ts   命中切分与键盘决策（纯函数）
   types.ts        节点、页面快照、媒体、handler 类型
   styles.css      壳与基础词表
   media.css       录音 / 播放
@@ -45,6 +47,10 @@ src/
    - 录音停 → `ui.event({handler, payload: {audio, mime, seconds}})`，`audio` 是 base64。
 5. 点动作 → `ui.event({handler, payload: {}})`；返回同一份快照，整页替换。
 6. 播放音频 → `media.load({media_id})` → `{mime, data(base64)}` → 引擎按需播；音频字节不进快照。参数名要和 Python 的 `load(media_id)` 对齐。
+7. 搜索：打字在引擎侧防抖 200ms → `ui.event({handler, payload: {value}})`；建议是
+   `search` 的子节点，画成下拉。回车在没有选中建议时提交输入框里的字，有选中建议时
+   把那一条的 `value` 交回去；上下键只在建议之间走（到头就停），Esc 只收下拉、不提交。
+   下拉开不开、建议几条、提交后去哪一屏，全由插件返回的下一次快照决定。
 
 ## 5. 页面快照
 
@@ -82,6 +88,9 @@ src/
 | list | — | 账本容器（ul） |
 | item | meta、title | 账本行：左栏 meta、右栏标题、子节点是这一行的动作 |
 | empty | title、hint? | 空状态；没有 hint 就不画第二行 |
+| search | placeholder、value、on_query、on_submit | 搜索框：防抖 200ms 问后端；children 是下拉建议；回车 / 按钮提交 |
+| suggestion | value、title、meta?、highlight?、on_pick | 下拉一条：点它把 value 交回去；highlight 在 title 里标出来 |
+| result | title、snippet、meta、highlight?、on_click | 结果行：标题可点；snippet 里把命中的词标出来 |
 
 - 未知 `type` → 占位框 + `console.warn`。
 - 没有子节点的 `children` 也得是数组。
@@ -116,5 +125,5 @@ src/
 - 深色主题。
 - 视频捕获、HTTP 媒体通道（v0 音频走 base64）。
 - 本地转写 / AI 解读。
-- 关联 / 网图、详情页、局部更新 / diff。
+- 关联 / 网图、局部更新 / diff。
 - 重连、请求超时、多客户端、窄屏适配。

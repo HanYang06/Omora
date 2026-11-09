@@ -66,14 +66,23 @@ error  {"id": "1", "type": "error",  "code": "unknown_target", "message": "服�
 
 - `children` 永远是数组，没有子节点就是 `[]`。
 - 可调用字段（如 `on_click`、`on_submit`）序列化成 handler id 字符串，对渲染引擎不透明。
-- 组件词表：`column` / `row` / `text` / `button` / `input` / `recorder` / `audio` / `list` / `item` / `empty`。
+- 组件词表：`column` / `row` / `text` / `button` / `input` / `recorder` / `audio` / `list` / `item` / `empty` / `search` / `suggestion` / `result`。
 - 事件载荷：`{"handler": "...", "payload": {...}}`；`input` 提交带 `{"value": "..."}`，`recorder` 带 `{"audio": base64, "mime": "...", "seconds": 0}`，`button` 带 `{}`。
+- 搜索：`search` 的 children 是 `suggestion`；打字事件与提交事件都带 `{"value": "..."}`，
+  点一条建议带回那条建议自己的 `value`，点 `result` 带 `{}`。`suggestion` 与 `result` 的
+  `highlight` 是"要把哪几个字标出来"，渲染引擎不认识它是不是真的命中。
 - 媒体字节在 v0 走 base64（`recorder` 的载荷、`media.load` 的返回值）；只收文本帧的规矩不变。
 - 未知 `type` → 渲染引擎画占位框，不崩。
 
 ## 6. 跨语言钉
 
-`app/sdk/tests/fixtures/protocol.json` 是唯一的一份帧样例，Python 与 TS 的测试都读它。
+`app/sdk/tests/fixtures/protocol.json` 是唯一的跨语言样例，Python 与 TS 的测试都读它：
+
+- `calls`：call 帧，合法与非法都要有；
+- `snapshots`：页面快照，钉字段（`pages` / `page` / `meta` / `content`）与节点形状。
+
+Python 用 SDK 的 `serialize` 输出和 `snapshots` 里的 `content` 逐字段比对；TS 检查同一份
+快照的节点形状。两边都不自己造样例。
 
 ## 7. 不做
 

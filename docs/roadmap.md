@@ -7,8 +7,9 @@
 - 母 UI（浅色）+ 界面库 v1 + 灵感页 + 音频捕获已落。
 - 仓库是 uv workspace：`omora-core` / `omora-sdk` / 每个 `omora-plugin-*` 都是 member；import 命名空间 `omora.*`。
 - 存储：SQLite（`.omora/omora.db`）；媒体文件（`.omora/media`）。
-- 测试：Python 83 条、TS 36 条，全绿。
+- 测试：Python 121 条、TS 56 条，全绿。
 - 门禁：`uv run python scripts/check.py` 全绿。
+- 灵感页有传统（非 AI）搜索：建议下拉、结果视图、详情与返回。
 - 项目 / 需求是占位页；深色主题待单独设计；视频、转写、AI 未做。
 
 ## 已完成：workspace 化
@@ -20,6 +21,20 @@
 - boot 的清单只留有序名字，按入口点找插件类
 - 一个 lock / 一个 venv；单独开发：`uv run --package omora-plugin-ideas pytest`
 - 验收：`check.py` 全绿；72 条 Python 测试按入口点装起来跑
+
+## 已完成：传统搜索
+
+浏览器式搜索，一个 AI 都没有：
+
+- store：`searchable` 声明 + `search`（参数化 LIKE 子串，标题命中 → 置顶 → 新的）
+- sdk：`Search` / `Suggestion` / `Result` 三个节点
+- 引擎：`search` 组件管 200ms 防抖、上下键、回车 / 按钮提交、Esc 收下拉
+- ideas：搜索状态（query / suggestions / results / detail）、建议下拉、结果视图、详情、返回
+- 协议：fixture 增加页面快照段，Python 的 serialize 与 TS 的形状检查都读它
+- 验收：`check.py` 全绿；store / ideas / 引擎的行为测试覆盖子串、参数化、分页、排名、
+  建议与结果的流转、无结果状态
+
+语义检索（"牛头不对马嘴"）不在这一版：等 AI 插件接进来，换的是 ideas 里调 `search` 那一行。
 
 ## 已完成：通用 store
 
@@ -58,9 +73,8 @@
 - 视频捕获：同一套媒体管线；二进制换 HTTP 媒体通道。
 - AI 接口插件：本地转写 + 云端明确化分析（provider、同意提示、草稿 UI）。
 - 关联 / 网：灵感之间的 `sparked` / `related` 边，候选关联。
-- 详情页：点开一条灵感。
 - GitHub provider：PR / issue / action 作为产物来源。
-- 深色主题、搜索、窄屏、TS 插件宿主、房间、server 形态。
+- 深色主题、窄屏、TS 插件宿主、房间、server 形态。
 
 ## 已完成：闭环
 
