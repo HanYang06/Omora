@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
+import type { DeviceSource } from "./devices";
 import type { EventHandler, MediaResolver, Node } from "./types";
 
 export interface NodeComponentProps {
   node: Node;
   onEvent?: EventHandler;
   loadMedia?: MediaResolver;
+  /** 设备来源；缺省用 navigator.mediaDevices。测试里传假的。 */
+  devices?: DeviceSource;
   children?: ReactNode;
 }
 

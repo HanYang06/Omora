@@ -1,0 +1,203 @@
+/**
+ * 客户端硬件检测：设备、权限、热插拔。
+ *
+ * 硬件只有浏览器看得见，所以检测在渲染引擎这一侧；Python 只给质量档与时限。
+ * 没有对应设备时，对应捕捉默认禁用——按钮留着，把原因写清楚。
+ */
+
+export type Capability = "microphone" | "camera";
+export type DeviceKind = "audioinput" | "videoinput";
+
+/** 设备种类 → 能力名。manager 的 report_capabilities 用同一套词。 */
+export const CAPABILITY_OF: Record<DeviceKind, Capability> = {
+  audioinput: "microphone",
+  videoinput: "camera",
+};
+
+export interface DeviceInfo {
+  deviceId: string;
+  label: string;
+}
+
+export interface DeviceState {
+  /** 浏览器有没有 mediaDevices（没有就彻底禁用） */
+  supported: boolean;
+  /** 枚举过一轮没有（没有之前一律禁用，理由是"正在检测"） */
+  ready: boolean;
+  audioinput: DeviceInfo[];
+  videoinput: DeviceInfo[];
+}
+
+export interface MediaDeviceInfoLike {
+  deviceId: string;
+  kind: string;
+  label: string;
+}
+
+/** navigator.mediaDevices 的子集；测试里传假的。 */
+export interface DeviceSource {
+  enumerateDevices(): Promise<readonly MediaDeviceInfoLike[]>;
+  getUserMedia?(constraints: MediaStreamConstraints): Promise<MediaStream>;
+  addEventListener?(type: "devicechange", listener: () => void): void;
+  removeEventListener?(type: "devicechange", listener: () => void): void;
+}
+
+export function unsupportedState(): DeviceState {
+  return { supported: false, ready: true, audioinput: [], videoinput: [] };
+}
+
+export function pendingState(): DeviceState {
+  return { supported: true, ready: false, audioinput: [], videoinput: [] };
+}
+
+/** 枚举结果 → 两类设备各自的清单。 */
+export function groupDevices(raw: readonly MediaDeviceInfoLike[]): {
+  audioinput: DeviceInfo[];
+  videoinput: DeviceInfo[];
+} {
+  const audioinput: DeviceInfo[] = [];
+  const videoinput: DeviceInfo[] = [];
+  for (const device of raw) {
+    const info: DeviceInfo = {
+      deviceId: typeof device.deviceId === "string" ? device.deviceId : "",
+      label: typeof device.label === "string" ? device.label : "",
+    };
+    if (device.kind === "audioinput") {
+      audioinput.push(info);
+    } else if (device.kind === "videoinput") {
+      videoinput.push(info);
+    }
+  }
+  return { audioinput, videoinput };
+}
+
+export interface Gate {
+  enabled: boolean;
+  reason?: string;
+  devices: DeviceInfo[];
+}
+
+/** 这个能力现在能不能用；不能用就给一句人话的理由。 */
+export function captureGate(state: DeviceState, kind: DeviceKind): Gate {
+  const devices = state[kind];
+  const noun = kind === "audioinput" ? "麦克风" : "摄像头";
+  if (!state.supported) {
+    return { enabled: false, reason: "这个环境没有媒体设备接口", devices };
+  }
+  if (!state.ready) {
+    return { enabled: false, reason: "正在检测设备…", devices };
+  }
+  if (devices.length === 0) {
+    return { enabled: false, reason: `没有检测到${noun}`, devices };
+  }
+  return { enabled: true, devices };
+}
+
+/** 客户端检测到的能力；交给 manager 上报，没上报 = 没有能力。 */
+export function capabilitiesOf(state: DeviceState): Capability[] {
+  const found: Capability[] = [];
+  if (state.audioinput.length > 0) {
+    found.push(CAPABILITY_OF.audioinput);
+  }
+  if (state.videoinput.length > 0) {
+    found.push(CAPABILITY_OF.videoinput);
+  }
+  return found;
+}
+
+/** 设备没有名字（权限还没给）时也得有个能读的标签。 */
+export function deviceLabel(device: DeviceInfo, index: number, kind: DeviceKind): string {
+  if (device.label.length > 0) {
+    return device.label;
+  }
+  return `${kind === "audioinput" ? "麦克风" : "摄像头"} ${index + 1}`;
+}
+
+/** getUserMedia 抛的错 → 一句能放在按钮旁边的理由。 */
+export function captureErrorReason(error: unknown, kind: DeviceKind): string {
+  const name = error instanceof Error ? error.name : "";
+  const noun = kind === "audioinput" ? "麦克风" : "摄像头";
+  if (name === "NotAllowedError") {
+    return `需要${noun}权限`;
+  }
+  if (name === "NotFoundError") {
+    return `没有检测到${noun}`;
+  }
+  if (name === "NotReadableError") {
+    return `${noun}被别的程序占用`;
+  }
+  return `打不开${noun}`;
+}
+
+/** 打开设备。只在用户点了按钮之后调：浏览器只认手势里的权限请求。 */
+export function openMediaStream(
+  source: DeviceSource | undefined,
+  constraints: MediaStreamConstraints,
+): Promise<MediaStream> {
+  if (source?.getUserMedia !== undefined) {
+    return source.getUserMedia(constraints);
+  }
+  const devices = typeof navigator === "undefined" ? undefined : navigator.mediaDevices;
+  if (devices === undefined) {
+    return Promise.reject(new Error("这个环境没有媒体设备接口"));
+  }
+  return devices.getUserMedia(constraints);
+}
+
+export interface DeviceTracker {
+  readonly state: DeviceState;
+  refresh(): Promise<DeviceState>;
+  stop(): void;
+}
+
+/**
+ * 设备跟踪：先枚举一次，之后每次 devicechange 重新枚举——
+ * 插上摄像头就立刻能用，拔掉就立刻禁用。
+ */
+export function createDeviceTracker(
+  source?: DeviceSource,
+  onChange?: (state: DeviceState) => void,
+): DeviceTracker {
+  let state = source === undefined ? unsupportedState() : pendingState();
+  let stopped = false;
+  const notify = (): void => {
+    onChange?.(state);
+  };
+  const refresh = async (): Promise<DeviceState> => {
+    if (source === undefined) {
+      notify();
+      return state;
+    }
+    try {
+      const raw = await source.enumerateDevices();
+      state = { supported: true, ready: true, ...groupDevices(raw) };
+    } catch (error) {
+      console.error("[omora] 枚举设备失败:", error);
+      state = { supported: true, ready: true, audioinput: [], videoinput: [] };
+    }
+    notify();
+    return state;
+  };
+  const onDeviceChange = (): void => {
+    if (stopped) {
+      return;
+    }
+    void refresh();
+  };
+  if (source !== undefined) {
+    source.addEventListener?.("devicechange", onDeviceChange);
+  }
+  return {
+    get state(): DeviceState {
+      return state;
+    },
+    refresh,
+    stop(): void {
+      if (stopped) {
+        return;
+      }
+      stopped = true;
+      source?.removeEventListener?.("devicechange", onDeviceChange);
+    },
+  };
+}
