@@ -4,8 +4,8 @@ from typing import Any
 
 from websockets.asyncio.client import connect
 
-from core.context import Context
-from packages.net import Net
+from omora.core.context import Context
+from omora.plugins.net import Net
 
 
 class _Echo:
@@ -16,10 +16,10 @@ class _Echo:
         raise RuntimeError("炸了")
 
 
-def _net() -> Net:
+def _net(port: int = 0) -> Net:
     ctx = Context()
     ctx.provide("svc", _Echo())
-    return Net(ctx)
+    return Net(ctx, port=port)
 
 
 def _call(frame_id: str, service: str, method: str, **args: Any) -> dict[str, Any]:

@@ -1,7 +1,10 @@
+from datetime import datetime
+from pathlib import Path
+
 import pytest
 
-from core.kernel import Kernel
-from packages.store import Store, StorePlugin
+from omora.core.kernel import Kernel
+from omora.plugins.store import Store, StorePlugin
 
 
 def test_adding_an_item_makes_it_visible_in_items() -> None:
@@ -40,10 +43,36 @@ def test_ids_keep_counting_after_an_archive() -> None:
     assert (second.id, third.id) == (2, 3)
 
 
-def test_installing_the_plugin_makes_store_reachable_by_name() -> None:
+def test_items_survive_reopening_the_database(tmp_path: Path) -> None:
+    path = str(tmp_path / "omora.db")
+    first = Store(path)
+    added = first.add("买牛奶")
+
+    second = Store(path)
+
+    assert [(item.id, item.title) for item in second.items()] == [(added.id, "买牛奶")]
+
+
+def test_an_item_remembers_its_media(tmp_path: Path) -> None:
+    path = str(tmp_path / "omora.db")
+    Store(path).add("语音", media="abc")
+
+    assert Store(path).items()[0].media == "abc"
+
+
+def test_adding_an_item_records_when_it_happened() -> None:
+    before = datetime.now()
+
+    item = Store().add("买牛奶")
+
+    after = datetime.now()
+    assert before <= item.created_at <= after
+
+
+def test_installing_the_plugin_makes_store_reachable_by_name(tmp_path: Path) -> None:
     kernel = Kernel()
 
-    kernel.install(StorePlugin())
+    kernel.install(StorePlugin(path=str(tmp_path / "omora.db")))
 
     store = kernel.resolve("store")
     store.add("买牛奶")
@@ -52,7 +81,7 @@ def test_installing_the_plugin_makes_store_reachable_by_name() -> None:
 
 def test_uninstalling_the_plugin_takes_the_store_away() -> None:
     kernel = Kernel()
-    kernel.install(StorePlugin())
+    kernel.install(StorePlugin(path=":memory:"))
 
     kernel.uninstall("store")
 

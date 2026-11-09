@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -28,7 +29,7 @@ def stages() -> list[tuple[str, list[str]]]:
         ("docs.links", [sys.executable, str(ROOT / "scripts" / "docs_links.py")]),
         ("py.test", [sys.executable, "-m", "pytest", "-q"]),
         ("py.lint", [sys.executable, "-m", "ruff", "check", "."]),
-        ("py.types", [sys.executable, "-m", "mypy", "app"]),
+        ("py.types", [sys.executable, str(ROOT / "scripts" / "typecheck.py")]),
         ("ui.test", pnpm("--dir", "app/ui-engine", "test", "--run")),
         ("ui.build", pnpm("--dir", "app/ui-engine", "build")),
     ]
@@ -45,6 +46,7 @@ def run_stage(name: str, argv: list[str]) -> bool:
             errors="replace",
             capture_output=True,
             check=False,
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
         )
     except OSError as exc:
         print(f"FAIL {name}: 无法启动 {shown}: {exc}")
@@ -60,6 +62,8 @@ def run_stage(name: str, argv: list[str]) -> bool:
 
 
 def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     if "--list" in sys.argv[1:]:
         for name, _ in stages():
             print(name)

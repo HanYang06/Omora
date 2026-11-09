@@ -1,0 +1,21 @@
+[project]
+name = "omora-plugin-ui"
+version = "0.1.0"
+description = "页面登记、渲染、事件派发"
+requires-python = ">=3.14"
+dependencies = [
+    "omora-sdk",
+]
+
+[project.entry-points."omora.plugins"]
+ui = "omora.plugins.ui:UiPlugin"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+omora-sdk = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/omora"]

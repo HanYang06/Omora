@@ -1,0 +1,21 @@
+[project]
+name = "omora-plugin-projects"
+version = "0.1.0"
+description = "项目页（占位）"
+requires-python = ">=3.14"
+dependencies = [
+    "omora-sdk",
+]
+
+[project.entry-points."omora.plugins"]
+projects = "omora.plugins.projects:ProjectsPlugin"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+omora-sdk = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/omora"]

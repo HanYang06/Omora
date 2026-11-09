@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import configparser
 from collections.abc import Callable, Mapping, Sequence
+from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from core.kernel import Kernel, Plugin
+from omora.core.kernel import Kernel, Plugin
 
-Factory = Callable[..., Plugin]
-Manifest = Sequence[tuple[str, Factory]]
+Loader = Callable[[str, Mapping[str, Any]], Plugin]
 
 _FALSE = {"false", "0", "no", "off", "none", ""}
 
@@ -67,13 +67,36 @@ def load_config(system: Path, user: Path | None = None) -> Config:
     return Config(merged)
 
 
-def build(config: Config, manifest: Manifest) -> Kernel:
+def load_plugin(name: str, settings: Mapping[str, Any]) -> Plugin:
+    """按入口点找插件：入口在插件自己的 pyproject 里，boot 只认名字。"""
+    matches = [entry for entry in entry_points(group="omora.plugins") if entry.name == name]
+    if not matches:
+        raise LookupError(f"缺少插件入口: {name}")
+    factory = matches[0].load()
+    plugin: Plugin = factory(**settings)
+    if plugin.name != name:
+        raise ValueError(f"插件入口 {name} 与插件 name {plugin.name} 不一致")
+    return plugin
+
+
+def build(
+    config: Config,
+    manifest: Sequence[str],
+    *,
+    loader: Loader | None = None,
+) -> Kernel:
     """按 manifest 的顺序装；装不上就带着插件名失败。"""
     kernel = Kernel()
-    for name, factory in manifest:
+    load = loader or load_plugin
+    for name in manifest:
         if not config.enabled(name):
             continue
-        kernel.install(factory(**config.for_plugin(name)))
+        try:
+            plugin = load(name, config.for_plugin(name))
+        except Exception as exc:
+            exc.add_note(f'插件 "{name}" 装载失败')
+            raise
+        kernel.install(plugin)
     return kernel
 
 

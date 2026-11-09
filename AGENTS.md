@@ -8,14 +8,15 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 本地优先的灵感与项目管理工具：灵感、项目、需求互相可追溯；默认本地跑，也能部署成网页。
 
-当前状态：闭环已通——内核、boot / 配置、store / ui / net / inbox 插件、渲染引擎（`app/ui-engine/`）。
+当前状态：闭环已通，母 UI（浅色）+ 界面库 v1 + 灵感页 + 音频捕获 + uv workspace 已落——`omora-core` / `omora-sdk` / `omora-plugin-*`、boot / 配置、store（SQLite）/ media / ui / ideas / projects / requirements / net 插件、渲染引擎（`app/ui-engine/`）。深色主题、视频、转写、AI 待做。
 
 ## 结构
 
 | 位置 | 是什么 | 语言 |
 |---|---|---|
-| `app/core/` | 内核：插件宿主（加持 / 持有 / 引用 / 运行） | Python |
-| `app/packages/` | 系统插件：随包发布，配置决定开关 | Python |
+| `app/core/` | 内核：插件宿主；package `omora-core` | Python |
+| `app/sdk/` | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk` | Python |
+| `app/packages/` | 系统插件：`omora-plugin-*`，uv workspace 的 member | Python |
 | `app/ui-engine/` | 渲染引擎：组件注册表、槽位、事件 | TS |
 | 运行后插件目录 | 生态插件，单独装；现在为空 | 待定 |
 | `docs/` | 架构与事实来源 | — |
@@ -45,6 +46,8 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 - 系统 `python` 是 Windows 商店占位，不可用；Python 命令一律走 `uv run`。
 - 前端依赖走 `pnpm`。
+- Python 侧是 uv workspace：`uv sync` 一个 lock / 一个 venv；每个包自己的 pyproject / 依赖 / src / tests。
+- 开发：`uv run python scripts/dev.py`（内核 + 渲染引擎一起起，Ctrl+C 一起停）。
 - 仓库统一 LF；不提交 `.venv/`、`node_modules/`、`dist/`、本地数据。
 
 门禁：`uv run python scripts/check.py`（体量预算 / 文档断链 / pytest / ruff / mypy / ui-engine 测试与构建）；CI 跑同一条。交付必须附上实际跑过的命令和输出。

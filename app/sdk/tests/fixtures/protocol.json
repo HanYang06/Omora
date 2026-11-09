@@ -2,12 +2,12 @@
   {
     "name": "render",
     "ok": true,
-    "frame": {"id": "1", "type": "call", "target": "ui", "method": "render", "args": {"view": "main"}}
+    "frame": {"id": "1", "type": "call", "target": "ui", "method": "render", "args": {"page": "ideas"}}
   },
   {
     "name": "event",
     "ok": true,
-    "frame": {"id": "2", "type": "call", "target": "ui", "method": "event", "args": {"handler": "main:1:0", "payload": {}}}
+    "frame": {"id": "2", "type": "call", "target": "ui", "method": "event", "args": {"handler": "ideas:1:0", "payload": {"value": "买牛奶"}}}
   },
   {
     "name": "no-args-key",

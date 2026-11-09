@@ -53,24 +53,29 @@
 
 ### 4.2 贡献界面
 
-返回一棵节点树，填进壳定义好的固定槽位。不产出界面的插件只登记服务。
+返回一页（内容 + 标题旁那句话），填进壳定义好的固定槽位。不产出界面的插件只登记服务。
 
 - 只填自己的：不改别人的树、不发明槽位、不需要知道还有谁在。
-- 拉取式：渲染器要哪个视图才构造；没有渲染器就没人调 `view()`。
+- 拉取式：渲染器要哪一页才构造；没有渲染器就没人调 `build()`。
 - 槽位先来先得，不预先设计一套体系。
 
 写法（界面库是 Python 包，内核不 import 它）：
 
 ```python
-from omora.ui import Column, Row, Text, Input, Button
+from omora.sdk.ui import Button, Column, Input, Item, Page
 
-class Inbox:
-    def view(self):
-        return Column(
-            Text("收件箱", kind="title"),
-            Input(placeholder="记一笔", on_submit=self.capture),
-            *[Row(Text(i.title), Button("归档", on_click=self.archive(i)))
-              for i in self.store.ideas()],
+class Ideas:
+    def apply(self, ctx):
+        ctx.resolve("ui").page(ctx, "ideas", "灵感", self.build)
+
+    def build(self) -> Page:
+        return Page(
+            meta=f"{len(self.store.items())} 条",
+            content=Column(
+                Input(placeholder="记一条", on_submit=self.capture),
+                *[Item(i.when, i.title, Button("归档", on_click=self.archive(i)))
+                  for i in self.store.items()],
+            ),
         )
 ```
 
@@ -185,8 +190,9 @@ class Inbox:
 
 | 位置 | 是什么 | 语言 |
 |---|---|---|
-| `app/core/` | 内核：插件宿主（四个词） | Python |
-| `app/packages/` | 系统插件：随包发布，配置决定开关 | Python |
+| `app/core/` | 内核：插件宿主（四个词）；package `omora-core` | Python |
+| `app/sdk/` | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk` | Python |
+| `app/packages/` | 系统插件：`omora-plugin-*`，uv workspace 的 member | Python |
 | `app/ui-engine/` | 渲染引擎：组件注册表、槽位、事件 | TS |
 | 运行后插件目录 | 单独装、可卸的插件 | 待定 |
 | `docs/` | 事实来源，架构文档在这里 | — |
@@ -194,9 +200,9 @@ class Inbox:
 ## 11. 落地顺序
 
 1. 内核 + 测试（`app/core/`）。已落。
-2. boot + 配置：读两份配置、合并、构造插件、报没人认领的段。
-3. net 插件 + 最小协议 + 一个系统插件 + 最小渲染引擎：列表画出来，按钮点得动。
-4. 界面库 + 第一个槽位：收件箱。
+2. boot + 配置：读两份配置、合并、构造插件、报没人认领的段。已落。
+3. net 插件 + 最小协议 + 一个系统插件 + 最小渲染引擎：列表画出来，按钮点得动。已落。
+4. 界面库 + 第一个槽位：灵感。已落。
 5. 领域插件：灵感 / 项目 / 需求，按需要长，不按表拆。
 6. 第二个插件证明组合；最后才是 server 形态。
 

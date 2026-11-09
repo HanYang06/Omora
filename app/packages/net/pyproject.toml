@@ -1,0 +1,22 @@
+[project]
+name = "omora-plugin-net"
+version = "0.1.0"
+description = "WebSocket 与帧分发"
+requires-python = ">=3.14"
+dependencies = [
+    "omora-sdk",
+    "websockets>=15,<16",
+]
+
+[project.entry-points."omora.plugins"]
+net = "omora.plugins.net:NetPlugin"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+omora-sdk = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/omora"]

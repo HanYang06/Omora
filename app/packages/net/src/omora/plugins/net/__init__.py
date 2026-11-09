@@ -12,8 +12,8 @@ from typing import Any
 from websockets.asyncio.server import Server, ServerConnection
 from websockets.asyncio.server import serve as ws_serve
 
-from core.context import Context
-from sdk.protocol import (
+from omora.sdk import Context
+from omora.sdk.protocol import (
     BAD_FRAME,
     CALL_FAILED,
     UNKNOWN_METHOD,

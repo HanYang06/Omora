@@ -9,8 +9,13 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "pyyaml>=6.0.3",
-    "rich>=15.0.0",
-    "websockets>=15,<16",
+    "omora-plugin-store",
+    "omora-plugin-media",
+    "omora-plugin-ui",
+    "omora-plugin-ideas",
+    "omora-plugin-projects",
+    "omora-plugin-requirements",
+    "omora-plugin-net",
 ]
 
 [dependency-groups]
@@ -24,6 +29,18 @@ dev = [
 [tool.uv]
 package = false
 
+[tool.uv.sources]
+omora-plugin-store = { workspace = true }
+omora-plugin-media = { workspace = true }
+omora-plugin-ui = { workspace = true }
+omora-plugin-ideas = { workspace = true }
+omora-plugin-projects = { workspace = true }
+omora-plugin-requirements = { workspace = true }
+omora-plugin-net = { workspace = true }
+
+[tool.uv.workspace]
+members = ["app/core", "app/sdk", "app/packages/*"]
+
 [tool.pytest.ini_options]
 pythonpath = ["app"]
 testpaths = ["app"]
@@ -34,9 +51,10 @@ target-version = "py314"
 exclude = [".agents", ".venv"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["boot", "core", "packages", "sdk"]
+known-first-party = ["boot", "omora"]
 
 [tool.mypy]
 python_version = "3.14"
 strict = true
 mypy_path = "app"
+explicit_package_bases = true

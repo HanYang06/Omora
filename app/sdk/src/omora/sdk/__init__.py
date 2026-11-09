@@ -4,7 +4,7 @@
 内核不 import 它；它不 import 任何插件。
 """
 
-from core.context import Context
-from core.kernel import Plugin
+from omora.core.context import Context
+from omora.core.kernel import Plugin
 
 __all__ = ["Context", "Plugin"]
