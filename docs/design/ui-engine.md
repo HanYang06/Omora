@@ -14,6 +14,7 @@ src/
   app.tsx         容器：快照 + 连接状态；连上 render，点导航 render，回车 / 动作 event，播放取媒体
   shell.tsx       默认母页面：左侧导航 + 右侧一页纸
   connection.ts   WebSocket：请求 / 响应按 id 配对；未连接不发请求
+  capability-report.ts  连上后把客户端能力报给 manager（检测在 capture 的 devices.ts）
   protocol.ts     帧的类型与校验（读同一份 fixture）
   renderer.tsx    节点树 → React；未知 type 画占位框
   components.tsx  基础词表（column / row / text / button / input / list / item / empty）+ 注册表
@@ -39,7 +40,8 @@ src/
 
 ## 4. 数据流
 
-1. 连上 → `ui.render({})` → `result` 是页面快照 → `setState`。
+1. 连上 → `manager.report_capabilities({capabilities})` 上报本客户端能力，然后
+   `ui.render({})` → `result` 是页面快照 → `setState`。
 2. 渲染：`Shell` 用 `pages` 画导航、`page` 高亮、`label` + `meta` 画标题，`content` 画页面。
 3. 点导航 → 引擎直接发 `ui.render({page})`，不走事件。
 4. 捕捉：
@@ -116,6 +118,7 @@ src/
 - 不认识 Python 服务之外的领域。
 - 不做业务判断：点按钮就发事件，不自己改数据。
 - 不 import Python 侧任何东西。
+- 客户端能力由引擎检测并上报；检测只归 capture（`devices.ts`），不重复枚举。
 - 只认 `{type, props, children}`、页面快照与 handler id。
 - 只跟 net 插件说话；net 是系统插件，不属于内核。
 

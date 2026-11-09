@@ -40,7 +40,20 @@ error  {"id": "1", "type": "error",  "code": "unknown_target", "message": "服�
   因此服务不会被并发调用，插件不需要加锁。
 - 什么时候回帧、能不能主动推，都是 net 的职责；v0 不推送。
 
+### 4.1 插件管理调用
+
+manager 是普通服务，不新增帧类型：
+
+| 调用 | args | 返回 |
+|---|---|---|
+| `manager.inventory` | `{}` | 清单快照 |
+| `manager.report_capabilities` | `{"capabilities": ["microphone"]}` | 清单快照 |
+| `manager.set_enabled` | `{"name": "ideas", "enabled": false}` | 清单快照 |
+
+能力是客户端的事实：引擎在连接 open 后上报一次，Python 侧不探测硬件。
+
 ## 5. 页面快照与节点
+
 
 `ui.render` / `ui.event` 的 `result.value` 是一份页面快照：
 
