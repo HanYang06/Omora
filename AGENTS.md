@@ -39,6 +39,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 - 不确定就问，不猜需求；有多种解释就列出来。
 - 一次只做一件事；不顺手改邻近代码。
+- 多区任务走 Agent 团队：Lead 拆任务（写域/依赖）→ 每个 teammate 自己的 worktree/分支 → PR → Lead review + merge commit 合并；详见 [omora-team](.agents/skills/omora-team/SKILL.md)。
 - 跑过才算完成；跑不了就明说没验证。
 - 不用"应该可以""理论上没问题"。
 
@@ -61,4 +62,4 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 ## 提交
 
-按 [omora-git](.agents/skills/omora-git/SKILL.md)：`type(scope): subject`，一次一件事，`main` 只经 PR 合并。
+按 [omora-git](.agents/skills/omora-git/SKILL.md)：`type(scope): subject`，一次一件事，`main` 只经 PR 合并。团队并行时同样按 omora-git；teammate 不合并，Lead review 后合并。
