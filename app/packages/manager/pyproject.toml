@@ -1,0 +1,27 @@
+[project]
+name = "omora-plugin-manager"
+version = "0.1.0"
+description = "插件清单、条件检查与开关"
+requires-python = ">=3.14"
+dependencies = [
+    "omora-sdk",
+]
+
+[project.entry-points."omora.plugins"]
+manager = "omora.manager:ManagerPlugin"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+omora-sdk = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["omora"]
+
+[tool.omora]
+platforms = []
+capabilities = []
+listed = true
+requires = ["store"]

@@ -15,6 +15,7 @@ PACKAGES = ["omora.core", "omora.sdk"]
 
 MODULES = [
     "omora.store",
+    "omora.manager",
     "omora.media",
     "omora.ui",
     "omora.ideas",
@@ -30,6 +31,7 @@ FILES = [
     "app/core/tests",
     "app/sdk/tests",
     "app/packages/ideas/tests",
+    "app/packages/manager/tests",
     "app/packages/media/tests",
     "app/packages/net/tests",
     "app/packages/store/tests",

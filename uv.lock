@@ -11,6 +11,7 @@ members = [
     "omora",
     "omora-core",
     "omora-plugin-ideas",
+    "omora-plugin-manager",
     "omora-plugin-media",
     "omora-plugin-net",
     "omora-plugin-projects",
@@ -229,6 +230,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "omora-plugin-ideas" },
+    { name = "omora-plugin-manager" },
     { name = "omora-plugin-media" },
     { name = "omora-plugin-net" },
     { name = "omora-plugin-projects" },
@@ -249,6 +251,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "omora-plugin-ideas", editable = "app/packages/ideas" },
+    { name = "omora-plugin-manager", editable = "app/packages/manager" },
     { name = "omora-plugin-media", editable = "app/packages/media" },
     { name = "omora-plugin-net", editable = "app/packages/net" },
     { name = "omora-plugin-projects", editable = "app/packages/projects" },
@@ -275,6 +278,17 @@ source = { editable = "app/core" }
 name = "omora-plugin-ideas"
 version = "0.1.0"
 source = { editable = "app/packages/ideas" }
+dependencies = [
+    { name = "omora-sdk" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "omora-sdk", editable = "app/sdk" }]
+
+[[package]]
+name = "omora-plugin-manager"
+version = "0.1.0"
+source = { editable = "app/packages/manager" }
 dependencies = [
     { name = "omora-sdk" },
 ]

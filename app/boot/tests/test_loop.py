@@ -8,7 +8,7 @@ from websockets.asyncio.client import ClientConnection, connect
 
 from boot import Config, build
 
-MANIFEST = ("store", "media", "ui", "ideas", "net")
+MANIFEST = ("store", "manager", "media", "ui", "ideas", "net")
 
 
 def _nodes(node: dict[str, Any], node_type: str) -> list[dict[str, Any]]:
@@ -146,3 +146,49 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
 
     assert loaded["mime"] == "audio/webm"
     assert base64.b64decode(str(loaded["data"])) == b"hello"
+
+
+def test_plugin_inventory_and_toggle_over_the_socket(tmp_path: Path) -> None:
+    async def scenario() -> tuple[Any, dict[str, Any], dict[str, Any], dict[str, Any]]:
+        config = Config(
+            {
+                "net": {"port": 0},
+                "store": {"path": str(tmp_path / "omora.db")},
+                "media": {"root": str(tmp_path / "media")},
+            }
+        )
+        kernel = build(config, MANIFEST)
+        net = kernel.resolve("net")
+        port = await net.serve()
+        try:
+            async with connect(f"ws://127.0.0.1:{port}") as ws:
+                inventory = await _request(ws, "1", "manager", "inventory", {})
+                reported = await _request(
+                    ws,
+                    "2",
+                    "manager",
+                    "report_capabilities",
+                    {"capabilities": ["microphone"]},
+                )
+                toggled = await _request(
+                    ws,
+                    "3",
+                    "manager",
+                    "set_enabled",
+                    {"name": "ideas", "enabled": False},
+                )
+                return kernel, inventory, reported, toggled
+        finally:
+            await net.stop()
+
+    kernel, inventory, reported, toggled = asyncio.run(scenario())
+
+    rows = {row["name"]: row for row in inventory["plugins"]}
+    assert list(rows) == list(MANIFEST)
+    assert rows["ideas"]["phase"] == "active"
+    assert rows["store"]["bootstrap"] is True
+    assert reported["capabilities"] == ["microphone"]
+    after = {row["name"]: row for row in toggled["plugins"]}
+    assert after["ideas"]["phase"] == "disabled"
+    assert after["ideas"]["reason"]["code"] == "disabled-by-setting"
+    assert kernel.running("ideas") is False

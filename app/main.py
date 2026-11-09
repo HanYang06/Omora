@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 SYSTEM_PLUGINS = (
     "store",
+    "manager",
     "media",
     "ui",
     "ideas",
