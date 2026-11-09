@@ -165,6 +165,40 @@ class Audio(Node):
 
 
 @dataclass(frozen=True)
+class AudioCapture(Node):
+    """音频捕捉条：录完把 base64 音频交给 on_submit。
+
+    设备、权限、热插拔由客户端检测；这里只给质量档与时限。
+    """
+
+    type: ClassVar[str] = "audio_capture"
+    on_submit: Handler | None = None
+    quality: str | None = None
+    noise_reduction: bool | None = None
+    max_seconds: int | None = None
+
+
+@dataclass(frozen=True)
+class VideoCapture(Node):
+    """视频捕捉条：录完先传 HTTP 媒体通道，再把 media id 交给 on_submit。"""
+
+    type: ClassVar[str] = "video_capture"
+    on_submit: Handler | None = None
+    upload_url: str | None = None
+    quality: str | None = None
+    max_seconds: int | None = None
+
+
+@dataclass(frozen=True)
+class Video(Node):
+    """一条视频：media 是 media 插件给的 id，src 是 HTTP 媒体通道的播放地址。"""
+
+    type: ClassVar[str] = "video"
+    media: str = ""
+    src: str | None = None
+
+
+@dataclass(frozen=True)
 class Page:
     """一页：内容 + 标题旁的那句话（比如“12 条”）。标题用登记页面时的标签。"""
 
@@ -191,6 +225,7 @@ def serialize(node: Node, register: Callable[[Handler], str]) -> dict[str, Any]:
 
 __all__ = [
     "Audio",
+    "AudioCapture",
     "Button",
     "Column",
     "Empty",
@@ -206,5 +241,7 @@ __all__ = [
     "Search",
     "Suggestion",
     "Text",
+    "Video",
+    "VideoCapture",
     "serialize",
 ]
