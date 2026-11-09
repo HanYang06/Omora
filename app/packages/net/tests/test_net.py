@@ -5,7 +5,7 @@ from typing import Any
 from websockets.asyncio.client import connect
 
 from omora.core.context import Context
-from omora.plugins.net import Net
+from omora.net import Net
 
 
 class _Echo:

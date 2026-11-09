@@ -1,6 +1,6 @@
 """类型检查：workspace 的包 + 组装根 + 测试。
 
-mypy 一次只能用一种目标（包 / 文件），所以分两次跑。
+mypy 一次只能用一种目标（包 / 模块 / 文件），所以分开跑。
 """
 
 from __future__ import annotations
@@ -11,16 +11,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-PACKAGES = [
-    "omora.core",
-    "omora.sdk",
-    "omora.plugins.store",
-    "omora.plugins.media",
-    "omora.plugins.ui",
-    "omora.plugins.ideas",
-    "omora.plugins.projects",
-    "omora.plugins.requirements",
-    "omora.plugins.net",
+PACKAGES = ["omora.core", "omora.sdk"]
+
+MODULES = [
+    "omora.store",
+    "omora.media",
+    "omora.ui",
+    "omora.ideas",
+    "omora.projects",
+    "omora.requirements",
+    "omora.net",
 ]
 
 FILES = [
@@ -46,8 +46,9 @@ def _mypy(args: list[str]) -> int:
 
 
 def main() -> int:
-    packages = [item for name in PACKAGES for item in ("-p", name)]
-    if _mypy(packages) != 0:
+    if _mypy([item for name in PACKAGES for item in ("-p", name)]) != 0:
+        return 1
+    if _mypy([item for name in MODULES for item in ("-m", name)]) != 0:
         return 1
     return _mypy(FILES)
 

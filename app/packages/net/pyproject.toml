@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [project.entry-points."omora.plugins"]
-net = "omora.plugins.net:NetPlugin"
+net = "omora.net:NetPlugin"
 
 [build-system]
 requires = ["hatchling"]
@@ -19,4 +19,4 @@ build-backend = "hatchling.build"
 omora-sdk = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/omora"]
+packages = ["omora"]

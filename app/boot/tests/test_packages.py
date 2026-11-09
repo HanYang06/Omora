@@ -33,7 +33,7 @@ def test_every_plugin_package_declares_itself() -> None:
         assert project["name"] == f"omora-plugin-{name}"
         assert str(project["description"]).strip()
         assert project["version"] == VERSION
-        source = PACKAGES / name / "src" / "omora" / "plugins" / name / "__init__.py"
+        source = PACKAGES / name / "omora" / f"{name}.py"
         assert source.is_file()
 
 
@@ -46,7 +46,7 @@ def test_the_manifest_matches_the_packages_and_entry_points() -> None:
     for name in SYSTEM_PLUGINS:
         factory = installed[name].load()
         assert factory.name == name
-        assert installed[name].value.startswith(f"omora.plugins.{name}:")
+        assert installed[name].value.startswith(f"omora.{name}:")
 
 
 def test_the_config_has_a_section_for_every_plugin() -> None:

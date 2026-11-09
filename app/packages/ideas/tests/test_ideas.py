@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Any
 
 from omora.core.kernel import Kernel
-from omora.plugins.ideas import IdeasPlugin, _when
-from omora.plugins.media import MediaPlugin
-from omora.plugins.store import StorePlugin
-from omora.plugins.ui import UiPlugin
+from omora.ideas import IdeasPlugin, _when
+from omora.media import MediaPlugin
+from omora.store import StorePlugin
+from omora.ui import UiPlugin
 
 
 def _kernel(tmp_path: Path) -> Kernel:
