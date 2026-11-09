@@ -87,6 +87,60 @@ class Input(Node):
     on_submit: Handler | None = None
 
 
+@dataclass(frozen=True, init=False)
+class Search(Node):
+    """搜索框：打字（防抖）交回 on_query，回车或按钮交回 on_submit。
+
+    子节点是建议：下拉里按顺序列出来，上下键选，回车就按选中项提交。
+    引擎只管防抖、键盘和画下拉；搜什么、怎么排，全在插件里。
+    """
+
+    type: ClassVar[str] = "search"
+    placeholder: str
+    value: str
+    on_query: Handler | None
+    on_submit: Handler | None
+    children: tuple[Node, ...]
+
+    def __init__(
+        self,
+        *suggestions: Node,
+        placeholder: str = "",
+        value: str = "",
+        on_query: Handler | None = None,
+        on_submit: Handler | None = None,
+    ) -> None:
+        object.__setattr__(self, "placeholder", placeholder)
+        object.__setattr__(self, "value", value)
+        object.__setattr__(self, "on_query", on_query)
+        object.__setattr__(self, "on_submit", on_submit)
+        object.__setattr__(self, "children", tuple(suggestions))
+
+
+@dataclass(frozen=True)
+class Suggestion(Node):
+    """下拉里的一条建议：value 是选中后提交的查询，title 是给人看的。"""
+
+    type: ClassVar[str] = "suggestion"
+    value: str = ""
+    title: str = ""
+    meta: str | None = None
+    highlight: str | None = None
+    on_pick: Handler | None = None
+
+
+@dataclass(frozen=True)
+class Result(Node):
+    """一条搜索结果：标题可点，snippet 里 highlight 那几个字标出来。"""
+
+    type: ClassVar[str] = "result"
+    title: str = ""
+    snippet: str = ""
+    meta: str = ""
+    highlight: str | None = None
+    on_click: Handler | None = None
+
+
 @dataclass(frozen=True)
 class Empty(Node):
     type: ClassVar[str] = "empty"
@@ -147,7 +201,10 @@ __all__ = [
     "Node",
     "Page",
     "Recorder",
+    "Result",
     "Row",
+    "Search",
+    "Suggestion",
     "Text",
     "serialize",
 ]
