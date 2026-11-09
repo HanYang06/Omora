@@ -183,3 +183,52 @@ describe("renderTree", () => {
     expect(loadMedia).toHaveBeenCalledWith("abc");
   });
 });
+describe("音频 / 视频捕捉节点", () => {
+  it("没有设备接口时，音频与视频都禁用并写清原因", () => {
+    const tree: Node[] = [
+      {
+        type: "audio_capture",
+        props: { on_submit: "ideas:1:0", quality: "high", noise_reduction: true, max_seconds: 600 },
+        children: [],
+      },
+      {
+        type: "video_capture",
+        props: {
+          on_submit: "ideas:1:1",
+          upload_url: "http://127.0.0.1:8766/media",
+          quality: "720p",
+          max_seconds: 120,
+        },
+        children: [],
+      },
+    ];
+
+    const html = renderToString(<>{renderTree(tree)}</>);
+
+    expect(html).toContain('data-type="audio_capture"');
+    expect(html).toContain("录音");
+    expect(html).toContain('data-type="video_capture"');
+    expect(html).toContain("录视频");
+    expect(html).toContain('data-gate="off"');
+    expect(html).toContain("这个环境没有媒体设备接口");
+    expect(html).toContain("disabled");
+  });
+
+  it("video 有 src 就画播放器，没有就说明通道没起", () => {
+    const withSrc: Node[] = [
+      {
+        type: "video",
+        props: { media: "abc", src: "http://127.0.0.1:8766/media/abc" },
+        children: [],
+      },
+    ];
+    const withoutSrc: Node[] = [{ type: "video", props: { media: "abc" }, children: [] }];
+
+    const played = renderToString(<>{renderTree(withSrc)}</>);
+    const missing = renderToString(<>{renderTree(withoutSrc)}</>);
+
+    expect(played).toContain('src="http://127.0.0.1:8766/media/abc"');
+    expect(played).toContain('data-media="abc"');
+    expect(missing).toContain("媒体通道未就绪");
+  });
+});

@@ -38,7 +38,7 @@ app/packages/<name>/
 | 位置 | `app/packages/` | 待定 |
 | 来源 | 随包 | 单独装 |
 | 开关 | 启动期的配置决定 | 用户装 |
-| 例子 | store、manager、media、ui、ideas、projects、requirements、net | —（现在一个都没有） |
+| 例子 | store、manager、media、ui、audio、video、ideas、projects、requirements、net | —（现在一个都没有） |
 | 缺了会怎样 | 应用降级；后果由插件自己说清 | 少一个功能 |
 
 产出页面不是分类轴：两种插件都可能产出页面，都可能只是给服务。运行后插件同样是 package，目录和打包格式还没定。
@@ -112,14 +112,68 @@ class Collection:
 ```python
 class Media:
     def save(self, data: bytes, mime: str) -> str: ...
+    def upload(self, data: bytes, mime: str) -> str: ...
     def load(self, media_id: str) -> dict[str, str]: ...
+    def read(self, media_id: str) -> dict[str, Any]: ...
+    def info(self, media_id: str) -> dict[str, Any]: ...
+    def delete(self, media_id: str) -> None: ...
 ```
 
-- 数据：文件放 `[media] root`（默认 `.omora/media`），一个 `index.json` 记 mime / size；`load` 返回 mime + base64。
+- 数据：文件放 `[media] root`（默认 `.omora/media`），一个 `index.json` 记 mime / size；
+  `load` 返回 mime + base64，`read` 返回原始字节。
 - 参数名是合同：net 按关键字转发，调用方必须写 `media_id`，不能写 `id`。
-- 二进制怎么过协议：v0 走 base64（短音频够用）；视频和大文件下一步换成 HTTP 媒体通道。
+- `upload` 是 HTTP 媒体通道的入库口：空媒体与超过 `[media] max_mb`（默认 64）都拒；
+  `info` 给 mime / size，`delete` 让视频插件清理被拒的录像，不留孤儿文件。
+- 二进制怎么过协议：音频 v0 走 base64；视频走 net 的 HTTP 媒体通道
+  （`POST /media` 上传、`GET /media/{id}` 播放，见 [协议设计](protocol.md) §7）。
+  通道归 net（它持有 socket），存盘归 media。
 
-## 6. ui（系统插件）
+## 6. 捕捉：audio 与 video（系统插件）
+
+捕捉拆成**两个插件**，不是一个插件的两半：没有麦克风只该关掉音频，没有摄像头只该关掉视频。
+
+| | audio | video |
+|---|---|---|
+| package | `app/packages/audio/` | `app/packages/video/` |
+| 服务 | `audio` | `video` |
+| 元数据 | `capabilities = ["microphone"]` | `capabilities = ["camera"]` |
+| 配置段 | `[audio]` | `[video]` |
+| 管什么 | 音质档、降噪、时限、后期处理钩子 | 清晰度档、时限、大小上限、后期处理钩子 |
+| 字节怎么来 | base64（协议 v0） | HTTP 媒体通道，事件只带 media id |
+
+共同点：
+
+- **硬件检测在客户端**，不在 Python：`navigator.mediaDevices` 的 enumerateDevices / getUserMedia /
+  devicechange。没有设备 → 对应捕捉控件禁用并写原因；权限只在用户点按钮时才要（浏览器只认手势）；
+  多设备给选择器；热插拔实时更新。
+- 插件不知道页面长什么样，只给节点：`audio.node(on_submit)` / `video.node(on_submit)`。
+  页面（现在的 ideas）按服务名 `has()` 决定放不放、放哪。
+- 都依赖 `media`（元数据 `requires = ["media"]`）；video 还要求 net 的媒体通道已经起来，
+  没起来就不出捕捉条（视频存不下，出了也没用）。
+- 后期处理钩子：`add_processor(...)`。audio 的钩子是 `bytes + mime → bytes`；video 的钩子是
+  `(media_id, {mime, size}) → None`（v0 只看不改，没有转码）。
+- 健康状态不自己造：插件的生命周期（phase + reason）由 manager 统一给，捕捉插件不发明第二套。
+
+配置：
+
+```ini
+[audio]
+enabled = true
+quality = high          ; high / low
+noise_reduction = true
+max_seconds = 600
+
+[video]
+enabled = true
+quality = 720p          ; 480p / 720p / 1080p
+max_seconds = 120
+max_mb = 64
+```
+
+`quality` 只能是枚举里的值，写错了启动期就报错（不静默降级）。
+时限在服务端再判一次：超时的录音 / 录像不收；视频还会把已上传的文件删掉，不留孤儿。
+
+## 7. ui（系统插件）
 
 - 职责：页面登记、渲染、事件派发。它不碰 socket，也不认识任何业务。
 - 服务接口：
@@ -138,37 +192,41 @@ class Ui:
     def event(self, handler: str, payload: dict[str, object]) -> dict[str, object]: ...
 ```
 
-### 6.1 页面登记
+### 7.1 页面登记
 
 - `page()` 把 name / label / build / count 存进表，并在传入的 ctx 上登记一条移除副作用——插件卸载时页面自动消失。
 - 同名页面重复登记 → `ValueError`（v0 不允许覆盖）。
 - `render()` 不指定页面名时画第一个登记的。
 
-### 6.2 渲染
+### 7.2 渲染
 
 1. 给该页面开一代（generation += 1），清掉上一代的 handler；
 2. 调 `build()` 得到 `Page(meta, content)`；
 3. 序列化 content：字段名 → `props`；可调用字段 → 分配 `{page}:{gen}-{n}` 并记进 handler 表（记住所属页面）；`None` 字段不写；`children` 递归；
 4. 返回页面快照：`{pages, page, meta, content}`。`pages` 按登记顺序，`count` 每次现算。
 
-### 6.3 派发
+### 7.3 派发
 
 - 找 handler → 把 payload 交给它 → 重画它所属的页面 → 返回新快照。
 - 找不到 → `LookupError`，由 net 插件包成错误帧。
 
-### 6.4 页面与节点
+### 7.4 页面与节点
 
 - `Page(content, meta)`：content 是节点树，meta 是标题旁那句话（比如“3 条”）。
 - 词表：`Column`、`Row`、`Text`、`Button`、`Input`、`Recorder`、`Audio`、`List`、`Item`、`Empty`、
-  `Search`、`Suggestion`、`Result`。
+  `Search`、`Suggestion`、`Result`、`AudioCapture`、`VideoCapture`、`Video`。
 
-## 7. 产出页面的插件
+## 8. 产出页面的插件
 
-### 7.1 ideas（灵感）
+### 8.1 ideas（灵感）
 
 - 依赖 `store`、`media`、`ui`，按名字取；缺了就让 `apply` 抛错（v0 不降级）。
-- 页面 `ideas`：搜索框 + 录音条 + 文字捕捉 + 账本列表 + 播放 + 置顶 + 归档 + 空状态。
-- 录音：`Recorder` 的回调收 `{audio(base64), mime, seconds}`；先存进 media，再写 store。
+- 页面 `ideas`：搜索框 + 文字捕捉 + 由 audio / video 提供的捕捉条 + 账本列表 + 播放 +
+  置顶 + 归档 + 空状态。audio / video 没装就只有文字；它们没起来（比如没有媒体通道），
+  对应捕捉条根本不出现。
+- 录音：`audio_capture` 的回调交给 audio 服务，它收 base64、存进 media、返回 id；
+  录像交给 video 服务（字节已经过 HTTP 通道进来，事件里只有 media id）。页面只负责写 store。
+- 播放：音频走 `media.load`（base64），视频走 HTTP 媒体通道的 `src`；字节都不进快照。
 - 搜索：插件持有 `{mode, query, open}` 三个状态，外加一个返回历史栈。打字收
   `{value}`，取前 5 条命中做下拉建议；提交进结果视图（导航不变，左栏留着），结果行带
   命中片段（查询词前后截窗）、时间和语音 / 置顶标记；点开进详情，返回按历史走回上一屏。
@@ -177,12 +235,12 @@ class Ui:
   只改这个插件的 `search` 那一行。
 - 卸载零残留：ui 的登记挂在 ctx 上。
 
-### 7.2 projects / requirements（占位）
+### 8.2 projects / requirements（占位）
 
 - 各登记一个空页，让导航里出现项目 / 需求。
 - 字段还没定，所以没有任何数据操作；字段定了再长。
 
-### 7.4 manager（插件管理）
+### 8.3 manager（插件管理）
 
 - 职责：插件清单、`[tool.omora]` 条件、开关与设置页。不 import 内核，装 / 卸走 boot
   提供的 `host` 服务。
@@ -201,10 +259,11 @@ class Manager:
 - 设置页通过 ui 插件登记：`plugins`，标签「插件」；store / manager 是启动项，不给开关。
 - 细节见 [插件管理器](plugin-manager.md)。
 
-## 8. 边界
+## 9. 边界
 
 - `packages` 不 import `omora.core`；只 import `omora.sdk`。
 
 - `sdk` 不 import `packages`。
-- store、media、ui、ideas、projects、requirements、net 互不 import。
+- store、manager、media、ui、audio、video、ideas、projects、requirements、net 互不 import。
 - 界面不是插件关心的事：插件只产出节点，不碰 DOM / CSS。
+- 捕捉插件不知道字节怎么存（那是 media 的），也不知道页面上有没有自己（那是页面的事）。

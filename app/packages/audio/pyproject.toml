@@ -1,0 +1,28 @@
+[project]
+name = "omora-plugin-audio"
+version = "0.1.0"
+description = "音频捕捉：质量档、降噪、时限与后期处理钩子"
+requires-python = ">=3.14"
+dependencies = [
+    "omora-sdk",
+]
+
+[project.entry-points."omora.plugins"]
+audio = "omora.audio:AudioPlugin"
+
+[tool.omora]
+# manager 读这四个键；设备门禁在客户端，不在这里。
+capabilities = ["microphone"]
+platforms = ["win32", "darwin", "linux"]
+listed = true
+requires = ["media"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+omora-sdk = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["omora"]

@@ -13,6 +13,8 @@ dependencies = [
     "omora-plugin-manager",
     "omora-plugin-media",
     "omora-plugin-ui",
+    "omora-plugin-audio",
+    "omora-plugin-video",
     "omora-plugin-ideas",
     "omora-plugin-projects",
     "omora-plugin-requirements",
@@ -35,6 +37,8 @@ omora-plugin-store = { workspace = true }
 omora-plugin-manager = { workspace = true }
 omora-plugin-media = { workspace = true }
 omora-plugin-ui = { workspace = true }
+omora-plugin-audio = { workspace = true }
+omora-plugin-video = { workspace = true }
 omora-plugin-ideas = { workspace = true }
 omora-plugin-projects = { workspace = true }
 omora-plugin-requirements = { workspace = true }

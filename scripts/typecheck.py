@@ -18,6 +18,8 @@ MODULES = [
     "omora.manager",
     "omora.media",
     "omora.ui",
+    "omora.audio",
+    "omora.video",
     "omora.ideas",
     "omora.projects",
     "omora.requirements",
@@ -30,12 +32,14 @@ FILES = [
     "app/boot/tests",
     "app/core/tests",
     "app/sdk/tests",
+    "app/packages/audio/tests",
     "app/packages/ideas/tests",
     "app/packages/manager/tests",
     "app/packages/media/tests",
     "app/packages/net/tests",
     "app/packages/store/tests",
     "app/packages/ui/tests",
+    "app/packages/video/tests",
 ]
 
 

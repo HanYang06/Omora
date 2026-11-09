@@ -20,10 +20,12 @@ SYSTEM_PLUGINS = (
     "manager",
     "media",
     "ui",
+    "audio",  # 捕捉拆成两个插件：没有麦克风只关音频，没有摄像头只关视频
+    "video",
     "ideas",
     "projects",
     "requirements",
-    "net",  # 最后一个：它一开就收帧
+    "net",  # 最后一个：它一开就收帧，HTTP 媒体通道也跟着起
 )
 
 
@@ -45,6 +47,8 @@ def main() -> int:
 async def _run(net: Net) -> None:
     port = await net.serve()
     print(f"omora 内核已起：ws://{net.host}:{port}", flush=True)
+    if net.media_url is not None:
+        print(f"媒体通道已起：{net.media_url}", flush=True)
     try:
         await asyncio.Event().wait()
     finally:

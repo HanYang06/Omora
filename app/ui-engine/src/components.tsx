@@ -1,7 +1,9 @@
 import type { ComponentType, ReactNode } from "react";
+import { AudioCapture } from "./audio-capture";
 import { Audio, Recorder } from "./capture";
 import { Result, Search, Suggestion } from "./search";
 import { prop, textOf, type NodeComponentProps } from "./shared";
+import { VideoCapture, VideoPlayer } from "./video-capture";
 
 /** column：纵向堆叠。 */
 export function Column({ children }: NodeComponentProps): ReactNode {
@@ -139,6 +141,9 @@ export const components: Record<string, ComponentType<NodeComponentProps>> = {
   input: Input,
   recorder: Recorder,
   audio: Audio,
+  audio_capture: AudioCapture,
+  video_capture: VideoCapture,
+  video: VideoPlayer,
   list: List,
   item: Item,
   empty: Empty,

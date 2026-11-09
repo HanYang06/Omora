@@ -4,13 +4,16 @@
 
 ## 现在
 
-- 母 UI（浅色）+ 界面库 v1 + 灵感页 + 音频捕获已落。
+- 母 UI（浅色）+ 界面库 v1 + 灵感页 + 音频 / 视频捕获已落。
 - 仓库是 uv workspace：`omora-core` / `omora-sdk` / 每个 `omora-plugin-*` 都是 member；import 命名空间 `omora.*`。
 - 存储：SQLite（`.omora/omora.db`）；媒体文件（`.omora/media`）。
-- 测试：Python 121 条、TS 56 条，全绿。
+- 测试：Python 202 条、TS 82 条，全绿。
 - 门禁：`uv run python scripts/check.py` 全绿。
 - 灵感页有传统（非 AI）搜索：建议下拉、结果视图、详情与返回。
-- 项目 / 需求是占位页；深色主题待单独设计；视频、转写、AI 未做。
+- 插件管理器已落：清单、`[tool.omora]` 条件（平台 / 能力 / 依赖服务）、开关与设置页；
+  客户端能力上报后，带能力条件的插件按需装上。
+- 捕捉拆成 audio / video 两个插件；硬件检测在客户端（无设备默认禁用）；视频走 HTTP 媒体通道。
+- 项目 / 需求是占位页；深色主题待单独设计；转写、AI 未做。
 
 ## 已完成：workspace 化
 
@@ -21,6 +24,19 @@
 - boot 的清单只留有序名字，按入口点找插件类
 - 一个 lock / 一个 venv；单独开发：`uv run --package omora-plugin-ideas pytest`
 - 验收：`check.py` 全绿；72 条 Python 测试按入口点装起来跑
+
+## 已完成：捕捉拆成两个插件
+
+音频和视频不再挤在一个插件里：缺麦克风只关音频，缺摄像头只关视频。
+
+- `audio` / `video` 两个系统插件，各自 pyproject / 入口点 / 配置段 / 元数据能力；
+  后期处理钩子（audio 收字节，video 收 media id）
+- 客户端硬件检测：`enumerateDevices` / `getUserMedia` / `devicechange`；没设备就禁用并写原因，
+  权限只在点按钮时申请，多设备可选，热插拔实时更新
+- 视频走 HTTP 媒体通道（`POST /media` 上传、`GET /media/{id}` 播放，带大小上限与 CORS）；
+  音频仍走 base64
+- ideas 按服务名组装捕捉条：audio / video 不在，页面就只剩文字与搜索
+- 验收：`check.py` 全绿；两个插件的设备门禁、时限、后期钩子、HTTP 通道的错误分支都有行为测试
 
 ## 已完成：传统搜索
 
@@ -85,7 +101,6 @@ WebSocket 端到端都有行为测试。
 ## 接下来（顺序待定）
 
 - 本地转写：Whisper 跑在 Python，后台；转写结果挂到条目上。
-- 视频捕获：同一套媒体管线；二进制换 HTTP 媒体通道。
 - AI 接口插件：本地转写 + 云端明确化分析（provider、同意提示、草稿 UI）。
 - 关联 / 网：灵感之间的 `sparked` / `related` 边，候选关联。
 - GitHub provider：PR / issue / action 作为产物来源。
