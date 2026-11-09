@@ -19,7 +19,7 @@ description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teamma
 
 - 用户：方向、产品决策；不参与日常 review。
 - Lead：拆任务、任务板、spawn、review、解决冲突、合并、整合；对完成率负责。
-- teammate：在自己 worktree 里开发、测试、提交、开 PR；不合并；产品问题回 Lead。
+- teammate：在自己 worktree 里开发、测试、提交、开 PR；不合并；产品问题回 Lead；对自己的分支/worktree 负责，Lead 不改。
 
 ## 3. Lead 开工前
 
@@ -47,12 +47,13 @@ description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teamma
 
 ## 5. Lead 的 review / 合并
 
-1. 看 CI / gate；看 diff，不只看文件列表。
-2. 冲突：让 teammate rebase 到最新 main；不要 Lead 硬改别人分支。
-3. 合并：`gh pr merge <n> --merge`（merge commit；不 squash/rebase）；删分支。
-4. 合并后 base 更新；下一个 PR rebase；重复。
-5. 全部合完：Lead 做跨区整合（自己的分支/PR）；再跑一次全门禁。
-6. 给用户最终报告：PR 列表、门禁、遗留、下一步。
+1. 发现问题不自己改：在 PR 上留 review comment（这就是历史留档），再 `send_message` 让 owner 在自己的 worktree 里改、rebase、重新推；你再 review。Lead 不切别人的分支、不动别人的 worktree。
+2. 看 CI / gate；看 diff，不只看文件列表。
+3. 冲突：让 teammate rebase 到最新 main；不要 Lead 硬改别人分支。
+4. 合并：`gh pr merge <n> --merge`（merge commit；不 squash/rebase）；删分支。
+5. 合并后 base 更新；下一个 PR rebase；重复。
+6. 全部合完：Lead 做跨区整合（自己的分支/PR）；再跑一次全门禁。
+7. 给用户最终报告：PR 列表、门禁、遗留、下一步。
 
 ## 6. 协调规则
 
@@ -61,13 +62,14 @@ description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teamma
 - 跨区接口（capability 通道、media HTTP）写进任务/brief；一方实现，另一方消费。
 - 不要重复实现检测/状态（devices.ts 只有一份）。
 - 产品决策（隐藏 vs 禁用、视频是否播放）Lead 问用户，不替用户拍。
+- PR 评论是历史留档：review 结论、问题、修复要求都写在 PR 上，不只发消息。
 
 ## 7. 反模式
 
 - teammate 在共享 checkout 里改，互相踩；必须 worktree。
 - Lead 发完任务就不管；review/merge/整合才是 Lead 的活。
 - 没测试/门禁就 PR；CI 红就合。
-- Lead 硬改 teammate 的分支（force push 别人的分支）。
+- Lead 亲自改 teammate 的分支/worktree；review 问题回给 owner，PR 评论留档。
 - squash/rebase 合并；丢分支边界。
 - 产品决策自己拍；用户被绕过。
 - 把“发了任务”当完成；完成 = PR 合了 + 集成跑通。
