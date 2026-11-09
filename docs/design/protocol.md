@@ -8,6 +8,7 @@
 - WebSocket，文本帧，一条消息一帧 JSON。
 - 默认 `ws://127.0.0.1:8765`，地址由 `config.ini` 的 `[net]` 决定。
 - 只收文本帧；收到二进制帧回 `bad_frame`。
+- 媒体字节还有一条旁路：视频走 HTTP 媒体通道（§7），音频 v0 仍走 base64。
 
 ## 2. 三种帧
 
@@ -79,12 +80,20 @@ manager 是普通服务，不新增帧类型：
 
 - `children` 永远是数组，没有子节点就是 `[]`。
 - 可调用字段（如 `on_click`、`on_submit`）序列化成 handler id 字符串，对渲染引擎不透明。
-- 组件词表：`column` / `row` / `text` / `button` / `input` / `recorder` / `audio` / `list` / `item` / `empty` / `search` / `suggestion` / `result`。
-- 事件载荷：`{"handler": "...", "payload": {...}}`；`input` 提交带 `{"value": "..."}`，`recorder` 带 `{"audio": base64, "mime": "...", "seconds": 0}`，`button` 带 `{}`。
+- 组件词表：`column` / `row` / `text` / `button` / `input` / `recorder` / `audio` /
+  `audio_capture` / `video_capture` / `video` / `list` / `item` / `empty` / `search` /
+  `suggestion` / `result`。
+- `recorder` 与 `audio` 是 v0 的形状，保留：老快照照样能画。新捕捉用
+  `audio_capture`（audio 插件给）和 `video_capture`（video 插件给）。
+- 事件载荷：`{"handler": "...", "payload": {...}}`；`input` 提交带 `{"value": "..."}`，
+  `recorder` / `audio_capture` 带 `{"audio": base64, "mime": "...", "seconds": 0}`，
+  `video_capture` 带 `{"media": "media id", "mime": "video/webm", "seconds": 0}`，
+  `button` 带 `{}`。
 - 搜索：`search` 的 children 是 `suggestion`；打字事件与提交事件都带 `{"value": "..."}`，
   点一条建议带回那条建议自己的 `value`，点 `result` 带 `{}`。`suggestion` 与 `result` 的
   `highlight` 是"要把哪几个字标出来"，渲染引擎不认识它是不是真的命中。
-- 媒体字节在 v0 走 base64（`recorder` 的载荷、`media.load` 的返回值）；只收文本帧的规矩不变。
+- 媒体字节在 v0 走 base64（`recorder` / `audio_capture` 的载荷、`media.load` 的返回值）；
+  视频不走 base64，走 §7 的 HTTP 媒体通道。只收文本帧的规矩不变。
 - 未知 `type` → 渲染引擎画占位框，不崩。
 
 ## 6. 跨语言钉
@@ -97,6 +106,25 @@ manager 是普通服务，不新增帧类型：
 Python 用 SDK 的 `serialize` 输出和 `snapshots` 里的 `content` 逐字段比对；TS 检查同一份
 快照的节点形状。两边都不自己造样例。
 
-## 7. 不做
+## 7. HTTP 媒体通道（视频）
 
-推送、二进制帧、超时、重连、多客户端、增量更新。
+音频的字节在 v0 走 base64；视频不走——base64 会让体积涨三分之一，还得整段塞进 JSON。
+视频字节走同一台机器上的 HTTP 通道，帧协议只传 media id。
+
+- 实现：net 插件（它持有 socket）。存盘仍归 media 插件，net 只按服务名转发。
+- 地址：`http://<host>:<media_port>/media`，端口由 `[net] media_port` 决定（0 = 由系统分配）。
+  `net.media_url` 是唯一一处拼这个地址的地方；video 插件问它要，拿不到就不出捕捉条。
+- `POST /media`：`Content-Type` 必须是 `audio/*` 或 `video/*`，必须带 `Content-Length`；
+  成功回 `201 {"media_id": "..."}`。
+- `GET /media/{id}`：回原始字节与该媒体的 `Content-Type`。
+- CORS：只回 `[net] media_origins` 里列出的 origin（默认是 Vite dev 的两个），`OPTIONS` 回 204。
+- 错误：`400`（请求体坏了 / 空媒体）、`404`（没有这个媒体或路由）、`411`（缺 `Content-Length`）、
+  `413`（超过 `[media] max_mb`）、`415`（不是音频或视频）、`503`（media 服务没装）。
+
+v0 的边界：没有鉴权；绑定地址跟 `[net] host` 一致（默认只听 127.0.0.1）；没有分块传输、
+没有 keep-alive、没有 Range（视频不能拖进度）、没有并发上限、没有压缩或转码。
+放到局域网 / 公网之前必须补鉴权。
+
+## 8. 不做
+
+推送、二进制帧、超时、重连、多客户端、增量更新；媒体通道的鉴权、Range 与分块传输。

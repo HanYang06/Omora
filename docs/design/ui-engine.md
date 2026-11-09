@@ -18,8 +18,13 @@ src/
   protocol.ts     帧的类型与校验（读同一份 fixture）
   renderer.tsx    节点树 → React；未知 type 画占位框
   components.tsx  基础词表（column / row / text / button / input / list / item / empty）+ 注册表
-  capture.tsx     录音 / 播放
-  media.ts        取媒体（media.load，参数名 media_id）
+  capture.tsx     老录音条 / 音频播放（v0 形状，保留）
+  audio-capture.tsx  音频捕捉：设备门禁、多设备、录音
+  video-capture.tsx  视频捕捉：设备门禁、预览、重录、上传；加视频播放器
+  devices.ts      设备检测：枚举、门禁、热插拔（纯函数，可直接测）
+  use-devices.ts  设备状态的 React 胶水
+  device-select.tsx  多设备时的选择器
+  media.ts        取媒体（media.load）+ 上传（HTTP 媒体通道）
   shared.ts       组件共用的 props 与工具
   search.tsx      搜索框、建议、结果
   searchText.ts   命中切分与键盘决策（纯函数）
@@ -46,10 +51,16 @@ src/
 3. 点导航 → 引擎直接发 `ui.render({page})`，不走事件。
 4. 捕捉：
    - 打字回车 → `ui.event({handler, payload: {value}})`；
-   - 录音停 → `ui.event({handler, payload: {audio, mime, seconds}})`，`audio` 是 base64。
-5. 点动作 → `ui.event({handler, payload: {}})`；返回同一份快照，整页替换。
-6. 播放音频 → `media.load({media_id})` → `{mime, data(base64)}` → 引擎按需播；音频字节不进快照。参数名要和 Python 的 `load(media_id)` 对齐。
-7. 搜索：打字在引擎侧防抖 200ms → `ui.event({handler, payload: {value}})`；建议是
+   - 录音停 → `ui.event({handler, payload: {audio, mime, seconds}})`，`audio` 是 base64；
+   - 录像保存 → 先 `POST` 到媒体通道拿 media id → `ui.event({handler, payload: {media, mime, seconds}})`。
+5. 设备：引擎一挂上就 `enumerateDevices`，之后跟着 `devicechange` 重新枚举；没有对应设备
+   （或还没有权限、还没枚举完）就把捕捉按钮禁用，并把原因写在旁边。`getUserMedia` 只在
+   用户点按钮那一下调——权限只在手势里给。多设备给选择器，选中的 deviceId 进 constraints。
+   插拔设备不需要刷新页面。
+6. 点动作 → `ui.event({handler, payload: {}})`；返回同一份快照，整页替换。
+7. 播放音频 → `media.load({media_id})` → `{mime, data(base64)}` → 引擎按需播；音频字节不进快照。参数名要和 Python 的 `load(media_id)` 对齐。
+   播放视频 → 节点里只有 `src`（媒体通道地址），`<video src>` 自己取字节，不要走 base64。
+8. 搜索：打字在引擎侧防抖 200ms → `ui.event({handler, payload: {value}})`；建议是
    `search` 的子节点，画成下拉。回车在没有选中建议时提交输入框里的字，有选中建议时
    把那一条的 `value` 交回去；上下键只在建议之间走（到头就停），Esc 只收下拉、不提交。
    下拉开不开、建议几条、提交后去哪一屏，全由插件返回的下一次快照决定。
@@ -87,6 +98,9 @@ src/
 | input | placeholder、on_submit | 捕捉行：回车把值塞进事件载荷，然后清空自己 |
 | recorder | on_submit | 录音条：点一下录，再点一下停；停后把 base64 音频交给事件 |
 | audio | media | 播放按钮：点的时候按需向 media 服务取，不预载 |
+| audio_capture | on_submit、quality?、noise_reduction?、max_seconds? | 音频捕捉条：设备门禁 + 多设备选择 + 录音；停后把 base64 交给事件 |
+| video_capture | on_submit、upload_url、quality?、max_seconds? | 视频捕捉条：门禁 + 实时预览 + 回看重录 + 上传；保存后只交 media id |
+| video | media、src? | 视频播放器；`src` 是媒体通道地址，没有就写"媒体通道未就绪" |
 | list | — | 账本容器（ul） |
 | item | meta、title | 账本行：左栏 meta、右栏标题、子节点是这一行的动作 |
 | empty | title、hint? | 空状态；没有 hint 就不画第二行 |
@@ -104,7 +118,8 @@ src/
 
 ## 9. 状态
 
-- 只持有两样：当前快照、连接状态。
+- 只持有三样：当前快照、连接状态、本机的设备状态（设备清单 / 枚举到没有）。
+  设备状态是本机事实，不上报成真相：它只决定这一台机器上的按钮能不能按。
 - 不缓存真相：数据在 Python 侧，这里只有当前这一份快照。
 - 媒体按需取、按需播；不把字节塞进快照。
 
@@ -126,7 +141,7 @@ src/
 
 - TS 插件宿主（接管整个界面的那一层）。
 - 深色主题。
-- 视频捕获、HTTP 媒体通道（v0 音频走 base64）。
 - 本地转写 / AI 解读。
 - 关联 / 网图、局部更新 / diff。
 - 重连、请求超时、多客户端、窄屏适配。
+- 视频通道的 Range（拖进度）与鉴权；设备权限被拒后的引导。
