@@ -30,16 +30,50 @@ interface InvalidCase {
 
 type FixtureCase = ValidCallCase | InvalidCase;
 
+interface RawNode {
+  type: string;
+  props: Record<string, unknown>;
+  children: RawNode[];
+}
+
+interface SnapshotCase {
+  name: string;
+  snapshot: {
+    pages: { name: string; label: string; count?: number }[];
+    page: string;
+    meta: string;
+    content: RawNode;
+  };
+}
+
+interface Fixture {
+  calls: FixtureCase[];
+  snapshots: SnapshotCase[];
+}
+
 const FIXTURE_URL = new URL(
   "../../sdk/tests/fixtures/protocol.json",
   import.meta.url,
 );
-const cases = JSON.parse(
+const fixture = JSON.parse(
   readFileSync(fileURLToPath(FIXTURE_URL), "utf8"),
-) as FixtureCase[];
+) as Fixture;
+const cases = fixture.calls;
 
 const validCalls = cases.filter((item): item is ValidCallCase => item.ok);
 const invalidFrames = cases.filter((item): item is InvalidCase => !item.ok);
+
+function walk(node: RawNode): RawNode[] {
+  return [node, ...node.children.flatMap(walk)];
+}
+
+function expectShape(node: RawNode, path: string): void {
+  expect(typeof node.type, path).toBe("string");
+  expect(node.type.length, path).toBeGreaterThan(0);
+  expect(typeof node.props, path).toBe("object");
+  expect(Array.isArray(node.children), path).toBe(true);
+  node.children.forEach((child, index) => expectShape(child, `${path}.${index}`));
+}
 
 function errorFrom(run: () => unknown): FrameError {
   try {
@@ -61,6 +95,49 @@ describe("协议：与 Python 共用同一份 fixture", () => {
 
   it.each(invalidFrames)("拒绝非法帧: $name", (item) => {
     expect(isCallFrame(item.frame), item.name).toBe(false);
+  });
+});
+
+describe("协议：页面快照的 fixture", () => {
+  it.each(fixture.snapshots)("快照字段与节点形状对得上: $name", ({ snapshot }) => {
+    expect(Array.isArray(snapshot.pages)).toBe(true);
+    expect(snapshot.pages.length).toBeGreaterThan(0);
+    expect(typeof snapshot.page).toBe("string");
+    expect(typeof snapshot.meta).toBe("string");
+    expectShape(snapshot.content, "content");
+    expect(walk(snapshot.content).length).toBeGreaterThan(1);
+  });
+
+  it("快照里钉住了 search / suggestion / result 的形状", () => {
+    const first = fixture.snapshots[0];
+    expect(first).toBeDefined();
+    if (first === undefined) {
+      return;
+    }
+    const byType = new Map(
+      walk(first.snapshot.content).map((node) => [node.type, node]),
+    );
+    const search = byType.get("search");
+    const suggestion = byType.get("suggestion");
+    const result = byType.get("result");
+
+    expect(search).toBeDefined();
+    expect(suggestion).toBeDefined();
+    expect(result).toBeDefined();
+    expect(Object.keys(search?.props ?? {}).sort()).toEqual([
+      "on_query",
+      "on_submit",
+      "placeholder",
+      "value",
+    ]);
+    expect(typeof search?.props.on_query).toBe("string");
+    expect(typeof search?.props.on_submit).toBe("string");
+    expect(search?.props.value).toBe("牛奶");
+    expect(suggestion?.props.value).toBe("买牛奶");
+    expect(typeof suggestion?.props.on_pick).toBe("string");
+    expect(result?.props.highlight).toBe("牛奶");
+    expect(typeof result?.props.on_click).toBe("string");
+    expect(byType.size).toBe(5);
   });
 });
 

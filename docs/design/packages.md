@@ -64,6 +64,8 @@ class Store:
         *,
         fields: Mapping[str, str],
         indexes: Sequence[str] = (),
+        searchable: Sequence[str] = (),
+        pinned: str | None = None,
     ) -> Collection: ...
 
 class Collection:
@@ -80,11 +82,22 @@ class Collection:
         offset: int = 0,
     ) -> list[Record]: ...
     def count(self, where: Mapping[str, Any] | None = None) -> int: ...
+    def search(
+        self,
+        query: str,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        where: Mapping[str, Any] | None = None,
+    ) -> list[Record]: ...
 ```
 
 - 领域模型由插件声明：字段名 / 类型（`text` / `int` / `float` / `bool` / `time`，`?` 表示可选）/ 索引。
 - 查询：结构化 `where`（等值 + `$ne/$gt/$gte/$lt/$lte/$in`）、`order`、`limit`（上限 200）、`offset`；参数化 SQL，插件不写 SQL；字段名、排序字段、limit 都校验。
 - 记录：id 是字符串 UUID；`created_at` / `updated_at` 自动；`Record` 支持 `record["title"]` 和 `record.title`。
+- 搜索：`searchable` 声明可搜字段（只能是 `text`，第一个算标题），`search` 用参数化 LIKE 做
+  子串匹配；查询词和过滤条件都走绑定参数，插件不写 SQL。排序是「标题命中 → 置顶 → 新的」，
+  `pinned` 声明一个 `bool` 字段当置顶信号。空查询没有结果。FTS5 是后面的升级，接口不变。
 - 迁移：见 [迁移](migrations.md)——开发期不写，发布时冻结。
 - 位置：`[store] path`（默认 `.omora/omora.db`）。`.omora/` 是本地数据目录，已忽略。
 - 为什么先 SQLite：捕获的条目不重启就丢是硬伤；换后端只改这个插件内部，接口不动。
@@ -144,16 +157,22 @@ class Ui:
 ### 6.4 页面与节点
 
 - `Page(content, meta)`：content 是节点树，meta 是标题旁那句话（比如“3 条”）。
-- 词表：`Column`、`Row`、`Text`、`Button`、`Input`、`Recorder`、`Audio`、`List`、`Item`、`Empty`。
+- 词表：`Column`、`Row`、`Text`、`Button`、`Input`、`Recorder`、`Audio`、`List`、`Item`、`Empty`、
+  `Search`、`Suggestion`、`Result`。
 
 ## 7. 产出页面的插件
 
 ### 7.1 ideas（灵感）
 
 - 依赖 `store`、`media`、`ui`，按名字取；缺了就让 `apply` 抛错（v0 不降级）。
-- 页面 `ideas`：录音条 + 文字捕捉 + 账本列表 + 播放 + 归档 + 空状态。
+- 页面 `ideas`：搜索框 + 录音条 + 文字捕捉 + 账本列表 + 播放 + 置顶 + 归档 + 空状态。
 - 录音：`Recorder` 的回调收 `{audio(base64), mime, seconds}`；先存进 media，再写 store。
-- 视图只读状态；写状态只发生在回调里。
+- 搜索：插件持有 `{mode, query, open}` 三个状态，外加一个返回历史栈。打字收
+  `{value}`，取前 5 条命中做下拉建议；提交进结果视图（导航不变，左栏留着），结果行带
+  命中片段（查询词前后截窗）、时间和语音 / 置顶标记；点开进详情，返回按历史走回上一屏。
+  搜索走 store 的 `search`，只用标题命中，所以 snippet 是标题里的一小段。
+- 视图只读状态；写状态只发生在回调里。引擎不知道"灵感"是什么，也知道不了：换 AI 检索
+  只改这个插件的 `search` 那一行。
 - 卸载零残留：ui 的登记挂在 ctx 上。
 
 ### 7.2 projects / requirements（占位）

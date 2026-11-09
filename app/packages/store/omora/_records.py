@@ -14,6 +14,8 @@ MAX_LIMIT = 200
 _RESERVED = frozenset({"id", "created_at", "updated_at"})
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 _OPERATORS = frozenset({"$eq", "$ne", "$gt", "$gte", "$lt", "$lte", "$in"})
+# LIKE 的转义符：用 ! 而不是反斜杠，省得和 Python、SQL 各转义一层。
+_LIKE_ESCAPE = "!"
 _SQL_TYPES = {"text": "TEXT", "int": "INTEGER", "float": "REAL", "bool": "INTEGER", "time": "TEXT"}
 
 
@@ -90,12 +92,16 @@ class Collection:
         fields: dict[str, Field],
         indexes: tuple[str, ...],
         dev: bool,
+        searchable: tuple[str, ...] = (),
+        pinned: str | None = None,
     ) -> None:
         self._conn = conn
         self._name = name
         self._fields = fields
         self._indexes = indexes
         self._dev = dev
+        self._searchable = searchable
+        self._pinned = pinned
         self._table = f"col_{name}"
         self._ensure()
 
@@ -157,29 +163,67 @@ class Collection:
         limit: int = DEFAULT_LIMIT,
         offset: int = 0,
     ) -> list[Record]:
-        if not 1 <= limit <= MAX_LIMIT:
-            raise ValueError(f"limit 必须在 1–{MAX_LIMIT}，当前 {limit}")
-        if offset < 0:
-            raise ValueError("offset 不能为负")
-        clause, params = self._where(where)
-        sql = f'SELECT * FROM "{self._table}"{clause}'
+        _check_limit(limit)
+        _check_offset(offset)
+        conditions, params = self._conditions(where)
+        sql = f'SELECT * FROM "{self._table}"{_where_clause(conditions)}'
         if order is not None:
             sql += f" ORDER BY {self._order(order)}"
         sql += " LIMIT ? OFFSET ?"
         rows = self._conn.execute(sql, [*params, limit, offset]).fetchall()
         return [self._record(row) for row in rows]
 
+    def search(
+        self,
+        query: str,
+        *,
+        limit: int = DEFAULT_LIMIT,
+        offset: int = 0,
+        where: Mapping[str, Any] | None = None,
+    ) -> list[Record]:
+        """按声明的 searchable 字段做子串匹配。
+
+        标题字段（searchable 的第一个）命中的排前面，然后置顶的，然后新的。
+        查询和过滤条件都走参数化 SQL；没有查询词就没有结果。
+        """
+        _check_limit(limit)
+        _check_offset(offset)
+        text = query.strip()
+        if not text:
+            return []
+        if not self._searchable:
+            raise ValueError(f"collection {self._name} 没有声明 searchable 字段")
+        pattern = _like(text)
+        conditions, params = self._conditions(where)
+        matched = " OR ".join(
+            f'"{name}" LIKE ? ESCAPE {_LIKE_ESCAPE!r}' for name in self._searchable
+        )
+        conditions.insert(0, f"({matched})")
+        order = [
+            f'CASE WHEN "{self._searchable[0]}" LIKE ? ESCAPE {_LIKE_ESCAPE!r} THEN 0 ELSE 1 END',
+        ]
+        if self._pinned is not None:
+            order.append(f'CASE WHEN "{self._pinned}" IS 1 THEN 0 ELSE 1 END')
+        order.append('"created_at" DESC')
+        sql = (
+            f'SELECT * FROM "{self._table}"{_where_clause(conditions)}'
+            f" ORDER BY {', '.join(order)} LIMIT ? OFFSET ?"
+        )
+        values = [*([pattern] * len(self._searchable)), *params, pattern, limit, offset]
+        rows = self._conn.execute(sql, values).fetchall()
+        return [self._record(row) for row in rows]
+
     def count(self, where: Mapping[str, Any] | None = None) -> int:
-        clause, params = self._where(where)
+        conditions, params = self._conditions(where)
         row = self._conn.execute(
-            f'SELECT COUNT(*) FROM "{self._table}"{clause}', params
+            f'SELECT COUNT(*) FROM "{self._table}"{_where_clause(conditions)}', params
         ).fetchone()
         assert row is not None
         return int(row[0])
 
-    def _where(self, where: Mapping[str, Any] | None) -> tuple[str, list[Any]]:
+    def _conditions(self, where: Mapping[str, Any] | None) -> tuple[list[str], list[Any]]:
         if not where:
-            return "", []
+            return [], []
         conditions: list[str] = []
         params: list[Any] = []
         for name, condition in where.items():
@@ -201,7 +245,7 @@ class Collection:
                 field.check(condition)
                 conditions.append(f'"{name}" = ?')
                 params.append(_encode(condition))
-        return " WHERE " + " AND ".join(conditions), params
+        return conditions, params
 
     def _order(self, order: str) -> str:
         parts = order.strip().split()
@@ -278,6 +322,27 @@ class Collection:
         for name, field in self._fields.items():
             data[name] = _decode(field, row[name])
         return Record(data)
+
+
+def _check_limit(limit: int) -> None:
+    if not 1 <= limit <= MAX_LIMIT:
+        raise ValueError(f"limit 必须在 1–{MAX_LIMIT}，当前 {limit}")
+
+
+def _check_offset(offset: int) -> None:
+    if offset < 0:
+        raise ValueError("offset 不能为负")
+
+
+def _where_clause(conditions: list[str]) -> str:
+    return "" if not conditions else " WHERE " + " AND ".join(conditions)
+
+
+def _like(term: str) -> str:
+    """查询词 → LIKE 模式；% 与 _ 当普通字符，不当通配符。"""
+    escaped = term.replace(_LIKE_ESCAPE, _LIKE_ESCAPE * 2)
+    escaped = escaped.replace("%", _LIKE_ESCAPE + "%").replace("_", _LIKE_ESCAPE + "_")
+    return f"%{escaped}%"
 
 
 def _condition(column: str, operator: str, value: Any, field: Field) -> tuple[str, list[Any]]:

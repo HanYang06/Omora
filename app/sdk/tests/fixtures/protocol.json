@@ -1,41 +1,78 @@
-[
-  {
-    "name": "render",
-    "ok": true,
-    "frame": {"id": "1", "type": "call", "target": "ui", "method": "render", "args": {"page": "ideas"}}
-  },
-  {
-    "name": "event",
-    "ok": true,
-    "frame": {"id": "2", "type": "call", "target": "ui", "method": "event", "args": {"handler": "ideas:1:0", "payload": {"value": "买牛奶"}}}
-  },
-  {
-    "name": "no-args-key",
-    "ok": true,
-    "frame": {"id": "3", "type": "call", "target": "store", "method": "items"}
-  },
-  {
-    "name": "not-an-object",
-    "ok": false,
-    "code": "bad_frame",
-    "frame": [1, 2]
-  },
-  {
-    "name": "missing-id",
-    "ok": false,
-    "code": "bad_frame",
-    "frame": {"type": "call", "target": "ui", "method": "render"}
-  },
-  {
-    "name": "wrong-type",
-    "ok": false,
-    "code": "bad_frame",
-    "frame": {"id": "4", "type": "result", "value": 1}
-  },
-  {
-    "name": "args-not-object",
-    "ok": false,
-    "code": "bad_frame",
-    "frame": {"id": "5", "type": "call", "target": "ui", "method": "render", "args": []}
-  }
-]
+{
+  "calls": [
+    {
+      "name": "render",
+      "ok": true,
+      "frame": {"id": "1", "type": "call", "target": "ui", "method": "render", "args": {"page": "ideas"}}
+    },
+    {
+      "name": "event",
+      "ok": true,
+      "frame": {"id": "2", "type": "call", "target": "ui", "method": "event", "args": {"handler": "ideas:1:0", "payload": {"value": "买牛奶"}}}
+    },
+    {
+      "name": "search-query",
+      "ok": true,
+      "frame": {"id": "3", "type": "call", "target": "ui", "method": "event", "args": {"handler": "ideas:2:1", "payload": {"value": "牛奶"}}}
+    },
+    {
+      "name": "no-args-key",
+      "ok": true,
+      "frame": {"id": "4", "type": "call", "target": "store", "method": "items"}
+    },
+    {
+      "name": "not-an-object",
+      "ok": false,
+      "code": "bad_frame",
+      "frame": [1, 2]
+    },
+    {
+      "name": "missing-id",
+      "ok": false,
+      "code": "bad_frame",
+      "frame": {"type": "call", "target": "ui", "method": "render"}
+    },
+    {
+      "name": "wrong-type",
+      "ok": false,
+      "code": "bad_frame",
+      "frame": {"id": "4", "type": "result", "value": 1}
+    },
+    {
+      "name": "args-not-object",
+      "ok": false,
+      "code": "bad_frame",
+      "frame": {"id": "5", "type": "call", "target": "ui", "method": "render", "args": []}
+    }
+  ],
+  "snapshots": [
+    {
+      "name": "ideas-with-results",
+      "snapshot": {
+        "pages": [{"name": "ideas", "label": "灵感", "count": 3}],
+        "page": "ideas",
+        "meta": "1 条结果",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "search",
+              "props": {"placeholder": "搜索灵感…", "value": "牛奶", "on_query": "ideas:3:0", "on_submit": "ideas:3:1"},
+              "children": [
+                {"type": "suggestion", "props": {"value": "买牛奶", "title": "买牛奶", "meta": "刚刚", "highlight": "牛奶", "on_pick": "ideas:3:2"}, "children": []}
+              ]
+            },
+            {
+              "type": "list",
+              "props": {},
+              "children": [
+                {"type": "result", "props": {"title": "买牛奶", "snippet": "…下班顺路买牛奶…", "meta": "置顶 · 刚刚 · 语音", "highlight": "牛奶", "on_click": "ideas:3:3"}, "children": []}
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
