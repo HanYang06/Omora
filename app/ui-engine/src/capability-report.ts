@@ -1,4 +1,5 @@
 import type { Connection } from "./connection";
+import { detectCapabilities } from "./devices";
 
 /** 客户端能力由 capture 的 devices.ts 枚举；这里只负责把结果交给 manager。 */
 export type CapabilityDetector = () => Promise<readonly string[]>;
@@ -33,4 +34,14 @@ export function reportCapabilities(
         console.error("[omora] 上报客户端能力失败:", error);
       });
   });
+}
+
+/**
+ * 引擎的默认接线：连上后把 devices.ts 检测到的客户端能力报给 manager。
+ * 设备检测只有这一处来源；别的模块不要再调 manager.report_capabilities。
+ */
+export function reportClientCapabilities(
+  connection: Pick<Connection, "subscribeStatus" | "call">,
+): () => void {
+  return reportCapabilities(connection, detectCapabilities);
 }

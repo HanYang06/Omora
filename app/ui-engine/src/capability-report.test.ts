@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ConnectionStatus } from "./connection";
-import { CAPABILITY_METHOD, CAPABILITY_TARGET, reportCapabilities } from "./capability-report";
+import {
+  CAPABILITY_METHOD,
+  CAPABILITY_TARGET,
+  reportCapabilities,
+  reportClientCapabilities,
+} from "./capability-report";
+
+vi.mock("./devices", () => ({
+  detectCapabilities: vi.fn(async () => ["microphone"]),
+}));
 
 interface Call {
   target: string;
@@ -82,3 +91,22 @@ describe("reportCapabilities", () => {
     logged.mockRestore();
   });
 });
+
+describe("reportClientCapabilities", () => {
+  it("连上后用 devices.ts 的检测结果上报，不用第二套枚举", async () => {
+    const connection = fakeConnection();
+
+    reportClientCapabilities(connection);
+    connection.emit("open");
+    await flush();
+
+    expect(connection.calls).toEqual([
+      {
+        target: CAPABILITY_TARGET,
+        method: CAPABILITY_METHOD,
+        args: { capabilities: ["microphone"] },
+      },
+    ]);
+  });
+});
+
