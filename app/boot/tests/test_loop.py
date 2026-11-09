@@ -22,6 +22,16 @@ def _titles(snapshot: dict[str, Any]) -> list[str]:
     return [str(item["props"]["title"]) for item in _nodes(snapshot["content"], "item")]
 
 
+def _find_input(node: dict[str, Any]) -> str | None:
+    if node["type"] == "input":
+        return str(node["props"]["on_submit"])
+    for child in node["children"]:
+        nested = _find_input(child)
+        if nested is not None:
+            return nested
+    return None
+
+
 def _find_button(node: dict[str, Any], label: str) -> str | None:
     if node["type"] == "button" and node["props"].get("text") == label:
         return str(node["props"]["on_click"])
@@ -53,7 +63,7 @@ async def _request(
 
 
 def test_clicking_archive_over_the_socket_updates_the_page(tmp_path: Path) -> None:
-    async def scenario() -> tuple[dict[str, Any], dict[str, Any]]:
+    async def scenario() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
         config = Config(
             {
                 "net": {"port": 0},
@@ -62,23 +72,32 @@ def test_clicking_archive_over_the_socket_updates_the_page(tmp_path: Path) -> No
             }
         )
         kernel = build(config, MANIFEST)
-        kernel.resolve("store").add("买牛奶")
         net = kernel.resolve("net")
         port = await net.serve()
         try:
             async with connect(f"ws://127.0.0.1:{port}") as ws:
-                before = await _request(ws, "1", "ui", "render", {})
+                empty = await _request(ws, "1", "ui", "render", {})
+                capture = _find_input(empty["content"])
+                assert capture is not None
+                before = await _request(
+                    ws,
+                    "2",
+                    "ui",
+                    "event",
+                    {"handler": capture, "payload": {"value": "买牛奶"}},
+                )
                 handler = _find_button(before["content"], "归档")
                 assert handler is not None
                 after = await _request(
-                    ws, "2", "ui", "event", {"handler": handler, "payload": {}}
+                    ws, "3", "ui", "event", {"handler": handler, "payload": {}}
                 )
-                return before, after
+                return empty, before, after
         finally:
             await net.stop()
 
-    before, after = asyncio.run(scenario())
+    empty, before, after = asyncio.run(scenario())
 
+    assert empty["meta"] == "0 条"
     assert before["page"] == "ideas"
     assert before["pages"][0]["label"] == "灵感"
     assert before["pages"][0]["count"] == 1

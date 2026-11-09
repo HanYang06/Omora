@@ -53,18 +53,39 @@ app/packages/<name>/
 
 ## 4. store（系统插件）
 
-- 职责：条目的持久化与查询。
-- SQLite，一个文件，一个表；不产出界面。
+- 职责：通用持久化服务。不产出界面，也不认识任何领域。
 - 服务接口：
 
 ```python
 class Store:
-    def items(self) -> list[Item]: ...
-    def add(self, title: str, media: str | None = None) -> Item: ...
-    def archive(self, item_id: int) -> None: ...
+    def collection(
+        self,
+        name: str,
+        *,
+        fields: Mapping[str, str],
+        indexes: Sequence[str] = (),
+    ) -> Collection: ...
+
+class Collection:
+    def add(self, **values: Any) -> Record: ...
+    def get(self, record_id: str) -> Record | None: ...
+    def update(self, record_id: str, **values: Any) -> Record: ...
+    def delete(self, record_id: str) -> None: ...
+    def find(
+        self,
+        where: Mapping[str, Any] | None = None,
+        *,
+        order: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Record]: ...
+    def count(self, where: Mapping[str, Any] | None = None) -> int: ...
 ```
 
-- 数据：`Item(id, title, archived, created_at, media)`；id 自增；`created_at` 在加入时记下；`media` 是 media 插件给的 id。
+- 领域模型由插件声明：字段名 / 类型（`text` / `int` / `float` / `bool` / `time`，`?` 表示可选）/ 索引。
+- 查询：结构化 `where`（等值 + `$ne/$gt/$gte/$lt/$lte/$in`）、`order`、`limit`（上限 200）、`offset`；参数化 SQL，插件不写 SQL；字段名、排序字段、limit 都校验。
+- 记录：id 是字符串 UUID；`created_at` / `updated_at` 自动；`Record` 支持 `record["title"]` 和 `record.title`。
+- 迁移：见 [迁移](migrations.md)——开发期不写，发布时冻结。
 - 位置：`[store] path`（默认 `.omora/omora.db`）。`.omora/` 是本地数据目录，已忽略。
 - 为什么先 SQLite：捕获的条目不重启就丢是硬伤；换后端只改这个插件内部，接口不动。
 

@@ -7,7 +7,7 @@
 - 母 UI（浅色）+ 界面库 v1 + 灵感页 + 音频捕获已落。
 - 仓库是 uv workspace：`omora-core` / `omora-sdk` / 每个 `omora-plugin-*` 都是 member；import 命名空间 `omora.*`。
 - 存储：SQLite（`.omora/omora.db`）；媒体文件（`.omora/media`）。
-- 测试：Python 72 条、TS 36 条，全绿。
+- 测试：Python 83 条、TS 36 条，全绿。
 - 门禁：`uv run python scripts/check.py` 全绿。
 - 项目 / 需求是占位页；深色主题待单独设计；视频、转写、AI 未做。
 
@@ -20,6 +20,15 @@
 - boot 的清单只留有序名字，按入口点找插件类
 - 一个 lock / 一个 venv；单独开发：`uv run --package omora-plugin-ideas pytest`
 - 验收：`check.py` 全绿；72 条 Python 测试按入口点装起来跑
+
+## 已完成：通用 store
+
+把 store 从 ideas 专用接口改成通用持久化服务：
+
+- `collection` + 字段/索引声明 + CRUD + 结构化查询；插件不写 SQL
+- ID 字符串 UUID；`created_at` / `updated_at` 自动
+- 迁移规则：开发期不写，发布时冻结（`docs/design/migrations.md`）
+- 验收：`check.py` 全绿；83 条 Python 测试
 
 ## 已完成：媒体与捕获基础
 

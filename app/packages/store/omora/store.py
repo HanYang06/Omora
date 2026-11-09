@@ -1,91 +1,102 @@
-"""store：条目的持久化。
+"""store：通用持久化服务。
 
-系统插件，不产出界面。SQLite，一个表；条目可以只是文字，也可以挂一条媒体。
+系统插件，不产出界面。SQLite；一个 collection 一张表。字段名、类型、
+索引由用它的插件声明，store 只负责建表、迁移和参数化查询——插件不写 SQL。
+
+迁移规则见 docs/design/migrations.md：开发期不写迁移，发布时冻结。
 """
 
 from __future__ import annotations
 
+import os
 import sqlite3
-from dataclasses import dataclass
-from datetime import datetime
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from omora.sdk import Context
 
+from ._records import _RESERVED, Collection, Field, Record, _check_name
 
-@dataclass(frozen=True)
-class Item:
-    id: int
-    title: str
-    archived: bool
-    created_at: datetime
-    media: str | None = None
+SCHEMA_VERSION = 1
 
 
 class Store:
-    def __init__(self, path: str = ":memory:") -> None:
-        self._conn = sqlite3.connect(path)
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                archived INTEGER NOT NULL DEFAULT 0,
-                created_at TEXT NOT NULL,
-                media TEXT
+    def __init__(self, path: str = ":memory:", *, dev: bool = False) -> None:
+        self._path = path
+        self._dev = dev
+        self._conn = self._open()
+
+    def _open(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self._path)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("PRAGMA user_version").fetchone()
+        version = int(row[0]) if row is not None else 0
+        if version == SCHEMA_VERSION:
+            return conn
+        if _is_fresh(conn):
+            _set_version(conn)
+            return conn
+        if not self._dev:
+            conn.close()
+            raise RuntimeError(
+                f"数据库 schema 版本 {version}，代码版本 {SCHEMA_VERSION}；"
+                "没有可用的迁移（见 docs/design/migrations.md）"
             )
-            """
-        )
-        self._conn.commit()
+        conn.close()
+        if self._path != ":memory:":
+            Path(self._path).unlink(missing_ok=True)
+        conn = sqlite3.connect(self._path)
+        conn.row_factory = sqlite3.Row
+        _set_version(conn)
+        return conn
 
-    def items(self) -> list[Item]:
-        """没被归档的条目，按加入顺序。"""
-        rows = self._conn.execute(
-            "SELECT id, title, archived, created_at, media FROM items"
-            " WHERE archived = 0 ORDER BY id"
-        ).fetchall()
-        return [self._item(row) for row in rows]
-
-    def add(self, title: str, media: str | None = None) -> Item:
-        created = datetime.now()
-        cursor = self._conn.execute(
-            "INSERT INTO items (title, archived, created_at, media) VALUES (?, 0, ?, ?)",
-            (title, created.isoformat(), media),
-        )
-        self._conn.commit()
-        return Item(int(cursor.lastrowid or 0), title, False, created, media)
-
-    def archive(self, item_id: int) -> None:
-        cursor = self._conn.execute(
-            "UPDATE items SET archived = 1 WHERE id = ? AND archived = 0", (item_id,)
-        )
-        if cursor.rowcount == 0:
-            raise LookupError(f"条目不存在: {item_id}")
-        self._conn.commit()
-
-    @staticmethod
-    def _item(row: sqlite3.Row) -> Item:
-        media = row["media"]
-        return Item(
-            int(row["id"]),
-            str(row["title"]),
-            bool(row["archived"]),
-            datetime.fromisoformat(str(row["created_at"])),
-            None if media is None else str(media),
-        )
+    def collection(
+        self,
+        name: str,
+        *,
+        fields: Mapping[str, str],
+        indexes: Sequence[str] = (),
+    ) -> Collection:
+        _check_name(name)
+        parsed: dict[str, Field] = {}
+        for field_name, spec in fields.items():
+            if field_name in _RESERVED:
+                raise ValueError(f"字段名保留: {field_name}")
+            _check_name(field_name)
+            parsed[field_name] = Field(field_name, spec)
+        for index in indexes:
+            if index not in parsed and index not in {"created_at", "updated_at"}:
+                raise ValueError(f"未知索引字段: {index}")
+        return Collection(self._conn, name, parsed, tuple(indexes), self._dev)
 
 
 class StorePlugin:
     name = "store"
 
-    def __init__(self, path: str = ".omora/omora.db") -> None:
+    def __init__(self, path: str = ".omora/omora.db", *, dev: bool | None = None) -> None:
         self.path = path
+        self.dev = _env_flag("OMORA_DEV") if dev is None else dev
 
     def apply(self, ctx: Context) -> None:
         if self.path != ":memory:":
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        ctx.provide("store", Store(self.path))
+        ctx.provide("store", Store(self.path, dev=self.dev))
 
 
-__all__ = ["Item", "Store", "StorePlugin"]
+def _is_fresh(conn: sqlite3.Connection) -> bool:
+    row = conn.execute(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+    ).fetchone()
+    return bool(row is not None and int(row[0]) == 0)
+
+
+def _set_version(conn: sqlite3.Connection) -> None:
+    conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+    conn.commit()
+
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip() == "1"
+
+
+__all__ = ["SCHEMA_VERSION", "Collection", "Record", "Store", "StorePlugin"]
