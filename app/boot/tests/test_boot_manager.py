@@ -13,6 +13,9 @@ from omora.core.context import Context
 from omora.manager import ManagerPlugin
 from omora.store import StorePlugin
 
+# 带能力条件的插件：客户端上报能力之前 manager 不会装它们。
+CAPABILITY_GATED = {"audio", "video"}
+
 
 class _Fake:
     def __init__(self, name: str, **config: Any) -> None:
@@ -126,8 +129,12 @@ def test_the_real_manifest_is_installed_through_the_manager(tmp_path: Path) -> N
         }
     )
     kernel = build(config, SYSTEM_PLUGINS, loader=loader)
+    # audio / video 带能力条件：客户端上报之前不装，所以先按"去掉它们"的顺序钉。
+    assert calls == [name for name in SYSTEM_PLUGINS if name not in CAPABILITY_GATED]
 
-    assert calls == list(SYSTEM_PLUGINS)
+    kernel.resolve("manager").report_capabilities(["microphone", "camera"])
+
+    assert sorted(calls) == sorted(SYSTEM_PLUGINS)
     inventory = kernel.resolve("manager").inventory()
     rows = {row["name"]: row for row in inventory["plugins"]}
     assert [row["name"] for row in inventory["plugins"]] == list(SYSTEM_PLUGINS)
