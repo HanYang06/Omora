@@ -42,8 +42,8 @@ description: Omora 仓库的开发规范与操作手册。任务落在 Omora 仓
 
 ### 加一个系统插件
 
-1. 在 `app/packages/<name>/` 建目录：`pyproject.toml`（name / version / description / dependencies / entry point）、`src/omora/plugins/<name>/`、`tests/`。
-2. 入口点写在 pyproject：`[project.entry-points."omora.plugins"] <name> = "omora.plugins.<name>:<Class>"`；依赖 `omora-sdk`；版本由 `scripts/sync_version.py` 同步。
+1. 在 `app/packages/<name>/` 建目录：`pyproject.toml`（name / version / description / dependencies / entry point）、`omora/<name>.py`、`tests/`。
+2. 入口点写在 pyproject：`[project.entry-points."omora.plugins"] <name> = "omora.<name>:<Class>"`；依赖 `omora-sdk`；版本由 `scripts/sync_version.py` 同步。
 3. 只依赖插件 API（`omora.sdk`）；用 `provide` 登记服务，需要页面就 `ui.page`。
 4. 把名字加进 `app/main.py` 的 `SYSTEM_PLUGINS` 和 `config.ini` 的段。
 5. `uv sync` 让它进 workspace；写行为测试：装上能跑、卸了干净、按名字取得到。

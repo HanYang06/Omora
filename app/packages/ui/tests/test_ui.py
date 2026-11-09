@@ -5,8 +5,8 @@ import pytest
 
 from omora.core.context import Context
 from omora.core.kernel import Kernel
-from omora.plugins.ui import Ui, UiPlugin
 from omora.sdk.ui import Button, Column, Empty, Input, Item, List, Page, Text
+from omora.ui import Ui, UiPlugin
 
 
 class _PagePlugin:

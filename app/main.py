@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 from boot import build, load_config
-from omora.plugins.net import Net
+from omora.net import Net
 
 ROOT = Path(__file__).resolve().parent.parent
 

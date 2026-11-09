@@ -14,13 +14,13 @@
 
 ```
 app/packages/<name>/
-  pyproject.toml              # name / version / description / dependencies / entry point
-  src/omora/plugins/<name>/   # 插件对象
-  tests/                      # 行为测试
+  pyproject.toml      # name / version / description / dependencies / entry point
+  omora/<name>.py     # 插件对象（单文件）
+  tests/              # 行为测试
 ```
 
-- 目录名 = 插件名；发行名 `omora-plugin-<name>`；import 名 `omora.plugins.<name>`。
-- 入口点写在自己的 pyproject：`[project.entry-points."omora.plugins"] <name> = "omora.plugins.<name>:<Class>"`。boot 的清单只留有序名字，插件类按入口点找。
+- 目录名 = 插件名；发行名 `omora-plugin-<name>`；import 名 `omora.<name>`。
+- 入口点写在自己的 pyproject：`[project.entry-points."omora.plugins"] <name> = "omora.<name>:<Class>"`。boot 的清单只留有序名字，插件类按入口点找。
 - 版本字段必须有，但由 `scripts/sync_version.py` 从根 `VERSION` 同步，不手写、不单独定版本。
 - 依赖：插件依赖 `omora-sdk`，SDK 依赖 `omora-core`；第三方依赖写在自己的 pyproject。
 - 一个 uv workspace、一个 lock、一个 venv：系统插件一起发，环境不分裂；隔离的是项目边界、依赖声明和测试。单独开发：`uv run --package omora-plugin-ideas pytest`。
@@ -46,8 +46,8 @@ app/packages/<name>/
 `app/sdk/`（`omora-sdk`）是公开面，不是插件：
 
 - 再导出 `Context`、`Plugin` 类型；
-- 放 UI 节点类型与序列化（`app/sdk/src/omora/sdk/ui.py`）；
-- 放协议编解码（`app/sdk/src/omora/sdk/protocol.py`）。
+- 放 UI 节点类型与序列化（`app/sdk/omora/sdk/ui.py`）；
+- 放协议编解码（`app/sdk/omora/sdk/protocol.py`）。
 
 插件只 import `omora.sdk` / `omora.sdk.ui` / `omora.sdk.protocol`，不 import `omora.core`。sdk 依赖 core；core 不知道 sdk。
 

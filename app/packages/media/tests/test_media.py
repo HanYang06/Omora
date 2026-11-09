@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from omora.core.kernel import Kernel
-from omora.plugins.media import Media, MediaPlugin
+from omora.media import Media, MediaPlugin
 
 
 def test_saving_and_loading_a_media_file(tmp_path: Path) -> None:

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from omora.core.kernel import Kernel
-from omora.plugins.store import Store, StorePlugin
+from omora.store import Store, StorePlugin
 
 
 def test_adding_an_item_makes_it_visible_in_items() -> None:

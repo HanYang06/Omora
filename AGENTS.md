@@ -46,7 +46,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 - 系统 `python` 是 Windows 商店占位，不可用；Python 命令一律走 `uv run`。
 - 前端依赖走 `pnpm`。
-- Python 侧是 uv workspace：`uv sync` 一个 lock / 一个 venv；每个包自己的 pyproject / 依赖 / src / tests。
+- Python 侧是 uv workspace：`uv sync` 一个 lock / 一个 venv；每个包自己的 pyproject / 依赖 / `omora` 命名空间 / tests。
 - 开发：`uv run python scripts/dev.py`（内核 + 渲染引擎一起起，Ctrl+C 一起停）。
 - 仓库统一 LF；不提交 `.venv/`、`node_modules/`、`dist/`、本地数据。
 

@@ -8,7 +8,7 @@ dependencies = [
 ]
 
 [project.entry-points."omora.plugins"]
-store = "omora.plugins.store:StorePlugin"
+store = "omora.store:StorePlugin"
 
 [build-system]
 requires = ["hatchling"]
@@ -18,4 +18,4 @@ build-backend = "hatchling.build"
 omora-sdk = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/omora"]
+packages = ["omora"]

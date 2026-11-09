@@ -15,7 +15,7 @@
 
 把插件从“目录 + 元数据”变成真正的子项目：
 
-- `omora-core` / `omora-sdk` / 每个 `omora-plugin-*` 各有 pyproject / 依赖 / `src` / tests
+- `omora-core` / `omora-sdk` / 每个 `omora-plugin-*` 各有 pyproject / 依赖 / `omora` 命名空间 / tests
 - import 命名空间收进 `omora.*`；插件入口点写在自己的 pyproject
 - boot 的清单只留有序名字，按入口点找插件类
 - 一个 lock / 一个 venv；单独开发：`uv run --package omora-plugin-ideas pytest`

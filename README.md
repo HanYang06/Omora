@@ -24,7 +24,7 @@
 | `app/ui-engine/` | 渲染引擎（TS） |
 | `docs/` | 事实来源 |
 
-Python 侧是一个 uv workspace：一个 lock、一个 venv；每个包有自己的 pyproject / 依赖 / src / tests，import 命名空间是 `omora.*`。
+Python 侧是一个 uv workspace：一个 lock、一个 venv；每个包有自己的 pyproject / 依赖 / 代码 / tests，import 命名空间是 `omora.*`。
 
 配置：`config.ini` 随包、二进制、不可读；`config.yaml` 用户级、明文、只做覆盖。两者都只在启动期读，应用不写。
 

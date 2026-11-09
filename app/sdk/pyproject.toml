@@ -13,4 +13,4 @@ build-backend = "hatchling.build"
 omora-core = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/omora"]
+packages = ["omora"]
