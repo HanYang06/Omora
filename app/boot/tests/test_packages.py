@@ -49,6 +49,17 @@ def test_the_manifest_matches_the_packages_and_entry_points() -> None:
         assert installed[name].value.startswith(f"omora.{name}:")
 
 
+def test_every_plugin_package_declares_tool_omora() -> None:
+    for name, data in _packages().items():
+        section = data.get("tool", {}).get("omora")
+        assert isinstance(section, dict), f"{name} 缺 [tool.omora]"
+        for key in ("platforms", "capabilities", "requires"):
+            value = section.get(key, [])
+            assert isinstance(value, list), f"{name}: tool.omora.{key} 必须是列表"
+            assert all(isinstance(item, str) for item in value)
+        assert isinstance(section.get("listed", True), bool)
+
+
 def test_the_config_has_a_section_for_every_plugin() -> None:
     parser = configparser.ConfigParser(interpolation=None)
     parser.read_string(CONFIG.read_text(encoding="utf-8"), source=str(CONFIG))

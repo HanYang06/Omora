@@ -45,7 +45,22 @@
 - 迁移规则：开发期不写，发布时冻结（`docs/design/migrations.md`）
 - 验收：`check.py` 全绿；83 条 Python 测试
 
+## 已完成：插件管理器
+
+把"装哪些、能不能开"从 boot 的硬编码变成可解释的清单：
+
+- `manager` 系统插件：清单、`[tool.omora]` 条件（platforms / capabilities / listed /
+  requires）、生效开关、阶段与原因
+- boot 先装 store + manager，其余由 manager 按清单装；manager 不碰内核，走 host 服务
+- 开关存 store 的 `settings` collection；config.ini 只给默认值、仍然只读
+- 设置页「插件」：状态、条件、原因、启用 / 禁用；启动项不可关
+- 能力通道：引擎连上后上报客户端能力，manager 不探测硬件
+
+验收：`uv run python scripts/check.py` 全绿；清单 / 条件 / 开关 / 卸载清理 / boot 顺序 /
+WebSocket 端到端都有行为测试。
+
 ## 已完成：媒体与捕获基础
+
 
 证明了「录音 → 媒体落盘 → 条目落库 → 列表播放」这条链路。
 

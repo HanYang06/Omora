@@ -20,3 +20,9 @@ omora-sdk = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["omora"]
+
+[tool.omora]
+platforms = []
+capabilities = []
+listed = true
+requires = []

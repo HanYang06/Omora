@@ -14,13 +14,15 @@
 
 ```
 app/packages/<name>/
-  pyproject.toml      # name / version / description / dependencies / entry point
+  pyproject.toml      # name / version / description / dependencies / entry point / [tool.omora]
   omora/<name>.py     # 插件对象（单文件）
   tests/              # 行为测试
 ```
 
 - 目录名 = 插件名；发行名 `omora-plugin-<name>`；import 名 `omora.<name>`。
 - 入口点写在自己的 pyproject：`[project.entry-points."omora.plugins"] <name> = "omora.<name>:<Class>"`。boot 的清单只留有序名字，插件类按入口点找。
+- 元数据写在自己的 `[tool.omora]`：`platforms` / `capabilities` / `listed` / `requires`；manager 在装载前按它检查条件。省略即默认：全平台、无能力要求、`listed = true`、无服务依赖。见 [插件管理器](plugin-manager.md)。
+- `omora/py.typed` 是 package 的一部分（mypy 靠它把 `omora.*` 当源码而不是第三方）。
 - 版本字段必须有，但由 `scripts/sync_version.py` 从根 `VERSION` 同步，不手写、不单独定版本。
 - 依赖：插件依赖 `omora-sdk`，SDK 依赖 `omora-core`；第三方依赖写在自己的 pyproject。
 - 一个 uv workspace、一个 lock、一个 venv：系统插件一起发，环境不分裂；隔离的是项目边界、依赖声明和测试。单独开发：`uv run --package omora-plugin-ideas pytest`。
@@ -36,7 +38,7 @@ app/packages/<name>/
 | 位置 | `app/packages/` | 待定 |
 | 来源 | 随包 | 单独装 |
 | 开关 | 启动期的配置决定 | 用户装 |
-| 例子 | store、media、ui、ideas、projects、requirements、net | —（现在一个都没有） |
+| 例子 | store、manager、media、ui、ideas、projects、requirements、net | —（现在一个都没有） |
 | 缺了会怎样 | 应用降级；后果由插件自己说清 | 少一个功能 |
 
 产出页面不是分类轴：两种插件都可能产出页面，都可能只是给服务。运行后插件同样是 package，目录和打包格式还没定。
@@ -180,9 +182,29 @@ class Ui:
 - 各登记一个空页，让导航里出现项目 / 需求。
 - 字段还没定，所以没有任何数据操作；字段定了再长。
 
+### 7.4 manager（插件管理）
+
+- 职责：插件清单、`[tool.omora]` 条件、开关与设置页。不 import 内核，装 / 卸走 boot
+  提供的 `host` 服务。
+- 服务接口：
+
+```python
+class Manager:
+    def inventory(self) -> dict[str, object]: ...
+    def set_enabled(self, name: str, enabled: bool) -> dict[str, object]: ...
+    def report_capabilities(self, capabilities: list[str]) -> dict[str, object]: ...
+```
+
+- 清单顺序 = boot 的 `SYSTEM_PLUGINS`；每行的元数据来自 package 的 `[tool.omora]`。
+- 开关存在 store 的 `settings` collection（`plugin` / `enabled`），config.ini 只给默认值。
+- 平台 / 能力 / 服务条件不满足 → `disabled` 并带原因；装失败 → `failed`。
+- 设置页通过 ui 插件登记：`plugins`，标签「插件」；store / manager 是启动项，不给开关。
+- 细节见 [插件管理器](plugin-manager.md)。
+
 ## 8. 边界
 
 - `packages` 不 import `omora.core`；只 import `omora.sdk`。
+
 - `sdk` 不 import `packages`。
 - store、media、ui、ideas、projects、requirements、net 互不 import。
 - 界面不是插件关心的事：插件只产出节点，不碰 DOM / CSS。

@@ -2,6 +2,10 @@
 
 它站在内核和所有插件外面：唯一知道"有哪些插件、什么顺序"的地方。
 内核看不到配置；插件看不到 boot。
+
+装法有两段：boot 先装 store + manager，再把 Host 服务交给 manager；
+其余插件由 manager 按元数据条件与 store 里的开关来装、来卸。
+manager 不 import 内核：装 / 卸 / 名单都走 Host。
 """
 
 from __future__ import annotations
@@ -18,6 +22,8 @@ from omora.core.kernel import Kernel, Plugin
 
 Loader = Callable[[str, Mapping[str, Any]], Plugin]
 
+BOOTSTRAP = ("store", "manager")
+
 _FALSE = {"false", "0", "no", "off", "none", ""}
 
 
@@ -29,12 +35,12 @@ class Config:
         self._claimed: set[str] = set()
 
     def enabled(self, name: str) -> bool:
-        """这个插件开不开，默认开。"""
+        """这个插件默认开不开。manager 手里它只是默认值。"""
         self._claimed.add(name)
         return _as_bool(self._merged.get(name, {}).get("enabled", True))
 
     def for_plugin(self, name: str) -> dict[str, Any]:
-        """插件自己的那一段，去掉 `enabled`。没写就是空。"""
+        """插件自己的那一段，去掉 enabled。没写就是空。"""
         self._claimed.add(name)
         section = dict(self._merged.get(name, {}))
         section.pop("enabled", None)
@@ -79,25 +85,102 @@ def load_plugin(name: str, settings: Mapping[str, Any]) -> Plugin:
     return plugin
 
 
+class Host:
+    """boot 交给 manager 的宿主接口：装、卸、名单、默认开关。
+
+    内核仍然是宿主；manager 只通过这里动手，不拿 Kernel。
+    """
+
+    def __init__(
+        self,
+        kernel: Kernel,
+        manifest: Sequence[str],
+        defaults: Mapping[str, bool],
+        load: Loader,
+        config: Config,
+    ) -> None:
+        self._kernel = kernel
+        self._manifest = tuple(manifest)
+        self._defaults = dict(defaults)
+        self._load = load
+        self._config = config
+
+    def manifest(self) -> tuple[str, ...]:
+        """boot 声明的顺序；manager 按这个顺序装。"""
+        return self._manifest
+
+    def names(self) -> tuple[str, ...]:
+        """现在装着的插件。"""
+        return self._kernel.names()
+
+    def default_enabled(self, name: str) -> bool:
+        """config.ini 提供的默认开关；store 里的值可以覆盖它。"""
+        return self._defaults.get(name, True)
+
+    def has_service(self, name: str) -> bool:
+        try:
+            self._kernel.resolve(name)
+        except LookupError:
+            return False
+        return True
+
+    def install(self, name: str) -> None:
+        if name in self._kernel.names():
+            return
+        plugin = self._load(name, self._config.for_plugin(name))
+        self._kernel.install(plugin)
+
+    def uninstall(self, name: str) -> None:
+        self._kernel.uninstall(name)
+
+
+class _HostPlugin:
+    """把 Host 挂到服务表上的最小插件；它不在 manifest 里。"""
+
+    name = "host"
+
+    def __init__(self, host: Host) -> None:
+        self._host = host
+
+    def apply(self, ctx: Any) -> None:
+        ctx.provide("host", self._host)
+
+
 def build(
     config: Config,
     manifest: Sequence[str],
     *,
     loader: Loader | None = None,
 ) -> Kernel:
-    """按 manifest 的顺序装；装不上就带着插件名失败。"""
+    """按 manifest 的顺序装。store + manager 先装，其余交给 manager。"""
     kernel = Kernel()
     load = loader or load_plugin
-    for name in manifest:
-        if not config.enabled(name):
+    names = tuple(manifest)
+    defaults = {name: config.enabled(name) for name in names}
+
+    if "manager" in names and defaults["manager"]:
+        kernel.install(_HostPlugin(Host(kernel, names, defaults, load, config)))
+        for name in names:
+            if name in BOOTSTRAP and defaults[name]:
+                _install(kernel, load, config, name)
+        if kernel.running("manager"):
+            return kernel
+
+    # 没有 manager（或被配置关掉）：回到 boot 自己按序装，应用以降级形态起。
+    for name in names:
+        if kernel.running(name) or not defaults[name]:
             continue
-        try:
-            plugin = load(name, config.for_plugin(name))
-        except Exception as exc:
-            exc.add_note(f'插件 "{name}" 装载失败')
-            raise
-        kernel.install(plugin)
+        _install(kernel, load, config, name)
     return kernel
+
+
+def _install(kernel: Kernel, load: Loader, config: Config, name: str) -> None:
+    try:
+        plugin = load(name, config.for_plugin(name))
+    except Exception as exc:
+        exc.add_note(f'插件 "{name}" 装载失败')
+        raise
+    kernel.install(plugin)
 
 
 def _deep_merge(base: dict[str, Any], override: Mapping[str, Any]) -> None:

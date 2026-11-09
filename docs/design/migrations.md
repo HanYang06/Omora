@@ -7,6 +7,7 @@
 - 只有发布了，才冻结一个 schema 版本，并写一条从上一个发布版到当前版的迁移。
 - 一个发布最多一条迁移：500 个 commit 改了多少次 schema 都压成一条。
 - 没有发布就没有迁移。
+- manager 的 `settings` collection 存插件开关，是普通 collection：字段变了按本节处理，不参与领域 schema 的版本。
 - 迁移是独立模块；日常改 schema 不顺手写。
 
 ## 2. 版本
