@@ -56,6 +56,8 @@ class Store:
         *,
         fields: Mapping[str, str],
         indexes: Sequence[str] = (),
+        searchable: Sequence[str] = (),
+        pinned: str | None = None,
     ) -> Collection:
         _check_name(name)
         parsed: dict[str, Field] = {}
@@ -67,7 +69,33 @@ class Store:
         for index in indexes:
             if index not in parsed and index not in {"created_at", "updated_at"}:
                 raise ValueError(f"未知索引字段: {index}")
-        return Collection(self._conn, name, parsed, tuple(indexes), self._dev)
+        searched = _search_fields(parsed, searchable)
+        _pin_field(parsed, pinned)
+        return Collection(self._conn, name, parsed, tuple(indexes), self._dev, searched, pinned)
+
+
+def _search_fields(fields: Mapping[str, Field], searchable: Sequence[str]) -> tuple[str, ...]:
+    """校验可搜字段：必须声明过、必须是 text。第一个算标题，排名靠它。"""
+    found: list[str] = []
+    for name in searchable:
+        field = fields.get(name)
+        if field is None:
+            raise ValueError(f"未知搜索字段: {name}")
+        if field.kind != "text":
+            raise ValueError(f"搜索字段必须是 text: {name}")
+        if name not in found:
+            found.append(name)
+    return tuple(found)
+
+
+def _pin_field(fields: Mapping[str, Field], pinned: str | None) -> None:
+    if pinned is None:
+        return
+    field = fields.get(pinned)
+    if field is None:
+        raise ValueError(f"未知置顶字段: {pinned}")
+    if field.kind != "bool":
+        raise ValueError(f"置顶字段必须是 bool: {pinned}")
 
 
 class StorePlugin:

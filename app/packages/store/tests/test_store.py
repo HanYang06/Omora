@@ -188,3 +188,181 @@ def test_uninstalling_the_plugin_takes_the_store_away(tmp_path: Path) -> None:
 
     with pytest.raises(LookupError, match="服务未提供: store"):
         kernel.resolve("store")
+
+SEARCH_FIELDS = {
+    "title": "text",
+    "body": "text?",
+    "note": "text?",
+    "pinned": "bool",
+    "archived": "bool?",
+}
+
+
+def _posts(store: Store) -> Collection:
+    """声明两个可搜字段（title 算标题）和一个置顶字段。"""
+    return store.collection(
+        "posts",
+        fields=SEARCH_FIELDS,
+        indexes=["archived"],
+        searchable=["title", "body"],
+        pinned="pinned",
+    )
+
+
+def test_search_matches_a_substring_of_the_title() -> None:
+    posts = _posts(Store())
+    posts.add(title="买牛奶", pinned=False)
+    posts.add(title="写周报", pinned=False)
+
+    assert [record.title for record in posts.search("牛奶")] == ["买牛奶"]
+
+
+def test_search_matches_the_other_declared_fields() -> None:
+    posts = _posts(Store())
+    posts.add(title="明天的清单", body="下班顺路买牛奶", pinned=False)
+
+    assert [record.title for record in posts.search("牛奶")] == ["明天的清单"]
+
+
+def test_search_ignores_fields_that_were_not_declared_searchable() -> None:
+    posts = _posts(Store())
+    posts.add(title="明天的清单", body=None, note="买牛奶", pinned=False)
+
+    assert posts.search("牛奶") == []
+
+
+def test_search_is_case_insensitive_for_ascii() -> None:
+    posts = _posts(Store())
+    posts.add(title="Milk Run", pinned=False)
+
+    assert [record.title for record in posts.search("milk")] == ["Milk Run"]
+
+
+def test_search_treats_like_wildcards_as_plain_text() -> None:
+    posts = _posts(Store())
+    posts.add(title="100% 确定", pinned=False)
+    posts.add(title="百分之百", pinned=False)
+
+    assert [record.title for record in posts.search("100%")] == ["100% 确定"]
+    assert [record.title for record in posts.search("%")] == ["100% 确定"]
+    assert posts.search("_") == []
+
+
+def test_search_never_runs_the_query_as_sql() -> None:
+    posts = _posts(Store())
+    posts.add(title="买牛奶", pinned=False)
+
+    assert posts.search("'; DROP TABLE col_posts; --") == []
+    assert posts.count() == 1
+
+
+def test_search_ranks_title_matches_before_body_matches() -> None:
+    posts = _posts(Store())
+    posts.add(title="明天的清单", body="买牛奶", pinned=False)
+    posts.add(title="牛奶计划", body=None, pinned=False)
+
+    assert [record.title for record in posts.search("牛奶")] == [
+        "牛奶计划",
+        "明天的清单",
+    ]
+
+
+def test_search_ranks_pinned_matches_before_newer_ones() -> None:
+    posts = _posts(Store())
+    older = posts.add(title="牛奶 A", pinned=False)
+    posts.add(title="牛奶 B", pinned=False)
+    posts.update(older.id, pinned=True)
+
+    assert [record.title for record in posts.search("牛奶")] == ["牛奶 A", "牛奶 B"]
+
+
+def test_search_lists_the_newest_match_first() -> None:
+    posts = _posts(Store())
+    posts.add(title="牛奶 A", pinned=False)
+    posts.add(title="牛奶 B", pinned=False)
+
+    assert [record.title for record in posts.search("牛奶")] == ["牛奶 B", "牛奶 A"]
+
+
+def test_search_pages_through_the_matches() -> None:
+    posts = _posts(Store())
+    for title in ("牛奶 1", "牛奶 2", "牛奶 3"):
+        posts.add(title=title, pinned=False)
+
+    first = posts.search("牛奶", limit=2)
+    rest = posts.search("牛奶", limit=2, offset=2)
+
+    assert len(first) == 2
+    assert [record.title for record in rest] == ["牛奶 1"]
+    assert {record.title for record in first}.isdisjoint({record.title for record in rest})
+
+
+def test_search_follows_a_filter() -> None:
+    posts = _posts(Store())
+    posts.add(title="牛奶 A", pinned=False, archived=False)
+    posts.add(title="牛奶 B", pinned=False, archived=True)
+
+    found = posts.search("牛奶", where={"archived": False})
+
+    assert [record.title for record in found] == ["牛奶 A"]
+
+
+def test_search_returns_the_declared_values() -> None:
+    posts = _posts(Store())
+    posts.add(title="牛奶 1", body="冷的", pinned=True, archived=False)
+
+    found = posts.search("牛奶")[0]
+
+    assert (found.title, found.body, found.pinned, found.archived) == (
+        "牛奶 1",
+        "冷的",
+        True,
+        False,
+    )
+
+
+def test_an_empty_query_finds_nothing() -> None:
+    posts = _posts(Store())
+    posts.add(title="牛奶", pinned=False)
+
+    assert posts.search("   ") == []
+
+
+def test_searching_without_declared_fields_is_an_error() -> None:
+    notes = Store().collection("notes", fields={"title": "text"})
+
+    with pytest.raises(ValueError, match="searchable"):
+        notes.search("牛奶")
+
+
+def test_search_rejects_an_unbounded_limit() -> None:
+    with pytest.raises(ValueError, match="limit"):
+        _posts(Store()).search("牛奶", limit=1000)
+
+
+def test_search_rejects_a_negative_offset() -> None:
+    with pytest.raises(ValueError, match="offset"):
+        _posts(Store()).search("牛奶", offset=-1)
+
+
+def test_declaring_an_unknown_search_column_is_an_error() -> None:
+    with pytest.raises(ValueError, match="未知搜索字段: nope"):
+        Store().collection("notes", fields={"title": "text"}, searchable=["nope"])
+
+
+def test_declaring_a_non_text_search_column_is_an_error() -> None:
+    with pytest.raises(ValueError, match="必须是 text"):
+        Store().collection(
+            "notes", fields={"title": "text", "views": "int"}, searchable=["views"]
+        )
+
+
+def test_declaring_an_unknown_pin_column_is_an_error() -> None:
+    with pytest.raises(ValueError, match="未知置顶字段: nope"):
+        Store().collection("notes", fields={"title": "text"}, pinned="nope")
+
+
+def test_declaring_a_non_bool_pin_column_is_an_error() -> None:
+    with pytest.raises(ValueError, match="必须是 bool"):
+        Store().collection("notes", fields={"title": "text"}, pinned="title")
+
