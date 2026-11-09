@@ -7,9 +7,11 @@
 - 母 UI（浅色）+ 界面库 v1 + 灵感页 + 音频 / 视频捕获已落。
 - 仓库是 uv workspace：`omora-core` / `omora-sdk` / 每个 `omora-plugin-*` 都是 member；import 命名空间 `omora.*`。
 - 存储：SQLite（`.omora/omora.db`）；媒体文件（`.omora/media`）。
-- 测试：Python 121 条、TS 56 条，全绿。
+- 测试：Python 202 条、TS 82 条，全绿。
 - 门禁：`uv run python scripts/check.py` 全绿。
 - 灵感页有传统（非 AI）搜索：建议下拉、结果视图、详情与返回。
+- 插件管理器已落：清单、`[tool.omora]` 条件（平台 / 能力 / 依赖服务）、开关与设置页；
+  客户端能力上报后，带能力条件的插件按需装上。
 - 捕捉拆成 audio / video 两个插件；硬件检测在客户端（无设备默认禁用）；视频走 HTTP 媒体通道。
 - 项目 / 需求是占位页；深色主题待单独设计；转写、AI 未做。
 
