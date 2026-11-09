@@ -11,8 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 VERSION_FILE = ROOT / "VERSION"
-PYPROJECT = ROOT / "pyproject.toml"
-JSON_PACKAGES = (ROOT / "package.json", ROOT / "app" / "ui-engine" / "package.json")
+PACKAGES = ROOT / "app" / "packages"
 
 VERSION_LINE = re.compile(r'^version = "[^"]*"$', re.MULTILINE)
 
@@ -21,12 +20,29 @@ def current_version() -> str:
     return VERSION_FILE.read_text(encoding="utf-8").strip()
 
 
-def sync_pyproject(version: str) -> bool:
-    text = PYPROJECT.read_text(encoding="utf-8")
+def pyproject_paths() -> list[Path]:
+    return [
+        ROOT / "pyproject.toml",
+        ROOT / "app" / "core" / "pyproject.toml",
+        ROOT / "app" / "sdk" / "pyproject.toml",
+        *sorted(PACKAGES.glob("*/pyproject.toml")),
+    ]
+
+
+def json_paths() -> list[Path]:
+    return [
+        ROOT / "package.json",
+        ROOT / "app" / "ui-engine" / "package.json",
+        *sorted(PACKAGES.glob("*/package.json")),
+    ]
+
+
+def sync_pyproject(path: Path, version: str) -> bool:
+    text = path.read_text(encoding="utf-8")
     updated = VERSION_LINE.sub(f'version = "{version}"', text, count=1)
     if updated == text:
         return False
-    PYPROJECT.write_text(updated, encoding="utf-8", newline="\n")
+    path.write_text(updated, encoding="utf-8", newline="\n")
     return True
 
 
@@ -41,8 +57,11 @@ def sync_json(path: Path, version: str) -> bool:
 
 def main() -> int:
     version = current_version()
-    changed = [str(PYPROJECT)] if sync_pyproject(version) else []
-    for path in JSON_PACKAGES:
+    changed: list[str] = []
+    for path in pyproject_paths():
+        if path.exists() and sync_pyproject(path, version):
+            changed.append(str(path))
+    for path in json_paths():
         if path.exists() and sync_json(path, version):
             changed.append(str(path))
     if changed:

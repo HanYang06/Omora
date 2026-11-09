@@ -30,7 +30,8 @@
 - 仓库根的 `VERSION` 是唯一手写版本号的地方。
 - 其他 package 的版本字段由**脚本**同步：扫描 `VERSION` → 写进每个 package 的元数据。插件多到一定程度，人工手写不现实，也不该手写。
 - 脚本：`scripts/sync_version.py`；断言测试：`app/boot/tests/test_version.py`。**约定会破，测试不会。**
-- 现在只有 `VERSION` 是手写的；`pyproject.toml`、`package.json`、`app/ui-engine/package.json` 由脚本同步。
+- 现在只有 `VERSION` 是手写的；根 `pyproject.toml`、根 `package.json`、`app/ui-engine/package.json`、`app/core/pyproject.toml`、`app/sdk/pyproject.toml`、`app/packages/*/pyproject.toml` 由脚本同步。
+- 这些都是 uv workspace 的 member，各自有 pyproject / 依赖 / src / tests；版本字段照填，但只有一个源。
 
 ## 4. 协议和数据格式
 

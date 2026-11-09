@@ -1,6 +1,7 @@
 """进程入口：读配置 → 装插件 → 起 net。
 
 整套东西里唯一不是插件的就是这个文件：它知道有哪些插件、按什么顺序装。
+插件类本身由 boot 按 pyproject 里的入口点找。
 """
 
 from __future__ import annotations
@@ -10,18 +11,18 @@ import sys
 from pathlib import Path
 
 from boot import build, load_config
-from packages.inbox import InboxPlugin
-from packages.net import Net, NetPlugin
-from packages.store import StorePlugin
-from packages.ui import UiPlugin
+from omora.plugins.net import Net
 
 ROOT = Path(__file__).resolve().parent.parent
 
 SYSTEM_PLUGINS = (
-    ("store", StorePlugin),
-    ("ui", UiPlugin),
-    ("inbox", InboxPlugin),
-    ("net", NetPlugin),  # 最后一个：它一开就收帧
+    "store",
+    "media",
+    "ui",
+    "ideas",
+    "projects",
+    "requirements",
+    "net",  # 最后一个：它一开就收帧
 )
 
 

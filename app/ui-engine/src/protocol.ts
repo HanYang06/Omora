@@ -1,5 +1,5 @@
 /**
- * 帧的形状。与 Python 的 app/sdk/protocol.py 各实现一份，
+ * 帧的形状。与 Python 的 app/sdk/src/omora/sdk/protocol.py 各实现一份，
  * 由 app/sdk/tests/fixtures/protocol.json 钉住。
  *
  * 渲染引擎只造 call、只解 result / error；不需要 parse_call。

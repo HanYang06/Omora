@@ -1,0 +1,21 @@
+[project]
+name = "omora-plugin-ideas"
+version = "0.1.0"
+description = "灵感页：录音、文字捕捉、账本列表"
+requires-python = ">=3.14"
+dependencies = [
+    "omora-sdk",
+]
+
+[project.entry-points."omora.plugins"]
+ideas = "omora.plugins.ideas:IdeasPlugin"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+omora-sdk = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/omora"]

@@ -1,70 +1,342 @@
+/* 浅色主题：橄榄灰桌面 + 暖白纸。深色主题单独设计，这里不做反相。 */
 :root {
-  color-scheme: light dark;
-  font-family: "Segoe UI", system-ui, sans-serif;
-  line-height: 1.5;
+  color-scheme: light;
+  --desk: #e4e8db;
+  --paper: #fefdfa;
+  --ink: #1a1d19;
+  --muted: #6d7268;
+  --line: #d3d7c9;
+  --accent: #27664b;
+  --tint: rgba(39, 102, 75, 0.12);
+  --hover: rgba(26, 29, 25, 0.055);
+  --warn: #a8701f;
+  --danger: #a63d34;
+  --ui: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
 }
 
 body {
   margin: 0;
+  background: var(--desk);
+  color: var(--ink);
+  font: 15px/1.7 var(--ui);
+  -webkit-font-smoothing: antialiased;
 }
 
-#root {
-  max-width: 48rem;
+.omora-app {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  height: 100%;
+}
+
+/* 侧栏 */
+
+.omora-sidebar {
+  display: flex;
+  flex-direction: column;
+  padding: 32px 16px 22px;
+  border-right: 1px solid var(--line);
+}
+
+.omora-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.omora-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.omora-nav-item:hover {
+  background: var(--hover);
+}
+
+.omora-nav-item[aria-current="page"] {
+  background: var(--tint);
+}
+
+.omora-nav-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.omora-nav-item[aria-current="page"] .omora-nav-count {
+  color: var(--accent);
+}
+
+.omora-sidebar-foot {
+  margin-top: auto;
+}
+
+.omora-conn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.omora-conn-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.omora-conn[data-status="open"] .omora-conn-dot {
+  background: var(--accent);
+}
+
+.omora-conn[data-status="connecting"] .omora-conn-dot {
+  background: var(--warn);
+}
+
+.omora-conn[data-status="closed"] .omora-conn-dot,
+.omora-conn[data-status="failed"] .omora-conn-dot {
+  background: var(--danger);
+}
+
+/* 页面 */
+
+.omora-page {
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--paper);
+}
+
+.omora-page-inner {
+  max-width: 720px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 72px 32px 96px;
 }
 
-.omora-status {
-  margin: 0 0 1rem;
-  font-size: 0.8125rem;
-  opacity: 0.7;
+.omora-page-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 34px;
 }
 
-.omora-status[data-status="failed"],
-.omora-status[data-status="closed"] {
-  color: #b91c1c;
-  opacity: 1;
+.omora-page-title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.omora-page-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .omora-column {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
 }
 
 .omora-row {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: baseline;
+  gap: 12px;
 }
 
 .omora-text--title {
-  font-size: 1.25rem;
+  font-size: 21px;
   font-weight: 600;
 }
 
-.omora-button {
-  align-self: flex-start;
-  padding: 0.375rem 0.75rem;
-  border: 1px solid currentColor;
-  border-radius: 0.375rem;
+.omora-text--muted {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* 捕捉行 */
+
+.omora-capture {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.omora-capture:focus-within {
+  border-bottom-color: var(--accent);
+}
+
+.omora-capture-plus {
+  color: var(--accent);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.omora-capture-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
   background: transparent;
-  color: inherit;
+  color: var(--ink);
   font: inherit;
+  font-size: 21px;
+  outline: none;
+}
+
+.omora-capture-input::placeholder {
+  color: var(--muted);
+}
+
+.omora-capture-hint {
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+/* 账本列表 */
+
+.omora-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.omora-item {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 20px;
+  align-items: baseline;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.omora-item-meta {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.omora-item-main {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+  padding-left: 20px;
+  border-left: 1px solid var(--line);
+}
+
+.omora-item-title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 动作 */
+
+.omora-button {
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
   cursor: pointer;
 }
 
-.omora-button:disabled {
-  opacity: 0.5;
-  cursor: default;
+.omora-button:hover {
+  border-color: var(--accent);
 }
 
+.omora-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.omora-button--ghost {
+  padding: 3px 6px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0;
+}
+
+.omora-item:hover .omora-button--ghost,
+.omora-item:focus-within .omora-button--ghost {
+  opacity: 1;
+}
+
+.omora-button--ghost:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+/* 空状态 */
+
+.omora-empty {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 20px;
+  padding-top: 46px;
+}
+
+.omora-empty-title {
+  grid-column: 2;
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.omora-empty-hint {
+  grid-column: 2;
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* 未知组件 */
+
 .omora-unknown {
-  border: 1px dashed #b45309;
-  border-radius: 0.375rem;
-  padding: 0.5rem;
-  color: #b45309;
+  padding: 8px;
+  border: 1px dashed var(--warn);
+  border-radius: 6px;
+  color: var(--warn);
   font-family: ui-monospace, "Cascadia Code", monospace;
-  font-size: 0.8125rem;
+  font-size: 13px;
+}
+
+/* 键盘焦点 */
+
+:where(button, input):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.omora-capture-input:focus-visible {
+  outline: none;
 }

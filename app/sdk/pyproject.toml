@@ -1,0 +1,16 @@
+[project]
+name = "omora-sdk"
+version = "0.1.0"
+description = "插件 API：Context / Plugin / UI 节点 / 协议"
+requires-python = ">=3.14"
+dependencies = ["omora-core"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+omora-core = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/omora"]

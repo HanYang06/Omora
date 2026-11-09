@@ -1,0 +1,91 @@
+/* 捕获与播放 */
+
+.omora-recorder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 10px;
+}
+
+.omora-record {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.omora-record:hover {
+  border-color: var(--accent);
+}
+
+.omora-record.is-recording {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.omora-record:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.omora-record-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.omora-record.is-recording .omora-record-dot {
+  background: var(--danger);
+  animation: omora-pulse 1s ease-in-out infinite;
+}
+
+.omora-record-hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.omora-audio {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--accent);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.omora-audio:hover {
+  border-color: var(--accent);
+}
+
+.omora-audio:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+@keyframes omora-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omora-record.is-recording .omora-record-dot {
+    animation: none;
+  }
+}

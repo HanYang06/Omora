@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from sdk.protocol import FrameError, error_frame, parse_call, result_frame
+from omora.sdk.protocol import FrameError, error_frame, parse_call, result_frame
 
 FIXTURES = Path(__file__).parent / "fixtures" / "protocol.json"
 

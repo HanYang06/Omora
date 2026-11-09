@@ -1,31 +1,10 @@
 import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Button } from "./components";
+import { Audio } from "./capture";
+import { Button, Input } from "./components";
 import { renderTree } from "./renderer";
-import type { Node } from "./types";
-
-const tree: Node[] = [
-  {
-    type: "column",
-    props: {},
-    children: [
-      { type: "text", props: { text: "收件箱", kind: "title" }, children: [] },
-      {
-        type: "row",
-        props: {},
-        children: [
-          { type: "text", props: { text: "两条" }, children: [] },
-          {
-            type: "button",
-            props: { text: "新建", on_click: "main:1:0" },
-            children: [],
-          },
-        ],
-      },
-    ],
-  },
-];
+import type { MediaData, Node } from "./types";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -33,18 +12,100 @@ afterEach(() => {
 
 describe("renderTree", () => {
   it("把 column / row / text / button 画成真实 DOM", () => {
+    const tree: Node[] = [
+      {
+        type: "column",
+        props: {},
+        children: [
+          { type: "text", props: { text: "灵感", kind: "title" }, children: [] },
+          {
+            type: "row",
+            props: {},
+            children: [
+              { type: "text", props: { text: "两条" }, children: [] },
+              { type: "button", props: { text: "新建", on_click: "ideas:1:0" }, children: [] },
+            ],
+          },
+        ],
+      },
+    ];
+
     const html = renderToString(<>{renderTree(tree)}</>);
 
     expect(html).toContain('data-type="column"');
     expect(html).toContain('data-type="row"');
     expect(html).toContain('data-type="text"');
     expect(html).toContain('data-type="button"');
-    expect(html).toContain("收件箱");
+    expect(html).toContain("灵感");
     expect(html).toContain("两条");
     expect(html).toContain("新建");
     expect(html).toContain('data-kind="title"');
     expect(html).toContain("omora-text--title");
-    expect(html).toContain('data-handler="main:1:0"');
+    expect(html).toContain('data-handler="ideas:1:0"');
+  });
+
+  it("list / item 画出账本行：左栏 meta、标题、动作", () => {
+    const tree: Node[] = [
+      {
+        type: "list",
+        props: {},
+        children: [
+          {
+            type: "item",
+            props: { meta: "昨天", title: "买牛奶" },
+            children: [
+              {
+                type: "button",
+                props: { text: "归档", on_click: "ideas:1:1", variant: "ghost" },
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const html = renderToString(<>{renderTree(tree)}</>);
+
+    expect(html).toContain('data-type="list"');
+    expect(html).toContain('data-type="item"');
+    expect(html).toContain("昨天");
+    expect(html).toContain("买牛奶");
+    expect(html).toContain("归档");
+    expect(html).toContain("omora-button--ghost");
+  });
+
+  it("recorder / audio 画出捕获与播放控件", () => {
+    const tree: Node[] = [
+      { type: "recorder", props: { on_submit: "ideas:1:0" }, children: [] },
+      { type: "audio", props: { media: "abc" }, children: [] },
+    ];
+
+    const html = renderToString(<>{renderTree(tree)}</>);
+
+    expect(html).toContain('data-type="recorder"');
+    expect(html).toContain("录音");
+    expect(html).toContain('data-type="audio"');
+    expect(html).toContain('aria-label="播放"');
+    expect(html).toContain('data-handler="abc"');
+  });
+
+  it("empty 画出空状态；没有 hint 就不画第二行", () => {
+    const withHint: Node[] = [
+      { type: "empty", props: { title: "还没有灵感。", hint: "在上面写第一条。" }, children: [] },
+    ];
+    const withoutHint: Node[] = [
+      { type: "empty", props: { title: "还没有项目。" }, children: [] },
+    ];
+
+    const html = renderToString(<>{renderTree(withHint)}</>);
+    const bare = renderToString(<>{renderTree(withoutHint)}</>);
+
+    expect(html).toContain("还没有灵感。");
+    expect(html).toContain("在上面写第一条。");
+    expect(html).toContain("omora-empty-hint");
+    expect(bare).toContain("还没有项目。");
+    expect(bare).not.toContain("omora-empty-hint");
   });
 
   it("未知 type 画占位框并 console.warn", () => {
@@ -64,11 +125,11 @@ describe("renderTree", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("chart"));
   });
 
-  it("button 把 props.on_click 作为 handler id 交给 onEvent", () => {
+  it("button 把 handler id 交给 onEvent", () => {
     const onEvent = vi.fn();
     const node: Node = {
       type: "button",
-      props: { text: "新建", on_click: "main:1:0" },
+      props: { text: "新建", on_click: "ideas:1:0" },
       children: [],
     };
 
@@ -77,6 +138,48 @@ describe("renderTree", () => {
     }>;
     element.props.onClick();
 
-    expect(onEvent).toHaveBeenCalledWith("main:1:0");
+    expect(onEvent).toHaveBeenCalledWith("ideas:1:0", {});
+  });
+
+  it("input 回车把值交给 onEvent 并清空自己", () => {
+    const onEvent = vi.fn();
+    const node: Node = {
+      type: "input",
+      props: { placeholder: "记一条灵感…", on_submit: "ideas:1:0" },
+      children: [],
+    };
+
+    const element = Input({ node, onEvent }) as unknown as ReactElement<{
+      children: ReactElement[];
+    }>;
+    const input = element.props.children.find((child) => child.type === "input") as
+      | ReactElement<{
+          onKeyDown: (event: { key: string; currentTarget: { value: string } }) => void;
+        }>
+      | undefined;
+    expect(input).toBeDefined();
+    if (input === undefined) {
+      return;
+    }
+
+    const event = { key: "Enter", currentTarget: { value: "  买牛奶 " } };
+    input.props.onKeyDown(event);
+
+    expect(onEvent).toHaveBeenCalledWith("ideas:1:0", { value: "买牛奶" });
+    expect(event.currentTarget.value).toBe("");
+  });
+
+  it("audio 点击把 media id 交给 loadMedia", () => {
+    const loadMedia = vi.fn(
+      (_media: string): Promise<MediaData> => new Promise(() => {}),
+    );
+    const node: Node = { type: "audio", props: { media: "abc" }, children: [] };
+
+    const element = Audio({ node, loadMedia }) as unknown as ReactElement<{
+      onClick: () => void;
+    }>;
+    element.props.onClick();
+
+    expect(loadMedia).toHaveBeenCalledWith("abc");
   });
 });

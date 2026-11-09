@@ -10,7 +10,7 @@ description: Omora 仓库的开发规范与操作手册。任务落在 Omora 仓
 ## 30 秒上手
 
 1. 先读 `../../../docs/ARCHITECTURE.md`。
-2. 确认改动落在哪一侧：内核 / 内核级插件 / 业务插件 / 渲染引擎。
+2. 确认改动落在哪一侧：内核 / 系统插件 / 渲染引擎（/ 运行后插件）。
 3. 动手前说清楚：改什么、为什么、怎么验证。
 4. 交付报告四项：改了什么 / 为什么 / 怎么验证 / 什么没验证。
 
@@ -29,25 +29,28 @@ description: Omora 仓库的开发规范与操作手册。任务落在 Omora 仓
 
 | 要写的东西 | 位置 | 语言 |
 |---|---|---|
-| 内核：插件加载、服务、消息转发 | `app/core/` | Python |
-| 内核级插件：存储、检索、领域规则等无界面能力 | `app/packages/` | Python |
+| 内核：插件加载、服务、消息转发 | `app/core/`（omora-core） | Python |
+| 插件 API（SDK）：Context / Plugin / UI 节点 / 协议 | `app/sdk/`（omora-sdk） | Python |
+| 系统插件：服务或页面（store / media / ui / ideas ...） | `app/packages/<name>/`（omora-plugin-*） | Python |
 | 渲染引擎：组件注册表、槽位、事件 | `app/ui-engine/` | TS |
-| 业务插件（要页面的功能） | 待建 | Python（+ TS） |
+| 运行后插件（生态） | 待定 | 待定 |
 | 架构与事实来源 | `docs/` | — |
 
-判断：**产不产出页面。** 不产出 → 内核级插件；产出 → 业务插件。
+产出页面不是分类轴：系统插件都可能产出页面。运行后插件的目录和格式还没定。
 
 ## 常见任务
 
-### 加一个内核级插件
+### 加一个系统插件
 
-1. 在 `app/packages/` 下建包，只依赖插件 API。
-2. 用 `provide` 登记服务，不产出界面。
-3. 写行为测试：装上能跑、卸了干净、按名字取得到。
+1. 在 `app/packages/<name>/` 建目录：`pyproject.toml`（name / version / description / dependencies / entry point）、`src/omora/plugins/<name>/`、`tests/`。
+2. 入口点写在 pyproject：`[project.entry-points."omora.plugins"] <name> = "omora.plugins.<name>:<Class>"`；依赖 `omora-sdk`；版本由 `scripts/sync_version.py` 同步。
+3. 只依赖插件 API（`omora.sdk`）；用 `provide` 登记服务，需要页面就 `ui.page`。
+4. 把名字加进 `app/main.py` 的 `SYSTEM_PLUGINS` 和 `config.ini` 的段。
+5. `uv sync` 让它进 workspace；写行为测试：装上能跑、卸了干净、按名字取得到。
 
-### 加一个业务插件
+### 加一个运行后插件
 
-要页面；等业务插件目录建好再动。
+目录和格式待定；定了再动。
 
 ### 改协议
 

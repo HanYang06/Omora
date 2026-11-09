@@ -2,8 +2,8 @@ from collections.abc import Callable
 
 import pytest
 
-from core.context import Context
-from core.kernel import Kernel
+from omora.core.context import Context
+from omora.core.kernel import Kernel
 
 
 class _Plugin:
