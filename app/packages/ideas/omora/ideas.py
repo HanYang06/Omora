@@ -35,11 +35,16 @@ class IdeasPlugin:
         store: Any = ctx.resolve("store")
         media: Any = ctx.resolve("media")
         ui: Any = ctx.resolve("ui")
+        ideas = store.collection(
+            "ideas",
+            fields={"title": "text", "archived": "bool", "media": "text?"},
+            indexes=["archived"],
+        )
 
         def capture_text(payload: dict[str, Any]) -> None:
             value = str(payload.get("value", "")).strip()
             if value:
-                store.add(value)
+                ideas.add(title=value, archived=False, media=None)
 
         def capture_audio(payload: dict[str, Any]) -> None:
             encoded = str(payload.get("audio", ""))
@@ -52,12 +57,16 @@ class IdeasPlugin:
             seconds = float(payload.get("seconds", 0) or 0)
             mime = str(payload.get("mime", "audio/webm"))
             media_id = media.save(data, mime)
-            store.add(f"语音 {_clock(seconds)}" if seconds else "语音", media_id)
+            ideas.add(
+                title=f"语音 {_clock(seconds)}" if seconds else "语音",
+                archived=False,
+                media=media_id,
+            )
 
         def build() -> Page:
-            items = store.items()
+            items = ideas.find({"archived": False}, order="created_at", limit=200)
             body: Node = (
-                _list(items, store)
+                _list(items, ideas)
                 if items
                 else Empty("还没有灵感。", "录一段，或者写第一条，按回车保存。")
             )
@@ -70,24 +79,24 @@ class IdeasPlugin:
                 meta=f"{len(items)} 条",
             )
 
-        ui.page(ctx, "ideas", "灵感", build, count=lambda: len(store.items()))
+        ui.page(ctx, "ideas", "灵感", build, count=lambda: ideas.count({"archived": False}))
 
 
-def _list(items: list[Any], store: Any) -> List:
-    return List(*[Item(_when(item.created_at), item.title, *_actions(item, store)) for item in items])
+def _list(items: list[Any], ideas: Any) -> List:
+    return List(*[Item(_when(item.created_at), item.title, *_actions(item, ideas)) for item in items])
 
 
-def _actions(item: Any, store: Any) -> list[Node]:
+def _actions(item: Any, ideas: Any) -> list[Node]:
     actions: list[Node] = []
     if item.media:
         actions.append(Audio(media=str(item.media)))
-    actions.append(Button("归档", variant="ghost", on_click=_archiver(store, item.id)))
+    actions.append(Button("归档", variant="ghost", on_click=_archiver(ideas, item.id)))
     return actions
 
 
-def _archiver(store: Any, item_id: int) -> Handler:
+def _archiver(ideas: Any, record_id: str) -> Handler:
     def run(payload: dict[str, Any]) -> None:
-        store.archive(item_id)
+        ideas.update(record_id, archived=True)
 
     return run
 

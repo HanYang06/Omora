@@ -22,12 +22,14 @@ def _pnpm(*args: str) -> list[str]:
     return ["pnpm", *args]
 
 
-def _spawn(argv: list[str], cwd: Path) -> subprocess.Popen[bytes]:
+def _spawn(
+    argv: list[str], cwd: Path, *, env: dict[str, str] | None = None
+) -> subprocess.Popen[bytes]:
     """各自开一个进程组，收的时候整棵收。"""
     if sys.platform == "win32":
         flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-        return subprocess.Popen(argv, cwd=cwd, creationflags=flags)
-    return subprocess.Popen(argv, cwd=cwd, start_new_session=True)
+        return subprocess.Popen(argv, cwd=cwd, creationflags=flags, env=env)
+    return subprocess.Popen(argv, cwd=cwd, start_new_session=True, env=env)
 
 
 def _stop(process: subprocess.Popen[bytes]) -> None:
@@ -65,7 +67,11 @@ def _watch(kernel: subprocess.Popen[bytes], web: subprocess.Popen[bytes]) -> int
 
 
 def main() -> int:
-    kernel = _spawn([sys.executable, str(ROOT / "app" / "main.py")], ROOT)
+    kernel = _spawn(
+        [sys.executable, str(ROOT / "app" / "main.py")],
+        ROOT,
+        env={**os.environ, "OMORA_DEV": "1"},
+    )
     web = _spawn(
         _pnpm(
             "--dir",

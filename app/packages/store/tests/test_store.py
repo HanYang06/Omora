@@ -1,87 +1,188 @@
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
 import pytest
 
 from omora.core.kernel import Kernel
-from omora.store import Store, StorePlugin
+from omora.store import Collection, Store, StorePlugin
+
+FIELDS = {"title": "text", "done": "bool?", "when": "time?"}
 
 
-def test_adding_an_item_makes_it_visible_in_items() -> None:
-    store = Store()
-
-    store.add("买牛奶")
-
-    assert [item.title for item in store.items()] == ["买牛奶"]
+def _notes(store: Store) -> Collection:
+    return store.collection("notes", fields=FIELDS, indexes=["done"])
 
 
-def test_archiving_an_item_removes_it_from_items() -> None:
-    store = Store()
-    milk = store.add("买牛奶")
-    store.add("写周报")
+def test_adding_a_record_returns_its_fields() -> None:
+    record = _notes(Store()).add(title="买牛奶")
 
-    store.archive(milk.id)
-
-    assert [item.title for item in store.items()] == ["写周报"]
-
-
-def test_archiving_an_unknown_item_says_which_id_is_missing() -> None:
-    store = Store()
-
-    with pytest.raises(LookupError, match="条目不存在: 42"):
-        store.archive(42)
+    assert record.title == "买牛奶"
+    assert record.done is None
+    assert record.id
+    assert isinstance(record.created_at, datetime)
 
 
-def test_ids_keep_counting_after_an_archive() -> None:
-    store = Store()
-    first = store.add("买牛奶")
-    store.archive(first.id)
+def test_a_record_can_be_fetched_by_id() -> None:
+    notes = _notes(Store())
+    record = notes.add(title="买牛奶", done=True)
 
-    second = store.add("写周报")
-    third = store.add("看书")
+    found = notes.get(record.id)
 
-    assert (second.id, third.id) == (2, 3)
+    assert found is not None
+    assert found.title == "买牛奶"
+    assert found.done is True
 
 
-def test_items_survive_reopening_the_database(tmp_path: Path) -> None:
+def test_get_says_none_for_an_unknown_id() -> None:
+    assert _notes(Store()).get("nope") is None
+
+
+def test_update_changes_fields_and_updated_at() -> None:
+    notes = _notes(Store())
+    record = notes.add(title="买牛奶")
+
+    changed = notes.update(record.id, done=True)
+
+    assert changed.done is True
+    assert changed.updated_at >= record.updated_at
+
+
+def test_update_an_unknown_record_says_which_id() -> None:
+    with pytest.raises(LookupError, match="记录不存在: nope"):
+        _notes(Store()).update("nope", done=True)
+
+
+def test_delete_removes_the_record() -> None:
+    notes = _notes(Store())
+    record = notes.add(title="买牛奶")
+
+    notes.delete(record.id)
+
+    assert notes.get(record.id) is None
+
+
+def test_delete_an_unknown_record_says_which_id() -> None:
+    with pytest.raises(LookupError, match="记录不存在: nope"):
+        _notes(Store()).delete("nope")
+
+
+def test_find_filters_by_equality_and_in() -> None:
+    notes = _notes(Store())
+    notes.add(title="买牛奶", done=False)
+    notes.add(title="写周报", done=True)
+
+    assert [record.title for record in notes.find({"done": False})] == ["买牛奶"]
+    assert [record.title for record in notes.find({"title": {"$in": ["买牛奶", "看书"]}})] == [
+        "买牛奶"
+    ]
+
+
+def test_find_orders_and_pages() -> None:
+    notes = _notes(Store())
+    for title in ("a", "b", "c"):
+        notes.add(title=title)
+
+    assert [record.title for record in notes.find(order="title desc")] == ["c", "b", "a"]
+    assert [record.title for record in notes.find(order="title", limit=2)] == ["a", "b"]
+    assert [record.title for record in notes.find(order="title", limit=2, offset=2)] == ["c"]
+
+
+def test_find_rejects_an_unbounded_limit() -> None:
+    with pytest.raises(ValueError, match="limit"):
+        _notes(Store()).find(limit=1000)
+
+
+def test_find_rejects_an_unknown_field() -> None:
+    with pytest.raises(ValueError, match="未知字段: nope"):
+        _notes(Store()).find({"nope": 1})
+
+
+def test_count_matches_the_filter() -> None:
+    notes = _notes(Store())
+    notes.add(title="a", done=True)
+    notes.add(title="b", done=False)
+
+    assert notes.count() == 2
+    assert notes.count({"done": True}) == 1
+
+
+def test_a_time_field_round_trips_through_the_database(tmp_path: Path) -> None:
     path = str(tmp_path / "omora.db")
-    first = Store(path)
-    added = first.add("买牛奶")
+    when = datetime(2026, 11, 9, 12, 0)
+    record = _notes(Store(path)).add(title="a", when=when)
 
-    second = Store(path)
+    found = _notes(Store(path)).get(record.id)
 
-    assert [(item.id, item.title) for item in second.items()] == [(added.id, "买牛奶")]
+    assert found is not None
+    assert found.when == when
 
 
-def test_an_item_remembers_its_media(tmp_path: Path) -> None:
+def test_records_survive_reopening_the_database(tmp_path: Path) -> None:
     path = str(tmp_path / "omora.db")
-    Store(path).add("语音", media="abc")
+    record = _notes(Store(path)).add(title="买牛奶")
 
-    assert Store(path).items()[0].media == "abc"
+    found = _notes(Store(path)).get(record.id)
+
+    assert found is not None
+    assert found.title == "买牛奶"
 
 
-def test_adding_an_item_records_when_it_happened() -> None:
-    before = datetime.now()
+def test_a_changed_schema_needs_a_migration_in_release(tmp_path: Path) -> None:
+    path = str(tmp_path / "omora.db")
+    _notes(Store(path)).add(title="a")
 
-    item = Store().add("买牛奶")
+    with pytest.raises(RuntimeError, match="需要迁移"):
+        Store(path).collection("notes", fields={"title": "text", "extra": "text?"})
 
-    after = datetime.now()
-    assert before <= item.created_at <= after
+
+def test_a_changed_schema_resets_in_dev(tmp_path: Path) -> None:
+    path = str(tmp_path / "omora.db")
+    _notes(Store(path)).add(title="a")
+
+    notes = Store(path, dev=True).collection("notes", fields={"title": "text"})
+
+    assert notes.count() == 0
+
+
+def test_an_old_database_is_reset_in_dev(tmp_path: Path) -> None:
+    path = str(tmp_path / "omora.db")
+    conn = sqlite3.connect(path)
+    conn.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, title TEXT)")
+    conn.execute("INSERT INTO items (title) VALUES ('旧数据')")
+    conn.commit()
+    conn.close()
+
+    store = Store(path, dev=True)
+
+    assert store.collection("notes", fields={"title": "text"}).count() == 0
+
+
+def test_an_old_database_is_an_error_in_release(tmp_path: Path) -> None:
+    path = str(tmp_path / "omora.db")
+    conn = sqlite3.connect(path)
+    conn.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, title TEXT)")
+    conn.commit()
+    conn.close()
+
+    with pytest.raises(RuntimeError, match="没有可用的迁移"):
+        Store(path)
 
 
 def test_installing_the_plugin_makes_store_reachable_by_name(tmp_path: Path) -> None:
     kernel = Kernel()
-
     kernel.install(StorePlugin(path=str(tmp_path / "omora.db")))
 
     store = kernel.resolve("store")
-    store.add("买牛奶")
-    assert [item.title for item in store.items()] == ["买牛奶"]
+    notes = store.collection("notes", fields={"title": "text"})
+    notes.add(title="买牛奶")
+
+    assert [record.title for record in notes.find()] == ["买牛奶"]
 
 
-def test_uninstalling_the_plugin_takes_the_store_away() -> None:
+def test_uninstalling_the_plugin_takes_the_store_away(tmp_path: Path) -> None:
     kernel = Kernel()
-    kernel.install(StorePlugin(path=":memory:"))
+    kernel.install(StorePlugin(path=str(tmp_path / "omora.db")))
 
     kernel.uninstall("store")
 
