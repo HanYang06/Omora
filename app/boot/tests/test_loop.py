@@ -8,7 +8,7 @@ from websockets.asyncio.client import ClientConnection, connect
 
 from boot import Config, build
 
-MANIFEST = ("store", "manager", "media", "ui", "ideas", "net")
+MANIFEST = ("store", "manager", "media", "ui", "audio", "video", "ideas", "net")
 
 
 def _nodes(node: dict[str, Any], node_type: str) -> list[dict[str, Any]]:
@@ -22,11 +22,11 @@ def _titles(snapshot: dict[str, Any]) -> list[str]:
     return [str(item["props"]["title"]) for item in _nodes(snapshot["content"], "item")]
 
 
-def _find_input(node: dict[str, Any]) -> str | None:
-    if node["type"] == "input":
+def _find_capture(node: dict[str, Any], node_type: str) -> str | None:
+    if node["type"] == node_type:
         return str(node["props"]["on_submit"])
     for child in node["children"]:
-        nested = _find_input(child)
+        nested = _find_capture(child, node_type)
         if nested is not None:
             return nested
     return None
@@ -42,16 +42,6 @@ def _find_button(node: dict[str, Any], label: str) -> str | None:
     return None
 
 
-def _find_recorder(node: dict[str, Any]) -> str | None:
-    if node["type"] == "recorder":
-        return str(node["props"]["on_submit"])
-    for child in node["children"]:
-        nested = _find_recorder(child)
-        if nested is not None:
-            return nested
-    return None
-
-
 async def _request(
     ws: ClientConnection, frame_id: str, target: str, method: str, args: dict[str, Any]
 ) -> Any:
@@ -60,6 +50,59 @@ async def _request(
     reply: dict[str, Any] = json.loads(await ws.recv())
     assert reply["type"] == "result", reply
     return reply["value"]
+
+
+def _media_port(net: Any) -> int:
+    url = str(net.media_url)
+    return int(url.split(":")[2].split("/")[0])
+
+
+async def _post(port: int, body: bytes, mime: str) -> tuple[int, bytes]:
+    """直接打 HTTP 媒体通道：视频不走 WS，也不走 base64。"""
+    reader, writer = await asyncio.open_connection("127.0.0.1", port)
+    head = (
+        "POST /media HTTP/1.1\r\n"
+        "Host: 127.0.0.1\r\n"
+        f"Content-Type: {mime}\r\n"
+        f"Content-Length: {len(body)}\r\n\r\n"
+    ).encode("latin-1")
+    writer.write(head + body)
+    await writer.drain()
+    status = int((await reader.readline()).decode("latin-1").split(" ")[1])
+    length = 0
+    while True:
+        line = await reader.readline()
+        if line in (b"\r\n", b"\n", b""):
+            break
+        key, _, value = line.decode("latin-1").partition(":")
+        if key.strip().lower() == "content-length":
+            length = int(value.strip())
+    payload = await reader.readexactly(length) if length else b""
+    writer.close()
+    await writer.wait_closed()
+    return status, payload
+
+
+async def _get(url: str) -> bytes:
+    host, _, rest = url.partition("://")[2].partition("/")
+    name, _, port_text = host.partition(":")
+    reader, writer = await asyncio.open_connection(name, int(port_text))
+    writer.write(f"GET /{rest} HTTP/1.1\r\nHost: {host}\r\n\r\n".encode("latin-1"))
+    await writer.drain()
+    status = (await reader.readline()).decode("latin-1")
+    assert " 200 " in status, status
+    length = 0
+    while True:
+        line = await reader.readline()
+        if line in (b"\r\n", b"\n", b""):
+            break
+        key, _, value = line.decode("latin-1").partition(":")
+        if key.strip().lower() == "content-length":
+            length = int(value.strip())
+    body = await reader.readexactly(length) if length else b""
+    writer.close()
+    await writer.wait_closed()
+    return body
 
 
 def test_clicking_archive_over_the_socket_updates_the_page(tmp_path: Path) -> None:
@@ -77,7 +120,7 @@ def test_clicking_archive_over_the_socket_updates_the_page(tmp_path: Path) -> No
         try:
             async with connect(f"ws://127.0.0.1:{port}") as ws:
                 empty = await _request(ws, "1", "ui", "render", {})
-                capture = _find_input(empty["content"])
+                capture = _find_capture(empty["content"], "input")
                 assert capture is not None
                 before = await _request(
                     ws,
@@ -120,9 +163,11 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
         net = kernel.resolve("net")
         port = await net.serve()
         try:
+            # 客户端上报能力之后，manager 才把 audio / video 装上。
+            kernel.resolve("manager").report_capabilities(["microphone", "camera"])
             async with connect(f"ws://127.0.0.1:{port}") as ws:
                 before = await _request(ws, "1", "ui", "render", {})
-                handler = _find_recorder(before["content"])
+                handler = _find_capture(before["content"], "audio_capture")
                 assert handler is not None
                 audio = base64.b64encode(b"hello").decode("ascii")
                 after = await _request(
@@ -146,6 +191,49 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
 
     assert loaded["mime"] == "audio/webm"
     assert base64.b64decode(str(loaded["data"])) == b"hello"
+
+
+def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path) -> None:
+    async def scenario() -> tuple[dict[str, Any], bytes]:
+        config = Config(
+            {
+                "net": {"port": 0},
+                "store": {"path": str(tmp_path / "omora.db")},
+                "media": {"root": str(tmp_path / "media")},
+            }
+        )
+        kernel = build(config, MANIFEST)
+        net = kernel.resolve("net")
+        port = await net.serve()
+        try:
+            kernel.resolve("manager").report_capabilities(["microphone", "camera"])
+            status, payload = await _post(_media_port(net), b"video-bytes", "video/webm")
+            assert status == 201, payload
+            media_id = str(json.loads(payload)["media_id"])
+            async with connect(f"ws://127.0.0.1:{port}") as ws:
+                before = await _request(ws, "1", "ui", "render", {})
+                handler = _find_capture(before["content"], "video_capture")
+                assert handler is not None
+                after = await _request(
+                    ws,
+                    "2",
+                    "ui",
+                    "event",
+                    {
+                        "handler": handler,
+                        "payload": {"media": media_id, "mime": "video/webm", "seconds": 4},
+                    },
+                )
+                src = str(_nodes(after["content"], "video")[0]["props"]["src"])
+                fetched = await _get(src)
+                return after, fetched
+        finally:
+            await net.stop()
+
+    after, fetched = asyncio.run(scenario())
+
+    assert _titles(after) == ["视频 0:04"]
+    assert fetched == b"video-bytes"
 
 
 def test_plugin_inventory_and_toggle_over_the_socket(tmp_path: Path) -> None:

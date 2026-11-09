@@ -3,18 +3,36 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from omora.audio import AudioPlugin
 from omora.core.kernel import Kernel
 from omora.ideas import IdeasPlugin, _snippet, _when
 from omora.media import MediaPlugin
 from omora.store import StorePlugin
 from omora.ui import UiPlugin
+from omora.video import VideoPlugin
+
+CHANNEL = "http://127.0.0.1:8766/media"
 
 
-def _kernel(tmp_path: Path) -> Kernel:
+class _Net:
+    name = "net"
+
+    def __init__(self, media_url: str = CHANNEL) -> None:
+        self.media_url = media_url
+
+    def apply(self, ctx: Any) -> None:
+        ctx.provide("net", self)
+
+
+def _kernel(tmp_path: Path, *, captures: bool = True) -> Kernel:
     kernel = Kernel()
     kernel.install(StorePlugin(path=str(tmp_path / "omora.db")))
     kernel.install(MediaPlugin(root=str(tmp_path / "media")))
     kernel.install(UiPlugin())
+    if captures:
+        kernel.install(AudioPlugin())
+        kernel.install(VideoPlugin())
+        kernel.install(_Net())
     kernel.install(IdeasPlugin())
     return kernel
 
@@ -80,7 +98,24 @@ def test_the_page_starts_empty(tmp_path: Path) -> None:
     assert _titles(snapshot) == []
     empty = _nodes(snapshot["content"], "empty")[0]
     assert empty["props"]["title"] == "还没有灵感。"
-    assert empty["props"]["hint"] == "录一段，或者写第一条，按回车保存。"
+    assert empty["props"]["hint"] == "录一段、拍一段，或者写第一条，按回车保存。"
+
+
+def test_the_page_offers_text_audio_and_video_capture(tmp_path: Path) -> None:
+    content = _kernel(tmp_path).resolve("ui").render()["content"]
+
+    assert len(_nodes(content, "input")) == 1
+    assert len(_nodes(content, "audio_capture")) == 1
+    assert len(_nodes(content, "video_capture")) == 1
+
+
+def test_the_capture_controls_carry_the_plugin_quality_and_channel(tmp_path: Path) -> None:
+    content = _kernel(tmp_path).resolve("ui").render()["content"]
+
+    audio = _nodes(content, "audio_capture")[0]["props"]
+    video = _nodes(content, "video_capture")[0]["props"]
+    assert (audio["quality"], audio["noise_reduction"]) == ("high", True)
+    assert (video["quality"], video["upload_url"]) == ("720p", CHANNEL)
 
 
 def test_capturing_text_puts_it_in_the_list(tmp_path: Path) -> None:
@@ -98,7 +133,7 @@ def test_capturing_audio_stores_media_and_shows_a_play_button(tmp_path: Path) ->
     audio = base64.b64encode(b"hello").decode("ascii")
 
     after = ui.event(
-        _handler(ui.render(), "recorder"),
+        _handler(ui.render(), "audio_capture"),
         {"audio": audio, "mime": "audio/webm", "seconds": 3.2},
     )
 
@@ -110,6 +145,22 @@ def test_capturing_audio_stores_media_and_shows_a_play_button(tmp_path: Path) ->
     assert base64.b64decode(loaded["data"]) == b"hello"
 
 
+def test_capturing_video_stores_media_and_shows_a_player(tmp_path: Path) -> None:
+    kernel = _kernel(tmp_path)
+    ui = kernel.resolve("ui")
+    uploaded = kernel.resolve("media").save(b"video", "video/webm")
+
+    after = ui.event(
+        _handler(ui.render(), "video_capture"),
+        {"media": uploaded, "mime": "video/webm", "seconds": 5},
+    )
+
+    assert after["meta"] == "1 条"
+    assert _titles(after) == ["视频 0:05"]
+    player = _nodes(after["content"], "video")[0]["props"]
+    assert player == {"media": uploaded, "src": f"{CHANNEL}/{uploaded}"}
+
+
 def test_a_blank_capture_is_ignored(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
 
@@ -117,6 +168,57 @@ def test_a_blank_capture_is_ignored(tmp_path: Path) -> None:
 
     assert after["meta"] == "0 条"
     assert _titles(after) == []
+
+
+def test_a_capture_the_audio_plugin_rejects_is_not_stored(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+
+    after = ui.event(
+        _handler(ui.render(), "audio_capture"),
+        {"audio": "", "mime": "audio/webm", "seconds": 1},
+    )
+
+    assert after["meta"] == "0 条"
+    assert _titles(after) == []
+
+
+def test_a_capture_the_video_plugin_rejects_is_not_stored(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+
+    after = ui.event(
+        _handler(ui.render(), "video_capture"),
+        {"media": "nope", "mime": "video/webm", "seconds": 1},
+    )
+
+    assert after["meta"] == "0 条"
+    assert _titles(after) == []
+
+
+def test_without_the_capture_plugins_the_page_keeps_text_only(tmp_path: Path) -> None:
+    kernel = _kernel(tmp_path, captures=False)
+    ui = kernel.resolve("ui")
+
+    snapshot = ui.render()
+    after = ui.event(_handler(snapshot, "input"), {"value": "买牛奶"})
+
+    assert _nodes(snapshot["content"], "audio_capture") == []
+    assert _nodes(snapshot["content"], "video_capture") == []
+    assert _titles(after) == ["买牛奶"]
+
+
+def test_capture_controls_appear_when_the_plugins_install_later(tmp_path: Path) -> None:
+    """manager 收到能力上报后才装 audio / video：页面得跟着长出捕捉条。"""
+    kernel = _kernel(tmp_path, captures=False)
+    ui = kernel.resolve("ui")
+    assert _nodes(ui.render()["content"], "audio_capture") == []
+
+    kernel.install(AudioPlugin())
+    kernel.install(VideoPlugin())
+    kernel.install(_Net())
+
+    content = ui.render()["content"]
+    assert len(_nodes(content, "audio_capture")) == 1
+    assert len(_nodes(content, "video_capture")) == 1
 
 
 def test_archiving_a_line_takes_it_out(tmp_path: Path) -> None:
@@ -237,7 +339,7 @@ def test_a_voice_result_can_be_played_from_the_detail(tmp_path: Path) -> None:
     ui = kernel.resolve("ui")
     audio = base64.b64encode(b"hello").decode("ascii")
     ui.event(
-        _handler(ui.render(), "recorder"),
+        _handler(ui.render(), "audio_capture"),
         {"audio": audio, "mime": "audio/webm", "seconds": 3.2},
     )
     results = _submit(ui, "语音")
@@ -246,6 +348,21 @@ def test_a_voice_result_can_be_played_from_the_detail(tmp_path: Path) -> None:
 
     media_id = str(_nodes(detail["content"], "audio")[0]["props"]["media"])
     assert base64.b64decode(kernel.resolve("media").load(media_id)["data"]) == b"hello"
+
+
+def test_a_video_result_is_marked_as_video(tmp_path: Path) -> None:
+    kernel = _kernel(tmp_path)
+    ui = kernel.resolve("ui")
+    uploaded = kernel.resolve("media").save(b"video", "video/webm")
+    ui.event(
+        _handler(ui.render(), "video_capture"),
+        {"media": uploaded, "mime": "video/webm", "seconds": 5},
+    )
+
+    after = _submit(ui, "视频")
+
+    result = _nodes(after["content"], "result")[0]["props"]
+    assert result["meta"] == "刚刚 · 视频"
 
 
 def test_archived_ideas_drop_out_of_the_results(tmp_path: Path) -> None:

@@ -1,12 +1,13 @@
 """ideas：灵感页。
 
-捕捉：录音或打字；账本：列表；搜索：打字给建议、回车看结果、点开看详情。
-不 import 别的插件；store / media / ui 都按服务名取。
+捕捉：打字（文本）、录音、录视频。文本是自己的；录音与录像由 audio / video
+插件按服务名提供——它们没有，页面就只留能用的那几样。
+账本：列表、置顶、播放；搜索：打字给建议、回车看结果、点开看详情。
+不 import 别的插件；store / media / ui 必须有，audio / video 有就用。
 """
 
 from __future__ import annotations
 
-import base64
 from datetime import datetime
 from typing import Any
 
@@ -22,12 +23,12 @@ from omora.sdk.ui import (
     List,
     Node,
     Page,
-    Recorder,
     Result,
     Row,
     Search,
     Suggestion,
     Text,
+    Video,
 )
 
 _WEEKDAYS = ("周一", "周二", "周三", "周四", "周五", "周六", "周日")
@@ -47,6 +48,13 @@ class IdeasPlugin:
         store: Any = ctx.resolve("store")
         media: Any = ctx.resolve("media")
         ui: Any = ctx.resolve("ui")
+        # audio / video 是可选能力，而且可能比 ideas 装得晚：manager 收到客户端
+        # 能力上报之后才把它们装上，所以每次现取，不在 apply 里定死。
+        def audio_service() -> Any:
+            return ctx.resolve("audio") if ctx.has("audio") else None
+
+        def video_service() -> Any:
+            return ctx.resolve("video") if ctx.has("video") else None
         ideas = store.collection(
             "ideas",
             fields=_FIELDS,
@@ -95,18 +103,28 @@ class IdeasPlugin:
                 ideas.add(title=value, archived=False, pinned=False, media=None)
 
         def capture_audio(payload: dict[str, Any]) -> None:
-            encoded = str(payload.get("audio", ""))
-            if not encoded:
+            service = audio_service()
+            if service is None:
                 return
-            try:
-                data = base64.b64decode(encoded, validate=True)
-            except ValueError:
+            media_id = service.capture(payload)
+            if not media_id:
                 return
-            seconds = float(payload.get("seconds", 0) or 0)
-            mime = str(payload.get("mime", "audio/webm"))
-            media_id = media.save(data, mime)
             ideas.add(
-                title=f"语音 {_clock(seconds)}" if seconds else "语音",
+                title=_spoken_title(payload),
+                archived=False,
+                pinned=False,
+                media=media_id,
+            )
+
+        def capture_video(payload: dict[str, Any]) -> None:
+            service = video_service()
+            if service is None:
+                return
+            media_id = service.capture(payload)
+            if not media_id:
+                return
+            ideas.add(
+                title=_video_title(payload),
                 archived=False,
                 pinned=False,
                 media=media_id,
@@ -148,15 +166,24 @@ class IdeasPlugin:
 
         def home() -> Page:
             items = ideas.find({"archived": False}, order="created_at", limit=200)
+            audio = audio_service()
+            video = video_service()
+            captures: list[Node] = []
+            if audio is not None:
+                captures.append(audio.node(capture_audio))
+            if video is not None:
+                capture = video.node(capture_video)
+                if capture is not None:
+                    captures.append(capture)
             body: Node = (
-                List(*[_item(record, ideas, pinner) for record in items])
+                List(*[_item(record, ideas, pinner, media, video) for record in items])
                 if items
-                else Empty("还没有灵感。", "录一段，或者写第一条，按回车保存。")
+                else Empty("还没有灵感。", "录一段、拍一段，或者写第一条，按回车保存。")
             )
             return Page(
                 content=Column(
                     search_bar(True),
-                    Recorder(on_submit=capture_audio),
+                    *captures,
                     Input(placeholder="记一条灵感…", on_submit=capture_text),
                     body,
                 ),
@@ -167,7 +194,7 @@ class IdeasPlugin:
             text = str(state["query"]).strip()
             if found:
                 content: Node = List(
-                    *[_result(record, text, opener(record.id)) for record in found]
+                    *[_result(record, text, opener(record.id), media) for record in found]
                 )
                 meta = f"{len(found)} 条结果"
             else:
@@ -188,8 +215,9 @@ class IdeasPlugin:
                 ),
                 Text(record.title, kind="title"),
             ]
-            if record.media:
-                parts.append(Audio(media=str(record.media)))
+            player = _player(record, media, video_service())
+            if player is not None:
+                parts.append(player)
             return Page(content=Column(*parts), meta="置顶" if record.pinned else "")
 
         def build() -> Page:
@@ -208,10 +236,11 @@ def _back_bar(handler: Handler) -> Node:
     return Row(Button("← 返回", variant="ghost", on_click=handler))
 
 
-def _item(record: Any, ideas: Any, pinner: Any) -> Item:
+def _item(record: Any, ideas: Any, pinner: Any, media: Any, video: Any) -> Item:
     actions: list[Node] = []
-    if record.media:
-        actions.append(Audio(media=str(record.media)))
+    player = _player(record, media, video)
+    if player is not None:
+        actions.append(player)
     label = "取消置顶" if record.pinned else "置顶"
     actions.append(
         Button(label, variant="ghost", on_click=pinner(record.id, bool(record.pinned)))
@@ -220,22 +249,55 @@ def _item(record: Any, ideas: Any, pinner: Any) -> Item:
     return Item(_when(record.created_at), record.title, *actions)
 
 
-def _result(record: Any, query: str, handler: Handler) -> Result:
+def _result(record: Any, query: str, handler: Handler, media: Any) -> Result:
     return Result(
         title=record.title,
         snippet=_snippet(record.title, query),
-        meta=_meta(record),
+        meta=_meta(record, media),
         highlight=query,
         on_click=handler,
     )
 
 
-def _meta(record: Any) -> str:
+def _player(record: Any, media: Any, video: Any) -> Node | None:
+    """一条记录怎么放：视频走 HTTP 媒体通道，音频仍走 media.load。"""
+    if not record.media:
+        return None
+    info = _media_info(media, record.media)
+    if info is None:
+        return None
+    if str(info.get("mime", "")).startswith("video/"):
+        if video is None:
+            return None
+        src = video.src(str(record.media))
+        return Video(media=str(record.media), src=src) if src else None
+    return Audio(media=str(record.media))
+
+
+def _media_info(media: Any, record_id: Any) -> dict[str, Any] | None:
+    try:
+        info: dict[str, Any] = media.info(str(record_id))
+    except LookupError:
+        return None
+    return info
+
+
+def _kind(record: Any, media: Any) -> str | None:
+    if not record.media:
+        return None
+    info = _media_info(media, record.media)
+    if info is None:
+        return None
+    return "视频" if str(info.get("mime", "")).startswith("video/") else "语音"
+
+
+def _meta(record: Any, media: Any) -> str:
     parts = [_when(record.created_at)]
     if record.pinned:
         parts.insert(0, "置顶")
-    if record.media:
-        parts.append("语音")
+    kind = _kind(record, media)
+    if kind is not None:
+        parts.append(kind)
     return " · ".join(parts)
 
 
@@ -261,6 +323,23 @@ def _snippet(text: str, query: str, width: int = _SNIPPET) -> str:
     if start + width < len(text):
         piece += "…"
     return piece
+
+
+def _spoken_title(payload: dict[str, Any]) -> str:
+    seconds = _seconds(payload)
+    return f"语音 {_clock(seconds)}" if seconds else "语音"
+
+
+def _video_title(payload: dict[str, Any]) -> str:
+    seconds = _seconds(payload)
+    return f"视频 {_clock(seconds)}" if seconds else "视频"
+
+
+def _seconds(payload: dict[str, Any]) -> float:
+    try:
+        return float(payload.get("seconds", 0) or 0)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def _when(created: datetime, now: datetime | None = None) -> str:
