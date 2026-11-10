@@ -1,22 +1,40 @@
 /* 浅色主题：橄榄灰桌面 + 暖白纸。深色主题单独设计，这里不做反相。 */
 :root {
   color-scheme: light;
+
+  /* 面：只有三层 */
   --desk: #e4e8db;
   --paper: #fefdfa;
+  --surface-inset: #f2f3ec;
+
+  /* 字 */
   --ink: #1a1d19;
   --muted: #6d7268;
-  --line: #d3d7c9;
+
+  /* 强调与状态 */
   --accent: #27664b;
   --accent-strong: #1e523c;
   --tint: rgba(39, 102, 75, 0.12);
-  --hover: rgba(26, 29, 25, 0.055);
   --warn: #a8701f;
   --danger: #a63d34;
-  --inset: 40px;
-  --radius-sm: 7px;
-  --radius: 10px;
-  --radius-lg: 16px;
-  --radius-pill: 999px;
+  --line: #d3d7c9;
+  --hover: rgba(26, 29, 25, 0.04);
+
+  /* 间距刻度：4 / 8 / 12 / 16 / 24 / 32 / 48 */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+
+  /* 圆角：6 / 10 / 12 / 999 */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-panel: 12px;
+  --r-pill: 999px;
+
   --ui: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif;
 }
 
@@ -51,7 +69,7 @@ body {
   flex-direction: column;
   align-items: center;
   min-height: 0;
-  padding: 14px 0 12px;
+  padding: var(--s3) 0;
   border-right: 1px solid var(--line);
   background: var(--desk);
 }
@@ -60,7 +78,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--s1);
   width: 100%;
 }
 
@@ -71,7 +89,7 @@ body {
   height: 40px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   background: none;
   color: var(--muted);
   cursor: pointer;
@@ -93,7 +111,7 @@ body {
   place-items: center;
   width: 100%;
   margin-top: auto;
-  padding-top: 10px;
+  padding-top: var(--s2);
 }
 
 .omora-conn {
@@ -147,7 +165,7 @@ body {
 
 .omora-page-inner {
   height: 100%;
-  padding: 32px var(--inset);
+  padding: var(--s6);
   overflow-y: auto;
 }
 
@@ -163,7 +181,7 @@ body {
 .omora-split-side {
   min-width: 0;
   min-height: 0;
-  padding-right: 20px;
+  padding-right: var(--s3);
   border-right: 1px solid var(--line);
   overflow-y: auto;
 }
@@ -171,8 +189,15 @@ body {
 .omora-split-main {
   min-width: 0;
   min-height: 0;
-  padding-left: 32px;
+  padding-left: var(--s5);
   overflow-y: auto;
+}
+
+/* 主区纵向节奏：区与区之间 24 */
+.omora-split-main > .omora-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
 }
 
 /* rail：索引栏 */
@@ -185,7 +210,7 @@ body {
 }
 
 .omora-rail-title {
-  margin: 2px 0 14px;
+  margin: 0 0 var(--s3);
   color: var(--muted);
   font-size: 13px;
   font-weight: 600;
@@ -196,10 +221,10 @@ body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--s2);
   min-height: 0;
   margin: 0;
-  padding: 0 4px 0 0;
+  padding: 0 var(--s1) 0 0;
   overflow-y: auto;
   list-style: none;
 }
@@ -212,12 +237,12 @@ body {
 .omora-row {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: var(--s3);
 }
 
-/* 工具条和下面的 feed 之间留一口气 */
-.omora-row:has(.omora-chip) {
-  margin-bottom: 16px;
+/* 捕捉块那一行：三个块等高撑满 */
+.omora-row:has(.omora-tile) {
+  align-items: stretch;
 }
 
 .omora-text--title {
@@ -241,18 +266,19 @@ body {
   flex: none;
 }
 
-/* 捕捉大按钮 */
+/* 捕捉块：只有图标 + 标题 */
 
 .omora-tile {
   display: flex;
   flex: 1 1 0;
-  align-items: flex-start;
-  gap: 14px;
+  align-items: center;
+  gap: var(--s3);
   min-width: 0;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--paper);
+  min-height: 104px;
+  padding: var(--s4);
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--surface-inset);
   color: var(--ink);
   font: inherit;
   text-align: left;
@@ -260,7 +286,7 @@ body {
 }
 
 .omora-tile:hover {
-  border-color: var(--accent);
+  background: var(--hover);
 }
 
 .omora-tile:disabled {
@@ -274,36 +300,27 @@ body {
   place-items: center;
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-sm);
-  background: var(--tint);
-  color: var(--accent);
+  color: var(--ink);
 }
 
 .omora-tile-body {
   display: flex;
   flex-direction: column;
-  gap: 3px;
   min-width: 0;
 }
 
 .omora-tile-title {
   font-size: 15px;
   font-weight: 600;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
-.omora-tile-hint {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-/* 工具条小药丸 */
+/* 工具条小药丸：无描边，靠底面对比 */
 
 .omora-chip {
-  padding: 5px 13px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
+  padding: var(--s1) var(--s3);
+  border: 0;
+  border-radius: var(--r-pill);
   background: transparent;
   color: var(--muted);
   font: inherit;
@@ -311,33 +328,53 @@ body {
   cursor: pointer;
 }
 
-.omora-chip:hover {
-  border-color: var(--muted);
-  color: var(--ink);
+.omora-chip:not(.is-active):hover {
+  background: rgba(254, 253, 250, 0.55);
 }
 
 .omora-chip.is-active {
-  border-color: var(--accent);
-  background: var(--tint);
-  color: var(--accent);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .omora-chip:disabled {
   cursor: default;
+  opacity: 0.55;
 }
 
-/* 推荐卡片 */
+/* 面板：inset 底，装工具条和行 */
+
+.omora-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding: var(--s3);
+  border-radius: var(--r-panel);
+  background: var(--surface-inset);
+}
+
+.omora-panel > .omora-row:first-child {
+  align-items: center;
+  gap: var(--s2);
+}
+
+.omora-panel .omora-empty {
+  padding: var(--s2);
+}
+
+/* 行条 */
 
 .omora-card {
   display: block;
-  padding: 18px 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  padding: var(--s3) var(--s4);
+  border: 0;
+  border-radius: var(--r-sm);
   background: var(--paper);
 }
 
 .omora-card + .omora-card {
-  margin-top: 12px;
+  margin-top: var(--s2);
 }
 
 .omora-card[data-handler] {
@@ -345,8 +382,7 @@ body {
 }
 
 .omora-card[data-handler]:hover {
-  border-color: var(--accent);
-  box-shadow: 0 2px 10px rgba(26, 29, 25, 0.05);
+  background: var(--hover);
 }
 
 .omora-card:focus-visible {
@@ -358,33 +394,33 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--s3);
 }
 
 .omora-card-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
 }
 
 .omora-card-meta {
   flex: none;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
 .omora-card-text {
-  margin: 6px 0 0;
+  margin: var(--s1) 0 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .omora-card-media {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 12px;
+  gap: var(--s2);
+  margin-top: var(--s2);
 }
 
 /* 捕捉行 */
@@ -392,8 +428,8 @@ body {
 .omora-capture {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 0;
+  gap: var(--s3);
+  padding: var(--s4) 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -410,7 +446,7 @@ body {
 .omora-capture-input {
   flex: 1;
   min-width: 0;
-  padding: 2px 0;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--ink);
@@ -424,7 +460,7 @@ body {
 }
 
 .omora-capture-hint {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   opacity: 0.55;
 }
@@ -440,14 +476,14 @@ body {
 .omora-item {
   display: grid;
   grid-template-columns: 84px minmax(0, 1fr);
-  gap: 20px;
+  gap: var(--s5);
   align-items: baseline;
-  padding: 13px 0;
+  padding: var(--s4) 0;
   border-bottom: 1px solid var(--line);
 }
 
 .omora-item-meta {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -455,9 +491,9 @@ body {
 .omora-item-main {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: var(--s3);
   min-width: 0;
-  padding-left: 20px;
+  padding-left: var(--s5);
   border-left: 1px solid var(--line);
 }
 
@@ -495,9 +531,9 @@ body {
 .omora-rail .omora-item {
   display: block;
   min-height: 44px;
-  padding: 5px 10px;
+  padding: var(--s1) var(--s2);
   border-bottom: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
 }
 
 .omora-rail .omora-item[data-handler] {
@@ -524,8 +560,8 @@ body {
 .omora-rail .omora-item-link {
   display: block;
   overflow: hidden;
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 15px;
+  line-height: 1.4;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -533,10 +569,10 @@ body {
 /* 动作 */
 
 .omora-button {
-  padding: 5px 12px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--paper);
+  padding: var(--s1) var(--s3);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface-inset);
   color: var(--ink);
   font: inherit;
   font-size: 13px;
@@ -544,7 +580,7 @@ body {
 }
 
 .omora-button:hover {
-  border-color: var(--accent);
+  background: var(--hover);
 }
 
 .omora-button:disabled {
@@ -553,11 +589,9 @@ body {
 }
 
 .omora-button--ghost {
-  padding: 4px 8px;
-  border: 0;
+  padding: var(--s1) var(--s2);
   background: none;
   color: var(--muted);
-  font-size: 13px;
 }
 
 .omora-button--ghost:hover {
@@ -567,8 +601,7 @@ body {
 
 /* 只有账本行里的行内动作才随 hover 出现 */
 .omora-item .omora-button--ghost {
-  padding: 3px 6px;
-  font-size: 12px;
+  font-size: 11px;
   opacity: 0;
 }
 
@@ -580,52 +613,55 @@ body {
 /* 空状态 */
 
 .omora-empty {
-  padding-top: 24px;
+  padding-top: var(--s5);
 }
 
 .omora-empty-title {
-  margin: 0 0 4px;
+  margin: 0 0 var(--s1);
   font-size: 15px;
   font-weight: 600;
 }
 
 .omora-empty-hint {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted);
 }
 
-/* 搜索 */
+/* 搜索：inset 胶囊，无描边，右侧一个实心主操作 */
 
 .omora-search {
   position: relative;
-  margin-bottom: 22px;
 }
 
 .omora-search-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--paper);
+  gap: var(--s3);
+  height: 44px;
+  padding: 0 6px 0 var(--s3);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--surface-inset);
 }
 
-.omora-search-row:focus-within {
-  border-color: var(--accent);
+.omora-search-row:has(.omora-search-input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .omora-search-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
   color: var(--muted);
-  font-size: 15px;
-  line-height: 1;
 }
 
 .omora-search-input {
   flex: 1;
   min-width: 0;
-  padding: 2px 0;
+  height: 100%;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--ink);
@@ -638,10 +674,16 @@ body {
   color: var(--muted);
 }
 
+.omora-search-input:focus-visible {
+  outline: none;
+}
+
 .omora-search-submit {
-  padding: 5px 14px;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-pill);
+  flex: none;
+  height: 32px;
+  padding: 0 var(--s3);
+  border: 0;
+  border-radius: var(--r-pill);
   background: var(--accent);
   color: var(--paper);
   font: inherit;
@@ -651,7 +693,6 @@ body {
 }
 
 .omora-search-submit:hover {
-  border-color: var(--accent-strong);
   background: var(--accent-strong);
 }
 
@@ -663,18 +704,18 @@ body {
 .omora-search-list {
   position: absolute;
   z-index: 10;
-  top: calc(100% + 6px);
+  top: calc(100% + var(--s1));
   right: 0;
   left: 0;
-  padding: 4px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  padding: var(--s1);
+  border: 0;
+  border-radius: var(--r-md);
   background: var(--paper);
   box-shadow: 0 10px 24px rgba(26, 29, 25, 0.09);
 }
 
 .omora-search-option {
-  border-radius: 6px;
+  border-radius: var(--r-sm);
 }
 
 .omora-search-option--active,
@@ -686,27 +727,27 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--s3);
   width: 100%;
-  padding: 7px 10px;
+  padding: var(--s2) var(--s3);
   border: 0;
   background: none;
   color: var(--ink);
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   text-align: left;
   cursor: pointer;
 }
 
 .omora-suggestion-meta {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
 }
 
 mark {
   padding: 0 1px;
-  border-radius: 2px;
+  border-radius: var(--r-sm);
   background: var(--tint);
   color: inherit;
 }
@@ -721,8 +762,8 @@ mark {
 
 .omora-result {
   display: grid;
-  gap: 3px;
-  padding: 14px 0;
+  gap: var(--s1);
+  padding: var(--s3) 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -733,7 +774,7 @@ mark {
   background: none;
   color: var(--ink);
   font: inherit;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
@@ -745,21 +786,21 @@ mark {
 
 .omora-result-snippet {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted);
 }
 
 .omora-result-meta {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
 }
 
 /* 未知组件 */
 
 .omora-unknown {
-  padding: 8px;
+  padding: var(--s2);
   border: 1px dashed var(--warn);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   color: var(--warn);
   font-family: ui-monospace, "Cascadia Code", monospace;
   font-size: 13px;

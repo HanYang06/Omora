@@ -3,7 +3,7 @@ import { AudioCapture } from "./audio-capture";
 import { Card } from "./cards";
 import { Audio, Recorder } from "./capture";
 import { Icon } from "./icons";
-import { Rail, Split } from "./layout";
+import { Panel, Rail, Split } from "./layout";
 import { Result, Search, Suggestion } from "./search";
 import { prop, textOf, type NodeComponentProps } from "./shared";
 import { Chip, Tile } from "./tiles";
@@ -198,6 +198,7 @@ export const components: Record<string, ComponentType<NodeComponentProps>> = {
   result: Result,
   split: Split,
   rail: Rail,
+  panel: Panel,
   icon: Icon,
   tile: Tile,
   chip: Chip,

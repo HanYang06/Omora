@@ -2,11 +2,10 @@ import type { ReactNode } from "react";
 import { IconGlyph } from "./icons";
 import { flag, prop, type NodeComponentProps } from "./shared";
 
-/** tile：捕捉大按钮。图标在左，标题与说明在右。 */
+/** tile：捕捉块。只有图标 + 标题。 */
 export function Tile({ node, onEvent }: NodeComponentProps): ReactNode {
   const icon = prop(node, "icon") ?? "";
   const title = prop(node, "title") ?? "";
-  const hint = prop(node, "hint") ?? "";
   const handler = prop(node, "on_click");
   const clickable = handler !== undefined && handler.length > 0;
 
@@ -28,7 +27,6 @@ export function Tile({ node, onEvent }: NodeComponentProps): ReactNode {
       </span>
       <span className="omora-tile-body">
         <span className="omora-tile-title">{title}</span>
-        {hint.length > 0 ? <span className="omora-tile-hint">{hint}</span> : null}
       </span>
     </button>
   );

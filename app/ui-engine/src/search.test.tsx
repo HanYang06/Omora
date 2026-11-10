@@ -141,6 +141,7 @@ describe("Search", () => {
     expect(html).toContain('placeholder="搜索灵感…"');
     expect(html).toContain('value="牛奶"');
     expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain('data-icon="search"');
     expect(html).toContain("搜索");
     expect(html).toContain('data-type="suggestion"');
     expect(html).toContain("<span>买</span><mark>牛奶</mark>");

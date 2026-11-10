@@ -3,17 +3,17 @@
 .omora-recorder {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 0 10px;
+  gap: var(--s3);
+  padding: var(--s1) 0 var(--s3);
 }
 
 .omora-record {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
+  gap: var(--s2);
+  padding: var(--s2) var(--s4);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--paper);
   color: var(--ink);
   font: inherit;
@@ -48,7 +48,7 @@
 }
 
 .omora-record-hint {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
 }
 
@@ -61,10 +61,10 @@
   height: 26px;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 50%;
+  border-radius: var(--r-pill);
   background: var(--paper);
   color: var(--accent);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
   cursor: pointer;
 }
@@ -95,8 +95,8 @@
 .omora-video-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 0 10px;
+  gap: var(--s3);
+  padding: var(--s1) 0 var(--s3);
   flex-wrap: wrap;
 }
 
@@ -108,19 +108,19 @@
 .omora-video-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s3);
   flex-wrap: wrap;
 }
 
 .omora-device {
   max-width: 220px;
-  padding: 6px 8px;
+  padding: var(--s1) var(--s2);
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--paper);
   color: var(--ink);
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .omora-device:disabled {
@@ -132,7 +132,7 @@
   max-width: 100%;
   aspect-ratio: 16 / 9;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: #10130f;
   object-fit: cover;
 }
@@ -142,7 +142,7 @@
 }
 
 .omora-video-missing {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
 }
 

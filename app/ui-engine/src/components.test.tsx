@@ -114,18 +114,31 @@ describe("icon", () => {
 describe("tile", () => {
   const tile: Node = {
     type: "tile",
-    props: { icon: "mic", title: "录音", hint: "说出口，比打字快", on_click: "ideas:5:0" },
+    props: { icon: "mic", title: "录音", on_click: "ideas:5:0" },
     children: [],
   };
 
-  it("画图标、标题和说明，handler 落在按钮上", () => {
+  it("只画图标和标题，handler 落在按钮上", () => {
     const html = htmlOf([tile]);
 
     expect(html).toContain('data-type="tile"');
     expect(html).toContain('data-icon="mic"');
     expect(html).toContain("录音");
-    expect(html).toContain("说出口，比打字快");
     expect(html).toContain('data-handler="ideas:5:0"');
+    expect(html).not.toContain("omora-tile-hint");
+  });
+
+  it("旧快照里带着 hint 也不画", () => {
+    const html = htmlOf([
+      {
+        type: "tile",
+        props: { icon: "mic", title: "录音", hint: "说出口，比打字快", on_click: "ideas:5:0" },
+        children: [],
+      },
+    ]);
+
+    expect(html).toContain("录音");
+    expect(html).not.toContain("说出口，比打字快");
   });
 
   it("点一下把空载荷交给 on_click", () => {
@@ -306,8 +319,42 @@ describe("item 的可点标题", () => {
   });
 });
 
+describe("panel", () => {
+  it("先画工具条再画内容", () => {
+    const html = htmlOf([
+      {
+        type: "panel",
+        props: {},
+        children: [
+          {
+            type: "row",
+            props: {},
+            children: [
+              { type: "chip", props: { text: "全部", active: true, on_click: "ideas:6:2" }, children: [] },
+            ],
+          },
+          {
+            type: "column",
+            props: {},
+            children: [
+              { type: "card", props: { title: "买牛奶", meta: "刚刚", on_click: "ideas:6:3" }, children: [] },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    expect(html).toContain('data-type="panel"');
+    expect(html).toContain("omora-panel");
+    expect(html).toContain('data-type="row"');
+    expect(html).toContain('data-type="chip"');
+    expect(html).toContain('data-type="card"');
+    expect(html.indexOf("全部")).toBeLessThan(html.indexOf("买牛奶"));
+  });
+});
+
 describe("注册表", () => {
-  it("六个新节点从注册表画出来", () => {
+  it("新节点都从注册表画出来", () => {
     const html = htmlOf([
       {
         type: "split",
@@ -324,9 +371,27 @@ describe("注册表", () => {
             type: "column",
             props: {},
             children: [
-              { type: "tile", props: { icon: "mic", title: "录音", hint: "说出口", on_click: "ideas:6:1" }, children: [] },
-              { type: "chip", props: { text: "全部", active: true, on_click: "ideas:6:2" }, children: [] },
-              { type: "card", props: { title: "买牛奶", text: "顺路", meta: "刚刚", on_click: "ideas:6:3" }, children: [] },
+              { type: "tile", props: { icon: "mic", title: "录音", on_click: "ideas:6:1" }, children: [] },
+              {
+                type: "panel",
+                props: {},
+                children: [
+                  {
+                    type: "row",
+                    props: {},
+                    children: [
+                      { type: "chip", props: { text: "全部", active: true, on_click: "ideas:6:2" }, children: [] },
+                    ],
+                  },
+                  {
+                    type: "column",
+                    props: {},
+                    children: [
+                      { type: "card", props: { title: "买牛奶", text: "顺路", meta: "刚刚", on_click: "ideas:6:3" }, children: [] },
+                    ],
+                  },
+                ],
+              },
               { type: "icon", props: { name: "pin" }, children: [] },
             ],
           },
@@ -338,6 +403,7 @@ describe("注册表", () => {
     expect(html).toContain('data-type="rail"');
     expect(html).toContain('data-type="item"');
     expect(html).toContain('data-type="tile"');
+    expect(html).toContain('data-type="panel"');
     expect(html).toContain('data-type="chip"');
     expect(html).toContain('data-type="card"');
     expect(html).toContain('data-type="icon"');

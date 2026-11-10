@@ -6,6 +6,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { IconGlyph } from "./icons";
 import { highlightParts, keyAction, moveActive } from "./searchText";
 import { prop, type NodeComponentProps } from "./shared";
 
@@ -121,7 +122,7 @@ export function Search({ node, onEvent, children }: NodeComponentProps): ReactNo
     <div className="omora-search" data-type="search" data-open={open ? "true" : "false"}>
       <div className="omora-search-row">
         <span className="omora-search-icon" aria-hidden="true">
-          ⌕
+          <IconGlyph name="search" />
         </span>
         <input
           className="omora-search-input"

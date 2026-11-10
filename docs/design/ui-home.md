@@ -25,7 +25,7 @@
 
 | 模式 | 内容 |
 |---|---|
-| home | 搜索行 → 三个捕捉大按钮 → 工具条 → 推荐 feed |
+| home | 搜索区 → 捕捉区（三个块）→ 列表面板（工具条 + feed） |
 | results | 搜索行 → 返回 → 结果列表（浏览器式：回车进结果页） |
 | detail | 返回 + 时间 → 标题 → 媒体 → 置顶 / 归档 |
 | capture_text | 返回 + 一行捕捉输入（回车保存，存完回 home） |
@@ -36,12 +36,16 @@
 
 **只读。** 编辑不在这里。
 
-1. **搜索行**：`Search`（自带下拉联想 + 右侧「搜索」按钮）。打字出联想，回车进 results。
-   模糊 / 语义搜索留给 AI 插件，v1 是子串。
-2. **三个捕捉大按钮**：`Tile` × 3 —— 录音 / 视频 / 文字。点一下进对应 capture 模式。
-3. **工具条**：`Chip` × 4 —— 全部 / 置顶 / 最近 / 久未打开。v1 是 feed 的筛选，不做分页。
-4. **推荐 feed**：`Card` 竖排。顺序 = 置顶优先，然后按创建时间倒序；「久未打开」筛
-   创建超过 30 天的。没有条目时放 `Empty`：没灵感时给一句引导。
+主区从上到下**三个区**，区间 24px。底色 / 间距 / 圆角 / 文案按
+[界面底层规则](ui-rules.md) 走，不在这里另定。
+
+1. **搜索区**：`Search` —— inset 胶囊、全圆角、无描边，右侧一个实心 accent 提交。
+   打字出联想，回车进 results；模糊 / 语义搜索留给 AI 插件，v1 是子串。
+2. **捕捉区**：`Tile` × 3 —— 录音 / 视频 / 文字。只有图标 + 标题，**没有说明文字**
+   （"说一句，存成语音"是在解释操作，不是给用户看的）。
+3. **列表面板**：`Panel(Row(Chip×4), feed)` —— inset 面板、圆角 12、内边距 12；
+   工具条是四个筛选 chip，下面是 `Card` 行条。顺序 = 置顶优先，然后创建时间倒序；
+   「久未打开」= 创建超过 30 天；没有条目时 `Empty` 一句话。
 
 推荐算法的"定期把旧灵感滚回来"是 v2；v1 只做这四种排序。
 
@@ -57,9 +61,10 @@
 | `split` | — | [side, main] | `grid-template-columns: 280px 1fr`，撑满高度 |
 | `rail` | title | 条目 | 索引栏：标题 + 可滚动列表 |
 | `icon` | name | — | 20px 内联 SVG；名字不认识就画空位 |
-| `tile` | icon, title, hint, on_click | — | 捕捉大按钮（图标在左，标题 + 说明） |
+| `tile` | icon, title, on_click | — | 捕捉大按钮（图标在左，只有标题，没有说明文字） |
 | `chip` | text, active, on_click | — | 工具条小药丸；active 只是样子 |
-| `card` | title, text, meta, on_click | 可选媒体 | 推荐卡片，点整张进 detail |
+| `card` | title, text, meta, on_click | 可选媒体 | 推荐行条，点整行进 detail |
+| `panel` | — | 工具条 + 内容 | inset 面板：圆角 12、内边距 12、无描边 |
 
 图标名：`ideas` / `projects` / `requirements` / `settings` / `search` / `mic` / `video` /
 `text` / `pin` / `archive` / `back` / `plus`。引擎不内置图标库，只用这几个内联路径。
