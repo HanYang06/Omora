@@ -50,16 +50,23 @@ class List(Node):
 
 @dataclass(frozen=True, init=False)
 class Item(Node):
-    """清单里的一行：左栏 meta，右边标题，子节点是这一行的动作。"""
+    """清单里的一行：左栏 meta，右边标题，子节点是这一行的动作。
+
+    on_click 让整行可点（索引栏用）；不给就是一个静态行。
+    """
 
     type: ClassVar[str] = "item"
     meta: str
     title: str
+    on_click: Handler | None
     children: tuple[Node, ...]
 
-    def __init__(self, meta: str, title: str, *actions: Node) -> None:
+    def __init__(
+        self, meta: str, title: str, *actions: Node, on_click: Handler | None = None
+    ) -> None:
         object.__setattr__(self, "meta", meta)
         object.__setattr__(self, "title", title)
+        object.__setattr__(self, "on_click", on_click)
         object.__setattr__(self, "children", tuple(actions))
 
 
@@ -198,6 +205,86 @@ class Video(Node):
     src: str | None = None
 
 
+@dataclass(frozen=True, init=False)
+class Split(Node):
+    """两栏：先侧栏后主区。侧栏宽度固定，主区吃剩下的。"""
+
+    type: ClassVar[str] = "split"
+    children: tuple[Node, ...]
+
+    def __init__(self, side: Node, main: Node) -> None:
+        object.__setattr__(self, "children", (side, main))
+
+
+@dataclass(frozen=True, init=False)
+class Rail(Node):
+    """索引栏：一个标题加一串条目，自己滚动。"""
+
+    type: ClassVar[str] = "rail"
+    title: str
+    children: tuple[Node, ...]
+
+    def __init__(self, title: str, *items: Node) -> None:
+        object.__setattr__(self, "title", title)
+        object.__setattr__(self, "children", tuple(items))
+
+
+@dataclass(frozen=True)
+class Icon(Node):
+    """一个图标：name 是词表里的名字，引擎认不出就画一个空位。"""
+
+    type: ClassVar[str] = "icon"
+    name: str = ""
+
+
+@dataclass(frozen=True)
+class Tile(Node):
+    """捕捉大按钮：图标 + 标题 + 一句说明。"""
+
+    type: ClassVar[str] = "tile"
+    icon: str = ""
+    title: str = ""
+    hint: str = ""
+    on_click: Handler | None = None
+
+
+@dataclass(frozen=True)
+class Chip(Node):
+    """工具条上的小按钮；active 只是样子。"""
+
+    type: ClassVar[str] = "chip"
+    text: str = ""
+    active: bool = False
+    on_click: Handler | None = None
+
+
+@dataclass(frozen=True, init=False)
+class Card(Node):
+    """推荐卡片：标题 + 一句正文 + 时间；子节点是可选的媒体。"""
+
+    type: ClassVar[str] = "card"
+    title: str
+    text: str
+    meta: str
+    on_click: Handler | None
+    children: tuple[Node, ...]
+
+    def __init__(
+        self,
+        title: str,
+        text: str = "",
+        meta: str = "",
+        *,
+        on_click: Handler | None = None,
+        children: tuple[Node, ...] = (),
+    ) -> None:
+        object.__setattr__(self, "title", title)
+        object.__setattr__(self, "text", text)
+        object.__setattr__(self, "meta", meta)
+        object.__setattr__(self, "on_click", on_click)
+        object.__setattr__(self, "children", tuple(children))
+
+
 @dataclass(frozen=True)
 class Page:
     """一页：内容 + 标题旁的那句话（比如“12 条”）。标题用登记页面时的标签。"""
@@ -227,20 +314,26 @@ __all__ = [
     "Audio",
     "AudioCapture",
     "Button",
+    "Card",
+    "Chip",
     "Column",
     "Empty",
     "Handler",
+    "Icon",
     "Input",
     "Item",
     "List",
     "Node",
     "Page",
+    "Rail",
     "Recorder",
     "Result",
     "Row",
     "Search",
+    "Split",
     "Suggestion",
     "Text",
+    "Tile",
     "Video",
     "VideoCapture",
     "serialize",

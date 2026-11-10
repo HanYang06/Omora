@@ -32,6 +32,26 @@ def _find_capture(node: dict[str, Any], node_type: str) -> str | None:
     return None
 
 
+def _find_tile(node: dict[str, Any], title: str) -> str | None:
+    if node["type"] == "tile" and node["props"].get("title") == title:
+        return str(node["props"]["on_click"])
+    for child in node["children"]:
+        nested = _find_tile(child, title)
+        if nested is not None:
+            return nested
+    return None
+
+
+def _find_item(node: dict[str, Any], title: str) -> str | None:
+    if node["type"] == "item" and node["props"].get("title") == title:
+        return str(node["props"]["on_click"])
+    for child in node["children"]:
+        nested = _find_item(child, title)
+        if nested is not None:
+            return nested
+    return None
+
+
 def _find_button(node: dict[str, Any], label: str) -> str | None:
     if node["type"] == "button" and node["props"].get("text") == label:
         return str(node["props"]["on_click"])
@@ -120,19 +140,29 @@ def test_clicking_archive_over_the_socket_updates_the_page(tmp_path: Path) -> No
         try:
             async with connect(f"ws://127.0.0.1:{port}") as ws:
                 empty = await _request(ws, "1", "ui", "render", {})
-                capture = _find_capture(empty["content"], "input")
+                tile = _find_tile(empty["content"], "文字")
+                assert tile is not None
+                capture_page = await _request(
+                    ws, "2", "ui", "event", {"handler": tile, "payload": {}}
+                )
+                capture = _find_capture(capture_page["content"], "input")
                 assert capture is not None
                 before = await _request(
                     ws,
-                    "2",
+                    "3",
                     "ui",
                     "event",
                     {"handler": capture, "payload": {"value": "买牛奶"}},
                 )
-                handler = _find_button(before["content"], "归档")
+                opened = _find_item(before["content"], "买牛奶")
+                assert opened is not None
+                detail = await _request(
+                    ws, "4", "ui", "event", {"handler": opened, "payload": {}}
+                )
+                handler = _find_button(detail["content"], "归档")
                 assert handler is not None
                 after = await _request(
-                    ws, "3", "ui", "event", {"handler": handler, "payload": {}}
+                    ws, "5", "ui", "event", {"handler": handler, "payload": {}}
                 )
                 return empty, before, after
         finally:
@@ -167,12 +197,17 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
             kernel.resolve("manager").report_capabilities(["microphone", "camera"])
             async with connect(f"ws://127.0.0.1:{port}") as ws:
                 before = await _request(ws, "1", "ui", "render", {})
-                handler = _find_capture(before["content"], "audio_capture")
+                tile = _find_tile(before["content"], "录音")
+                assert tile is not None
+                capture_page = await _request(
+                    ws, "2", "ui", "event", {"handler": tile, "payload": {}}
+                )
+                handler = _find_capture(capture_page["content"], "audio_capture")
                 assert handler is not None
                 audio = base64.b64encode(b"hello").decode("ascii")
                 after = await _request(
                     ws,
-                    "2",
+                    "3",
                     "ui",
                     "event",
                     {
@@ -180,8 +215,13 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
                         "payload": {"audio": audio, "mime": "audio/webm", "seconds": 2.0},
                     },
                 )
-                media_id = str(_nodes(after["content"], "audio")[0]["props"]["media"])
-                loaded = await _request(ws, "3", "media", "load", {"media_id": media_id})
+                opened = _find_item(after["content"], "语音 0:02")
+                assert opened is not None
+                detail = await _request(
+                    ws, "4", "ui", "event", {"handler": opened, "payload": {}}
+                )
+                media_id = str(_nodes(detail["content"], "audio")[0]["props"]["media"])
+                loaded = await _request(ws, "5", "media", "load", {"media_id": media_id})
                 assert isinstance(loaded, dict)
                 return loaded
         finally:
@@ -212,11 +252,16 @@ def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path) -> None:
             media_id = str(json.loads(payload)["media_id"])
             async with connect(f"ws://127.0.0.1:{port}") as ws:
                 before = await _request(ws, "1", "ui", "render", {})
-                handler = _find_capture(before["content"], "video_capture")
+                tile = _find_tile(before["content"], "视频")
+                assert tile is not None
+                capture_page = await _request(
+                    ws, "2", "ui", "event", {"handler": tile, "payload": {}}
+                )
+                handler = _find_capture(capture_page["content"], "video_capture")
                 assert handler is not None
                 after = await _request(
                     ws,
-                    "2",
+                    "3",
                     "ui",
                     "event",
                     {
@@ -224,7 +269,12 @@ def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path) -> None:
                         "payload": {"media": media_id, "mime": "video/webm", "seconds": 4},
                     },
                 )
-                src = str(_nodes(after["content"], "video")[0]["props"]["src"])
+                opened = _find_item(after["content"], "视频 0:04")
+                assert opened is not None
+                detail = await _request(
+                    ws, "4", "ui", "event", {"handler": opened, "payload": {}}
+                )
+                src = str(_nodes(detail["content"], "video")[0]["props"]["src"])
                 fetched = await _get(src)
                 return after, fetched
         finally:

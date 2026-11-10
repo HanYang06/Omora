@@ -20,7 +20,7 @@ class ProjectsPlugin:
         def build() -> Page:
             return Page(content=Empty("还没有项目。"))
 
-        ui.page(ctx, "projects", "项目", build)
+        ui.page(ctx, "projects", "项目", build, icon="projects")
 
 
 __all__ = ["ProjectsPlugin"]

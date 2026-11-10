@@ -1,0 +1,71 @@
+"""灵感页的文字：时间、片段、捕捉标题。纯函数，不知道 store 也不知道界面。"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any
+
+_WEEKDAYS = ("周一", "周二", "周三", "周四", "周五", "周六", "周日")
+_SNIPPET = 40
+
+
+def now() -> datetime:
+    """页面的钟。测试换掉它，「现在」就定了。"""
+    return datetime.now()
+
+
+def when(created: datetime, current: datetime | None = None) -> str:
+    """把时间写成索引栏左栏那一句话。"""
+    moment = current or now()
+    seconds = (moment - created).total_seconds()
+    if seconds < 60:
+        return "刚刚"
+    if seconds < 3600:
+        return f"{int(seconds // 60)} 分钟前"
+    if created.date() == moment.date():
+        return f"{int(seconds // 3600)} 小时前"
+    days = (moment.date() - created.date()).days
+    if days == 1:
+        return "昨天"
+    if days < 7:
+        return _WEEKDAYS[created.weekday()]
+    return f"{created.month} 月 {created.day} 日"
+
+
+def snippet(text: str, query: str, width: int = _SNIPPET) -> str:
+    """命中词附近的一段；标题本来就短就原样给。"""
+    needle = query.strip()
+    if not needle or len(text) <= width:
+        return text
+    at = text.lower().find(needle.lower())
+    if at < 0:
+        return text[:width] + "…"
+    start = min(max(0, at - (width - len(needle)) // 2), len(text) - width)
+    piece = text[start : start + width]
+    if start > 0:
+        piece = "…" + piece
+    if start + width < len(text):
+        piece += "…"
+    return piece
+
+
+def clock(value: float) -> str:
+    total = max(0, int(value))
+    return f"{total // 60}:{total % 60:02d}"
+
+
+def seconds(payload: dict[str, Any]) -> float:
+    try:
+        return float(payload.get("seconds", 0) or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def spoken_title(payload: dict[str, Any]) -> str:
+    length = seconds(payload)
+    return f"语音 {clock(length)}" if length else "语音"
+
+
+def video_title(payload: dict[str, Any]) -> str:
+    length = seconds(payload)
+    return f"视频 {clock(length)}" if length else "视频"

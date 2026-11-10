@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ConnectionStatus } from "./connection";
+import { IconGlyph } from "./icons";
 import { renderTree } from "./renderer";
 import type { EventHandler, MediaResolver, PageEntry, Snapshot } from "./types";
 
@@ -11,6 +12,9 @@ const STATUS_TEXT: Record<ConnectionStatus, string> = {
   failed: "连接失败",
 };
 
+/** 页面没给 icon 时的缺省图标。 */
+const DEFAULT_ICON = "dot";
+
 export interface ShellProps {
   snapshot: Snapshot | null;
   status: ConnectionStatus;
@@ -20,30 +24,36 @@ export interface ShellProps {
   loadMedia: MediaResolver;
 }
 
-export interface NavItemProps {
+export interface RailButtonProps {
   entry: PageEntry;
   active: boolean;
   onNavigate: (page: string) => void;
 }
 
-/** 导航里的一行。点击就换页，不走事件。 */
-export function NavItem({ entry, active, onNavigate }: NavItemProps): ReactNode {
+/** 图标栏里的一个页面按钮：一个图标，label 只进 aria-label / title。 */
+export function RailButton({ entry, active, onNavigate }: RailButtonProps): ReactNode {
+  const icon = entry.icon !== undefined && entry.icon.length > 0 ? entry.icon : DEFAULT_ICON;
+
   return (
     <button
       type="button"
-      className="omora-nav-item"
+      className="omora-shell-item"
+      aria-label={entry.label}
       aria-current={active ? "page" : undefined}
+      title={entry.label}
+      data-page={entry.name}
+      data-icon={icon}
       onClick={() => onNavigate(entry.name)}
     >
-      <span>{entry.label}</span>
-      {typeof entry.count === "number" ? (
-        <span className="omora-nav-count">{entry.count}</span>
-      ) : null}
+      <IconGlyph name={icon} />
     </button>
   );
 }
 
-/** 默认母页面：左边导航，右边一页纸。只认快照，不认业务。 */
+/**
+ * 默认母页面：左边 56px 图标栏，右边主区。
+ * 索引栏由页面用 Split 排；这里不猜页面内容，只铺满。
+ */
 export function Shell({
   snapshot,
   status,
@@ -54,14 +64,13 @@ export function Shell({
 }: ShellProps): ReactNode {
   const pages = snapshot?.pages ?? [];
   const current = snapshot?.page ?? "";
-  const label = pages.find((entry) => entry.name === current)?.label ?? "";
 
   return (
     <div className="omora-app" data-connection={status}>
-      <aside className="omora-sidebar">
-        <nav className="omora-nav" aria-label="集合">
+      <aside className="omora-shell-rail">
+        <nav className="omora-shell-nav" aria-label="页面">
           {pages.map((entry) => (
-            <NavItem
+            <RailButton
               key={entry.name}
               entry={entry}
               active={entry.name === current}
@@ -69,25 +78,23 @@ export function Shell({
             />
           ))}
         </nav>
-        <div className="omora-sidebar-foot">
-          <div className="omora-conn" data-status={status} title={endpoint}>
-            <span className="omora-conn-dot" />
-            {STATUS_TEXT[status]}
+        <div className="omora-shell-foot">
+          <div
+            className="omora-conn"
+            data-status={status}
+            title={endpoint}
+            role="status"
+            aria-label={STATUS_TEXT[status]}
+          >
+            <span className="omora-conn-dot" aria-hidden="true" />
+            <span className="omora-conn-label">{STATUS_TEXT[status]}</span>
           </div>
         </div>
       </aside>
       <main className="omora-page">
         {snapshot === null ? null : (
           <div className="omora-page-inner">
-            <header className="omora-page-head">
-              <h1 className="omora-page-title">{label}</h1>
-              {snapshot.meta.length > 0 ? (
-                <span className="omora-page-count">{snapshot.meta}</span>
-              ) : null}
-            </header>
-            <div className="omora-page-content">
-              {renderTree([snapshot.content], onEvent, loadMedia)}
-            </div>
+            {renderTree([snapshot.content], onEvent, loadMedia)}
           </div>
         )}
       </main>
