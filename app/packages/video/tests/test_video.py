@@ -73,7 +73,7 @@ def test_a_captured_video_keeps_the_stored_media_and_returns_its_id(tmp_path: Pa
     ctx = _ctx(tmp_path)
     media_id = _stored(ctx)
 
-    assert _video(ctx).capture({"media": media_id, "seconds": 3}) == media_id
+    assert _video(ctx, post_process=False).capture({"media": media_id, "seconds": 3}) == media_id
     assert ctx.resolve("media").info(media_id)["mime"] == "video/webm"
 
 
