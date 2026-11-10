@@ -210,7 +210,7 @@ describe("音频 / 视频捕捉节点", () => {
     expect(html).toContain('data-type="video_capture"');
     expect(html).toContain("录视频");
     expect(html).toContain('data-gate="off"');
-    expect(html).toContain("这个环境没有媒体设备接口");
+    expect(html).toContain("不支持媒体设备采集");
     expect(html).toContain("disabled");
   });
 

@@ -65,7 +65,7 @@ describe("设备门禁", () => {
     const gate = captureGate(unsupportedState(), "audioinput");
 
     expect(gate.enabled).toBe(false);
-    expect(gate.reason).toBe("这个环境没有媒体设备接口");
+    expect(gate.reason).toBe("不支持媒体设备采集");
   });
 
   it("还没枚举完就禁用，不假装能用", () => {
@@ -85,7 +85,7 @@ describe("设备门禁", () => {
     expect(captureGate(tracker.state, "audioinput").enabled).toBe(true);
     expect(captureGate(tracker.state, "videoinput")).toMatchObject({
       enabled: false,
-      reason: "没有检测到摄像头",
+      reason: "未检测到摄像头",
     });
     tracker.stop();
   });
@@ -96,8 +96,8 @@ describe("设备门禁", () => {
 
     await tracker.refresh();
 
-    expect(captureGate(tracker.state, "audioinput").reason).toBe("没有检测到麦克风");
-    expect(captureGate(tracker.state, "videoinput").reason).toBe("没有检测到摄像头");
+    expect(captureGate(tracker.state, "audioinput").reason).toBe("未检测到麦克风");
+    expect(captureGate(tracker.state, "videoinput").reason).toBe("未检测到摄像头");
     tracker.stop();
   });
 
@@ -225,7 +225,7 @@ describe("设备词表", () => {
 
   it("getUserMedia 的错翻成人话", () => {
     expect(captureErrorReason(errorNamed("NotAllowedError"), "audioinput")).toBe("需要麦克风权限");
-    expect(captureErrorReason(errorNamed("NotFoundError"), "videoinput")).toBe("没有检测到摄像头");
+    expect(captureErrorReason(errorNamed("NotFoundError"), "videoinput")).toBe("未检测到摄像头");
     expect(captureErrorReason(errorNamed("NotReadableError"), "videoinput")).toBe("摄像头被别的程序占用");
     expect(captureErrorReason(new Error("?"), "audioinput")).toBe("打不开麦克风");
   });

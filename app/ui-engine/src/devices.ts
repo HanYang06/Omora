@@ -82,13 +82,13 @@ export function captureGate(state: DeviceState, kind: DeviceKind): Gate {
   const devices = state[kind];
   const noun = kind === "audioinput" ? "麦克风" : "摄像头";
   if (!state.supported) {
-    return { enabled: false, reason: "这个环境没有媒体设备接口", devices };
+    return { enabled: false, reason: "不支持媒体设备采集", devices };
   }
   if (!state.ready) {
     return { enabled: false, reason: "正在检测设备…", devices };
   }
   if (devices.length === 0) {
-    return { enabled: false, reason: `没有检测到${noun}`, devices };
+    return { enabled: false, reason: `未检测到${noun}`, devices };
   }
   return { enabled: true, devices };
 }
@@ -121,7 +121,7 @@ export function captureErrorReason(error: unknown, kind: DeviceKind): string {
     return `需要${noun}权限`;
   }
   if (name === "NotFoundError") {
-    return `没有检测到${noun}`;
+    return `未检测到${noun}`;
   }
   if (name === "NotReadableError") {
     return `${noun}被别的程序占用`;
@@ -147,7 +147,7 @@ export function openMediaStream(
   }
   const devices = defaultDeviceSource();
   if (devices?.getUserMedia === undefined) {
-    return Promise.reject(new Error("这个环境没有媒体设备接口"));
+    return Promise.reject(new Error("不支持媒体设备采集"));
   }
   return devices.getUserMedia(constraints);
 }
