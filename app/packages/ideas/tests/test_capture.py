@@ -454,3 +454,41 @@ def test_a_blank_rename_never_clears_the_title(tmp_path: Path, monkeypatch: Any)
 
     assert _cards(cleared) == ["买牛奶"]
     assert _nodes(_capture_region(cleared), "input")[0]["props"]["value"] == "买牛奶"
+
+def test_a_take_shorter_than_the_minimum_never_reaches_the_store(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    """手滑按一下不落库：不到 0.4 秒就当没录，面板也不变。"""
+    _pin_clock(monkeypatch)
+    kernel = _kernel(tmp_path)
+    ui = kernel.resolve("ui")
+    audio_id = str(kernel.resolve("media").save(b"brief", "audio/webm"))
+    video_id = str(kernel.resolve("media").save(b"brief", "video/webm"))
+    takes = (
+        ("录音", "audio_capture", _audio_take(audio_id, 0.2)),
+        ("视频", "video_capture", _video_take(video_id, 0.2)),
+    )
+
+    for tile, node_type, payload in takes:
+        handler, _ = _recording(ui, tile, node_type)
+
+        after = ui.event(handler, payload)
+
+        assert _nodes(_main(after), node_type), tile
+        assert _nodes(_main(after), "input") == [], tile
+        assert _cards(after) == [], tile
+        assert after["pages"][0]["count"] == 0, tile
+        _click_button(ui, "收起")
+
+
+def test_a_take_over_the_minimum_is_stored(tmp_path: Path, monkeypatch: Any) -> None:
+    _pin_clock(monkeypatch)
+    kernel = _kernel(tmp_path)
+    ui = kernel.resolve("ui")
+    uploaded = str(kernel.resolve("media").save(b"half", "audio/webm"))
+    handler, _ = _recording(ui, "录音", "audio_capture")
+
+    saved = ui.event(handler, _audio_take(uploaded, 0.5))
+
+    assert _cards(saved) == ["语音 11-11 03:41"]
+    assert _texts(_capture_region(saved)) == ["已保存 · 0:00"]

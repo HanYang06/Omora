@@ -22,6 +22,8 @@ AUDIO = "audio"
 VIDEO = "video"
 TEXT = "text"
 _TITLES = {AUDIO: "录音", VIDEO: "视频", TEXT: "文字"}
+_MIN_SECONDS = 0.4
+"""短于这个长度就当手滑：按住即录最容易按一下就松，不落库、不出已保存条。"""
 
 
 class Capture:
@@ -146,7 +148,7 @@ class Capture:
 
     def _save_audio(self, payload: dict[str, Any]) -> None:
         service = self._audio()
-        if service is None:
+        if service is None or seconds(payload) < _MIN_SECONDS:
             return
         media_id = service.capture(payload)
         if not media_id:
@@ -155,7 +157,7 @@ class Capture:
 
     def _save_video(self, payload: dict[str, Any]) -> None:
         service = self._video()
-        if service is None:
+        if service is None or seconds(payload) < _MIN_SECONDS:
             return
         media_id = service.capture(payload)
         if not media_id:
