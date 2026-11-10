@@ -36,14 +36,15 @@ target=log  method=write_many  args={entries: [{proc, ch, lvl, msg, data}, ...]}
 落盘 `.omora/logs/dev.jsonl`，一行一条 JSON：
 
 ```json
-{"ts":"2026-11-10T23:50:01.123","proc":"kernel","ch":"ideas","lvl":"info","msg":"event","data":{"h":"ideas:2:5","ms":1.4}}
+{"ts":"2026-11-10T23:50:01.123","proc":"kernel","ch":"ideas","lvl":"info","msg":"ui.event","data":{"handler":"ideas:2:5","ms":1.4}}
 ```
 
-终端上是同一行的人话版本：
+`msg` 是**点分事件名**，不是一句话：可 grep、可统计、不随文案漂移。人看的部分在
+`data` 里。终端上是同一行：
 
 ```
-23:50:01.123 K ideas  event  h=ideas:2:5 ms=1.4
-23:50:01.160 E render 收到快照  page=ideas nodes=31 ms=1.1
+23:50:01.123 K ideas  ui.event        handler=ideas:2:5 ms=1.4
+23:50:01.160 E render render.received page=ideas nodes=31 ms=1.1
 ```
 
 `K` / `E` 分别是内核和引擎，后面是通道。
@@ -54,14 +55,14 @@ target=log  method=write_many  args={entries: [{proc, ch, lvl, msg, data}, ...]}
 
 | 进程 | 通道 | 打什么 |
 |---|---|---|
-| 内核 | `boot` | 配置段没认领、启动地址 |
-| 内核 | `<插件名>` | 装载 / 卸载 / 装载失败 |
-| 内核 | `ui` | 每次 render（页名、耗时）、每个 event（handler、耗时、未知 handler） |
-| 内核 | `net` | ws 连上 / 断开、call 失败 |
-| 引擎 | `conn` | 连上 / 断开 / 错误 |
-| 引擎 | `render` | 收到快照（页名、节点数、耗时） |
-| 引擎 | `event` | 发出事件（handler、payload 的键） |
-| 引擎 | `media` | 媒体加载失败 |
+| 内核 | `boot` | `config.unclaimed` / `boot.started` / `boot.media.started` |
+| 内核 | `<插件名>` | `plugin.installed` / `plugin.removed` / `plugin.failed` |
+| 内核 | `ui` | `ui.render` / `ui.event` / `ui.event.unknown` |
+| 内核 | `net` | `net.connected` / `net.disconnected` / `net.call.failed` / `net.call`（trace） |
+| 引擎 | `conn` | `conn.open` / `conn.closed` / `conn.failed` / `capability.report_failed` |
+| 引擎 | `render` | `render.received`（页名、节点数、耗时） |
+| 引擎 | `event` | `event.sent`（handler、payload 的键） |
+| 引擎 | `media` | `media.failed` |
 
 帧级别的 `net:call` 默认是 `trace`，量太大，需要时单独开。
 

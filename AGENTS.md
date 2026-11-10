@@ -18,7 +18,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 | `app/sdk/` | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk` | Python |
 | `app/packages/` | 系统插件：`omora-plugin-*`，uv workspace 的 member | Python |
 | `app/ui-engine/` | 渲染引擎：组件注册表、槽位、事件 | TS |
-| `app/shell/` | 桌面壳：Electron 主进程（开发时由 `dev.py --shell` 拉起） | JS |
+| `app/shell/` | 桌面壳：Electron 主进程（开发时由 `omora dev --shell` 拉起） | JS |
 | 运行后插件目录 | 生态插件，单独装；现在为空 | 待定 |
 | `docs/` | 架构与事实来源 | — |
 
@@ -49,7 +49,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 - 系统 `python` 是 Windows 商店占位，不可用；Python 命令一律走 `uv run`。
 - 前端依赖走 `pnpm`。
 - Python 侧是 uv workspace：`uv sync` 一个 lock / 一个 venv；每个包自己的 pyproject / 依赖 / `omora` 命名空间 / tests。
-- 开发：`uv run python scripts/dev.py`（内核 + 渲染引擎一起起，Ctrl+C 一起停）。
+- 开发：`uv run omora dev`（内核 + 渲染引擎；`--shell` 连桌面壳；`-v` 看 debug 日志）。
 - 仓库统一 LF；不提交 `.venv/`、`node_modules/`、`dist/`、本地数据。
 
 门禁：`uv run python scripts/check.py`（体量预算 / 文档断链 / pytest / ruff / mypy / ui-engine 测试与构建）；CI 跑同一条。交付必须附上实际跑过的命令和输出。

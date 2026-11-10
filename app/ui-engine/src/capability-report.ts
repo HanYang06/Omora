@@ -37,6 +37,22 @@ export function reportCapabilities(
 }
 
 /**
+ * 上报一次，等它真的到岸再返回。
+ *
+ * 首屏渲染必须排在它后面：audio / video 是按能力条件装的，装完页面才会多出
+ * 录音、视频两个捕捉块。先渲染再上报，会渲染出一份"少两个按钮"的快照。
+ */
+export async function reportCapabilitiesOnce(
+  connection: Pick<Connection, "call">,
+  detect: CapabilityDetector = detectCapabilities,
+): Promise<void> {
+  const capabilities = await detect();
+  await connection.call(CAPABILITY_TARGET, CAPABILITY_METHOD, {
+    capabilities: [...capabilities],
+  });
+}
+
+/**
  * 引擎的默认接线：连上后把 devices.ts 检测到的客户端能力报给 manager。
  * 设备检测只有这一处来源；别的模块不要再调 manager.report_capabilities。
  */

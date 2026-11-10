@@ -20,14 +20,14 @@
 2. 装页面：开发时 `OMORA_DEV_URL` → vite dev server；发布时 → `app/ui-engine/dist/index.html`；
 3. 给调试留口子：`OMORA_DEVTOOLS=1` 开 DevTools；`OMORA_SHOT` 截图后退出。
 
-**它不起 Python 内核。** 开发时内核由 `scripts/dev.py` 起（和 vite 一起），壳只当
+**它不起 Python 内核。** 开发时内核由 `omora dev` 起（和 vite 一起），壳只当
 浏览器用；发布形态由壳拉起内核，是下一步的事。
 
 ## 开发
 
 ```bash
-uv run python scripts/dev.py --shell            # 内核 + 引擎 + 壳
-uv run python scripts/dev.py --shell --devtools # 顺带开 DevTools
+uv run omora dev --shell            # 内核 + 引擎 + 壳
+uv run omora dev --shell --devtools # 顺带开 DevTools
 pnpm --dir app/shell install                    # 第一次
 ```
 
@@ -45,7 +45,7 @@ pnpm --dir app/shell install                    # 第一次
 
 ## 验证壳在干活
 
-`OMORA_SHOT=路径 uv run python scripts/dev.py --shell` 会在页面加载后截图并退出，
+`OMORA_SHOT=路径 uv run omora dev --shell` 会在页面加载后截图并退出，
 同时把 `#root` / `.omora-app` / `.omora-split` 的尺寸和视口写进 `路径.json` ——
 "页面是不是真的画出来了"不该靠猜。
 

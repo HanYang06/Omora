@@ -49,7 +49,7 @@ class Kernel:
         try:
             plugin.apply(ctx)
         except BaseException as exc:
-            self._log.child(plugin.name).error("装载失败", err=type(exc).__name__)
+            self._log.child(plugin.name).error("plugin.failed", err=type(exc).__name__)
             try:
                 ctx.dispose()
             except BaseException as rollback:  # noqa: BLE001 — 回滚失败不能盖掉原始异常
@@ -57,7 +57,7 @@ class Kernel:
             exc.add_note(f'插件 "{plugin.name}" 装载失败')
             raise
         self._plugins[plugin.name] = ctx
-        self._log.child(plugin.name).info("已装")
+        self._log.child(plugin.name).info("plugin.installed")
         return Handle(plugin.name, self.uninstall)
 
     def uninstall(self, name: str) -> None:
@@ -65,7 +65,7 @@ class Kernel:
         ctx = self._plugins.pop(name, None)
         if ctx is not None:
             ctx.dispose()
-            self._log.child(name).info("已卸")
+            self._log.child(name).info("plugin.removed")
 
     def running(self, name: str) -> bool:
         """持有：这个插件在不在。"""

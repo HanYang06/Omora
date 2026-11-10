@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-PACKAGES = ["omora.core", "omora.sdk"]
+PACKAGES = ["omora.cli", "omora.core", "omora.sdk"]
 
 MODULES = [
     "omora.store",

@@ -1,7 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app";
-import { reportClientCapabilities } from "./capability-report";
 import { Connection } from "./connection";
 import { createLogger } from "./log";
 import "./styles.css";
@@ -16,8 +15,6 @@ const connection = new Connection();
 const logger = createLogger({
   call: (target, method, args) => connection.call(target, method, args),
 });
-
-reportClientCapabilities(connection);
 
 createRoot(container).render(
   <StrictMode>

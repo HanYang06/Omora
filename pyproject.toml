@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "omora-cli",
     "pyyaml>=6.0.3",
     "omora-plugin-store",
     "omora-plugin-manager",
@@ -33,6 +34,7 @@ dev = [
 package = false
 
 [tool.uv.sources]
+omora-cli = { workspace = true }
 omora-plugin-store = { workspace = true }
 omora-plugin-manager = { workspace = true }
 omora-plugin-media = { workspace = true }
@@ -45,7 +47,7 @@ omora-plugin-requirements = { workspace = true }
 omora-plugin-net = { workspace = true }
 
 [tool.uv.workspace]
-members = ["app/core", "app/sdk", "app/packages/*"]
+members = ["app/cli", "app/core", "app/sdk", "app/packages/*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["app"]

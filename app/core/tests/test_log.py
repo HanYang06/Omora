@@ -11,7 +11,7 @@ class _Plugin:
     name = "demo"
 
     def apply(self, ctx: Any) -> None:
-        ctx.log.info("hello", n=1)
+        ctx.log.info("test.event", n=1)
 
 
 def _lines(path: Path) -> list[dict[str, Any]]:
@@ -62,12 +62,12 @@ def test_the_kernel_records_what_it_installs_and_removes(tmp_path: Path) -> None
     handle = kernel.install(_Plugin())
 
     messages = [(item["ch"], item["msg"]) for item in _lines(tmp_path / "dev.jsonl")]
-    assert ("demo", "已装") in messages
-    assert ("demo", "hello") in messages
+    assert ("demo", "plugin.installed") in messages
+    assert ("demo", "test.event") in messages
 
     handle.dispose()
     messages = [(item["ch"], item["msg"]) for item in _lines(tmp_path / "dev.jsonl")]
-    assert ("demo", "已卸") in messages
+    assert ("demo", "plugin.removed") in messages
 
 
 def test_a_whole_batch_of_engine_lines_comes_through_one_frame(tmp_path: Path) -> None:
