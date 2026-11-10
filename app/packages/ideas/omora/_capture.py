@@ -15,7 +15,7 @@ from typing import Any
 from omora.sdk.ui import Audio, Button, Handler, Input, Node, Panel, Row, Text, Tile
 
 from . import _views
-from ._format import clock, seconds, spoken_title, video_title
+from ._format import caption, clock, now, seconds
 
 AUDIO = "audio"
 VIDEO = "video"
@@ -119,7 +119,7 @@ class Capture:
         media_id = service.capture(payload)
         if not media_id:
             return
-        self._settle(AUDIO, media_id, payload, spoken_title(payload))
+        self._settle(AUDIO, media_id, payload, caption(now(), "语音"))
 
     def _save_video(self, payload: dict[str, Any]) -> None:
         service = self._video()
@@ -128,7 +128,7 @@ class Capture:
         media_id = service.capture(payload)
         if not media_id:
             return
-        self._settle(VIDEO, media_id, payload, video_title(payload))
+        self._settle(VIDEO, media_id, payload, caption(now(), "视频"))
 
     def _settle(self, mode: str, media_id: str, payload: dict[str, Any], title: str) -> None:
         """落库之后切到已保存条；面板早收起（或换了捕捉）就只落库。

@@ -3,9 +3,11 @@
 工作区不换页：搜索区、索引栏、列表面板都还在，只有捕捉区那一块换了样子。
 """
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import omora._capture as capture_page
 from omora.audio import AudioPlugin
 from omora.core.kernel import Kernel
 from omora.ideas import IdeasPlugin
@@ -15,6 +17,7 @@ from omora.ui import UiPlugin
 from omora.video import VideoPlugin
 
 CHANNEL = "http://127.0.0.1:8766/media"
+SAVED_AT = datetime(2026, 11, 11, 3, 41)
 
 
 class _Net:
@@ -78,6 +81,11 @@ def _texts(node: dict[str, Any]) -> list[str]:
 
 def _button_texts(node: dict[str, Any]) -> list[str]:
     return [str(child["props"]["text"]) for child in _nodes(node, "button")]
+
+
+def _pin_clock(monkeypatch: Any) -> None:
+    """钉住捕捉的钟：默认名读的是保存时刻，不是时长。"""
+    monkeypatch.setattr(capture_page, "now", lambda: SAVED_AT)
 
 
 def _click_tile(ui: Any, title: str) -> Any:
@@ -155,7 +163,10 @@ def test_a_blank_text_capture_is_not_stored(tmp_path: Path) -> None:
     assert after["pages"][0]["count"] == 0
 
 
-def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(tmp_path: Path) -> None:
+def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    _pin_clock(monkeypatch)
     kernel = _kernel(tmp_path)
     ui = kernel.resolve("ui")
     uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
@@ -170,17 +181,20 @@ def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(tmp_path: Path) -
     assert _texts(bar) == ["已保存 · 0:12"]
     assert _button_texts(bar) == ["再录一条", "收起"]
     assert _nodes(bar, "audio")[0]["props"]["media"] == uploaded
-    assert _cards(saved) == ["语音 0:12"]
-    assert _rail_titles(saved) == ["语音 0:12"]
+    assert _cards(saved) == ["语音 11-11 03:41"]
+    assert _rail_titles(saved) == ["语音 11-11 03:41"]
     assert saved["pages"][0]["count"] == 1
 
     tiles = _click_button(ui, "收起")
 
     assert list(_tiles(tiles)) == ["录音", "视频", "文字"]
-    assert _cards(tiles) == ["语音 0:12"]
+    assert _cards(tiles) == ["语音 11-11 03:41"]
 
 
-def test_the_saved_bar_records_again_and_collapses_to_the_tiles(tmp_path: Path) -> None:
+def test_the_saved_bar_records_again_and_collapses_to_the_tiles(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    _pin_clock(monkeypatch)
     kernel = _kernel(tmp_path)
     ui = kernel.resolve("ui")
     uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
@@ -192,16 +206,17 @@ def test_the_saved_bar_records_again_and_collapses_to_the_tiles(tmp_path: Path) 
     assert _nodes(_capture_region(again), "audio_capture")
     assert _nodes(_capture_region(again), "audio") == []
     assert _texts(_capture_region(again)) == ["录音"]
-    assert _cards(again) == ["语音 0:03"]
+    assert _cards(again) == ["语音 11-11 03:41"]
 
     tiles = _click_button(ui, "收起")
 
     assert list(_tiles(tiles)) == ["录音", "视频", "文字"]
-    assert _cards(tiles) == ["语音 0:03"]
+    assert _cards(tiles) == ["语音 11-11 03:41"]
 
 
-def test_a_saved_video_offers_no_inline_player(tmp_path: Path) -> None:
+def test_a_saved_video_offers_no_inline_player(tmp_path: Path, monkeypatch: Any) -> None:
     """16:9 全宽塞不进一条：视频只在详情里看。"""
+    _pin_clock(monkeypatch)
     kernel = _kernel(tmp_path)
     ui = kernel.resolve("ui")
     uploaded = str(kernel.resolve("media").save(b"video", "video/webm"))
@@ -215,24 +230,25 @@ def test_a_saved_video_offers_no_inline_player(tmp_path: Path) -> None:
     assert _nodes(bar, "audio") == []
     assert _texts(bar) == ["已保存 · 0:05"]
     assert _button_texts(bar) == ["再录一条", "收起"]
-    assert _cards(saved) == ["视频 0:05"]
+    assert _cards(saved) == ["视频 11-11 03:41"]
 
-    detail = _click_rail(ui, "视频 0:05")
+    detail = _click_rail(ui, "视频 11-11 03:41")
     assert _nodes(_main(detail), "video")[0]["props"] == {
         "media": uploaded,
         "src": f"{CHANNEL}/{uploaded}",
     }
 
 
-def test_the_saved_bar_is_gone_after_a_page_change(tmp_path: Path) -> None:
+def test_the_saved_bar_is_gone_after_a_page_change(tmp_path: Path, monkeypatch: Any) -> None:
     """已保存条不是持久状态：换页再回来就是三个 Tile。"""
+    _pin_clock(monkeypatch)
     kernel = _kernel(tmp_path)
     ui = kernel.resolve("ui")
     uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
     handler, _ = _recording(ui, "录音", "audio_capture")
     ui.event(handler, _audio_take(uploaded, 3))
 
-    _click_rail(ui, "语音 0:03")
+    _click_rail(ui, "语音 11-11 03:41")
     home = _click_button(ui, "← 返回")
 
     assert list(_tiles(home)) == ["录音", "视频", "文字"]
@@ -240,9 +256,10 @@ def test_the_saved_bar_is_gone_after_a_page_change(tmp_path: Path) -> None:
 
 
 def test_collapsing_while_recording_stores_the_take_without_reopening_the_bar(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: Any
 ) -> None:
     """录制中点收起：引擎在卸载时停止并提交，带的 id 属于上一代；只落库，别把面板变回来。"""
+    _pin_clock(monkeypatch)
     kernel = _kernel(tmp_path)
     ui = kernel.resolve("ui")
     uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
@@ -256,7 +273,7 @@ def test_collapsing_while_recording_stores_the_take_without_reopening_the_bar(
 
     settled = ui.event(handler, _audio_take(uploaded, 3))
 
-    assert _cards(settled) == ["语音 0:03"]
+    assert _cards(settled) == ["语音 11-11 03:41"]
     assert settled["pages"][0]["count"] == 1
     assert list(_tiles(settled)) == ["录音", "视频", "文字"]
     assert _nodes(settled["content"], "audio") == []
