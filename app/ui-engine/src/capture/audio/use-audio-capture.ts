@@ -57,6 +57,8 @@ export function useAudioRecorder(options: AudioRecorderOptions) {
   } = options;
   const [phase, setPhase] = useState<AudioPhase>("idle");
   const [seconds, setSeconds] = useState(0);
+  /** wavesurfer 是异步加载的：加载完之前不能开录，否则 autostart 会扑空。 */
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const wavesurfer = useRef<WaveSurfer | null>(null);
   const record = useRef<RecordPlugin | null>(null);
@@ -154,6 +156,7 @@ export function useAudioRecorder(options: AudioRecorderOptions) {
       );
       wavesurfer.current = wave;
       record.current = plugin;
+      setLoaded(true);
 
       // wavesurfer 的进度是毫秒；Omora 这边一律按秒。
       plugin.on("record-progress", (millis: number) => {
@@ -224,13 +227,13 @@ export function useAudioRecorder(options: AudioRecorderOptions) {
     }
   }, [deviceId, ready]);
 
-  // 按住空格进来的：挂上就开录。
+  // 按住空格进来的：波形库加载完、设备就绪之后立刻开录。
   useEffect(() => {
-    if (!autostart || !ready) {
+    if (!autostart || !ready || !loaded) {
       return;
     }
     void start();
-  }, [autostart, ready, start]);
+  }, [autostart, loaded, ready, start]);
 
   const stop = useCallback(() => {
     record.current?.stopRecording();
