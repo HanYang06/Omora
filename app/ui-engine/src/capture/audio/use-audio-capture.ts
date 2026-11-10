@@ -106,7 +106,7 @@ export function useAudioRecorder(options: AudioRecorderOptions) {
   /** record-end：算时长、按规则决定要不要交，然后销毁波形实例。 */
   const settle = useCallback(
     (blob: Blob) => {
-      const length = record.current?.getDuration() ?? 0;
+      const length = (record.current?.getDuration() ?? 0) / 1000;
       const plan = planStop({
         submitted: submitted.current,
         hasData: blob.size > 0,
@@ -155,10 +155,12 @@ export function useAudioRecorder(options: AudioRecorderOptions) {
       wavesurfer.current = wave;
       record.current = plugin;
 
-      plugin.on("record-progress", (duration: number) => {
+      // wavesurfer 的进度是毫秒；Omora 这边一律按秒。
+      plugin.on("record-progress", (millis: number) => {
         if (unmounted.current) {
           return;
         }
+        const duration = millis / 1000;
         setSeconds(duration);
         if (limit.current > 0 && duration >= limit.current) {
           plugin.stopRecording();
