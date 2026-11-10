@@ -20,6 +20,40 @@ const DEFAULT_SECONDS = 120;
 type Mode = "idle" | "recording" | "review" | "uploading";
 
 /**
+ * 录制时的实时预览。
+ *
+ * 只把 stream 挂到 srcObject 上是不够的：video 不会自己开播，画面就一直是黑的。
+ * 要 autoPlay + muted（静音才允许自动播），拿到流之后补一次 play()。
+ */
+export function LiveVideo({ stream }: { stream: MediaStream | null }): ReactNode {
+  const element = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = element.current;
+    if (video === null) {
+      return;
+    }
+    video.srcObject = stream;
+    if (stream !== null) {
+      void video.play().catch(() => {
+        // 自动播放被拦时留黑帧，不弹错：用户还能停、能保存
+      });
+    }
+  }, [stream]);
+
+  return (
+    <video
+      className="omora-video"
+      data-type="video-live"
+      ref={element}
+      autoPlay
+      muted
+      playsInline
+    />
+  );
+}
+
+/**
  * video_capture：视频捕捉条。
  *
  * 设备与权限在客户端；录的时候有实时预览，停下来的先给一次回看——满意再保存，
@@ -46,7 +80,6 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
   const started = useRef(0);
   const timer = useRef<number | null>(null);
   const cancelled = useRef(false);
-  const live = useRef<HTMLVideoElement | null>(null);
 
   const clearPreview = useCallback(() => {
     setPreviewUrl((current) => {
@@ -78,14 +111,6 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
       clearPreview();
     };
   }, [clearPreview, release]);
-
-  useEffect(() => {
-    const element = live.current;
-    if (element === null) {
-      return;
-    }
-    element.srcObject = mode === "recording" ? stream.current : null;
-  }, [mode]);
 
   const stop = useCallback(() => {
     const active = recorder.current;
@@ -186,9 +211,7 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
 
   return (
     <div className="omora-video-bar" data-type="video_capture" data-gate={ready ? "on" : "off"}>
-      {mode === "recording" ? (
-        <video className="omora-video" ref={live} muted playsInline />
-      ) : null}
+      {mode === "recording" ? <LiveVideo stream={stream.current} /> : null}
       {mode === "review" && previewUrl !== undefined ? (
         <video className="omora-video" src={previewUrl} controls playsInline />
       ) : null}
