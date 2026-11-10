@@ -42,7 +42,7 @@ async function grab(window) {
     try {
       const shot = await debugger_.sendCommand("Page.captureScreenshot", {
         format: "png",
-        fromSurface: false,
+        fromSurface: process.env.OMORA_SHOT_SURFACE === "1",
         captureBeyondViewport: false,
       });
       return Buffer.from(shot.data, "base64");
@@ -53,6 +53,21 @@ async function grab(window) {
 }
 
 /** 截图时顺手把 DOM 的关键尺寸倒出来，省得瞎猜。 */
+/** 截图前先点一下某个元素：验证交互后的画面（例如录制中的实时预览）。 */
+async function clickForShot(window) {
+  const selector = process.env.OMORA_CLICK ?? "";
+  if (selector.length === 0) {
+    return;
+  }
+  try {
+    await window.webContents.executeJavaScript(
+      `document.querySelector(${JSON.stringify(selector)})?.click()`,
+    );
+  } catch (error) {
+    console.error("[shell] 点击失败 " + error);
+  }
+}
+
 async function dumpLayout(window) {
   const script = `(() => {
     const pick = (sel) => {
@@ -70,6 +85,17 @@ async function dumpLayout(window) {
       main: pick(".omora-split-main"),
       mainFirst: (document.querySelector(".omora-split-main")?.firstElementChild?.className) ?? null,
       search: pick(".omora-search"),
+      live: (() => {
+        const video = document.querySelector('video[data-type="video-live"]');
+        if (!video) return null;
+        return {
+          w: video.videoWidth,
+          h: video.videoHeight,
+          readyState: video.readyState,
+          paused: video.paused,
+          time: Math.round(video.currentTime * 10) / 10,
+        };
+      })(),
       errors: window.__omoraErrors ?? [],
     };
   })()`;
@@ -99,6 +125,9 @@ function capture(window) {
   window.webContents.once("did-finish-load", () => {
     setTimeout(async () => {
       try {
+        await clickForShot(window);
+        // 点完之后给状态机一点时间：权限、getUserMedia、video 挂流都要几帧
+        await new Promise((done) => setTimeout(done, 1500));
         await dumpLayout(window);
         fs.writeFileSync(SHOT, await grab(window));
         console.log("[shell] 截图已存 " + SHOT);

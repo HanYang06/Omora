@@ -49,6 +49,17 @@ pnpm --dir app/shell install                    # 第一次
 同时把 `#root` / `.omora-app` / `.omora-split` 的尺寸和视口写进 `路径.json` ——
 "页面是不是真的画出来了"不该靠猜。
 
+三个配套开关：
+
+| 变量 | 作用 |
+|---|---|
+| `OMORA_CLICK=CSS 选择器` | 截图前先点一下（验证交互后的画面，比如录制预览），点完等 1.5s |
+| `OMORA_SHOT_SURFACE=1` | 用 surface 截图。默认走 renderer 截图，**视频帧是黑的**；要看画面必须开这个 |
+| `路径.json` 里的 `live` 字段 | `<video data-type="video-live">` 的 `videoWidth/readyState/paused/currentTime`，判断"是没流还是没播" |
+
+第 5 个坑：**截图看不见视频**。渲染器侧截图拿不到视频层，会是一片黑，但这不代表
+预览坏了——先看 `live` 的 `readyState=4 / paused=false`，再决定要不要开 surface。
+
 ## 下一步
 
 - 打包：electron-builder，Windows 先做
