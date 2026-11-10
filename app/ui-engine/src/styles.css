@@ -7,10 +7,16 @@
   --muted: #6d7268;
   --line: #d3d7c9;
   --accent: #27664b;
+  --accent-strong: #1e523c;
   --tint: rgba(39, 102, 75, 0.12);
   --hover: rgba(26, 29, 25, 0.055);
   --warn: #a8701f;
   --danger: #a63d34;
+  --inset: 40px;
+  --radius-sm: 7px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
   --ui: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif;
 }
 
@@ -32,78 +38,75 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* 壳：左边图标栏，右边主区 */
+
 .omora-app {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 56px minmax(0, 1fr);
   height: 100%;
 }
 
-/* 侧栏 */
-
-.omora-sidebar {
+.omora-shell-rail {
   display: flex;
   flex-direction: column;
-  padding: 32px 16px 22px;
-  border-right: 1px solid var(--line);
-}
-
-.omora-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.omora-nav-item {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  min-height: 0;
+  padding: 14px 0 12px;
+  border-right: 1px solid var(--line);
+  background: var(--desk);
+}
+
+.omora-shell-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   width: 100%;
-  padding: 7px 12px;
+}
+
+.omora-shell-item {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: none;
-  color: var(--ink);
-  font: inherit;
-  font-size: 14px;
-  text-align: left;
+  color: var(--muted);
   cursor: pointer;
 }
 
-.omora-nav-item:hover {
+.omora-shell-item:hover {
   background: var(--hover);
+  color: var(--ink);
 }
 
-.omora-nav-item[aria-current="page"] {
-  background: var(--tint);
-}
-
-.omora-nav-count {
-  font-size: 12px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.omora-nav-item[aria-current="page"] .omora-nav-count {
+.omora-shell-item[aria-current="page"] {
+  background: var(--paper);
   color: var(--accent);
+  box-shadow: 0 1px 2px rgba(26, 29, 25, 0.08);
 }
 
-.omora-sidebar-foot {
+.omora-shell-foot {
+  display: grid;
+  place-items: center;
+  width: 100%;
   margin-top: auto;
+  padding-top: 10px;
 }
 
 .omora-conn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  font-size: 12px;
-  color: var(--muted);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
 }
 
 .omora-conn-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--muted);
 }
@@ -121,38 +124,84 @@ body {
   background: var(--danger);
 }
 
-/* 页面 */
+/* 状态文字只给读屏，栏里只留圆点 */
+.omora-conn-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 主区：铺满，不再 720px 居中 */
 
 .omora-page {
   min-width: 0;
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--paper);
 }
 
 .omora-page-inner {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 72px 32px 96px;
+  height: 100%;
+  padding: 32px var(--inset);
+  overflow-y: auto;
 }
 
-.omora-page-head {
+/* split：索引栏 + 主区，撑满高度，各自滚动 */
+
+.omora-split {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.omora-split-side {
+  min-width: 0;
+  min-height: 0;
+  padding-right: 20px;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
+
+.omora-split-main {
+  min-width: 0;
+  min-height: 0;
+  padding-left: 32px;
+  overflow-y: auto;
+}
+
+/* rail：索引栏 */
+
+.omora-rail {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 34px;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
-.omora-page-title {
-  margin: 0;
-  font-size: 21px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.omora-page-count {
-  font-size: 12px;
+.omora-rail-title {
+  margin: 2px 0 14px;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.omora-rail-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  margin: 0;
+  padding: 0 4px 0 0;
+  overflow-y: auto;
+  list-style: none;
 }
 
 .omora-column {
@@ -166,6 +215,11 @@ body {
   gap: 12px;
 }
 
+/* 工具条和下面的 feed 之间留一口气 */
+.omora-row:has(.omora-chip) {
+  margin-bottom: 16px;
+}
+
 .omora-text--title {
   font-size: 21px;
   font-weight: 600;
@@ -174,6 +228,163 @@ body {
 .omora-text--muted {
   font-size: 13px;
   color: var(--muted);
+}
+
+/* 图标 */
+
+.omora-icon {
+  display: inline-flex;
+}
+
+.omora-icon-svg {
+  display: block;
+  flex: none;
+}
+
+/* 捕捉大按钮 */
+
+.omora-tile {
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.omora-tile:hover {
+  border-color: var(--accent);
+}
+
+.omora-tile:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.omora-tile-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--tint);
+  color: var(--accent);
+}
+
+.omora-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.omora-tile-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.omora-tile-hint {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* 工具条小药丸 */
+
+.omora-chip {
+  padding: 5px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.omora-chip:hover {
+  border-color: var(--muted);
+  color: var(--ink);
+}
+
+.omora-chip.is-active {
+  border-color: var(--accent);
+  background: var(--tint);
+  color: var(--accent);
+}
+
+.omora-chip:disabled {
+  cursor: default;
+}
+
+/* 推荐卡片 */
+
+.omora-card {
+  display: block;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.omora-card + .omora-card {
+  margin-top: 12px;
+}
+
+.omora-card[data-handler] {
+  cursor: pointer;
+}
+
+.omora-card[data-handler]:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 10px rgba(26, 29, 25, 0.05);
+}
+
+.omora-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.omora-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.omora-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.omora-card-meta {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.omora-card-text {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.omora-card-media {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 /* 捕捉行 */
@@ -255,6 +466,70 @@ body {
   min-width: 0;
 }
 
+/* 可点行里的动作容器：不参与布局，只负责挡住整行点击 */
+.omora-item-actions {
+  display: contents;
+}
+
+.omora-item-link {
+  display: block;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.omora-item-link:hover {
+  color: var(--accent);
+}
+
+/* 索引栏里的行：整块两行，整行可点 */
+
+.omora-rail .omora-item {
+  display: block;
+  min-height: 44px;
+  padding: 5px 10px;
+  border-bottom: 0;
+  border-radius: var(--radius-sm);
+}
+
+.omora-rail .omora-item[data-handler] {
+  cursor: pointer;
+}
+
+.omora-rail .omora-item[data-handler]:hover {
+  background: var(--hover);
+}
+
+.omora-rail .omora-item-meta {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.omora-rail .omora-item-main {
+  display: block;
+  padding-left: 0;
+  border-left: 0;
+}
+
+.omora-rail .omora-item-title,
+.omora-rail .omora-item-link {
+  display: block;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* 动作 */
 
 .omora-button {
@@ -278,10 +553,21 @@ body {
 }
 
 .omora-button--ghost {
-  padding: 3px 6px;
+  padding: 4px 8px;
   border: 0;
   background: none;
   color: var(--muted);
+  font-size: 13px;
+}
+
+.omora-button--ghost:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+/* 只有账本行里的行内动作才随 hover 出现 */
+.omora-item .omora-button--ghost {
+  padding: 3px 6px;
   font-size: 12px;
   opacity: 0;
 }
@@ -291,29 +577,19 @@ body {
   opacity: 1;
 }
 
-.omora-button--ghost:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-
 /* 空状态 */
 
 .omora-empty {
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: 20px;
-  padding-top: 46px;
+  padding-top: 24px;
 }
 
 .omora-empty-title {
-  grid-column: 2;
   margin: 0 0 4px;
   font-size: 15px;
   font-weight: 600;
 }
 
 .omora-empty-hint {
-  grid-column: 2;
   margin: 0;
   font-size: 14px;
   color: var(--muted);
@@ -363,18 +639,20 @@ body {
 }
 
 .omora-search-submit {
-  padding: 4px 12px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--paper);
-  color: var(--ink);
+  padding: 5px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--paper);
   font: inherit;
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .omora-search-submit:hover {
-  border-color: var(--accent);
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
 }
 
 .omora-search-submit:disabled {

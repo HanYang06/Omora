@@ -21,6 +21,11 @@ export function prop(node: Node, name: string): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+/** props 里的布尔开关；只有真正的 true 才算开。 */
+export function flag(node: Node, name: string): boolean {
+  return node.props?.[name] === true;
+}
+
 export function clock(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;

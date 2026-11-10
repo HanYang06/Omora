@@ -19,10 +19,12 @@ export interface MediaData {
 
 export type MediaResolver = (media: string) => Promise<MediaData>;
 
-/** 导航里的一项：页面登记时给的 name / label / 可选数量。 */
+/** 导航里的一项：页面登记时给的 name / label / 可选图标 / 可选数量。 */
 export interface PageEntry {
   name: string;
   label: string;
+  /** 图标栏用的词表名字；页面没给就用 dot。 */
+  icon?: string;
   count?: number;
 }
 

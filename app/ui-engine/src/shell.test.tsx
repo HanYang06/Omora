@@ -1,12 +1,12 @@
 import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { NavItem, Shell } from "./shell";
+import { RailButton, Shell } from "./shell";
 import type { MediaData, Snapshot } from "./types";
 
 const snapshot: Snapshot = {
   pages: [
-    { name: "ideas", label: "灵感", count: 2 },
+    { name: "ideas", label: "灵感", icon: "ideas", count: 2 },
     { name: "projects", label: "项目" },
   ],
   page: "ideas",
@@ -15,29 +15,11 @@ const snapshot: Snapshot = {
     type: "column",
     props: {},
     children: [
-      { type: "recorder", props: { on_submit: "ideas:1:0" }, children: [] },
+      { type: "text", props: { text: "还没有灵感。" }, children: [] },
       {
-        type: "input",
-        props: { placeholder: "记一条灵感…", on_submit: "ideas:1:1" },
+        type: "button",
+        props: { text: "记一条", on_click: "ideas:1:0" },
         children: [],
-      },
-      {
-        type: "list",
-        props: {},
-        children: [
-          {
-            type: "item",
-            props: { meta: "刚刚", title: "语音 0:03" },
-            children: [
-              { type: "audio", props: { media: "abc" }, children: [] },
-              {
-                type: "button",
-                props: { text: "归档", on_click: "ideas:1:2", variant: "ghost" },
-                children: [],
-              },
-            ],
-          },
-        ],
       },
     ],
   },
@@ -50,7 +32,7 @@ async function loadMedia(_media: string): Promise<MediaData> {
 }
 
 describe("Shell", () => {
-  it("画出导航、当前页、捕获控件和连接状态", () => {
+  it("左边是图标栏：每页一个图标按钮，当前页标出来，底部是连接圆点", () => {
     const html = renderToString(
       <Shell
         snapshot={snapshot}
@@ -62,15 +44,52 @@ describe("Shell", () => {
       />,
     );
 
-    expect(html).toContain("灵感");
-    expect(html).toContain("项目");
+    expect(html).toContain('data-connection="open"');
+    expect(html).toContain("omora-shell-rail");
+    expect(html).toContain('aria-label="灵感"');
+    expect(html).toContain('aria-label="项目"');
     expect(html).toContain('aria-current="page"');
-    expect(html).toContain("2 条");
-    expect(html).toContain("语音 0:03");
-    expect(html).toContain("录音");
-    expect(html).toContain('aria-label="播放"');
-    expect(html).toContain("已连接");
+    expect(html).toContain('data-icon="ideas"');
+    // 页面没给 icon 就用 dot
+    expect(html).toContain('data-icon="dot"');
+    expect(html).not.toContain("omora-nav-item");
+    expect(html).not.toContain("omora-sidebar");
+  });
+
+  it("主区只铺内容：不再有 720px 居中的页头", () => {
+    const html = renderToString(
+      <Shell
+        snapshot={snapshot}
+        status="open"
+        endpoint="ws://127.0.0.1:8765"
+        onNavigate={noop}
+        onEvent={noop}
+        loadMedia={loadMedia}
+      />,
+    );
+
+    expect(html).toContain("omora-page-inner");
+    expect(html).toContain("还没有灵感。");
+    expect(html).toContain("记一条");
+    expect(html).not.toContain("omora-page-head");
+    expect(html).not.toContain("omora-page-title");
+  });
+
+  it("底部圆点写清连接状态", () => {
+    const html = renderToString(
+      <Shell
+        snapshot={snapshot}
+        status="open"
+        endpoint="ws://127.0.0.1:8765"
+        onNavigate={noop}
+        onEvent={noop}
+        loadMedia={loadMedia}
+      />,
+    );
+
+    expect(html).toContain("omora-conn-dot");
     expect(html).toContain('data-status="open"');
+    expect(html).toContain("已连接");
   });
 
   it("没有快照时只剩壳，状态照写", () => {
@@ -85,8 +104,9 @@ describe("Shell", () => {
       />,
     );
 
+    expect(html).toContain("omora-shell-rail");
     expect(html).toContain("连接中…");
-    expect(html).not.toContain("omora-nav-item");
+    expect(html).not.toContain("omora-shell-item");
     expect(html).not.toContain("omora-page-inner");
   });
 
@@ -103,12 +123,13 @@ describe("Shell", () => {
     );
 
     expect(html).toContain("连接已断开");
+    expect(html).toContain('data-status="closed"');
   });
 
-  it("NavItem 点击把页面名字交出去", () => {
+  it("RailButton 点击把页面名字交出去", () => {
     const onNavigate = vi.fn();
-    const element = NavItem({
-      entry: { name: "ideas", label: "灵感", count: 2 },
+    const element = RailButton({
+      entry: { name: "ideas", label: "灵感", icon: "ideas", count: 2 },
       active: true,
       onNavigate,
     }) as unknown as ReactElement<{ onClick: () => void }>;
@@ -116,5 +137,21 @@ describe("Shell", () => {
     element.props.onClick();
 
     expect(onNavigate).toHaveBeenCalledWith("ideas");
+  });
+
+  it("RailButton 没有 icon 时画 dot，label 只进 aria-label", () => {
+    const element = RailButton({
+      entry: { name: "projects", label: "项目" },
+      active: false,
+      onNavigate: noop,
+    }) as unknown as ReactElement<{
+      "data-icon": string;
+      "aria-label": string;
+      "aria-current"?: string;
+    }>;
+
+    expect(element.props["data-icon"]).toBe("dot");
+    expect(element.props["aria-label"]).toBe("项目");
+    expect(element.props["aria-current"]).toBeUndefined();
   });
 });

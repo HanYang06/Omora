@@ -1,8 +1,12 @@
 import type { ComponentType, ReactNode } from "react";
 import { AudioCapture } from "./audio-capture";
+import { Card } from "./cards";
 import { Audio, Recorder } from "./capture";
+import { Icon } from "./icons";
+import { Rail, Split } from "./layout";
 import { Result, Search, Suggestion } from "./search";
 import { prop, textOf, type NodeComponentProps } from "./shared";
+import { Chip, Tile } from "./tiles";
 import { VideoCapture, VideoPlayer } from "./video-capture";
 
 /** column：纵向堆叠。 */
@@ -106,14 +110,56 @@ export function List({ children }: NodeComponentProps): ReactNode {
   );
 }
 
-/** item：左栏 meta、右边标题，子节点是这一行的动作。 */
-export function Item({ node, children }: NodeComponentProps): ReactNode {
+/**
+ * item：左栏 meta、右边标题，子节点是这一行的动作。
+ * 给了 on_click 就整行可点：标题仍是原生按钮（键盘由它负责），
+ * 行内动作放在一个不传点击的容器里，避免误触整行。
+ */
+export function Item({ node, onEvent, children }: NodeComponentProps): ReactNode {
+  const title = prop(node, "title") ?? "";
+  const handler = prop(node, "on_click");
+  const clickable = handler !== undefined && handler.length > 0;
+
+  const fire = (): void => {
+    if (clickable) {
+      onEvent?.(handler, {});
+    }
+  };
+
   return (
-    <li className="omora-item" data-type="item">
+    <li
+      className="omora-item"
+      data-type="item"
+      data-handler={clickable ? handler : undefined}
+      onClick={clickable ? fire : undefined}
+    >
       <span className="omora-item-meta">{prop(node, "meta") ?? ""}</span>
       <span className="omora-item-main">
-        <span className="omora-item-title">{prop(node, "title") ?? ""}</span>
-        {children}
+        {clickable ? (
+          <button
+            type="button"
+            className="omora-item-link"
+            data-handler={handler}
+            onClick={(event) => {
+              event.stopPropagation();
+              fire();
+            }}
+          >
+            {title}
+          </button>
+        ) : (
+          <span className="omora-item-title">{title}</span>
+        )}
+        {clickable ? (
+          <span
+            className="omora-item-actions"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {children}
+          </span>
+        ) : (
+          children
+        )}
       </span>
     </li>
   );
@@ -150,4 +196,10 @@ export const components: Record<string, ComponentType<NodeComponentProps>> = {
   search: Search,
   suggestion: Suggestion,
   result: Result,
+  split: Split,
+  rail: Rail,
+  icon: Icon,
+  tile: Tile,
+  chip: Chip,
+  card: Card,
 };
