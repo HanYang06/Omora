@@ -12,7 +12,7 @@ const ACCENT = "#27664b";
 const ACCENT_STRONG = "#1e523c";
 
 /** 实时波形看最近多少秒。 */
-const WAVE_WINDOW_SECONDS = 20;
+const WAVE_WINDOW_SECONDS = 10;
 
 export interface AudioRecorderOptions {
   container: React.RefObject<HTMLDivElement | null>;
