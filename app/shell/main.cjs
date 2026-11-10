@@ -9,7 +9,7 @@
  * 壳只当浏览器用；发布形态再让壳去拉起 kernel，是下一步的事。
  */
 
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, session } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -81,6 +81,20 @@ async function dumpLayout(window) {
   }
 }
 
+/**
+ * 麦克风 / 摄像头的授权：Electron 不会替用户弹权限框，必须在这里显式放行。
+ * 只放 media，别的（剪贴板、通知……）一律不给。
+ */
+function grantMedia() {
+  const allowed = new Set(["media"]);
+  session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => {
+    callback(allowed.has(permission));
+  });
+  session.defaultSession.setPermissionCheckHandler((_contents, permission) =>
+    allowed.has(permission),
+  );
+}
+
 function capture(window) {
   window.webContents.once("did-finish-load", () => {
     setTimeout(async () => {
@@ -142,7 +156,10 @@ function createWindow() {
   window.loadFile(index);
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  grantMedia();
+  createWindow();
+});
 
 app.on("window-all-closed", () => {
   app.quit();
