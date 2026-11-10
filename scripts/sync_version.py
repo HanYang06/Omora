@@ -59,13 +59,10 @@ def sync_json(path: Path, version: str) -> bool:
 
 def main() -> int:
     version = current_version()
-    changed: list[str] = []
-    for path in pyproject_paths():
-        if path.exists() and sync_pyproject(path, version):
-            changed.append(str(path))
-    for path in json_paths():
-        if path.exists() and sync_json(path, version):
-            changed.append(str(path))
+    changed = [
+        str(path) for path in pyproject_paths() if path.exists() and sync_pyproject(path, version)
+    ]
+    changed.extend(str(path) for path in json_paths() if path.exists() and sync_json(path, version))
     if changed:
         print(f"已同步到 {version}:")
         for path in changed:

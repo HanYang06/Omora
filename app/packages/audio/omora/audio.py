@@ -120,7 +120,7 @@ class Audio:
                 after=len(data),
             )
             return fresh
-        except Exception as exc:  # noqa: BLE001 — 后处理坏了也要把原录音还给用户
+        except Exception as exc:
             log.warning("audio.post_process.failed", err=type(exc).__name__)
             return media_id
 

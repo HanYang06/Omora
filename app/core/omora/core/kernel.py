@@ -50,7 +50,7 @@ class Kernel:
             self._log.child(plugin.name).error("plugin.failed", err=type(exc).__name__)
             try:
                 ctx.dispose()
-            except BaseException as rollback:  # noqa: BLE001 — 回滚失败不能盖掉原始异常
+            except BaseException as rollback:
                 exc.add_note(f'插件 "{plugin.name}" 回滚时又出错: {rollback!r}')
             exc.add_note(f'插件 "{plugin.name}" 装载失败')
             raise

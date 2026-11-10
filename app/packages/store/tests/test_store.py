@@ -364,3 +364,109 @@ def test_declaring_an_unknown_pin_column_is_an_error() -> None:
 def test_declaring_a_non_bool_pin_column_is_an_error() -> None:
     with pytest.raises(ValueError, match="必须是 bool"):
         Store().collection("notes", fields={"title": "text"}, pinned="title")
+
+
+def test_a_required_field_rejects_none() -> None:
+    with pytest.raises(ValueError, match="不能为空"):
+        _notes(Store()).add(title=None)
+
+
+def test_a_text_field_rejects_a_non_string() -> None:
+    with pytest.raises(ValueError, match="要 text"):
+        _notes(Store()).add(title=1)
+
+
+def test_a_bool_field_rejects_a_non_bool() -> None:
+    with pytest.raises(ValueError, match="要 bool"):
+        _notes(Store()).add(title="x", done="yes")
+
+
+def test_a_time_field_rejects_a_non_datetime() -> None:
+    with pytest.raises(ValueError, match="要 time"):
+        _notes(Store()).add(title="x", when="2026-01-01")
+
+
+def test_numeric_fields_round_trip_and_reject_bools() -> None:
+    scores = Store().collection("scores", fields={"name": "text", "n": "int", "x": "float"})
+
+    record = scores.add(name="a", n=3, x=1)
+
+    assert (record.n, record.x) == (3, 1.0)
+    with pytest.raises(ValueError, match="要 int"):
+        scores.add(name="a", n=True, x=1)
+    with pytest.raises(ValueError, match="要 float"):
+        scores.add(name="a", n=1, x=True)
+
+
+def test_bad_schema_declarations_are_rejected() -> None:
+    store = Store()
+
+    with pytest.raises(ValueError, match="未知字段类型"):
+        store.collection("bad", fields={"x": "blob"})
+    with pytest.raises(ValueError, match="保留"):
+        store.collection("bad", fields={"id": "text"})
+    with pytest.raises(ValueError, match="非法名字"):
+        store.collection("Bad", fields={"x": "text"})
+    with pytest.raises(ValueError, match="未知索引字段"):
+        store.collection("bad", fields={"x": "text"}, indexes=["nope"])
+
+
+def test_writing_an_unknown_field_is_rejected() -> None:
+    notes = _notes(Store())
+    record = notes.add(title="x")
+
+    with pytest.raises(ValueError, match="未知字段"):
+        notes.add(title="x", nope=1)
+    with pytest.raises(ValueError, match="未知字段"):
+        notes.update(record.id, nope=1)
+    with pytest.raises(ValueError, match="至少要改"):
+        notes.update(record.id)
+
+
+def test_find_rejects_bad_order_and_filters() -> None:
+    notes = _notes(Store())
+
+    with pytest.raises(ValueError, match="order 格式"):
+        notes.find(order="a b c")
+    with pytest.raises(ValueError, match="asc/desc"):
+        notes.find(order="title sideways")
+    with pytest.raises(ValueError, match="未知 order"):
+        notes.find(order="nope")
+    with pytest.raises(ValueError, match="未知字段"):
+        notes.find(where={"nope": 1})
+    with pytest.raises(ValueError, match="过滤条件为空"):
+        notes.find(where={"title": {}})
+    with pytest.raises(ValueError, match="不支持的过滤操作"):
+        notes.find(where={"title": {"$bogus": 1}})
+
+
+def test_filters_handle_none_and_in() -> None:
+    notes = _notes(Store())
+    notes.add(title="x")
+
+    assert notes.count(where={"done": None}) == 1
+    assert notes.count(where={"done": {"$eq": None}}) == 1
+    assert notes.count(where={"done": {"$ne": None}}) == 0
+    assert notes.count(where={"title": {"$in": ["x", "y"]}}) == 1
+    with pytest.raises(ValueError, match="非空列表"):
+        notes.find(where={"title": {"$in": []}})
+    with pytest.raises(ValueError, match="不支持 None"):
+        notes.find(where={"title": {"$gt": None}})
+
+
+def test_find_bounds_limit_and_offset() -> None:
+    notes = _notes(Store())
+
+    with pytest.raises(ValueError, match="limit"):
+        notes.find(limit=0)
+    with pytest.raises(ValueError, match="offset"):
+        notes.find(offset=-1)
+
+
+def test_a_record_supports_attribute_access_and_repr() -> None:
+    record = _notes(Store()).add(title="x")
+
+    assert record.title == "x"
+    assert "x" in repr(record)
+    with pytest.raises(AttributeError):
+        _ = record.nope

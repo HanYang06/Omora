@@ -15,7 +15,9 @@ OMORA_LOG，并在端口被占时直接给出处理命令。
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -117,20 +119,14 @@ def _stop(process: subprocess.Popen[bytes]) -> None:
             capture_output=True,
         )
     else:
-        import signal
-
-        try:
+        with contextlib.suppress(ProcessLookupError):
             os.killpg(process.pid, signal.SIGTERM)
-        except ProcessLookupError:
-            pass
     try:
         process.wait(timeout=10)
     except subprocess.TimeoutExpired:
         process.kill()
-        try:
+        with contextlib.suppress(subprocess.TimeoutExpired):
             process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            pass
 
 
 def _watch(processes: list[tuple[str, subprocess.Popen[bytes]]]) -> int:
@@ -145,7 +141,7 @@ def _watch(processes: list[tuple[str, subprocess.Popen[bytes]]]) -> int:
         time.sleep(POLL_SECONDS)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:  # noqa: PLR0912, PLR0915 —— CLI 编排
     # 终端编码：子进程（vite / 日志）会吐非 GBK 字符，先统一成 UTF-8
     cast(Any, sys.stdout).reconfigure(encoding="utf-8", errors="replace")
     cast(Any, sys.stderr).reconfigure(encoding="utf-8", errors="replace")

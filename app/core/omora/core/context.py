@@ -81,7 +81,7 @@ class Context:
             for fn in reversed(self._effects):
                 try:
                     fn()
-                except BaseException as exc:  # noqa: BLE001 — 一个撤销失败不能挡住后面的
+                except BaseException as exc:
                     errors.append(exc)
         finally:
             self._effects.clear()

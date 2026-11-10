@@ -26,6 +26,7 @@ dependencies = [
 dev = [
     "mypy>=2.4.1",
     "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
     "ruff>=0.17.4",
     "types-pyyaml>=6.0.12.20261103",
 ]
@@ -52,14 +53,67 @@ members = ["app/cli", "app/core", "app/sdk", "app/packages/*"]
 [tool.pytest.ini_options]
 pythonpath = ["app"]
 testpaths = ["app"]
+addopts = ["--strict-markers", "--strict-config"]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_covered = true
 
 [tool.ruff]
 line-length = 100
 target-version = "py314"
 exclude = [".agents", ".venv"]
 
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "UP",
+    "B",
+    "C4",
+    "SIM",
+    "RUF",
+    "PIE",
+    "PERF",
+    "PT",
+    "DTZ",
+    "ARG",
+    "PL",
+    "T20",
+    "S",
+]
+# 中文全角标点是正文的一部分，不是易混淆字符。
+ignore = ["RUF001", "RUF002", "RUF003"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["boot", "main", "omora"]
+
+[tool.ruff.lint.per-file-ignores]
+# 测试本来就用 assert；断言值就是具体常量；夹具参数为对齐接口而存在。
+# scripts 与 app/cli 是给人看的命令入口，print 与子进程是本职。
+"**/tests/**" = [
+    "S101",
+    "S603",
+    "S607",
+    "PLR2004",
+    "PLR0913",
+    "PLR0917",
+    "DTZ001",
+    "DTZ005",
+    "ARG001",
+    "ARG002",
+    "ARG005",
+]
+"scripts/*.py" = ["T201", "S603", "S607", "PLR2004"]
+"app/cli/**" = ["T201", "S603", "S607"]
 
 [tool.mypy]
 python_version = "3.14"

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import weakref
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
@@ -25,6 +26,12 @@ class Store:
         self._path = path
         self._dev = dev
         self._conn = self._open()
+        # 连接跟着 Store 走：Store 被回收时先关连接，避免 sqlite 自己的
+        # 终结器晚一步触发、在别的测试里冒出 ResourceWarning。
+        self._finalizer = weakref.finalize(self, self._conn.close)
+
+    def close(self) -> None:
+        self._finalizer()
 
     def _open(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self._path)
@@ -71,7 +78,16 @@ class Store:
                 raise ValueError(f"未知索引字段: {index}")
         searched = _search_fields(parsed, searchable)
         _pin_field(parsed, pinned)
-        return Collection(self._conn, name, parsed, tuple(indexes), self._dev, searched, pinned)
+        return Collection(
+            self._conn,
+            name,
+            parsed,
+            tuple(indexes),
+            self._dev,
+            searched,
+            pinned,
+            owner=self,
+        )
 
 
 def _search_fields(fields: Mapping[str, Field], searchable: Sequence[str]) -> tuple[str, ...]:

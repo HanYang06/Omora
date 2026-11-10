@@ -495,6 +495,5 @@ def _items(node: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _all_text(node: dict[str, Any]) -> str:
     parts = [str(node["props"].get("text", ""))]
-    for child in node["children"]:
-        parts.append(_all_text(child))
+    parts.extend(_all_text(child) for child in node["children"])
     return " ".join(parts)

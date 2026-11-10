@@ -35,7 +35,7 @@ class Ui:
         self._pages: dict[str, _Page] = {}
         self._log = log if log is not None else NullLog()
 
-    def page(
+    def page(  # noqa: PLR0913, PLR0917 —— 页面登记的声明式参数
         self,
         ctx: Context,
         name: str,

@@ -79,7 +79,7 @@ def process(data: bytes) -> tuple[bytes, str]:
         source = room / "in.media"
         target = room / "out.mp4"
         source.write_bytes(data)
-        done = subprocess.run(
+        done = subprocess.run(  # noqa: S603 —— argv 固定，路径走参数列表，不经 shell
             command(source, target),
             capture_output=True,
             check=False,

@@ -12,6 +12,7 @@ v0 的边界（CORS、上限、错误码、没有鉴权）写在 docs/design/pro
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 from typing import Any
 from urllib.parse import unquote, urlsplit
@@ -20,6 +21,7 @@ from omora.sdk import Context
 
 MAX_HEADER_BYTES = 16 * 1024
 MEDIA_PREFIXES = ("audio/", "video/")
+_REQUEST_PARTS = 3
 _REASONS = {
     200: "OK",
     201: "Created",
@@ -75,7 +77,7 @@ class MediaHttp:
     async def _connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         try:
             status, headers, body = await self._handle(reader)
-        except Exception as exc:  # noqa: BLE001 — 一个坏请求不能把通道带崩
+        except Exception as exc:
             status = 500
             headers = {"Content-Type": "application/json"}
             body = _json({"error": str(exc)})
@@ -87,7 +89,7 @@ class MediaHttp:
         except asyncio.IncompleteReadError, ConnectionError:
             return 400, {}, _json({"error": "请求不完整"})
         parts = line.decode("latin-1").strip().split(" ")
-        if len(parts) != 3:
+        if len(parts) != _REQUEST_PARTS:
             return 400, {}, _json({"error": "请求行不合法"})
         method, target, _version = parts
         try:
@@ -212,10 +214,8 @@ async def _respond(
         pass
     finally:
         writer.close()
-        try:
+        with contextlib.suppress(ConnectionError, OSError):
             await writer.wait_closed()
-        except ConnectionError, OSError:
-            pass
 
 
 def _json(value: dict[str, Any]) -> bytes:

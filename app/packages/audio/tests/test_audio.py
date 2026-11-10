@@ -159,7 +159,8 @@ def test_a_processor_rewrites_the_bytes_into_a_new_media(tmp_path: Path) -> None
 
     fresh = audio.capture(_take(uploaded))
 
-    assert fresh is not None and fresh != uploaded
+    assert fresh is not None
+    assert fresh != uploaded
     stored = ctx.resolve("media").read(fresh)
     assert (stored["mime"], stored["data"]) == ("audio/webm", b"HELLO!")
     with pytest.raises(LookupError, match="媒体不存在"):
