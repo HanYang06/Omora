@@ -1,12 +1,21 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Connection, type ConnectionStatus } from "./connection";
-import type { JsonObject } from "./protocol";
+import type { Logger } from "./log";
 import { fetchMedia } from "./media";
+import type { JsonObject } from "./protocol";
 import { Shell } from "./shell";
-import type { Snapshot } from "./types";
+import type { Node, Snapshot } from "./types";
 
 export interface AppProps {
   connection: Connection;
+  logger: Logger;
 }
 
 /** ui 的返回值必须是页面快照；不是就丢掉，别把壳画坏。 */
@@ -30,16 +39,61 @@ function asSnapshot(value: unknown): Snapshot | null {
   return value as Snapshot;
 }
 
+/** 快照里有多少个节点：只数，不看内容。 */
+function countNodes(node: Node): number {
+  const children = Array.isArray(node.children) ? node.children : [];
+  let total = 1;
+  for (const child of children) {
+    total += countNodes(child);
+  }
+  return total;
+}
+
+function elapsedMs(started: number): number {
+  return Math.round((performance.now() - started) * 10) / 10;
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /**
  * 默认母页面的容器：持有快照与连接状态。
  * 连上 → render；点导航 → render(name)；回车 / 点动作 → event。
  */
-export function App({ connection }: AppProps): ReactNode {
+export function App({ connection, logger }: AppProps): ReactNode {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const requested = useRef(false);
+  const lastStatus = useRef<ConnectionStatus | null>(null);
+
+  const logs = useMemo(
+    () => ({
+      conn: logger.child("conn"),
+      render: logger.child("render"),
+      event: logger.child("event"),
+      media: logger.child("media"),
+    }),
+    [logger],
+  );
 
   useEffect(() => connection.subscribeStatus(setStatus), [connection]);
+
+  // conn 通道：只记真正连上 / 断开 / 失败，connecting 之类不刷屏。
+  useEffect(() => {
+    const previous = lastStatus.current;
+    lastStatus.current = status;
+    if (previous === status) {
+      return;
+    }
+    if (status === "open") {
+      logs.conn.info("ws 连上", { endpoint: connection.endpoint });
+    } else if (status === "closed") {
+      logs.conn.info("ws 断开", { endpoint: connection.endpoint });
+    } else if (status === "failed") {
+      logs.conn.error("连接失败", { endpoint: connection.endpoint });
+    }
+  }, [status, connection, logs]);
 
   useEffect(() => {
     connection.connect();
@@ -47,6 +101,7 @@ export function App({ connection }: AppProps): ReactNode {
 
   const send = useCallback(
     async (method: string, args: JsonObject) => {
+      const started = performance.now();
       try {
         const value = await connection.call("ui", method, args);
         const next = asSnapshot(value);
@@ -54,12 +109,19 @@ export function App({ connection }: AppProps): ReactNode {
           console.error("[omora] ui 返回的不是页面快照:", value);
           return;
         }
+        if (method === "render") {
+          logs.render.debug("收到快照", {
+            page: next.page,
+            nodes: countNodes(next.content),
+            ms: elapsedMs(started),
+          });
+        }
         setSnapshot(next);
       } catch (error) {
         console.error("[omora] 调用失败:", error);
       }
     },
-    [connection],
+    [connection, logs],
   );
 
   useEffect(() => {
@@ -79,14 +141,32 @@ export function App({ connection }: AppProps): ReactNode {
 
   const handleEvent = useCallback(
     (handler: string, payload?: JsonObject) => {
-      void send("event", { handler, payload: payload ?? {} });
+      const body = payload ?? {};
+      logs.event.debug("发出事件", {
+        handler,
+        keys: Object.keys(body).join(","),
+      });
+      void send("event", { handler, payload: body });
     },
-    [send],
+    [send, logs],
   );
 
   const loadMedia = useCallback(
-    (media: string) => fetchMedia((target, method, args) => connection.call(target, method, args), media),
-    [connection],
+    (media: string) => {
+      const started = performance.now();
+      return fetchMedia(
+        (target, method, args) => connection.call(target, method, args),
+        media,
+      ).catch((error: unknown) => {
+        logs.media.error("加载失败", {
+          media,
+          ms: elapsedMs(started),
+          err: errorText(error),
+        });
+        throw error;
+      });
+    },
+    [connection, logs],
   );
 
   return (

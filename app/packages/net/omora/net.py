@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 from websockets.asyncio.server import Server, ServerConnection
@@ -47,6 +48,7 @@ class Net:
         self.port = port
         self._ctx = ctx
         self._server: Server | None = None
+        self._log = ctx.log
         self._media = MediaHttp(ctx, host=host, port=media_port, origins=media_origins)
 
     @property
@@ -70,10 +72,20 @@ class Net:
         if method is None or not callable(method):
             return error_frame(call.id, UNKNOWN_METHOD, f"{call.target} 没有方法 {call.method}")
 
+        started = time.perf_counter()
         try:
             value: Any = method(**call.args)
         except Exception as exc:  # noqa: BLE001 — 服务抛什么都变成一帧错误
+            self._log.warning(
+                "call 失败", target=call.target, method=call.method, err=type(exc).__name__
+            )
             return error_frame(call.id, CALL_FAILED, str(exc))
+        self._log.trace(
+            "call",
+            target=call.target,
+            method=call.method,
+            ms=(time.perf_counter() - started) * 1000,
+        )
         return result_frame(call.id, value)
 
     async def serve(self) -> int:
@@ -97,13 +109,17 @@ class Net:
             self._server = None
 
     async def _connection(self, ws: ServerConnection) -> None:
-        async for message in ws:
-            try:
-                raw = _decode(message)
-            except FrameError as exc:
-                await ws.send(_encode(error_frame(None, exc.code, str(exc))))
-                continue
-            await ws.send(_encode(self.handle(raw)))
+        self._log.debug("ws 连上")
+        try:
+            async for message in ws:
+                try:
+                    raw = _decode(message)
+                except FrameError as exc:
+                    await ws.send(_encode(error_frame(None, exc.code, str(exc))))
+                    continue
+                await ws.send(_encode(self.handle(raw)))
+        finally:
+            self._log.debug("ws 断开")
 
 
 class NetPlugin:

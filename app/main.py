@@ -7,10 +7,11 @@
 from __future__ import annotations
 
 import asyncio
-import sys
+import os
 from pathlib import Path
 
 from boot import build, load_config
+from omora.core.log import Log, build_log, level_of, log_path
 from omora.net import Net
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -31,24 +32,26 @@ SYSTEM_PLUGINS = (
 
 def main() -> int:
     config = load_config(ROOT / "config.ini", ROOT / "config.yaml")
-    kernel = build(config, SYSTEM_PLUGINS)
+    log = build_log(log_path(ROOT), level=level_of(os.environ.get("OMORA_LOG")))
+    boot_log = log.child("boot")
+    kernel = build(config, SYSTEM_PLUGINS, log=log)
 
+    # 必须在 build 之后：认领是插件取配置时发生的
     for section in config.unclaimed():
-        print(f"配置里这一段没有插件认领: [{section}]", file=sys.stderr)
-
+        boot_log.warning("配置段没有插件认领", section=section)
     net: Net = kernel.resolve("net")
     try:
-        asyncio.run(_run(net))
+        asyncio.run(_run(net, boot_log))
     except KeyboardInterrupt:
         return 0
     return 0
 
 
-async def _run(net: Net) -> None:
+async def _run(net: Net, log: Log) -> None:
     port = await net.serve()
-    print(f"omora 内核已起：ws://{net.host}:{port}", flush=True)
+    log.info("内核已起", ws=f"ws://{net.host}:{port}")
     if net.media_url is not None:
-        print(f"媒体通道已起：{net.media_url}", flush=True)
+        log.info("媒体通道已起", url=net.media_url)
     try:
         await asyncio.Event().wait()
     finally:

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./app";
 import { reportClientCapabilities } from "./capability-report";
 import { Connection } from "./connection";
+import { createLogger } from "./log";
 import "./styles.css";
 import "./media.css";
 
@@ -12,11 +13,14 @@ if (container === null) {
 }
 
 const connection = new Connection();
+const logger = createLogger({
+  call: (target, method, args) => connection.call(target, method, args),
+});
 
 reportClientCapabilities(connection);
 
 createRoot(container).render(
   <StrictMode>
-    <App connection={connection} />
+    <App connection={connection} logger={logger} />
   </StrictMode>,
 );

@@ -19,6 +19,7 @@ from typing import Any
 import yaml
 
 from omora.core.kernel import Kernel, Plugin
+from omora.core.log import Log
 
 Loader = Callable[[str, Mapping[str, Any]], Plugin]
 
@@ -151,9 +152,11 @@ def build(
     manifest: Sequence[str],
     *,
     loader: Loader | None = None,
+    log: Log | None = None,
 ) -> Kernel:
     """按 manifest 的顺序装。store + manager 先装，其余交给 manager。"""
-    kernel = Kernel()
+    # log 挂成服务：引擎把日志帧送到 target=log / method=write，内核统一落盘上屏。
+    kernel = Kernel(log, {"log": log} if log is not None else None)
     load = loader or load_plugin
     names = tuple(manifest)
     defaults = {name: config.enabled(name) for name in names}

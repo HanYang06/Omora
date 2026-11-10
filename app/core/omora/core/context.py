@@ -5,25 +5,40 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from .log import Log, NullLog
+
 Disposer = Callable[[], None]
 
 
 class Context:
     """服务表由同一作用域树共享，副作用各自撤销。"""
 
-    def __init__(self, services: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        services: dict[str, Any] | None = None,
+        *,
+        name: str = "-",
+        log: Log | None = None,
+    ) -> None:
         self._services: dict[str, Any] = {} if services is None else services
         self._effects: list[Disposer] = []
         self._disposed = False
+        self.name = name
+        self._log = log if log is not None else NullLog()
+
+    @property
+    def log(self) -> Log:
+        """这个作用域的日志出口：通道名就是插件名。"""
+        return self._log.child(self.name)
 
     @property
     def disposed(self) -> bool:
         return self._disposed
 
-    def extend(self) -> Context:
-        """开一个子作用域：服务共享，副作用分开撤销。"""
+    def extend(self, name: str = "-") -> Context:
+        """开一个子作用域：服务共享，副作用分开撤销，日志换通道。"""
         self._assert_live()
-        return Context(self._services)
+        return Context(self._services, name=name, log=self._log)
 
     def provide[T](self, name: str, value: T) -> None:
         """登记一个服务；这个作用域撤销时自动移除。"""
