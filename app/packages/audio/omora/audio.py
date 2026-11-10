@@ -78,6 +78,11 @@ class Audio:
         """登记一个后期处理钩子。"""
         self._processors.append(process)
 
+    def src(self, media_id: str) -> str | None:
+        """一条录音的播放 / 画波形地址；没有媒体通道就是 None。"""
+        url = self.channel()
+        return None if url is None else f"{url}/{media_id}"
+
     def capture(self, payload: dict[str, Any]) -> str | None:
         """收一条上传完的录音：不存在、非音频、超时都返回 None（不收，也不把页面炸掉）。"""
         media_id = str(payload.get("media", ""))
@@ -156,7 +161,7 @@ class AudioPlugin:
 def _seconds(payload: dict[str, Any]) -> float:
     try:
         return float(payload.get("seconds", 0) or 0)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return 0.0
 
 

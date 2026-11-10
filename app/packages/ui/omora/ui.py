@@ -19,9 +19,7 @@ Counter = Callable[[], int]
 
 
 class _Page:
-    def __init__(
-        self, label: str, build: Builder, count: Counter | None, icon: str | None
-    ) -> None:
+    def __init__(self, label: str, build: Builder, count: Counter | None, icon: str | None) -> None:
         self.label = label
         self.build = build
         self.count = count
@@ -85,7 +83,10 @@ class Ui:
                 callback(payload)
                 snapshot = self._draw(name, entry)
                 self._log.info(
-                    "ui.event", handler=handler, page=name, ms=(time.perf_counter() - started) * 1000
+                    "ui.event",
+                    handler=handler,
+                    page=name,
+                    ms=(time.perf_counter() - started) * 1000,
                 )
                 return snapshot
         self._log.warning("ui.event.unknown", handler=handler)

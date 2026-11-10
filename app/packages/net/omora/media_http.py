@@ -72,9 +72,7 @@ class MediaHttp:
             self._server = None
         self._port = None
 
-    async def _connection(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-    ) -> None:
+    async def _connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         try:
             status, headers, body = await self._handle(reader)
         except Exception as exc:  # noqa: BLE001 — 一个坏请求不能把通道带崩
@@ -86,7 +84,7 @@ class MediaHttp:
     async def _handle(self, reader: asyncio.StreamReader) -> tuple[int, dict[str, str], bytes]:
         try:
             line = await reader.readline()
-        except (asyncio.IncompleteReadError, ConnectionError):
+        except asyncio.IncompleteReadError, ConnectionError:
             return 400, {}, _json({"error": "请求不完整"})
         parts = line.decode("latin-1").strip().split(" ")
         if len(parts) != 3:
@@ -210,13 +208,13 @@ async def _respond(
         lines.extend(f"{name}: {value}" for name, value in merged.items())
         writer.write(("\r\n".join(lines) + "\r\n\r\n").encode("latin-1") + body)
         await writer.drain()
-    except (ConnectionError, OSError):
+    except ConnectionError, OSError:
         pass
     finally:
         writer.close()
         try:
             await writer.wait_closed()
-        except (ConnectionError, OSError):
+        except ConnectionError, OSError:
             pass
 
 

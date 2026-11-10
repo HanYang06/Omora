@@ -223,7 +223,9 @@ class IdeasPlugin:
             else:
                 content = Empty("没有匹配的灵感。", "换个词试试。")
                 meta = "没有结果"
-            return Page(content=Column(search_bar(False), _views.back_bar(back), content), meta=meta)
+            return Page(
+                content=Column(search_bar(False), _views.back_bar(back), content), meta=meta
+            )
 
         def detail() -> Page | None:
             opened = state["open"]

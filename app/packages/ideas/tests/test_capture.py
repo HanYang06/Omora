@@ -60,7 +60,9 @@ def _main(snapshot: dict[str, Any]) -> dict[str, Any]:
 
 
 def _rail_titles(snapshot: dict[str, Any]) -> list[str]:
-    return [str(row["props"]["title"]) for row in _nodes(snapshot["content"]["children"][0], "item")]
+    return [
+        str(row["props"]["title"]) for row in _nodes(snapshot["content"]["children"][0], "item")
+    ]
 
 
 def _cards(snapshot: dict[str, Any]) -> list[str]:
@@ -114,16 +116,9 @@ def _recording(ui: Any, tile: str, node_type: str) -> tuple[str, dict[str, Any]]
     return str(node["props"]["on_submit"]), node
 
 
-def _audio_take(
-    media_id: str, seconds: float, peaks: list[int] | None = None
-) -> dict[str, Any]:
-    """引擎交上来的载荷：字节已经在 HTTP 媒体通道里，帧里只有 id 与波形。"""
-    return {
-        "media": media_id,
-        "mime": "audio/webm",
-        "seconds": seconds,
-        "peaks": [0, 50, 100] if peaks is None else peaks,
-    }
+def _audio_take(media_id: str, seconds: float) -> dict[str, Any]:
+    """引擎交上来的载荷：字节已经在 HTTP 媒体通道里，帧里只有 id 与时长。"""
+    return {"media": media_id, "mime": "audio/webm", "seconds": seconds}
 
 
 def _video_take(media_id: str, seconds: float = 5) -> dict[str, Any]:
@@ -189,7 +184,7 @@ def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(
     handler, recorder = _recording(ui, "录音", "audio_capture")
     assert (recorder["props"]["quality"], recorder["props"]["noise_reduction"]) == ("high", True)
 
-    saved = ui.event(handler, _audio_take(uploaded, 12.4, [3, 30, 100]))
+    saved = ui.event(handler, _audio_take(uploaded, 12.4))
 
     bar = _capture_region(saved)
     assert [child["type"] for child in bar["children"]] == ["row", "waveform"]
@@ -199,7 +194,7 @@ def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(
     assert _nodes(bar, "input")[0]["props"]["value"] == "语音 11-11 03:41"
     assert _nodes(bar, "audio")[0]["props"]["media"] == uploaded
     waveform = _nodes(bar, "waveform")[0]["props"]
-    assert (waveform["peaks"], waveform["seconds"]) == ((3, 30, 100), 12.4)
+    assert waveform["src"] == f"{CHANNEL}/{uploaded}"
     assert _cards(saved) == ["语音 11-11 03:41"]
     assert _rail_titles(saved) == ["语音 11-11 03:41"]
     assert saved["pages"][0]["count"] == 1
@@ -345,6 +340,7 @@ def test_the_capture_tiles_follow_the_capture_plugins_and_the_media_channel(
     kernel.install(_Net())
     assert list(_tiles(ui.render())) == ["录音", "视频", "文字"]
 
+
 def test_naming_a_saved_take_renames_the_record(tmp_path: Path, monkeypatch: Any) -> None:
     _pin_clock(monkeypatch)
     kernel = _kernel(tmp_path)
@@ -383,6 +379,7 @@ def test_a_blank_rename_never_clears_the_title(tmp_path: Path, monkeypatch: Any)
 
     assert _cards(cleared) == ["买牛奶"]
     assert _nodes(_capture_region(cleared), "input")[0]["props"]["value"] == "买牛奶"
+
 
 def test_a_take_shorter_than_the_minimum_never_reaches_the_store(
     tmp_path: Path, monkeypatch: Any

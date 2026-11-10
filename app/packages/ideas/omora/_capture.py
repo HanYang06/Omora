@@ -16,7 +16,7 @@ from typing import Any
 from omora.sdk.ui import AudioCapture, Handler, Input, Node, Row, Tile
 
 from . import _views
-from ._format import caption, clock, now, peaks, seconds
+from ._format import caption, clock, now, seconds
 
 AUDIO = "audio"
 VIDEO = "video"
@@ -78,14 +78,15 @@ class Capture:
         """工作区：一行头部（媒体名 + 收起）+ 主体；落库后是已保存条。"""
         mode = str(self._state.get("mode", ""))
         if self._state.get("phase") == "saved":
-            # 视频不给内联播放：16:9 全宽塞不进一条，也就没有波形。
+            # 视频不给内联播放、也不给波形：16:9 全宽塞不进一条。
             audio = str(self._state.get("media", "")) if mode == AUDIO else None
+            service = self._audio() if audio is not None else None
+            wave = None if service is None or audio is None else service.src(audio)
             return _views.saved(
                 stamp=clock(seconds(self._state)),
                 title=str(self._state.get("title", "")),
                 audio=audio,
-                peaks=self._state.get("peaks", ()),
-                seconds=seconds(self._state),
+                wave=wave,
                 on_rename=self._rename,
                 on_again=self._again,
                 on_collapse=self._collapse,
@@ -198,6 +199,5 @@ class Capture:
             media=media_id,
             title=title,
             seconds=seconds(payload),
-            peaks=peaks(payload),
             record=record.id,
         )

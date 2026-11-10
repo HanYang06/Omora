@@ -90,7 +90,9 @@ def test_the_fixture_pins_the_search_nodes() -> None:
 def test_the_search_page_serializes_to_the_snapshot_fixture() -> None:
     tree = Column(
         Search(
-            Suggestion(value="买牛奶", title="买牛奶", meta="刚刚", highlight="牛奶", on_pick=_noop),
+            Suggestion(
+                value="买牛奶", title="买牛奶", meta="刚刚", highlight="牛奶", on_pick=_noop
+            ),
             placeholder="搜索灵感…",
             value="牛奶",
             on_query=_noop,

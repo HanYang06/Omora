@@ -12,9 +12,7 @@ ROOT = Path(__file__).resolve().parents[4]
 
 def test_a_missing_table_means_every_default() -> None:
     assert parse_metadata(None) == Metadata()
-    assert parse_metadata({}) == Metadata(
-        platforms=(), capabilities=(), listed=True, requires=()
-    )
+    assert parse_metadata({}) == Metadata(platforms=(), capabilities=(), listed=True, requires=())
 
 
 def test_all_four_keys_are_read() -> None:
@@ -73,12 +71,14 @@ def test_the_installed_catalog_reads_every_system_package() -> None:
         assert record.version == version, f"{name} 的版本没同步"
         assert record.description.strip(), f"{name} 缺 description"
         assert isinstance(record.metadata.listed, bool)
-        assert record.metadata == parse_metadata({
-            "platforms": list(record.metadata.platforms),
-            "capabilities": list(record.metadata.capabilities),
-            "listed": record.metadata.listed,
-            "requires": list(record.metadata.requires),
-        })
+        assert record.metadata == parse_metadata(
+            {
+                "platforms": list(record.metadata.platforms),
+                "capabilities": list(record.metadata.capabilities),
+                "listed": record.metadata.listed,
+                "requires": list(record.metadata.requires),
+            }
+        )
     manager_record = records["manager"]
     ideas_record = records["ideas"]
     assert manager_record is not None and ideas_record is not None

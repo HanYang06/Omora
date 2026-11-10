@@ -277,9 +277,7 @@ class Collection:
         rows = self._conn.execute(f'PRAGMA table_info("{self._table}")').fetchall()
         if not rows:
             return None
-        return {
-            str(row["name"]): (str(row["type"]).upper(), bool(row["notnull"])) for row in rows
-        }
+        return {str(row["name"]): (str(row["type"]).upper(), bool(row["notnull"])) for row in rows}
 
     def _expected(self) -> dict[str, tuple[str, bool]]:
         expected = {

@@ -47,7 +47,11 @@ def _page() -> Page:
         content=Column(
             Text("灵感", kind="title"),
             Input(placeholder="记一笔", on_submit=lambda payload: None),
-            List(Item("昨天", "买牛奶", Button("归档", on_click=lambda payload: None, variant="ghost"))),
+            List(
+                Item(
+                    "昨天", "买牛奶", Button("归档", on_click=lambda payload: None, variant="ghost")
+                )
+            ),
         ),
         meta="1 条",
     )
@@ -167,6 +171,7 @@ def test_unknown_handler_is_looked_up() -> None:
 
     with pytest.raises(LookupError, match="未知 handler: main:1:9"):
         kernel.resolve("ui").event("main:1:9", {})
+
 
 def _input_page(seen: list[dict[str, Any]]) -> Callable[[], Page]:
     def build() -> Page:

@@ -170,7 +170,7 @@ def _flag(value: bool | str) -> bool:
 def _seconds(payload: dict[str, Any]) -> float:
     try:
         return float(payload.get("seconds", 0) or 0)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return 0.0
 
 

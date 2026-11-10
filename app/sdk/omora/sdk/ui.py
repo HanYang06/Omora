@@ -313,14 +313,13 @@ class Hotkey(Node):
 
 @dataclass(frozen=True)
 class Waveform(Node):
-    """一条静态波形：peaks 是 0–100 的柱高，seconds 只用来标时长。
+    """一条静态波形：src 是媒体通道里那条音频的地址，渲染引擎自己去取。
 
-    它只负责看，不负责播（播放是 Audio）；峰值由客户端在录的时候顺手采下来。
+    它只负责看，不负责播（播放是 Audio）；要画多高、什么颜色由引擎定。
     """
 
     type: ClassVar[str] = "waveform"
-    peaks: tuple[int, ...] = ()
-    seconds: float = 0.0
+    src: str = ""
 
 
 @dataclass(frozen=True, init=False)

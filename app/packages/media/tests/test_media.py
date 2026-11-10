@@ -54,6 +54,7 @@ def test_uninstalling_the_plugin_takes_media_away(tmp_path: Path) -> None:
     with pytest.raises(LookupError, match="服务未提供: media"):
         kernel.resolve("media")
 
+
 def test_upload_refuses_an_empty_file(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="空媒体"):
         Media(tmp_path).upload(b"", "video/webm")

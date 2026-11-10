@@ -189,6 +189,7 @@ def test_uninstalling_the_plugin_takes_the_store_away(tmp_path: Path) -> None:
     with pytest.raises(LookupError, match="服务未提供: store"):
         kernel.resolve("store")
 
+
 SEARCH_FIELDS = {
     "title": "text",
     "body": "text?",
@@ -352,9 +353,7 @@ def test_declaring_an_unknown_search_column_is_an_error() -> None:
 
 def test_declaring_a_non_text_search_column_is_an_error() -> None:
     with pytest.raises(ValueError, match="必须是 text"):
-        Store().collection(
-            "notes", fields={"title": "text", "views": "int"}, searchable=["views"]
-        )
+        Store().collection("notes", fields={"title": "text", "views": "int"}, searchable=["views"])
 
 
 def test_declaring_an_unknown_pin_column_is_an_error() -> None:
@@ -365,4 +364,3 @@ def test_declaring_an_unknown_pin_column_is_an_error() -> None:
 def test_declaring_a_non_bool_pin_column_is_an_error() -> None:
     with pytest.raises(ValueError, match="必须是 bool"):
         Store().collection("notes", fields={"title": "text"}, pinned="title")
-

@@ -35,11 +35,7 @@ SUFFIX = ".mp4"
 
 # 顺序就是处理链：降噪 → 去闪烁 → 提对比。
 # 不做锐化：在噪点多的画面上锐化会把噪声一起放大，实测体积涨 37%（5176779 → 7081601）。
-FILTERS = (
-    "hqdn3d=2:1:4:3,"
-    "deflicker=size=10,"
-    "eq=contrast=1.04:saturation=1.06:brightness=0.01"
-)
+FILTERS = "hqdn3d=2:1:4:3,deflicker=size=10,eq=contrast=1.04:saturation=1.06:brightness=0.01"
 
 ARGS = (
     "-hide_banner",

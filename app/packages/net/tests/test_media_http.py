@@ -54,7 +54,9 @@ async def _request(
     return status, got, payload
 
 
-def _upload(port: int, body: bytes = b"video-bytes", mime: str = "video/webm") -> tuple[int, dict[str, str], bytes]:
+def _upload(
+    port: int, body: bytes = b"video-bytes", mime: str = "video/webm"
+) -> tuple[int, dict[str, str], bytes]:
     return asyncio.run(
         _request(port, "POST", "/media", body=body, headers=(("Content-Type", mime),))
     )
@@ -174,9 +176,7 @@ def test_the_dev_origin_gets_cors_and_others_do_not(tmp_path: Path) -> None:
     async def scenario() -> tuple[dict[str, str], dict[str, str]]:
         net, port = await _serve(_ctx(tmp_path))
         try:
-            _, allowed, _ = await _request(
-                port, "OPTIONS", "/media", headers=(("Origin", ORIGIN),)
-            )
+            _, allowed, _ = await _request(port, "OPTIONS", "/media", headers=(("Origin", ORIGIN),))
             _, other, _ = await _request(
                 port, "OPTIONS", "/media", headers=(("Origin", "http://evil.example"),)
             )
