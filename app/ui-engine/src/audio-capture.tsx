@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import {
-  captureErrorReason,
-  captureGate,
-  openMediaStream,
-  type DeviceSource,
-} from "./devices";
+import { captureErrorReason, captureGate, openMediaStream } from "./devices";
 import { DeviceSelect } from "./device-select";
+import { planStop } from "./capture-rules";
 import { clock, prop, type NodeComponentProps } from "./shared";
 import { useMediaDevices } from "./use-devices";
 
@@ -22,6 +18,7 @@ export function numberProp(node: NodeComponentProps["node"], name: string, fallb
  *
  * 设备与权限在客户端：没有麦克风就把按钮禁用并写原因；多设备给选择器；
  * 插拔跟着 devicechange 走。录完把 base64 交给 on_submit（音频仍走 v0 的 base64）。
+ * 卸载时还在录，也把这段停掉交出去——录制不能因为切走页面就丢了。
  */
 export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): ReactNode {
   const handler = prop(node, "on_submit");
@@ -37,18 +34,21 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const started = useRef(0);
-  const timer = useRef<number | null>(null);
-  const cancelled = useRef(false);
+  const ticker = useRef<number | null>(null);
+  const unmounted = useRef(false);
+  const submitted = useRef(false);
 
   useEffect(() => {
-    cancelled.current = false;
+    unmounted.current = false;
     return () => {
-      cancelled.current = true;
-      if (timer.current !== null) {
-        window.clearInterval(timer.current);
+      unmounted.current = true;
+      if (ticker.current !== null) {
+        window.clearInterval(ticker.current);
+        ticker.current = null;
       }
       const active = recorder.current;
       if (active !== null && active.state !== "inactive") {
+        // 还在录：停下来交给 onstop 提交。这里只动 ref，不碰界面。
         active.stop();
       }
     };
@@ -66,6 +66,7 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
       return;
     }
     setReason(undefined);
+    submitted.current = false;
     const audio: MediaTrackConstraints = {
       echoCancellation: noiseReduction,
       noiseSuppression: noiseReduction,
@@ -76,6 +77,11 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
     }
     try {
       const stream = await openMediaStream(devices, { audio });
+      if (unmounted.current) {
+        // 等权限的时候人已经走了：别偷偷录下去，麦克风也别占着
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       const options: MediaRecorderOptions =
         quality === "low" ? { audioBitsPerSecond: 64000 } : {};
       const media = new MediaRecorder(stream, options);
@@ -87,22 +93,31 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
       };
       media.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
-        if (timer.current !== null) {
-          window.clearInterval(timer.current);
-          timer.current = null;
-        }
-        setRecording(false);
-        if (cancelled.current) {
-          return;
+        if (ticker.current !== null) {
+          window.clearInterval(ticker.current);
+          ticker.current = null;
         }
         const elapsed = (Date.now() - started.current) / 1000;
         const blob = new Blob(chunks.current, { type: media.mimeType || "audio/webm" });
+        const plan = planStop({
+          submitted: submitted.current,
+          hasData: blob.size > 0,
+          hasHandler: handler !== undefined && handler.length > 0,
+          unmounted: unmounted.current,
+        });
+        if (plan.updateUi) {
+          setRecording(false);
+        }
+        if (!plan.submit || handler === undefined) {
+          return;
+        }
+        submitted.current = true;
         const reader = new FileReader();
         reader.onload = () => {
           const result = String(reader.result ?? "");
           const comma = result.indexOf(",");
           const data = comma >= 0 ? result.slice(comma + 1) : "";
-          if (data.length > 0 && handler.length > 0) {
+          if (data.length > 0) {
             onEvent?.(handler, {
               audio: data,
               mime: blob.type || "audio/webm",
@@ -116,16 +131,19 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
       started.current = Date.now();
       setSeconds(0);
       setRecording(true);
-      timer.current = window.setInterval(() => {
-        const elapsed = Math.floor((Date.now() - started.current) / 1000);
-        setSeconds(elapsed);
-        if (elapsed >= maxSeconds) {
+      ticker.current = window.setInterval(() => {
+        const running = Math.floor((Date.now() - started.current) / 1000);
+        setSeconds(running);
+        if (running >= maxSeconds) {
           stop();
         }
       }, 250);
       media.start();
       refresh();
     } catch (error) {
+      if (unmounted.current) {
+        return;
+      }
       setReason(captureErrorReason(error, "audioinput"));
     }
   }, [devices, gate.enabled, handler, maxSeconds, noiseReduction, onEvent, quality, refresh, selected, stop]);
