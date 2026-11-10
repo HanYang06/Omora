@@ -58,7 +58,7 @@ description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teamma
 1. 从**集成分支**开 worktree：`git worktree add ../Omora-wt-<name> -b feat/<slug> origin/feat/<integration>`。
 2. sync：`uv sync`；`pnpm install`（根目录 workspace，一次装齐）。
 3. 实现 + 行为测试（omora-testing）。
-4. `uv run python scripts/check.py` 全绿。
+4. 按 `docs/design/ci.md` 的命令逐条跑门禁，全绿。
 5. 逻辑提交（omora-git）；push 自己的分支（**不开 PR**）。
 6. `send_message` Lead：分支名、提交列表、门禁输出、关键决定、冲突、阻塞。
 7. 卡住/需要产品决策：马上问，不猜。
@@ -71,7 +71,7 @@ description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teamma
 2. 看 diff，不只看文件列表；看 teammate 报的门禁输出。
 3. 冲突：让 owner 把自己的分支 rebase 到最新集成分支；不要 Lead 硬改别人分支。
 4. 文档、规则、跨区整合由 Lead 在集成分支上提交（同一个功能 = 同一个 PR）。
-5. 集成分支跑一次全门禁（`uv run python scripts/check.py`），再做端到端（能跑就跑）。
+5. 集成分支跑一次全门禁（命令见 `docs/design/ci.md`），再做端到端（能跑就跑）。
 6. **只开一个 PR**：`gh pr create --base main --head feat/<integration>`；PR body 五段。
 7. CI 绿 → `gh pr merge <n> --merge`（merge commit；不 squash/rebase）；删分支。
 8. 给用户最终报告：PR、门禁、端到端结果、遗留、下一步。
@@ -120,7 +120,7 @@ Workflow:
 1. worktree from the integration branch:
    git fetch origin; git worktree add ../Omora-wt-<name> -b feat/<slug> origin/feat/<integration>
 2. uv sync; pnpm install; implement; behavioral tests;
-   uv run python scripts/check.py
+   按 docs/design/ci.md 跑门禁
 3. logical commits (omora-git); push your branch. Do NOT open a PR.
 4. send_message Lead: branch name, commits, gate output, decisions, conflicts, blockers.
 ```

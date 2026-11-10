@@ -53,7 +53,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 - 开发：`uv run omora dev`（内核 + 渲染引擎；`--shell` 连桌面壳；`-v` 看 debug 日志）。
 - 仓库统一 LF；不提交 `.venv/`、`node_modules/`、`dist/`、本地数据。
 
-门禁：`uv run python scripts/check.py`（体量预算 / 文档断链 / pytest / ruff / mypy / ui-engine 测试与构建）；CI 跑同一条。交付必须附上实际跑过的命令和输出。
+门禁：`.github/workflows/ci.yml`（ruff / mypy / pytest + 覆盖率 / eslint / prettier / tsc / vitest + 覆盖率 / 安全扫描 / 构建 / Windows）。一条命令一个 step，不套壳；本地按 `docs/design/ci.md` 的命令逐条跑。交付必须附上实际跑过的命令和输出。
 
 ## 停下来问
 

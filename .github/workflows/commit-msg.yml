@@ -6,14 +6,20 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: commit-msg-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: 校验 PR 内每条提交
         env:
           BASE: ${{ github.event.pull_request.base.sha }}

@@ -119,4 +119,7 @@ def test_creating_idea_persists_and_emits_event(fake_store: FakeStore) -> None:
 
 ## 机器能拦的部分
 
-还没有自动化护栏。先靠三问和评审；等代码落地再补。
+- `pytest --cov` 与 `vitest --coverage` 有覆盖率地板（Python 95%，TS 从 54% 起步，只许升）。
+- PR 上 `diff-cover` 卡新增生产代码的行覆盖率。
+- 变异测试（mutmut / Stryker）排在下一阶段；接入后先观察四周，再设地板。
+- 覆盖率与变异分数都拦不住"行为本身没测到"的 bug；三问和评审仍是第一道。

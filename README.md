@@ -49,17 +49,30 @@ uv run omora dev
 
 ## 门禁
 
+CI 是唯一门禁，命令都在 `.github/workflows/ci.yml` 里，一条命令一个 step。本地要验证就逐条跑：
+
+```bash
+uv sync
+pnpm install
+
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest --cov=app --cov-report=term-missing
+uv run mypy -p omora.cli -p omora.core -p omora.sdk
+
+pnpm exec eslint app/ui-engine/src app/shell/main.cjs
+pnpm exec prettier --check .
+pnpm --dir app/ui-engine exec tsc --noEmit
+pnpm --dir app/ui-engine exec vitest run --coverage
 ```
-uv run python scripts/check.py
-```
+
+为什么这么拆、覆盖率地板怎么定，见 [CI 与门禁](docs/design/ci.md)。
 
 ## 脚本
 
 | 脚本                      | 作用                                                   |
 | ------------------------- | ------------------------------------------------------ |
 | `app/cli/`                | `omora` 命令：一条命令起内核 + 渲染引擎（`omora dev`） |
-| `scripts/check.py`        | 统一门禁：体量预算、测试、lint、类型、前端测试与构建   |
-| `scripts/typecheck.py`    | 类型检查：workspace 的包 + 组装根 + 测试               |
 | `scripts/budget.py`       | 体量预算：文档与代码的文件行数上限，读 `budget.json`   |
 | `scripts/docs_links.py`   | 文档相对链接检查：README、AGENTS、docs 与项目 skill    |
 | `scripts/sync_version.py` | 把 `VERSION` 同步到各 package 元数据                   |

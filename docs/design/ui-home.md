@@ -87,5 +87,5 @@ feed 的推荐算法、窄屏适配。
 
 ## 8. 怎么验证
 
-`uv run python scripts/check.py`：pytest（ideas 页行为 + 捕捉工作区 + 词表序列化）、ruff、mypy、
+CI 全绿：pytest（ideas 页行为 + 捕捉工作区 + 词表序列化）、ruff、mypy、
 ui-engine 测试（shell / 卡片 / 捕捉按钮 / 卸载即提交）与构建。
