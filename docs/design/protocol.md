@@ -87,7 +87,7 @@ manager 是普通服务，不新增帧类型：
   `audio_capture`（audio 插件给）和 `video_capture`（video 插件给）。
 - 事件载荷：`{"handler": "...", "payload": {...}}`；`input` 提交带 `{"value": "..."}`，
   `audio_capture` / `video_capture` 带 `{"media": "media id", "mime": "...", "seconds": 0.0}`，
-  音频另带 `{"peaks": [0..100, ...]}`（录制中采的波形，最多 300 个），`button` 带 `{}`。
+  `button` 带 `{}`。波形不进载荷：`waveform` 节点只给媒体地址，渲染引擎自己去取。
   `hotkey` 按下 / 松开都带 `{}`。
 - 搜索：`search` 的 children 是 `suggestion`；打字事件与提交事件都带 `{"value": "..."}`，
   点一条建议带回那条建议自己的 `value`，点 `result` 带 `{}`。`suggestion` 与 `result` 的
