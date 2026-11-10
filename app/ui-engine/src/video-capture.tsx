@@ -5,6 +5,7 @@ import {
   openMediaStream,
 } from "./devices";
 import { DeviceSelect } from "./device-select";
+import { LiveVideo } from "./live-video";
 import { numberProp } from "./audio-capture";
 import { uploadMedia } from "./media";
 import { clock, prop, type NodeComponentProps } from "./shared";
@@ -15,43 +16,25 @@ const QUALITY_SIZE: Record<string, { width: number; height: number }> = {
   "720p": { width: 1280, height: 720 },
   "1080p": { width: 1920, height: 1080 },
 };
+
+/** 码率按分辨率给，别吃浏览器默认：低默认码率会把本来就不好的镜头糊得更惨。 */
+export const QUALITY_BITRATE: Record<string, number> = {
+  "480p": 1_200_000,
+  "720p": 2_800_000,
+  "1080p": 5_000_000,
+};
+
+/**
+ * 开流之后先空转一会儿再录。
+ *
+ * 摄像头刚打开时曝光 / 白平衡在做第一次收敛，那几百毫秒画面会明显跳一下；
+ * 不预热的话，这段跳变会被录进文件头部。
+ */
+const WARMUP_MS = 400;
+
 const DEFAULT_SECONDS = 120;
 
 type Mode = "idle" | "recording" | "review" | "uploading";
-
-/**
- * 录制时的实时预览。
- *
- * 只把 stream 挂到 srcObject 上是不够的：video 不会自己开播，画面就一直是黑的。
- * 要 autoPlay + muted（静音才允许自动播），拿到流之后补一次 play()。
- */
-export function LiveVideo({ stream }: { stream: MediaStream | null }): ReactNode {
-  const element = useRef<HTMLVideoElement | null>(null);
-
-  useEffect(() => {
-    const video = element.current;
-    if (video === null) {
-      return;
-    }
-    video.srcObject = stream;
-    if (stream !== null) {
-      void video.play().catch(() => {
-        // 自动播放被拦时留黑帧，不弹错：用户还能停、能保存
-      });
-    }
-  }, [stream]);
-
-  return (
-    <video
-      className="omora-video"
-      data-type="video-live"
-      ref={element}
-      autoPlay
-      muted
-      playsInline
-    />
-  );
-}
 
 /**
  * video_capture：视频捕捉条。
@@ -130,6 +113,10 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
     const video: MediaTrackConstraints = {
       width: { ideal: size?.width ?? 1280 },
       height: { ideal: size?.height ?? 720 },
+      // 16:9 要显式要：有的摄像头默认给 4:3，拿 640×480 凑 720p 的框
+      aspectRatio: { ideal: 16 / 9 },
+      frameRate: { ideal: 30, max: 30 },
+      resizeMode: "none",
     };
     if (selected !== undefined && selected.length > 0) {
       video.deviceId = { ideal: selected };
@@ -137,7 +124,13 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
     try {
       const opened = await openMediaStream(devices, { video, audio: false });
       stream.current = opened;
-      const media = new MediaRecorder(opened);
+      // 先让 ISP 收敛，别把开头那次亮度跳变录进去
+      await new Promise((done) => {
+        setTimeout(done, WARMUP_MS);
+      });
+      const media = new MediaRecorder(opened, {
+        videoBitsPerSecond: QUALITY_BITRATE[quality] ?? QUALITY_BITRATE["720p"],
+      });
       chunks.current = [];
       media.ondataavailable = (event: BlobEvent) => {
         if (event.data.size > 0) {
