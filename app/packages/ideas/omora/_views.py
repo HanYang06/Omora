@@ -1,4 +1,4 @@
-"""灵感页的节点：索引栏一行、推荐卡片、搜索结果、媒体播放器。
+"""灵感页的节点：索引栏一行、推荐卡片、搜索结果、媒体播放器、捕捉区。
 
 只拼节点，不碰状态；handler 由页面传进来。
 """
@@ -7,7 +7,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from omora.sdk.ui import Audio, Button, Card, Handler, Item, Node, Result, Row, Video
+from omora.sdk.ui import (
+    Audio,
+    Button,
+    Card,
+    Handler,
+    Item,
+    Node,
+    Panel,
+    Result,
+    Row,
+    Text,
+    Video,
+)
 
 from ._format import snippet, when
 
@@ -19,6 +31,14 @@ def rail_item(record: Any, on_click: Handler) -> Item:
 
 def back_bar(handler: Handler) -> Node:
     return Row(Button("← 返回", variant="ghost", on_click=handler))
+
+
+def workspace(title: str, body: Node, on_collapse: Handler) -> Panel:
+    """工作区：一行头部（媒体名 + 收起）+ 主体。"""
+    return Panel(
+        Row(Text(title), Button("收起", variant="ghost", on_click=on_collapse)),
+        body,
+    )
 
 
 def card(record: Any, media: Any, on_click: Handler) -> Card:
