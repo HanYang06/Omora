@@ -95,9 +95,6 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
         </span>
       )}
       <span className="omora-record-hint">{hint}</span>
-      {recorder.live.length === 0 ? null : (
-        <WaveformChart peaks={recorder.live.slice(-LIVE_WINDOW)} live={active} />
-      )}
       <div className="omora-record-actions">
         {pausable && recorder.phase === "recording" ? (
           <button type="button" className="omora-button" onClick={recorder.pause}>
@@ -124,6 +121,9 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
           />
         ) : null}
       </div>
+      {recorder.live.length === 0 ? null : (
+        <WaveformChart peaks={recorder.live.slice(-LIVE_WINDOW)} live={active} />
+      )}
     </div>
   );
 }
