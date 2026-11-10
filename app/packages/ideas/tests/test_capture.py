@@ -159,40 +159,105 @@ def test_a_blank_text_capture_is_not_stored(tmp_path: Path) -> None:
     assert after["pages"][0]["count"] == 0
 
 
-def test_stopping_a_recording_stores_the_idea_and_folds_back_to_the_tiles(
-    tmp_path: Path,
-) -> None:
+def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(tmp_path: Path) -> None:
     kernel = _kernel(tmp_path)
     ui = kernel.resolve("ui")
     handler, recorder = _recording(ui, "录音", "audio_capture")
     assert (recorder["props"]["quality"], recorder["props"]["noise_reduction"]) == ("high", True)
 
-    home = ui.event(handler, _audio_take(12.4))
+    saved = ui.event(handler, _audio_take(12.4))
 
-    assert list(_tiles(home)) == ["录音", "视频", "文字"]
-    assert _cards(home) == ["语音 0:12"]
-    assert _rail_titles(home) == ["语音 0:12"]
-    detail = _click_rail(ui, "语音 0:12")
-    media_id = str(_nodes(_main(detail), "audio")[0]["props"]["media"])
+    bar = _capture_region(saved)
+    assert [child["type"] for child in bar["children"]] == ["row"]
+    assert _nodes(bar, "audio_capture") == []
+    assert _texts(bar) == ["已保存 · 0:12"]
+    assert _button_texts(bar) == ["再录一条", "收起"]
+    media_id = str(_nodes(bar, "audio")[0]["props"]["media"])
     assert base64.b64decode(kernel.resolve("media").load(media_id)["data"]) == b"hello"
+    assert _cards(saved) == ["语音 0:12"]
+    assert _rail_titles(saved) == ["语音 0:12"]
+    assert saved["pages"][0]["count"] == 1
+
+    tiles = _click_button(ui, "收起")
+
+    assert list(_tiles(tiles)) == ["录音", "视频", "文字"]
+    assert _cards(tiles) == ["语音 0:12"]
 
 
-def test_stopping_a_video_stores_the_idea_and_folds_back_to_the_tiles(tmp_path: Path) -> None:
+def test_the_saved_bar_records_again_and_collapses_to_the_tiles(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    handler, _ = _recording(ui, "录音", "audio_capture")
+    ui.event(handler, _audio_take(3))
+
+    again = _click_button(ui, "再录一条")
+
+    assert _nodes(_capture_region(again), "audio_capture")
+    assert _nodes(_capture_region(again), "audio") == []
+    assert _texts(_capture_region(again)) == ["录音"]
+    assert _cards(again) == ["语音 0:03"]
+
+    tiles = _click_button(ui, "收起")
+
+    assert list(_tiles(tiles)) == ["录音", "视频", "文字"]
+    assert _cards(tiles) == ["语音 0:03"]
+
+
+def test_a_saved_video_offers_no_inline_player(tmp_path: Path) -> None:
+    """16:9 全宽塞不进一条：视频只在详情里看。"""
     kernel = _kernel(tmp_path)
     ui = kernel.resolve("ui")
     uploaded = str(kernel.resolve("media").save(b"video", "video/webm"))
     handler, recorder = _recording(ui, "视频", "video_capture")
     assert (recorder["props"]["quality"], recorder["props"]["upload_url"]) == ("720p", CHANNEL)
 
-    home = ui.event(handler, _video_take(uploaded))
+    saved = ui.event(handler, _video_take(uploaded))
 
-    assert list(_tiles(home)) == ["录音", "视频", "文字"]
-    assert _cards(home) == ["视频 0:05"]
+    bar = _capture_region(saved)
+    assert _nodes(bar, "video") == []
+    assert _nodes(bar, "audio") == []
+    assert _texts(bar) == ["已保存 · 0:05"]
+    assert _button_texts(bar) == ["再录一条", "收起"]
+    assert _cards(saved) == ["视频 0:05"]
+
     detail = _click_rail(ui, "视频 0:05")
     assert _nodes(_main(detail), "video")[0]["props"] == {
         "media": uploaded,
         "src": f"{CHANNEL}/{uploaded}",
     }
+
+
+def test_the_saved_bar_is_gone_after_a_page_change(tmp_path: Path) -> None:
+    """已保存条不是持久状态：换页再回来就是三个 Tile。"""
+    ui = _kernel(tmp_path).resolve("ui")
+    handler, _ = _recording(ui, "录音", "audio_capture")
+    ui.event(handler, _audio_take(3))
+
+    _click_rail(ui, "语音 0:03")
+    home = _click_button(ui, "← 返回")
+
+    assert list(_tiles(home)) == ["录音", "视频", "文字"]
+    assert _nodes(home["content"], "audio") == []
+
+
+def test_collapsing_while_recording_stores_the_take_without_reopening_the_bar(
+    tmp_path: Path,
+) -> None:
+    """录制中点收起：引擎在卸载时停止并提交，带的 id 属于上一代；只落库，别把面板变回来。"""
+    ui = _kernel(tmp_path).resolve("ui")
+    workspace = _click_tile(ui, "录音")
+    # 两个 id 来自同一份快照，就像引擎手里那份；收起之后录制组件才卸载并提交。
+    handler = str(_nodes(_main(workspace), "audio_capture")[0]["props"]["on_submit"])
+    collapse = str(_nodes(_capture_region(workspace), "button")[0]["props"]["on_click"])
+
+    collapsed = ui.event(collapse, {})
+    assert list(_tiles(collapsed)) == ["录音", "视频", "文字"]
+
+    settled = ui.event(handler, _audio_take(3))
+
+    assert _cards(settled) == ["语音 0:03"]
+    assert settled["pages"][0]["count"] == 1
+    assert list(_tiles(settled)) == ["录音", "视频", "文字"]
+    assert _nodes(settled["content"], "audio") == []
 
 
 def test_collapsing_the_workspace_goes_back_to_the_three_tiles(tmp_path: Path) -> None:

@@ -15,6 +15,7 @@ from typing import Any
 
 from omora.sdk import Context
 from omora.sdk.ui import (
+    Audio,
     Button,
     Chip,
     Column,
@@ -35,7 +36,7 @@ from omora.sdk.ui import (
 )
 
 from . import _views
-from ._format import now, spoken_title, video_title, when
+from ._format import clock, now, seconds, spoken_title, video_title, when
 
 _FIELDS = {"title": "text", "archived": "bool", "pinned": "bool", "media": "text?"}
 _SUGGESTIONS = 5
@@ -143,6 +144,28 @@ class IdeasPlugin:
         def collapse(_: dict[str, Any]) -> None:
             capture.clear()
 
+        def record_again(_: dict[str, Any]) -> None:
+            """再录一条：回到录制初始态，重新挂上捕捉组件。"""
+            mode = str(capture.get("mode", ""))
+            capture.clear()
+            capture.update(mode=mode, phase="live")
+
+        def settle(mode: str, media_id: str, payload: dict[str, Any]) -> None:
+            """落库之后切到已保存条；面板早收起（或换了捕捉）就只落库。
+
+            录制中 / 上传中点「收起」时组件是卸载掉的，引擎在卸载时提交；
+            这时不能再把面板变回来。
+            """
+            if capture.get("mode") != mode or capture.get("phase") != "live":
+                return
+            capture.clear()
+            capture.update(
+                mode=mode,
+                phase="saved",
+                media=media_id,
+                seconds=seconds(payload),
+            )
+
         def save_text(payload: dict[str, Any]) -> None:
             value = str(payload.get("value", "")).strip()
             if not value:
@@ -158,7 +181,7 @@ class IdeasPlugin:
             if not media_id:
                 return
             ideas.add(title=spoken_title(payload), archived=False, pinned=False, media=media_id)
-            capture.clear()
+            settle(AUDIO, media_id, payload)
 
         def save_video(payload: dict[str, Any]) -> None:
             service = video_service()
@@ -168,7 +191,7 @@ class IdeasPlugin:
             if not media_id:
                 return
             ideas.add(title=video_title(payload), archived=False, pinned=False, media=media_id)
-            capture.clear()
+            settle(VIDEO, media_id, payload)
 
         def opener(record_id: str) -> Handler:
             def run(_: dict[str, Any]) -> None:
@@ -252,8 +275,16 @@ class IdeasPlugin:
             return None if service is None else service.node(save_video)
 
         def workspace() -> Node | None:
-            """工作区：一行头部（媒体名 + 收起）+ 主体那个节点。"""
+            """工作区：一行头部（媒体名 + 收起）+ 主体；落库后是已保存条。"""
             mode = str(capture.get("mode", ""))
+            if capture.get("phase") == "saved":
+                parts: list[Node] = [Text(f"已保存 · {clock(seconds(capture))}")]
+                # 视频不给内联播放：16:9 全宽塞不进一条。
+                if mode == AUDIO:
+                    parts.append(Audio(media=str(capture.get("media", ""))))
+                parts.append(Button("再录一条", on_click=record_again))
+                parts.append(Button("收起", variant="ghost", on_click=collapse))
+                return Panel(Row(*parts))
             body: Node | None
             if mode == TEXT:
                 body = Input(placeholder="记一条灵感…", on_submit=save_text)
