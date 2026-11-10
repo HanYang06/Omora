@@ -1,6 +1,7 @@
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { LiveVideo } from "./video-capture";
+import { LiveVideo } from "./live-video";
+import { QUALITY_BITRATE } from "./video-capture";
 
 /**
  * 回归：录制时只挂 srcObject 不会开始播放，画面就是黑的。
@@ -15,5 +16,12 @@ describe("录制预览", () => {
     expect(lower, html).toContain("muted");
     expect(lower, html).toContain("playsinline");
     expect(html).toContain('data-type="video-live"');
+  });
+});
+describe("录制参数", () => {
+  it("三档都有码率，而且分辨率越高码率越大", () => {
+    expect(Object.keys(QUALITY_BITRATE).sort()).toEqual(["1080p", "480p", "720p"]);
+    expect(QUALITY_BITRATE["480p"]).toBeLessThan(QUALITY_BITRATE["720p"]);
+    expect(QUALITY_BITRATE["720p"]).toBeLessThan(QUALITY_BITRATE["1080p"]);
   });
 });
