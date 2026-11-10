@@ -5,7 +5,7 @@
  *   开发（OMORA_DEV_URL 有值）→ 直接装 vite dev server，热更新照旧；
  *   发布（没有 OMORA_DEV_URL）→ 装 app/ui-engine/dist/index.html。
  *
- * 为什么不在这里起 Python 内核：开发时内核由 scripts/dev.py 起（和 vite 一起），
+ * 为什么不在这里起 Python 内核：开发时内核由 omora dev 起（和 vite 一起），
  * 壳只当浏览器用；发布形态再让壳去拉起 kernel，是下一步的事。
  */
 

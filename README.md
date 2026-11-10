@@ -40,7 +40,7 @@ pnpm --dir app/ui-engine install
 之后一条命令起内核和渲染引擎：
 
 ```
-uv run python scripts/dev.py
+uv run omora dev
 ```
 
 浏览器打开 http://127.0.0.1:5173；Ctrl+C 一起停。看到灵感页，点「录音」说一句、点「录视频」拍一段，或者在输入框里记一条；点「归档」，条目消失。没有麦克风 / 摄像头时，对应按钮会禁用并写明原因。
@@ -57,7 +57,7 @@ uv run python scripts/check.py
 
 | 脚本 | 作用 |
 |---|---|
-| `scripts/dev.py` | 一条命令起内核 + 渲染引擎，Ctrl+C 一起停 |
+| `app/cli/` | `omora` 命令：一条命令起内核 + 渲染引擎（`omora dev`） |
 | `scripts/check.py` | 统一门禁：体量预算、测试、lint、类型、前端测试与构建 |
 | `scripts/typecheck.py` | 类型检查：workspace 的包 + 组装根 + 测试 |
 | `scripts/budget.py` | 体量预算：文档与代码的文件行数上限，读 `budget.json` |
