@@ -19,9 +19,21 @@ describe("录制预览", () => {
   });
 });
 describe("录制参数", () => {
+  /**
+   * 索引访问在 noUncheckedIndexedAccess 下是 number | undefined。
+   * 缺档本身就是 bug，这里显式取出来：缺了扔错，测试信息直接指出是哪一档。
+   */
+  function bitrate(quality: string): number {
+    const value = QUALITY_BITRATE[quality];
+    if (value === undefined) {
+      throw new Error(`缺少 ${quality} 的码率`);
+    }
+    return value;
+  }
+
   it("三档都有码率，而且分辨率越高码率越大", () => {
     expect(Object.keys(QUALITY_BITRATE).sort()).toEqual(["1080p", "480p", "720p"]);
-    expect(QUALITY_BITRATE["480p"]).toBeLessThan(QUALITY_BITRATE["720p"]);
-    expect(QUALITY_BITRATE["720p"]).toBeLessThan(QUALITY_BITRATE["1080p"]);
+    expect(bitrate("480p")).toBeLessThan(bitrate("720p"));
+    expect(bitrate("720p")).toBeLessThan(bitrate("1080p"));
   });
 });
