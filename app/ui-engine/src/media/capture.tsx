@@ -55,7 +55,7 @@ export function Recorder({ node, onEvent }: NodeComponentProps): ReactNode {
         const blob = new Blob(chunks.current, { type: media.mimeType || "audio/webm" });
         const reader = new FileReader();
         reader.onload = () => {
-          const result = String(reader.result ?? "");
+          const result = typeof reader.result === "string" ? reader.result : "";
           const comma = result.indexOf(",");
           const data = comma >= 0 ? result.slice(comma + 1) : "";
           if (data.length > 0 && handler.length > 0) {

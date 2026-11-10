@@ -10,7 +10,8 @@ export type VideoMode = "idle" | "recording" | "paused" | "uploading" | "failed"
 
 export interface VideoRecorderOptions {
   devices?: DeviceSource;
-  refresh(): void;
+  /** 闭包，不是带 this 的方法：写成属性箭头类型才不会被当成"未绑定方法"传丢。 */
+  refresh: () => void;
   ready: boolean;
   pausable: boolean;
   maxSeconds: number;
@@ -29,11 +30,12 @@ export interface VideoRecorder {
   /** 刚录完的本地回放地址 */
   previewUrl?: string;
   error?: string;
-  start(): void;
-  stop(): void;
-  pause(): void;
-  resume(): void;
-  retry(): void;
+  /** 同上：这些是会传给 onClick 的闭包，不是对象方法。 */
+  start: () => void;
+  stop: () => void;
+  pause: () => void;
+  resume: () => void;
+  retry: () => void;
 }
 
 /**

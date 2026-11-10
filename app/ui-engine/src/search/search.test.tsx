@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { renderTree } from "../render/renderer";
-import { Result, Search, Suggestion } from "./search";
+import { Result, Suggestion } from "./search";
 import { highlightParts, keyAction, moveActive } from "./searchText";
 import type { Node } from "../core/types";
 

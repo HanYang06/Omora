@@ -12,6 +12,9 @@ build/
 node_modules/
 *.tsbuildinfo
 
+# 测试产物
+coverage/
+
 # 本地数据
 .omora/
 *.sqlite*

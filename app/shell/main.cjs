@@ -36,7 +36,7 @@ async function grab(window) {
   try {
     const image = await window.webContents.capturePage();
     return image.toPNG();
-  } catch (first) {
+  } catch {
     const debugger_ = window.webContents.debugger;
     debugger_.attach("1.3");
     try {
