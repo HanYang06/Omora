@@ -1,7 +1,9 @@
 """audio：音频捕捉。
 
 设备、权限、热插拔由客户端（TS 引擎）检测；这里管音质档、降噪开关、时限，
-以及录完之后的后期处理钩子。字节存进 media 服务，audio 自己不碰文件。
+以及录完之后的后期处理钩子。录音字节不走 base64：客户端先 POST 到 net 的
+HTTP 媒体通道拿 media_id，这里只校验（存在 / mime / 时限）、跑后期钩子，再把
+id 交给调用方。文件在 media 服务，audio 自己不碰文件。
 
 它和 video 是两个插件，不是同一个插件的两半：没有麦克风时只该关掉音频，
 不该连摄像头一起关掉。
@@ -9,7 +11,6 @@
 
 from __future__ import annotations
 
-import base64
 from collections.abc import Callable
 from typing import Any
 
@@ -17,15 +18,17 @@ from omora.sdk import Context
 from omora.sdk.ui import AudioCapture, Handler
 
 QUALITIES = ("low", "high")
-DEFAULT_SECONDS = 600
+DEFAULT_SECONDS = 0
+"""默认不限时长：0 表示不设上限。"""
 
 Processor = Callable[[bytes, str], bytes]
-"""后期处理钩子：原始音频字节 + mime → 新字节。按登记顺序跑，抛错就算这条没收成。"""
+"""后期处理钩子：原始音频字节 + mime → 新字节。按登记顺序跑。"""
 
 
 class Audio:
     def __init__(
         self,
+        ctx: Context,
         media: Any,
         *,
         quality: str = "high",
@@ -34,6 +37,7 @@ class Audio:
     ) -> None:
         if quality not in QUALITIES:
             raise ValueError(f"未知音质档: {quality}（可选 {', '.join(QUALITIES)}）")
+        self._ctx = ctx
         self._media = media
         self.quality = quality
         self.noise_reduction = _flag(noise_reduction)
@@ -41,17 +45,29 @@ class Audio:
         self._processors: list[Processor] = []
 
     def settings(self) -> dict[str, Any]:
-        """页面与客户端要的一切：质量档、降噪、时限。"""
+        """页面与客户端要的一切：质量档、降噪、时限、往哪儿传。"""
         return {
             "quality": self.quality,
             "noise_reduction": self.noise_reduction,
             "max_seconds": self.max_seconds,
+            "upload_url": self.channel(),
         }
 
-    def node(self, on_submit: Handler) -> AudioCapture:
-        """给页面用的捕捉条；设备有没有、用户给不给权限，由客户端回答。"""
+    def channel(self) -> str | None:
+        """HTTP 媒体通道的地址；net 没装或还没起就是 None。"""
+        if not self._ctx.has("net"):
+            return None
+        url = getattr(self._ctx.resolve("net"), "media_url", None)
+        return url if isinstance(url, str) and url else None
+
+    def node(self, on_submit: Handler) -> AudioCapture | None:
+        """给页面用的捕捉条；没有媒体通道就不出（音频存不下，出了也没用）。"""
+        url = self.channel()
+        if url is None:
+            return None
         return AudioCapture(
             on_submit=on_submit,
+            upload_url=url,
             quality=self.quality,
             noise_reduction=self.noise_reduction,
             max_seconds=self.max_seconds,
@@ -62,24 +78,51 @@ class Audio:
         self._processors.append(process)
 
     def capture(self, payload: dict[str, Any]) -> str | None:
-        """收一条录音：坏数据、非音频、超时都返回 None（不收，也不把页面炸掉）。"""
-        encoded = str(payload.get("audio", ""))
-        if not encoded:
+        """收一条上传完的录音：不存在、非音频、超时都返回 None（不收，也不把页面炸掉）。"""
+        media_id = str(payload.get("media", ""))
+        if not media_id:
             return None
         try:
-            data = base64.b64decode(encoded, validate=True)
-        except ValueError:
+            info: dict[str, Any] = self._media.info(media_id)
+        except LookupError:
             return None
-        if not data:
+        if not str(info.get("mime", "")).startswith("audio/"):
+            self._drop(media_id)
             return None
-        mime = str(payload.get("mime") or "audio/webm")
-        if not mime.startswith("audio/"):
+        if self.max_seconds > 0 and _seconds(payload) > self.max_seconds:
+            self._drop(media_id)
             return None
-        if _seconds(payload) > self.max_seconds:
-            return None
-        for process in self._processors:
-            data = process(data, mime)
-        return str(self._media.save(data, mime))
+        if not self._processors:
+            return media_id
+        return self._post_process(media_id)
+
+    def _post_process(self, media_id: str) -> str:
+        """读字节 → 跑钩子 → 存新的 → 删旧的。失败保留原件，不能吃掉用户的录音。"""
+        log = self._ctx.log.child("audio")
+        try:
+            before = self._media.info(media_id)
+            piece = self._media.read(media_id)
+            data: bytes = piece["data"]
+            mime = str(piece["mime"])
+            for process in self._processors:
+                data = process(data, mime)
+            fresh = str(self._media.save(data, mime))
+            self._media.delete(media_id)
+            log.info(
+                "audio.post_process",
+                before=int(before["size"]),
+                after=len(data),
+            )
+            return fresh
+        except Exception as exc:  # noqa: BLE001 — 后处理坏了也要把原录音还给用户
+            log.warning("audio.post_process.failed", err=type(exc).__name__)
+            return media_id
+
+    def _drop(self, media_id: str) -> None:
+        try:
+            self._media.delete(media_id)
+        except LookupError:
+            return
 
 
 class AudioPlugin:
@@ -100,6 +143,7 @@ class AudioPlugin:
         ctx.provide(
             "audio",
             Audio(
+                ctx,
                 media,
                 quality=self.quality,
                 noise_reduction=self.noise_reduction,
