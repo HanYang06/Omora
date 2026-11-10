@@ -200,15 +200,23 @@ class Ui:
 
 ### 7.2 渲染
 
-1. 给该页面开一代（generation += 1），清掉上一代的 handler；
-2. 调 `build()` 得到 `Page(meta, content)`；
-3. 序列化 content：字段名 → `props`；可调用字段 → 分配 `{page}:{gen}-{n}` 并记进 handler 表（记住所属页面）；`None` 字段不写；`children` 递归；
-4. 返回页面快照：`{pages, page, meta, content}`。`pages` 按登记顺序，`count` 每次现算。
+1. 该页面的 `serial` += 1（只增不减），这一次画出来的 handler id 用这个 serial；
+2. 把上一代的 handler 表挪进 `previous`，开一张新的；
+3. 调 `build()` 得到 `Page(meta, content)`；
+4. 序列化 content：字段名 → `props`；可调用字段 → 分配 `{page}:{serial}:{n}` 并记进 handler 表
+   （记住所属页面）；`None` 字段不写；`children` 递归；
+5. 返回页面快照：`{pages, page, meta, content}`。`pages` 按登记顺序，`count` 每次现算。
+
+**handler id 永不复用。** serial 只增不减，因为每次画都会把同一类位置重新编号；如果 id 回收，
+一个「重画之前出发、重画之后才回来」的事件就会打到新树里同序号、却完全不相干的回调上。
+典型场景：组件卸载时提交录制的那一段（见 [捕捉工作区](ui-capture.md) §5）。
 
 ### 7.3 派发
 
-- 找 handler → 把 payload 交给它 → 重画它所属的页面 → 返回新快照。
-- 找不到 → `LookupError`，由 net 插件包成错误帧。
+- 找 handler：先查当代，再查上一代（`previous`）；上一代只留一次宽限，下一次画就被替换掉；
+- 命中上一代说明有个事件比它的树慢了一拍：写一条 `ui.event.stale`（带 handler 与 page），不静默；
+- 把 payload 交给它 → 重画它所属的页面 → 返回新快照；
+- 两代都找不到 → `LookupError`，由 net 插件包成错误帧。
 
 ### 7.4 页面与节点
 
