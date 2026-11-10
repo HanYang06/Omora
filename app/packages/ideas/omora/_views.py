@@ -12,6 +12,7 @@ from omora.sdk.ui import (
     Button,
     Card,
     Handler,
+    Input,
     Item,
     Node,
     Panel,
@@ -19,6 +20,7 @@ from omora.sdk.ui import (
     Row,
     Text,
     Video,
+    Waveform,
 )
 
 from ._format import snippet, when
@@ -39,6 +41,35 @@ def workspace(title: str, body: Node, on_collapse: Handler) -> Panel:
         Row(Text(title), Button("收起", variant="ghost", on_click=on_collapse)),
         body,
     )
+
+
+def saved(
+    *,
+    stamp: str,
+    title: str,
+    audio: str | None,
+    peaks: tuple[int, ...],
+    seconds: float,
+    on_rename: Handler,
+    on_again: Handler,
+    on_collapse: Handler,
+) -> Panel:
+    """已保存条：第一行给一次命名与动作，音频再加一行静态波形。
+
+    audio 是刚存那条的 media id；视频没有内联播放，也就没有波形。
+    """
+    top: list[Node] = [
+        Text(f"已保存 · {stamp}"),
+        Input(value=title, on_submit=on_rename),
+    ]
+    if audio is not None:
+        top.append(Audio(media=audio))
+    top.append(Button("再录一条", on_click=on_again))
+    top.append(Button("收起", variant="ghost", on_click=on_collapse))
+    rows: list[Node] = [Row(*top)]
+    if audio is not None:
+        rows.append(Waveform(peaks=peaks, seconds=seconds))
+    return Panel(*rows)
 
 
 def card(record: Any, media: Any, on_click: Handler) -> Card:

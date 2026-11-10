@@ -112,9 +112,16 @@ def _recording(ui: Any, tile: str, node_type: str) -> tuple[str, dict[str, Any]]
     return str(node["props"]["on_submit"]), node
 
 
-def _audio_take(media_id: str, seconds: float) -> dict[str, Any]:
-    """引擎交上来的载荷：字节已经在 HTTP 媒体通道里，帧里只有 media id。"""
-    return {"media": media_id, "mime": "audio/webm", "seconds": seconds}
+def _audio_take(
+    media_id: str, seconds: float, peaks: list[int] | None = None
+) -> dict[str, Any]:
+    """引擎交上来的载荷：字节已经在 HTTP 媒体通道里，帧里只有 id 与波形。"""
+    return {
+        "media": media_id,
+        "mime": "audio/webm",
+        "seconds": seconds,
+        "peaks": [0, 50, 100] if peaks is None else peaks,
+    }
 
 
 def _video_take(media_id: str, seconds: float = 5) -> dict[str, Any]:
@@ -180,14 +187,17 @@ def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(
     handler, recorder = _recording(ui, "录音", "audio_capture")
     assert (recorder["props"]["quality"], recorder["props"]["noise_reduction"]) == ("high", True)
 
-    saved = ui.event(handler, _audio_take(uploaded, 12.4))
+    saved = ui.event(handler, _audio_take(uploaded, 12.4, [3, 30, 100]))
 
     bar = _capture_region(saved)
-    assert [child["type"] for child in bar["children"]] == ["row"]
+    assert [child["type"] for child in bar["children"]] == ["row", "waveform"]
     assert _nodes(bar, "audio_capture") == []
     assert _texts(bar) == ["已保存 · 0:12"]
     assert _button_texts(bar) == ["再录一条", "收起"]
+    assert _nodes(bar, "input")[0]["props"]["value"] == "语音 11-11 03:41"
     assert _nodes(bar, "audio")[0]["props"]["media"] == uploaded
+    waveform = _nodes(bar, "waveform")[0]["props"]
+    assert (waveform["peaks"], waveform["seconds"]) == ((3, 30, 100), 12.4)
     assert _cards(saved) == ["语音 11-11 03:41"]
     assert _rail_titles(saved) == ["语音 11-11 03:41"]
     assert saved["pages"][0]["count"] == 1
@@ -233,9 +243,12 @@ def test_a_saved_video_offers_no_inline_player(tmp_path: Path, monkeypatch: Any)
     saved = ui.event(handler, _video_take(uploaded))
 
     bar = _capture_region(saved)
+    assert [child["type"] for child in bar["children"]] == ["row"]
     assert _nodes(bar, "video") == []
     assert _nodes(bar, "audio") == []
+    assert _nodes(bar, "waveform") == []
     assert _texts(bar) == ["已保存 · 0:05"]
+    assert _nodes(bar, "input")[0]["props"]["value"] == "视频 11-11 03:41"
     assert _button_texts(bar) == ["再录一条", "收起"]
     assert _cards(saved) == ["视频 11-11 03:41"]
 
@@ -284,6 +297,8 @@ def test_collapsing_while_recording_stores_the_take_without_reopening_the_bar(
     assert settled["pages"][0]["count"] == 1
     assert list(_tiles(settled)) == ["录音", "视频", "文字"]
     assert _nodes(settled["content"], "audio") == []
+    assert _nodes(_main(settled), "waveform") == []
+    assert _nodes(_main(settled), "input") == []
 
 
 def test_collapsing_the_workspace_goes_back_to_the_three_tiles(tmp_path: Path) -> None:
@@ -400,3 +415,42 @@ def test_holding_space_without_the_audio_plugin_keeps_the_tiles(tmp_path: Path) 
     after = ui.event(str(key["props"]["on_press"]), {})
 
     assert list(_tiles(after)) == ["文字"]
+
+def test_naming_a_saved_take_renames_the_record(tmp_path: Path, monkeypatch: Any) -> None:
+    _pin_clock(monkeypatch)
+    kernel = _kernel(tmp_path)
+    ui = kernel.resolve("ui")
+    uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
+    handler, _ = _recording(ui, "录音", "audio_capture")
+    saved = ui.event(handler, _audio_take(uploaded, 3))
+    field = _nodes(_capture_region(saved), "input")[0]
+
+    renamed = ui.event(str(field["props"]["on_submit"]), {"value": "  买牛奶  "})
+
+    assert _cards(renamed) == ["买牛奶"]
+    assert _rail_titles(renamed) == ["买牛奶"]
+    bar = _capture_region(renamed)
+    assert _texts(bar) == ["已保存 · 0:03"]
+    assert _nodes(bar, "input")[0]["props"]["value"] == "买牛奶"
+    assert _nodes(bar, "waveform")
+
+
+def test_a_blank_rename_never_clears_the_title(tmp_path: Path, monkeypatch: Any) -> None:
+    _pin_clock(monkeypatch)
+    kernel = _kernel(tmp_path)
+    ui = kernel.resolve("ui")
+    uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
+    handler, _ = _recording(ui, "录音", "audio_capture")
+    saved = ui.event(handler, _audio_take(uploaded, 3))
+    field = _nodes(_capture_region(saved), "input")[0]
+
+    blank = ui.event(str(field["props"]["on_submit"]), {"value": "   "})
+    assert _cards(blank) == ["语音 11-11 03:41"]
+
+    field = _nodes(_capture_region(blank), "input")[0]
+    renamed = ui.event(str(field["props"]["on_submit"]), {"value": "买牛奶"})
+    field = _nodes(_capture_region(renamed), "input")[0]
+    cleared = ui.event(str(field["props"]["on_submit"]), {"value": ""})
+
+    assert _cards(cleared) == ["买牛奶"]
+    assert _nodes(_capture_region(cleared), "input")[0]["props"]["value"] == "买牛奶"

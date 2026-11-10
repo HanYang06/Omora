@@ -7,6 +7,7 @@ from typing import Any
 
 _WEEKDAYS = ("周一", "周二", "周三", "周四", "周五", "周六", "周日")
 _SNIPPET = 40
+_MAX_PEAKS = 300
 
 
 def now() -> datetime:
@@ -59,6 +60,20 @@ def seconds(payload: dict[str, Any]) -> float:
         return float(payload.get("seconds", 0) or 0)
     except (TypeError, ValueError):
         return 0.0
+
+
+def peaks(payload: dict[str, Any]) -> tuple[int, ...]:
+    """引擎顺手采的柱高：0–100、最多 300 个；坏值丢掉，别把页面炸掉。"""
+    raw = payload.get("peaks")
+    if not isinstance(raw, (list, tuple)):
+        return ()
+    kept: list[int] = []
+    for value in raw[:_MAX_PEAKS]:
+        try:
+            kept.append(max(0, min(100, int(value))))
+        except (TypeError, ValueError):
+            continue
+    return tuple(kept)
 
 
 def caption(created: datetime, kind: str) -> str:

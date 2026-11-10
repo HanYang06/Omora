@@ -13,21 +13,10 @@ from collections.abc import Callable
 from dataclasses import replace
 from typing import Any
 
-from omora.sdk.ui import (
-    Audio,
-    AudioCapture,
-    Button,
-    Handler,
-    Input,
-    Node,
-    Panel,
-    Row,
-    Text,
-    Tile,
-)
+from omora.sdk.ui import AudioCapture, Handler, Input, Node, Row, Tile
 
 from . import _views
-from ._format import caption, clock, now, seconds
+from ._format import caption, clock, now, peaks, seconds
 
 AUDIO = "audio"
 VIDEO = "video"
@@ -85,13 +74,18 @@ class Capture:
         """工作区：一行头部（媒体名 + 收起）+ 主体；落库后是已保存条。"""
         mode = str(self._state.get("mode", ""))
         if self._state.get("phase") == "saved":
-            parts: list[Node] = [Text(f"已保存 · {clock(seconds(self._state))}")]
-            # 视频不给内联播放：16:9 全宽塞不进一条。
-            if mode == AUDIO:
-                parts.append(Audio(media=str(self._state.get("media", ""))))
-            parts.append(Button("再录一条", on_click=self._again))
-            parts.append(Button("收起", variant="ghost", on_click=self._collapse))
-            return Panel(Row(*parts))
+            # 视频不给内联播放：16:9 全宽塞不进一条，也就没有波形。
+            audio = str(self._state.get("media", "")) if mode == AUDIO else None
+            return _views.saved(
+                stamp=clock(seconds(self._state)),
+                title=str(self._state.get("title", "")),
+                audio=audio,
+                peaks=self._state.get("peaks", ()),
+                seconds=seconds(self._state),
+                on_rename=self._rename,
+                on_again=self._again,
+                on_collapse=self._collapse,
+            )
         body = self._body(mode)
         if body is None:
             return None
@@ -133,6 +127,16 @@ class Capture:
         self.clear()
         self._state.update(mode=mode, phase="live")
 
+    def _rename(self, payload: dict[str, Any]) -> None:
+        """给刚存的那条改名；空回车保留现在的名字，不清空标题。"""
+        record_id = self._state.get("record")
+        record = None if record_id is None else self._ideas.get(str(record_id))
+        if record is None:
+            return
+        title = str(payload.get("value", "")).strip() or str(record.title)
+        self._ideas.update(str(record_id), title=title)
+        self._state["title"] = title
+
     def _save_text(self, payload: dict[str, Any]) -> None:
         value = str(payload.get("value", "")).strip()
         if not value:
@@ -164,8 +168,16 @@ class Capture:
         录制中 / 上传中点「收起」时组件是卸载掉的，引擎在卸载时提交；
         这时不能再把面板变回来。
         """
-        self._ideas.add(title=title, archived=False, pinned=False, media=media_id)
+        record = self._ideas.add(title=title, archived=False, pinned=False, media=media_id)
         if self._state.get("mode") != mode or self._state.get("phase") != "live":
             return
         self.clear()
-        self._state.update(mode=mode, phase="saved", media=media_id, seconds=seconds(payload))
+        self._state.update(
+            mode=mode,
+            phase="saved",
+            media=media_id,
+            title=title,
+            seconds=seconds(payload),
+            peaks=peaks(payload),
+            record=record.id,
+        )
