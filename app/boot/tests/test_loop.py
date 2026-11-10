@@ -195,6 +195,9 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
         try:
             # 客户端上报能力之后，manager 才把 audio / video 装上。
             kernel.resolve("manager").report_capabilities(["microphone", "camera"])
+            status, payload = await _post(_media_port(net), b"hello", "audio/webm")
+            assert status == 201, payload
+            audio_id = str(json.loads(payload)["media_id"])
             async with connect(f"ws://127.0.0.1:{port}") as ws:
                 before = await _request(ws, "1", "ui", "render", {})
                 tile = _find_tile(before["content"], "录音")
@@ -204,7 +207,6 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
                 )
                 handler = _find_capture(capture_page["content"], "audio_capture")
                 assert handler is not None
-                audio = base64.b64encode(b"hello").decode("ascii")
                 after = await _request(
                     ws,
                     "3",
@@ -212,7 +214,7 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
                     "event",
                     {
                         "handler": handler,
-                        "payload": {"audio": audio, "mime": "audio/webm", "seconds": 2.0},
+                        "payload": {"media": audio_id, "mime": "audio/webm", "seconds": 2.0},
                     },
                 )
                 opened = _find_item(after["content"], "语音 0:02")
