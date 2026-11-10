@@ -31,7 +31,15 @@
 - TypeScript：`@vitest/coverage-v8`，`include = src/**/*.{ts,tsx}`，排除测试、`*.d.ts`、纯类型文件与样式；初始地板 lines 54 / statements 53 / branches 52 / functions 53。
 - 两边的 Cobertura XML 都作为 workflow artifact 保存 14 天；同时尽力上传 GitHub Code Quality（`actions/upload-code-coverage`，失败不阻断）。Code Quality 的覆盖率数据依赖仓库/套餐开启该能力，没开时上传会 404，此时以 CI 里的 `fail_under` / vitest 阈值为准，文件仍能从 artifact 取到。
 - **抬阈值的流程**：先补真实行为的测试，确认覆盖率变了，再改阈值数字。不允许先改数字再凑测试。
-- 防"垃圾测试"：PR 上用 `diff-cover` 卡新增生产代码行覆盖率；变异测试（mutmut / Stryker）排在下一步单独接入，接入后先观察四周再设地板。
+- 防"垃圾测试"：PR 上用 `diff-cover` 卡新增生产代码行覆盖率；每周一 03:00 UTC 跑 `.github/workflows/mutation.yml`（TS 用 Stryker），只出报告不拦门禁，观察四周后再设地板。报告作为 artifact 保留 30 天。
+
+## 变异测试
+
+每周一 03:00 UTC 跑 `.github/workflows/mutation.yml`：TS 用 Stryker（vitest runner，inPlace 模式），只出变异分数与报告，不拦 PR；报告作为 artifact 保留 30 天，观察四周后再决定地板。
+
+Stryker 用 inPlace 是因为 Stryker 10 读不了仓库的 TypeScript 7 经典编译 API；CI 是干净 checkout，跑完只留报告。
+
+Python 侧暂未接入：mutmut 3 按仓库相对路径推导模块名（期望 `app.core.omora.*`），而 uv workspace 的 import 是 `omora.*`，trampoline 键对不上；同时它的 mutants/ 沙箱里 editable 安装仍指向原仓库。等有适配 workspace 布局的方案或工具再补，不先用一个假绿的 weekly job 占位。
 
 ## 安全与供应链
 

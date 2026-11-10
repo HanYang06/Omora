@@ -13,6 +13,10 @@ build/
 coverage.xml
 htmlcov/
 
+# 变异测试产物
+.stryker-tmp/
+app/ui-engine/reports/
+
 # Node
 node_modules/
 *.tsbuildinfo

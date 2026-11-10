@@ -10,6 +10,8 @@ __pycache__/
 # 本地数据
 .omora/
 coverage/
+.stryker-tmp/
+app/ui-engine/reports/
 
 # 锁文件与第三方资产
 pnpm-lock.yaml

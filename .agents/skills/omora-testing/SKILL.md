@@ -121,5 +121,7 @@ def test_creating_idea_persists_and_emits_event(fake_store: FakeStore) -> None:
 
 - `pytest --cov` 与 `vitest --coverage` 有覆盖率地板（Python 95%，TS 从 54% 起步，只许升）。
 - PR 上 `diff-cover` 卡新增生产代码的行覆盖率。
-- 变异测试（mutmut / Stryker）排在下一阶段；接入后先观察四周，再设地板。
+- 每周变异测试（Stryker，TS）给出"测试是否真的约束了行为"的指标；
+  先观察四周，再设地板。Python 侧 mutmut 与 uv workspace 布局不兼容，
+  暂未接入（原因记在 docs/design/ci.md）。
 - 覆盖率与变异分数都拦不住"行为本身没测到"的 bug；三问和评审仍是第一道。
