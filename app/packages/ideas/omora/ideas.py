@@ -1,7 +1,7 @@
 """ideas：灵感页。
 
 三栏由页面自己排：Split(索引栏, 主区)。索引栏只导航；主区在同一页里换模式——
-首页（搜索、三个捕捉大按钮、工具条、推荐 feed）、结果、详情、三种捕捉。
+首页（搜索区、捕捉区、列表面板）、结果、详情、三种捕捉。
 捕捉：文字是自己的；录音 / 录像由 audio / video 插件按服务名提供——它们没有，
 对应的 Tile 就不出现。置顶 / 归档只在详情里做。
 
@@ -24,6 +24,7 @@ from omora.sdk.ui import (
     List,
     Node,
     Page,
+    Panel,
     Rail,
     Row,
     Search,
@@ -55,10 +56,10 @@ _CHIPS = (
     ("stale", "久未打开"),
 )
 _EMPTY = {
-    "all": ("还没有灵感。", "录一段、拍一段，或者写第一条，按回车保存。"),
-    "pinned": ("还没有置顶的灵感。", "打开一条，点「置顶」钉到最前面。"),
-    "recent": (f"最近 {_STALE_DAYS} 天没有新灵感。", "换个筛选，或者现在记一条。"),
-    "stale": (f"没有超过 {_STALE_DAYS} 天的灵感。", "放旧了会回到这里。"),
+    "all": ("还没有灵感。", "记下的第一条会出现在这里。"),
+    "pinned": ("还没有置顶的灵感。", "置顶的会钉在最前面。"),
+    "recent": (f"最近 {_STALE_DAYS} 天没有新灵感。", "更早的灵感在「全部」里。"),
+    "stale": (f"没有超过 {_STALE_DAYS} 天的灵感。", "放旧的灵感会落到这里。"),
 }
 
 
@@ -225,32 +226,11 @@ class IdeasPlugin:
         def tiles() -> list[Node]:
             nodes: list[Node] = []
             if audio_service() is not None:
-                nodes.append(
-                    Tile(
-                        icon="mic",
-                        title="录音",
-                        hint="说一句，存成语音",
-                        on_click=enter(CAPTURE_AUDIO),
-                    )
-                )
+                nodes.append(Tile(icon="mic", title="录音", on_click=enter(CAPTURE_AUDIO)))
             video = video_service()
             if video is not None and video.node(save_video) is not None:
-                nodes.append(
-                    Tile(
-                        icon="video",
-                        title="视频",
-                        hint="拍一段，存成视频",
-                        on_click=enter(CAPTURE_VIDEO),
-                    )
-                )
-            nodes.append(
-                Tile(
-                    icon="text",
-                    title="文字",
-                    hint="写一句，回车存下",
-                    on_click=enter(CAPTURE_TEXT),
-                )
-            )
+                nodes.append(Tile(icon="video", title="视频", on_click=enter(CAPTURE_VIDEO)))
+            nodes.append(Tile(icon="text", title="文字", on_click=enter(CAPTURE_TEXT)))
             return nodes
 
         def feed(items: list[Any]) -> Node:
@@ -269,8 +249,7 @@ class IdeasPlugin:
                 content=Column(
                     search_bar(True),
                     Row(*tiles()),
-                    Row(*chips),
-                    feed(filtered(items)),
+                    Panel(Row(*chips), feed(filtered(items))),
                 ),
                 meta=f"{len(items)} 条",
             )
@@ -283,7 +262,7 @@ class IdeasPlugin:
                 )
                 meta = f"{len(found)} 条结果"
             else:
-                content = Empty("没有匹配的灵感。", "换个词试试；只搜标题。")
+                content = Empty("没有匹配的灵感。", "换个词试试。")
                 meta = "没有结果"
             return Page(content=Column(search_bar(False), _views.back_bar(back), content), meta=meta)
 
@@ -326,7 +305,7 @@ class IdeasPlugin:
                 if node is not None:
                     body.append(node)
             if not body:
-                body.append(Empty("这条捕捉现在用不了。", "对应的服务不在了，先回首页。"))
+                body.append(Empty("这条捕捉暂时用不了。", "回首页再试。"))
             return Page(content=Column(_views.back_bar(back), *body))
 
         def page() -> Page:

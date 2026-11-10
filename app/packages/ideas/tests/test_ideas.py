@@ -159,29 +159,38 @@ def test_the_page_is_a_split_of_a_rail_and_a_main_area_with_the_ideas_icon(
     }
 
 
-def test_the_home_starts_with_the_capture_tiles_and_an_empty_feed(tmp_path: Path) -> None:
+def test_the_home_is_three_regions_with_the_toolbar_and_feed_in_a_panel(
+    tmp_path: Path,
+) -> None:
     snapshot = _kernel(tmp_path).resolve("ui").render()
+    main = _main(snapshot)
+    _, tiles_row, panel = main["children"]
 
+    assert [child["type"] for child in main["children"]] == ["search", "row", "panel"]
     assert list(_tiles(snapshot)) == ["录音", "视频", "文字"]
-    empty = _nodes(_main(snapshot), "empty")[0]["props"]
-    assert empty["title"] == "还没有灵感。"
-    assert empty["hint"] == "录一段、拍一段，或者写第一条，按回车保存。"
+    assert all("hint" not in tile["props"] for tile in tiles_row["children"])
+    assert list(_chips(snapshot)) == ["全部", "置顶", "最近", "久未打开"]
+    assert _active_chips(snapshot) == ["全部"]
+    assert [child["type"] for child in panel["children"]] == ["row", "empty"]
+    assert _nodes(panel, "chip")
+    assert _nodes(panel, "tile") == []
+    assert _nodes(panel, "empty")[0]["props"]["hint"] == "记下的第一条会出现在这里。"
     assert snapshot["meta"] == "0 条"
 
 
-def test_the_toolbar_lists_the_four_filters_with_all_active(tmp_path: Path) -> None:
-    snapshot = _kernel(tmp_path).resolve("ui").render()
-
-    assert list(_chips(snapshot)) == ["全部", "置顶", "最近", "久未打开"]
-    assert _active_chips(snapshot) == ["全部"]
-
-
-def test_the_rail_lists_every_idea_newest_first(tmp_path: Path) -> None:
+def test_the_rail_lists_every_idea_newest_first_and_the_feed_sits_in_the_panel(
+    tmp_path: Path,
+) -> None:
     ui = _kernel(tmp_path).resolve("ui")
     for title in ("牛奶 A", "牛奶 B", "写周报"):
         _capture_text(ui, title)
 
-    assert _rail_titles(ui.render()) == ["写周报", "牛奶 B", "牛奶 A"]
+    snapshot = ui.render()
+    panel = _main(snapshot)["children"][2]
+
+    assert _rail_titles(snapshot) == ["写周报", "牛奶 B", "牛奶 A"]
+    assert panel["type"] == "panel"
+    assert _titles(panel, "card") == ["写周报", "牛奶 B", "牛奶 A"]
 
 
 def test_the_rail_only_navigates_and_carries_no_actions(tmp_path: Path) -> None:
@@ -358,6 +367,7 @@ def test_the_recent_and_stale_chips_split_the_feed_by_age(
     assert _cards(stale) == ["牛奶 B", "牛奶 A"]
     assert _active_chips(stale) == ["久未打开"]
 
+
 def test_the_detail_carries_the_pin_state_it_can_undo(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
     _capture_text(ui, "买牛奶")
@@ -436,17 +446,6 @@ def test_a_query_without_matches_offers_nothing_and_shows_the_empty_state(
     after = _submit(ui, "牛排")
     assert after["meta"] == "没有结果"
     assert _nodes(_main(after), "empty")[0]["props"]["title"] == "没有匹配的灵感。"
-
-
-def test_back_from_the_results_returns_home(tmp_path: Path) -> None:
-    ui = _kernel(tmp_path).resolve("ui")
-    _capture_text(ui, "买牛奶")
-    _submit(ui, "牛奶")
-
-    home = _click_button(ui, "← 返回")
-
-    assert _cards(home) == ["买牛奶"]
-    assert _nodes(_main(home), "result") == []
 
 
 def test_clicking_a_result_opens_the_detail_and_back_walks_home(tmp_path: Path) -> None:
