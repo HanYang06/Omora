@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_PEAKS,
+  clockSeconds,
+  pauseClock,
   planStop,
   planUpload,
+  pushPeak,
+  resumeClock,
+  rmsToPeak,
+  startClock,
+  timeUp,
   uploadFailureReason,
   type StopFacts,
 } from "./capture-rules";
@@ -92,5 +100,104 @@ describe("上传错误 → 界面上的原因", () => {
     expect(uploadFailureReason({ status: 500 })).toBe("上传失败");
     expect(uploadFailureReason(undefined)).toBe("上传失败");
     expect(uploadFailureReason(new Error(""))).toBe("上传失败");
+  });
+});
+describe("录制中的波形峰值", () => {
+  it("新柱子接在末尾，不改变已经采到的顺序", () => {
+    expect(pushPeak([10, 20], 30)).toEqual([10, 20, 30]);
+  });
+
+  it("越界和小数先夹回 0–100 的整数，再进序列", () => {
+    expect(pushPeak([], 150)).toEqual([100]);
+    expect(pushPeak([], -3)).toEqual([0]);
+    expect(pushPeak([], 42.6)).toEqual([43]);
+  });
+
+  it("满 300 根之后开始压缩，之后录多久都不超过 300 根", () => {
+    let peaks: number[] = [];
+    for (let index = 0; index < MAX_PEAKS; index += 1) {
+      peaks = pushPeak(peaks, 50);
+    }
+    expect(peaks).toHaveLength(MAX_PEAKS);
+
+    peaks = pushPeak(peaks, 50);
+    expect(peaks.length).toBeLessThan(MAX_PEAKS);
+
+    for (let index = 0; index < 5000; index += 1) {
+      peaks = pushPeak(peaks, 50);
+    }
+    expect(peaks.length).toBeLessThanOrEqual(MAX_PEAKS);
+    expect(peaks.length).toBeGreaterThan(0);
+  });
+
+  it("压缩取一段里的最大值：一声重音不会被平均抹平", () => {
+    const peaks = Array.from({ length: MAX_PEAKS }, () => 0);
+    peaks[MAX_PEAKS - 1] = 100;
+
+    const squeezed = pushPeak(peaks, 0);
+
+    expect(squeezed.length).toBeLessThan(MAX_PEAKS);
+    expect(Math.max(...squeezed)).toBe(100);
+  });
+
+  it("RMS 映射：静音贴底、满幅到顶、常用音量被抬起来", () => {
+    expect(rmsToPeak(0)).toBe(0);
+    expect(rmsToPeak(1)).toBe(100);
+    expect(rmsToPeak(0.25)).toBe(50);
+    expect(rmsToPeak(2)).toBe(100);
+    expect(rmsToPeak(-1)).toBe(0);
+    // 小声说话的 RMS 大约 0.04：线性映射只剩 4，平方根映射还能看见
+    expect(rmsToPeak(0.04)).toBeGreaterThan(10);
+  });
+});
+
+describe("暂停与计时", () => {
+  it("没暂停时按真实流逝走", () => {
+    expect(clockSeconds(startClock(1000), 6000)).toBe(5);
+  });
+
+  it("暂停时计时冻结，等多久都不涨", () => {
+    const paused = pauseClock(startClock(0), 5000);
+
+    expect(clockSeconds(paused, 9000)).toBe(5);
+    expect(clockSeconds(paused, 600000)).toBe(5);
+  });
+
+  it("继续之后暂停的那段不算进时长", () => {
+    const resumed = resumeClock(pauseClock(startClock(0), 5000), 12000);
+
+    expect(clockSeconds(resumed, 14000)).toBe(7);
+  });
+
+  it("连点两次暂停不会把时间吞两次", () => {
+    const twice = pauseClock(pauseClock(startClock(0), 5000), 8000);
+
+    expect(clockSeconds(twice, 9000)).toBe(5);
+  });
+
+  it("没暂停时点继续不改变计时", () => {
+    const clock = startClock(0);
+
+    expect(clockSeconds(resumeClock(clock, 3000), 4000)).toBe(4);
+  });
+
+  it("系统时钟倒着走也不会给出负时长", () => {
+    expect(clockSeconds(startClock(10000), 5000)).toBe(0);
+  });
+});
+
+describe("时长上限", () => {
+  it("max_seconds = 0 表示不限时长，录多久都不自动停", () => {
+    expect(timeUp(0, 999999)).toBe(false);
+  });
+
+  it("负数也按不限处理", () => {
+    expect(timeUp(-1, 60)).toBe(false);
+  });
+
+  it("到点自动停，差一点不算停", () => {
+    expect(timeUp(30, 29.9)).toBe(false);
+    expect(timeUp(30, 30)).toBe(true);
+    expect(timeUp(30, 31)).toBe(true);
   });
 });
