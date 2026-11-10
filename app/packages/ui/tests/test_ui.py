@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -5,6 +6,7 @@ import pytest
 
 from omora.core.context import Context
 from omora.core.kernel import Kernel
+from omora.core.log import Log
 from omora.sdk.ui import Button, Column, Empty, Input, Item, List, Page, Text
 from omora.ui import Ui, UiPlugin
 
@@ -165,3 +167,88 @@ def test_unknown_handler_is_looked_up() -> None:
 
     with pytest.raises(LookupError, match="未知 handler: main:1:9"):
         kernel.resolve("ui").event("main:1:9", {})
+
+def _input_page(seen: list[dict[str, Any]]) -> Callable[[], Page]:
+    def build() -> Page:
+        return Page(content=Column(Input(placeholder="记一笔", on_submit=seen.append)))
+
+    return build
+
+
+def _input_kernel(seen: list[dict[str, Any]]) -> Kernel:
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(_input_page(seen)))
+    return kernel
+
+
+def test_a_handler_from_the_previous_render_still_fires_once() -> None:
+    """组件卸载时提交带的 id 属于上一代：重画之后还得能触发一次，不然那条就丢了。"""
+    seen: list[dict[str, Any]] = []
+    ui: Ui = _input_kernel(seen).resolve("ui")
+
+    old = ui.render()["content"]["children"][0]["props"]["on_submit"]
+    ui.render()
+    ui.event(old, {"value": "买牛奶"})
+
+    assert seen == [{"value": "买牛奶"}]
+
+
+def test_a_handler_stops_working_after_the_next_render() -> None:
+    """宽限只留一代：再画一次，上一代就被替换掉，陈旧 id 彻底作废。"""
+    seen: list[dict[str, Any]] = []
+    ui: Ui = _input_kernel(seen).resolve("ui")
+
+    old = ui.render()["content"]["children"][0]["props"]["on_submit"]
+    ui.render()
+    ui.render()
+
+    with pytest.raises(LookupError, match="未知 handler"):
+        ui.event(old, {"value": "买牛奶"})
+
+    assert seen == []
+
+
+def test_a_stale_id_never_runs_the_handler_that_took_its_index() -> None:
+    """回归：id 曾按 generation + 序号回收，重画后同序号的另一个回调会被陈旧 id 打到。"""
+    seen: list[str] = []
+    state = {"step": 0}
+
+    def build() -> Page:
+        label = "甲" if state["step"] == 0 else "乙"
+
+        def step(payload: dict[str, Any]) -> None:
+            seen.append(label)
+            state["step"] = 1
+
+        return Page(content=Column(Button(label, on_click=step)))
+
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(build))
+    ui: Ui = kernel.resolve("ui")
+
+    old = ui.render()["content"]["children"][0]["props"]["on_click"]
+    ui.event(old, {})
+    ui.event(old, {})
+
+    assert seen == ["甲", "甲"]
+
+
+def test_a_stale_event_is_logged(caplog: pytest.LogCaptureFixture) -> None:
+    """陈旧 id 命中要说出来，别静默——它意味着有个回调在重画之后才回来。"""
+    seen: list[dict[str, Any]] = []
+    caplog.set_level(logging.INFO)
+    logger = logging.getLogger("omora.test.ui.stale")
+    kernel = Kernel(log=Log(logger, "ui", "kernel", logging.INFO))
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(_input_page(seen)))
+    ui: Ui = kernel.resolve("ui")
+
+    old = ui.render()["content"]["children"][0]["props"]["on_submit"]
+    ui.render()
+    ui.event(old, {"value": "买牛奶"})
+
+    stale = [record for record in caplog.records if record.getMessage() == "ui.event.stale"]
+    assert len(stale) == 1
+    assert vars(stale[0])["data"] == {"handler": old, "page": "main"}
