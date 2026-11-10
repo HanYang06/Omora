@@ -12,14 +12,14 @@ export interface RecordTimer {
   /** 界面上显示的秒数（暂停时冻结） */
   seconds: number;
   /** 到现在为止录了多久；停的时候按它算载荷里的 seconds */
-  elapsed(): number;
+  elapsed: () => number;
   /** 从现在起重置计时；到 limitSeconds 回调一次（0 = 不限） */
-  start(limitSeconds: number, onLimit: () => void): void;
-  pause(): void;
-  resume(): void;
-  stop(): void;
+  start: (limitSeconds: number, onLimit: () => void) => void;
+  pause: () => void;
+  resume: () => void;
+  stop: () => void;
   /** 现在是不是暂停中（暂停时不该采样） */
-  paused(): boolean;
+  paused: () => boolean;
 }
 
 /**

@@ -181,7 +181,7 @@ export class Logger {
     const pending = (async () => {
       try {
         // 一次 flush 一帧；单条日志帧（write）留给一次性调用。
-        await call("log", "write_many", { entries } as unknown as JsonObject);
+        await call("log", "write_many", { entries });
       } catch {
         // 日志送不出去不该反噬调用方；控制台那份已经打过了。
       }

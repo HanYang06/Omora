@@ -181,12 +181,12 @@ describe("console", () => {
 describe("防自激", () => {
   it("发日志的那帧 call 自己不再记一条", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
-    let logger: Logger | undefined;
     const call = vi.fn(async (): Promise<number> => {
-      logger?.child("render").info("发送中");
+      logger.child("render").info("发送中");
       return 1;
     });
-    logger = createLogger({ call, enabled: true, level: "trace" });
+    // call 在 createLogger 之后才会被调用，闭包里引用 logger 不会踩 TDZ。
+    const logger: Logger = createLogger({ call, enabled: true, level: "trace" });
 
     logger.child("render").info("hello");
     await logger.flush();

@@ -134,7 +134,7 @@ export function defaultDeviceSource(): DeviceSource | undefined {
   if (typeof navigator === "undefined") {
     return undefined;
   }
-  return navigator.mediaDevices as unknown as DeviceSource | undefined;
+  return navigator.mediaDevices;
 }
 
 /** 打开设备。只在用户点了按钮之后调：浏览器只认手势里的权限请求。 */

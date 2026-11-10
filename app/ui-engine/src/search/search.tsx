@@ -1,6 +1,6 @@
 import { Children, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { IconGlyph } from "../shell/icons";
-import { highlightParts, keyAction, moveActive } from "./searchText";
+import { highlightParts, keyAction } from "./searchText";
 import { prop, type NodeComponentProps } from "../core/shared";
 
 /** 打字之后等这么久再问后端；再敲一下就重新计时。 */

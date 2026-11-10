@@ -17,7 +17,7 @@ export interface WebSocketLike {
 
 export type WebSocketFactory = (url: string) => WebSocketLike;
 
-const defaultFactory: WebSocketFactory = (url) => new WebSocket(url) as unknown as WebSocketLike;
+const defaultFactory: WebSocketFactory = (url) => new WebSocket(url);
 
 /** 调用失败：code 来自错误帧，或连接层的 not_connected / connection_closed。 */
 export class CallError extends Error {

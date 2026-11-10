@@ -32,7 +32,7 @@ interface ClickableElement {
 }
 
 function asElement(value: unknown): ClickableElement {
-  return value as unknown as ClickableElement;
+  return value as ClickableElement;
 }
 
 function findChild(element: ClickableElement, className: string): ClickableElement | undefined {
