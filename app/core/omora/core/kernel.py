@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any, Protocol
 
 from .context import Context
+from .log import Log, NullLog
 
 
 class Plugin(Protocol):
@@ -33,18 +34,22 @@ class Handle:
 class Kernel:
     """装上插件、记着谁在、按名字给服务。"""
 
-    def __init__(self) -> None:
-        self._root = Context()
+    def __init__(
+        self, log: Log | None = None, services: Mapping[str, Any] | None = None
+    ) -> None:
+        self._log = log if log is not None else NullLog()
+        self._root = Context(dict(services or {}), log=self._log)
         self._plugins: dict[str, Context] = {}
 
     def install(self, plugin: Plugin) -> Handle:
         """加持：装上并运行；运行失败就撤销它登记过的一切。"""
         if plugin.name in self._plugins:
             raise ValueError(f"插件已安装: {plugin.name}")
-        ctx = self._root.extend()
+        ctx = self._root.extend(plugin.name)
         try:
             plugin.apply(ctx)
         except BaseException as exc:
+            self._log.child(plugin.name).error("装载失败", err=type(exc).__name__)
             try:
                 ctx.dispose()
             except BaseException as rollback:  # noqa: BLE001 — 回滚失败不能盖掉原始异常
@@ -52,6 +57,7 @@ class Kernel:
             exc.add_note(f'插件 "{plugin.name}" 装载失败')
             raise
         self._plugins[plugin.name] = ctx
+        self._log.child(plugin.name).info("已装")
         return Handle(plugin.name, self.uninstall)
 
     def uninstall(self, name: str) -> None:
@@ -59,6 +65,7 @@ class Kernel:
         ctx = self._plugins.pop(name, None)
         if ctx is not None:
             ctx.dispose()
+            self._log.child(name).info("已卸")
 
     def running(self, name: str) -> bool:
         """持有：这个插件在不在。"""
