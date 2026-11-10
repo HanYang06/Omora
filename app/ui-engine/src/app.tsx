@@ -6,13 +6,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { reportCapabilitiesOnce } from "./capability-report";
-import { Connection, type ConnectionStatus } from "./connection";
-import type { Logger } from "./log";
-import { fetchMedia } from "./media";
-import type { JsonObject } from "./protocol";
-import { Shell } from "./shell";
-import type { Node, Snapshot } from "./types";
+import { reportCapabilitiesOnce } from "./core/capability-report";
+import { Connection, type ConnectionStatus } from "./core/connection";
+import type { Logger } from "./core/log";
+import { fetchMedia } from "./media/media";
+import type { JsonObject } from "./core/protocol";
+import { Shell } from "./shell/shell";
+import type { Node, Snapshot } from "./core/types";
 
 export interface AppProps {
   connection: Connection;

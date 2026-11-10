@@ -1,10 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app";
-import { Connection } from "./connection";
-import { createLogger } from "./log";
-import "./styles.css";
-import "./media.css";
+import { Connection } from "./core/connection";
+import { createLogger } from "./core/log";
+import "./styles/styles.css";
+import "./styles/media.css";
 
 const container = document.getElementById("root");
 if (container === null) {
