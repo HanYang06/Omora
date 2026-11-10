@@ -29,7 +29,7 @@
 
 - Python：`pytest-cov`，`source = app`，排除 `tests`，`fail_under = 95`。
 - TypeScript：`@vitest/coverage-v8`，`include = src/**/*.{ts,tsx}`，排除测试、`*.d.ts`、纯类型文件与样式；初始地板 lines 54 / statements 53 / branches 52 / functions 53。
-- 两边的 Cobertura XML 都上传 GitHub Code Quality（`actions/upload-code-coverage`），不依赖第三方覆盖率服务。
+- 两边的 Cobertura XML 都作为 workflow artifact 保存 14 天；同时尽力上传 GitHub Code Quality（`actions/upload-code-coverage`，失败不阻断）。Code Quality 的覆盖率数据依赖仓库/套餐开启该能力，没开时上传会 404，此时以 CI 里的 `fail_under` / vitest 阈值为准，文件仍能从 artifact 取到。
 - **抬阈值的流程**：先补真实行为的测试，确认覆盖率变了，再改阈值数字。不允许先改数字再凑测试。
 - 防"垃圾测试"：PR 上用 `diff-cover` 卡新增生产代码行覆盖率；变异测试（mutmut / Stryker）排在下一步单独接入，接入后先观察四周再设地板。
 

@@ -85,19 +85,27 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
-        run: git fetch --no-tags origin "$BASE_REF"
+        run: git fetch --no-tags --unshallow origin "$BASE_REF" 2>/dev/null || git fetch --no-tags origin "$BASE_REF"
       - name: Changed-line coverage
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
         run: uvx diff-cover coverage.xml --compare-branch="origin/$BASE_REF" --fail-under=90
-      - name: Upload coverage
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: python-coverage
+          path: coverage.xml
+          retention-days: 14
+      - name: Upload coverage to Code Quality
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
         uses: actions/upload-code-coverage@2b21a77928be8d5168c2b9581a67f2adbebacc52 # v1
         with:
           file: coverage.xml
           language: Python
           label: python/pytest
+          fail-on-error: false
 
   ts-lint:
     name: ts-lint
@@ -176,13 +184,21 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: vitest
         run: pnpm --dir app/ui-engine exec vitest run --coverage
-      - name: Upload coverage
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: typescript-coverage
+          path: app/ui-engine/coverage/
+          retention-days: 14
+      - name: Upload coverage to Code Quality
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
         uses: actions/upload-code-coverage@2b21a77928be8d5168c2b9581a67f2adbebacc52 # v1
         with:
           file: app/ui-engine/coverage/cobertura-coverage.xml
           language: TypeScript
           label: ui-engine/vitest
+          fail-on-error: false
 
   security:
     name: security
