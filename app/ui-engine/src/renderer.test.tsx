@@ -169,6 +169,18 @@ describe("renderTree", () => {
     expect(event.currentTarget.value).toBe("");
   });
 
+  it("input 用 value 预填，用户不动它就带着旧名字", () => {
+    const node: Node = {
+      type: "input",
+      props: { value: "语音 11-11 03:41", on_submit: "ideas:1:0" },
+      children: [],
+    };
+
+    const html = renderToString(<Input node={node} onEvent={() => {}} />);
+
+    expect(html).toContain('value="语音 11-11 03:41"');
+  });
+
   it("audio 点击把 media id 交给 loadMedia", () => {
     const loadMedia = vi.fn(
       (_media: string): Promise<MediaData> => new Promise(() => {}),

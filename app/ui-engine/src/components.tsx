@@ -72,10 +72,15 @@ export function Button({ node, onEvent }: NodeComponentProps): ReactNode {
   );
 }
 
-/** input：一行捕捉。回车把值交回去，然后清空自己。 */
+/**
+ * input：一行输入。回车把值交回去，然后清空自己。
+ *
+ * value 只用于预填（改名时带上旧名字）；输入框不被状态接管，用户改过就以用户为准。
+ */
 export function Input({ node, onEvent }: NodeComponentProps): ReactNode {
   const handler = prop(node, "on_submit");
   const placeholder = prop(node, "placeholder") ?? "";
+  const value = prop(node, "value");
 
   return (
     <div className="omora-capture" data-type="input">
@@ -85,6 +90,7 @@ export function Input({ node, onEvent }: NodeComponentProps): ReactNode {
       <input
         className="omora-capture-input"
         placeholder={placeholder}
+        defaultValue={value ?? ""}
         onKeyDown={(event) => {
           if (event.key !== "Enter" || handler === undefined) {
             return;
