@@ -27,10 +27,18 @@ export const WARMUP_MS = 400;
 
 export const DEFAULT_SECONDS = 120;
 
+/**
+ * Chromium 的扩展约束：resizeMode 不在 lib.dom 的 MediaTrackConstraints 里，
+ * 但 Chromium 认这个字段，用来禁止对采集帧做裁剪 / 缩放（"none" = 原样输出）。
+ * 标准类型里没有它，这里用局部扩展类型显式接住，不用 as any 或对象字面量断言。
+ */
+type ResizeModeConstraint = { resizeMode?: "none" | "crop-and-scale" };
+type VideoTrackConstraints = MediaTrackConstraints & ResizeModeConstraint;
+
 /** 质量档 → 开流约束；16:9 与帧率要显式要，别吃摄像头默认。 */
 export function videoConstraints(quality: string, deviceId?: string): MediaTrackConstraints {
   const size = SIZE[quality] ?? SIZE["720p"];
-  const video: MediaTrackConstraints = {
+  const video: VideoTrackConstraints = {
     width: { ideal: size?.width ?? 1280 },
     height: { ideal: size?.height ?? 720 },
     aspectRatio: { ideal: 16 / 9 },
