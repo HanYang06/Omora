@@ -1,4 +1,4 @@
-"""灵感页的节点：索引栏一行、推荐卡片、搜索结果、媒体播放器。
+"""灵感页的节点：索引栏一行、推荐卡片、搜索结果、媒体播放器、捕捉区。
 
 只拼节点，不碰状态；handler 由页面传进来。
 """
@@ -7,7 +7,21 @@ from __future__ import annotations
 
 from typing import Any
 
-from omora.sdk.ui import Audio, Button, Card, Handler, Item, Node, Result, Row, Video
+from omora.sdk.ui import (
+    Audio,
+    Button,
+    Card,
+    Handler,
+    Input,
+    Item,
+    Node,
+    Panel,
+    Result,
+    Row,
+    Text,
+    Video,
+    Waveform,
+)
 
 from ._format import snippet, when
 
@@ -19,6 +33,43 @@ def rail_item(record: Any, on_click: Handler) -> Item:
 
 def back_bar(handler: Handler) -> Node:
     return Row(Button("← 返回", variant="ghost", on_click=handler))
+
+
+def workspace(title: str, body: Node, on_collapse: Handler) -> Panel:
+    """工作区：一行头部（媒体名 + 收起）+ 主体。"""
+    return Panel(
+        Row(Text(title), Button("收起", variant="ghost", on_click=on_collapse)),
+        body,
+    )
+
+
+def saved(
+    *,
+    stamp: str,
+    title: str,
+    audio: str | None,
+    peaks: tuple[int, ...],
+    seconds: float,
+    on_rename: Handler,
+    on_again: Handler,
+    on_collapse: Handler,
+) -> Panel:
+    """已保存条：第一行给一次命名与动作，音频再加一行静态波形。
+
+    audio 是刚存那条的 media id；视频没有内联播放，也就没有波形。
+    """
+    top: list[Node] = [
+        Text(f"已保存 · {stamp}"),
+        Input(value=title, on_submit=on_rename),
+    ]
+    if audio is not None:
+        top.append(Audio(media=audio))
+    top.append(Button("再录一条", on_click=on_again))
+    top.append(Button("收起", variant="ghost", on_click=on_collapse))
+    rows: list[Node] = [Row(*top)]
+    if audio is not None:
+        rows.append(Waveform(peaks=peaks, seconds=seconds))
+    return Panel(*rows)
 
 
 def card(record: Any, media: Any, on_click: Handler) -> Card:

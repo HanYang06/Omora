@@ -2,6 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 import { AudioCapture } from "./audio-capture";
 import { Card } from "./cards";
 import { Audio, Recorder } from "./capture";
+import { Hotkey } from "./hotkey";
 import { Icon } from "./icons";
 import { Panel, Rail, Split } from "./layout";
 import { Result, Search, Suggestion } from "./search";
@@ -9,6 +10,7 @@ import { prop, textOf, type NodeComponentProps } from "./shared";
 import { Chip, Tile } from "./tiles";
 import { VideoCapture } from "./video-capture";
 import { VideoPlayer } from "./video-player";
+import { Waveform } from "./waveform";
 
 /** column：纵向堆叠。 */
 export function Column({ children }: NodeComponentProps): ReactNode {
@@ -70,19 +72,27 @@ export function Button({ node, onEvent }: NodeComponentProps): ReactNode {
   );
 }
 
-/** input：一行捕捉。回车把值交回去，然后清空自己。 */
+/**
+ * input：一行输入。回车把值交回去，然后清空自己。
+ *
+ * value 只用于预填（改名时带上旧名字）；输入框不被状态接管，用户改过就以用户为准。
+ */
 export function Input({ node, onEvent }: NodeComponentProps): ReactNode {
   const handler = prop(node, "on_submit");
   const placeholder = prop(node, "placeholder") ?? "";
+  const value = prop(node, "value");
 
   return (
     <div className="omora-capture" data-type="input">
-      <span className="omora-capture-plus" aria-hidden="true">
-        +
-      </span>
+      {value === undefined ? (
+        <span className="omora-capture-plus" aria-hidden="true">
+          +
+        </span>
+      ) : null}
       <input
         className="omora-capture-input"
         placeholder={placeholder}
+        defaultValue={value ?? ""}
         onKeyDown={(event) => {
           if (event.key !== "Enter" || handler === undefined) {
             return;
@@ -95,9 +105,11 @@ export function Input({ node, onEvent }: NodeComponentProps): ReactNode {
           event.currentTarget.value = "";
         }}
       />
-      <span className="omora-capture-hint" aria-hidden="true">
-        回车
-      </span>
+      {value === undefined ? (
+        <span className="omora-capture-hint" aria-hidden="true">
+          回车
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -191,6 +203,8 @@ export const components: Record<string, ComponentType<NodeComponentProps>> = {
   audio_capture: AudioCapture,
   video_capture: VideoCapture,
   video: VideoPlayer,
+  hotkey: Hotkey,
+  waveform: Waveform,
   list: List,
   item: Item,
   empty: Empty,

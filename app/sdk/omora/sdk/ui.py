@@ -87,10 +87,11 @@ class Button(Node):
 
 @dataclass(frozen=True)
 class Input(Node):
-    """一行捕捉：回车把值交回去。"""
+    """一行输入：回车把值交回去。value 用来预填（改名、回填）。"""
 
     type: ClassVar[str] = "input"
     placeholder: str = ""
+    value: str | None = None
     on_submit: Handler | None = None
 
 
@@ -173,16 +174,23 @@ class Audio(Node):
 
 @dataclass(frozen=True)
 class AudioCapture(Node):
-    """音频捕捉条：录完把 base64 音频交给 on_submit。
+    """录音工作区的主体：录完先 POST 到 HTTP 媒体通道，再把 media id 交给 on_submit。
 
-    设备、权限、热插拔由客户端检测；这里只给质量档与时限。
+    设备、权限、热插拔、波形、暂停都由客户端管；这里只说"去哪儿存、能录多长、怎么起手"。
+    - upload_url：媒体通道地址；没有就出不了这个节点（音频也走 HTTP 了，见协议文档）。
+    - max_seconds：0 表示不限时长。
+    - autostart：一挂上就开始录（按住快捷键起手的那条路）。
+    - pausable：给出暂停 / 继续。
     """
 
     type: ClassVar[str] = "audio_capture"
     on_submit: Handler | None = None
+    upload_url: str | None = None
     quality: str | None = None
     noise_reduction: bool | None = None
     max_seconds: int | None = None
+    autostart: bool | None = None
+    pausable: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -194,6 +202,7 @@ class VideoCapture(Node):
     upload_url: str | None = None
     quality: str | None = None
     max_seconds: int | None = None
+    pausable: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -284,6 +293,32 @@ class Card(Node):
         object.__setattr__(self, "children", tuple(children))
 
 
+@dataclass(frozen=True)
+class Hotkey(Node):
+    """一个快捷键：按下发 on_press，松开发 on_release。
+
+    引擎不画它，只挂监听；焦点在输入框里时不触发。按键名用 KeyboardEvent.code 的小写
+    形式（"space"、"keyr"）。它不持有状态：压着不放只在按下时发一次。
+    """
+
+    type: ClassVar[str] = "hotkey"
+    key: str = ""
+    on_press: Handler | None = None
+    on_release: Handler | None = None
+
+
+@dataclass(frozen=True)
+class Waveform(Node):
+    """一条静态波形：peaks 是 0–100 的柱高，seconds 只用来标时长。
+
+    它只负责看，不负责播（播放是 Audio）；峰值由客户端在录的时候顺手采下来。
+    """
+
+    type: ClassVar[str] = "waveform"
+    peaks: tuple[int, ...] = ()
+    seconds: float = 0.0
+
+
 @dataclass(frozen=True, init=False)
 class Panel(Node):
     """内嵌面板：一块 inset 面，装工具条和行。子节点通常是一行工具条 + 内容。"""
@@ -329,6 +364,7 @@ __all__ = [
     "Column",
     "Empty",
     "Handler",
+    "Hotkey",
     "Icon",
     "Input",
     "Item",
@@ -347,5 +383,6 @@ __all__ = [
     "Tile",
     "Video",
     "VideoCapture",
+    "Waveform",
     "serialize",
 ]

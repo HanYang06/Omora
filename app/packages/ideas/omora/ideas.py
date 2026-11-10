@@ -2,8 +2,9 @@
 
 三栏由页面自己排：Split(索引栏, 主区)。索引栏只导航；主区在同一页里换模式——
 首页（搜索区、捕捉区、列表面板）、结果、详情。捕捉就地做：点 Tile 只把捕捉区换成
-工作区，不换页；停止录制就是落库，收起回三个 Tile。录音 / 录像由 audio / video
-插件按服务名提供——它们没有，对应的 Tile 就不出现。置顶 / 归档只在详情里做。
+工作区，不换页；停止录制就是落库，收起回三个 Tile。捕捉区自己的状态在 _capture。
+录音 / 录像由 audio / video 插件按服务名提供——它们没有，对应的 Tile 就不出现。
+置顶 / 归档只在详情里做。
 
 不 import 别的插件；store / media / ui 必须有，audio / video 有就用。
 """
@@ -15,13 +16,12 @@ from typing import Any
 
 from omora.sdk import Context
 from omora.sdk.ui import (
-    Audio,
     Button,
     Chip,
     Column,
     Empty,
     Handler,
-    Input,
+    Hotkey,
     List,
     Node,
     Page,
@@ -32,11 +32,10 @@ from omora.sdk.ui import (
     Split,
     Suggestion,
     Text,
-    Tile,
 )
 
-from . import _views
-from ._format import clock, now, seconds, spoken_title, video_title, when
+from . import _capture, _views
+from ._format import now, when
 
 _FIELDS = {"title": "text", "archived": "bool", "pinned": "bool", "media": "text?"}
 _SUGGESTIONS = 5
@@ -46,10 +45,6 @@ _STALE_DAYS = 30
 HOME = "home"
 RESULTS = "results"
 DETAIL = "detail"
-AUDIO = "audio"
-VIDEO = "video"
-TEXT = "text"
-_TITLES = {AUDIO: "录音", VIDEO: "视频", TEXT: "文字"}
 _CHIPS = (
     ("all", "全部"),
     ("pinned", "置顶"),
@@ -88,7 +83,7 @@ class IdeasPlugin:
             pinned="pinned",
         )
         state: dict[str, Any] = {"mode": HOME, "query": "", "open": None, "filter": "all"}
-        capture: dict[str, Any] = {}
+        capture = _capture.Capture(ideas, media, audio_service, video_service)
         history: list[tuple[str, str | None]] = []
         found: list[Any] = []
 
@@ -131,67 +126,6 @@ class IdeasPlugin:
             state["query"] = value
             found[:] = search(value)
             go(RESULTS if value else HOME)
-
-        def open_capture(mode: str) -> Handler:
-            """点 Tile：只换捕捉区，不换页面模式。"""
-
-            def run(_: dict[str, Any]) -> None:
-                capture.clear()
-                capture.update(mode=mode, phase="live")
-
-            return run
-
-        def collapse(_: dict[str, Any]) -> None:
-            capture.clear()
-
-        def record_again(_: dict[str, Any]) -> None:
-            """再录一条：回到录制初始态，重新挂上捕捉组件。"""
-            mode = str(capture.get("mode", ""))
-            capture.clear()
-            capture.update(mode=mode, phase="live")
-
-        def settle(mode: str, media_id: str, payload: dict[str, Any]) -> None:
-            """落库之后切到已保存条；面板早收起（或换了捕捉）就只落库。
-
-            录制中 / 上传中点「收起」时组件是卸载掉的，引擎在卸载时提交；
-            这时不能再把面板变回来。
-            """
-            if capture.get("mode") != mode or capture.get("phase") != "live":
-                return
-            capture.clear()
-            capture.update(
-                mode=mode,
-                phase="saved",
-                media=media_id,
-                seconds=seconds(payload),
-            )
-
-        def save_text(payload: dict[str, Any]) -> None:
-            value = str(payload.get("value", "")).strip()
-            if not value:
-                return
-            ideas.add(title=value, archived=False, pinned=False, media=None)
-            capture.clear()
-
-        def save_audio(payload: dict[str, Any]) -> None:
-            service = audio_service()
-            if service is None:
-                return
-            media_id = service.capture(payload)
-            if not media_id:
-                return
-            ideas.add(title=spoken_title(payload), archived=False, pinned=False, media=media_id)
-            settle(AUDIO, media_id, payload)
-
-        def save_video(payload: dict[str, Any]) -> None:
-            service = video_service()
-            if service is None:
-                return
-            media_id = service.capture(payload)
-            if not media_id:
-                return
-            ideas.add(title=video_title(payload), archived=False, pinned=False, media=media_id)
-            settle(VIDEO, media_id, payload)
 
         def opener(record_id: str) -> Handler:
             def run(_: dict[str, Any]) -> None:
@@ -256,59 +190,6 @@ class IdeasPlugin:
                 *[_views.rail_item(record, opener(record.id)) for record in records()],
             )
 
-        def tiles() -> list[Node]:
-            nodes: list[Node] = []
-            if audio_service() is not None:
-                nodes.append(Tile(icon="mic", title="录音", on_click=open_capture(AUDIO)))
-            video = video_service()
-            if video is not None and video.node(save_video) is not None:
-                nodes.append(Tile(icon="video", title="视频", on_click=open_capture(VIDEO)))
-            nodes.append(Tile(icon="text", title="文字", on_click=open_capture(TEXT)))
-            return nodes
-
-        def recorder(mode: str) -> Node | None:
-            """工作区的主体：audio / video 插件给的捕捉节点，props 不变。"""
-            if mode == AUDIO:
-                service = audio_service()
-                return None if service is None else service.node(save_audio)
-            service = video_service()
-            return None if service is None else service.node(save_video)
-
-        def workspace() -> Node | None:
-            """工作区：一行头部（媒体名 + 收起）+ 主体；落库后是已保存条。"""
-            mode = str(capture.get("mode", ""))
-            if capture.get("phase") == "saved":
-                parts: list[Node] = [Text(f"已保存 · {clock(seconds(capture))}")]
-                # 视频不给内联播放：16:9 全宽塞不进一条。
-                if mode == AUDIO:
-                    parts.append(Audio(media=str(capture.get("media", ""))))
-                parts.append(Button("再录一条", on_click=record_again))
-                parts.append(Button("收起", variant="ghost", on_click=collapse))
-                return Panel(Row(*parts))
-            body: Node | None
-            if mode == TEXT:
-                body = Input(placeholder="记一条灵感…", on_submit=save_text)
-            else:
-                body = recorder(mode)
-            if body is None:
-                return None
-            return Panel(
-                Row(
-                    Text(_TITLES[mode]),
-                    Button("收起", variant="ghost", on_click=collapse),
-                ),
-                body,
-            )
-
-        def capture_region() -> Node:
-            """捕捉区：没有工作区就是三个 Tile，有就把这一块换成工作区。"""
-            if capture:
-                opened = workspace()
-                if opened is not None:
-                    return opened
-                capture.clear()
-            return Row(*tiles())
-
         def feed(items: list[Any]) -> Node:
             if not items:
                 title, hint = _EMPTY[str(state["filter"])]
@@ -324,8 +205,10 @@ class IdeasPlugin:
             return Page(
                 content=Column(
                     search_bar(True),
-                    capture_region(),
+                    capture.region(),
                     Panel(Row(*chips), feed(filtered(items))),
+                    # 常驻在捕捉区外面：工作区换形态时它不能被卸载，否则收不到松手。
+                    Hotkey(key="space", on_press=capture.hold_start, on_release=capture.hold_end),
                 ),
                 meta=f"{len(items)} 条",
             )

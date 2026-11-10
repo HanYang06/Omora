@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 
-from omora._format import snippet, when
+from omora._format import caption, peaks, snippet, when
 
 
 def test_snippets_cut_a_window_around_the_match() -> None:
@@ -28,3 +28,18 @@ def test_relative_time_reads_like_a_ledger() -> None:
     assert when(now - timedelta(days=1), now) == "昨天"
     assert when(now - timedelta(days=3), now) == "周五"
     assert when(now - timedelta(days=20), now) == "10 月 20 日"
+
+
+def test_a_capture_s_default_name_is_the_moment_it_was_saved() -> None:
+    saved_at = datetime(2026, 11, 11, 3, 41)
+
+    assert caption(saved_at, "语音") == "语音 11-11 03:41"
+    assert caption(saved_at, "视频") == "视频 11-11 03:41"
+    assert caption(datetime(2027, 1, 2, 23, 5), "语音") == "语音 01-02 23:05"
+
+
+def test_waveform_peaks_are_kept_inside_the_contract() -> None:
+    assert peaks({"peaks": [0, 40, 100]}) == (0, 40, 100)
+    assert peaks({}) == ()
+    assert peaks({"peaks": [-4, 40, 140]}) == (0, 40, 100)
+    assert len(peaks({"peaks": list(range(400))})) == 300

@@ -7,6 +7,7 @@ from typing import Any
 
 _WEEKDAYS = ("周一", "周二", "周三", "周四", "周五", "周六", "周日")
 _SNIPPET = 40
+_MAX_PEAKS = 300
 
 
 def now() -> datetime:
@@ -61,11 +62,20 @@ def seconds(payload: dict[str, Any]) -> float:
         return 0.0
 
 
-def spoken_title(payload: dict[str, Any]) -> str:
-    length = seconds(payload)
-    return f"语音 {clock(length)}" if length else "语音"
+def peaks(payload: dict[str, Any]) -> tuple[int, ...]:
+    """引擎顺手采的柱高：0–100、最多 300 个；坏值丢掉，别把页面炸掉。"""
+    raw = payload.get("peaks")
+    if not isinstance(raw, (list, tuple)):
+        return ()
+    kept: list[int] = []
+    for value in raw[:_MAX_PEAKS]:
+        try:
+            kept.append(max(0, min(100, int(value))))
+        except (TypeError, ValueError):
+            continue
+    return tuple(kept)
 
 
-def video_title(payload: dict[str, Any]) -> str:
-    length = seconds(payload)
-    return f"视频 {clock(length)}" if length else "视频"
+def caption(created: datetime, kind: str) -> str:
+    """捕捉的默认名：保存时刻的时间轴（月-日 时:分），不是时长。"""
+    return f"{kind} {created.month:02d}-{created.day:02d} {created.hour:02d}:{created.minute:02d}"

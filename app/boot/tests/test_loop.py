@@ -1,14 +1,17 @@
 import asyncio
 import base64
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from websockets.asyncio.client import ClientConnection, connect
 
+import omora._capture as ideas_capture
 from boot import Config, build
 
 MANIFEST = ("store", "manager", "media", "ui", "audio", "video", "ideas", "net")
+SAVED_AT = datetime(2026, 11, 11, 3, 41)
 
 
 def _nodes(node: dict[str, Any], node_type: str) -> list[dict[str, Any]]:
@@ -180,7 +183,12 @@ def test_clicking_archive_over_the_socket_updates_the_page(tmp_path: Path) -> No
     assert _nodes(after["content"], "empty")[0]["props"]["title"] == "还没有灵感。"
 
 
-def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
+def test_audio_capture_and_media_load_over_the_socket(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    # 默认名读的是保存时刻：把捕捉的钟钉住，断言才不会随分钟漂。
+    monkeypatch.setattr(ideas_capture, "now", lambda: SAVED_AT)
+
     async def scenario() -> dict[str, Any]:
         config = Config(
             {
@@ -195,6 +203,9 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
         try:
             # 客户端上报能力之后，manager 才把 audio / video 装上。
             kernel.resolve("manager").report_capabilities(["microphone", "camera"])
+            status, payload = await _post(_media_port(net), b"hello", "audio/webm")
+            assert status == 201, payload
+            audio_id = str(json.loads(payload)["media_id"])
             async with connect(f"ws://127.0.0.1:{port}") as ws:
                 before = await _request(ws, "1", "ui", "render", {})
                 tile = _find_tile(before["content"], "录音")
@@ -204,7 +215,6 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
                 )
                 handler = _find_capture(capture_page["content"], "audio_capture")
                 assert handler is not None
-                audio = base64.b64encode(b"hello").decode("ascii")
                 after = await _request(
                     ws,
                     "3",
@@ -212,10 +222,10 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
                     "event",
                     {
                         "handler": handler,
-                        "payload": {"audio": audio, "mime": "audio/webm", "seconds": 2.0},
+                        "payload": {"media": audio_id, "mime": "audio/webm", "seconds": 2.0},
                     },
                 )
-                opened = _find_item(after["content"], "语音 0:02")
+                opened = _find_item(after["content"], "语音 11-11 03:41")
                 assert opened is not None
                 detail = await _request(
                     ws, "4", "ui", "event", {"handler": opened, "payload": {}}
@@ -233,7 +243,11 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path) -> None:
     assert base64.b64decode(str(loaded["data"])) == b"hello"
 
 
-def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path) -> None:
+def test_video_capture_uploads_over_http_and_plays_back(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    monkeypatch.setattr(ideas_capture, "now", lambda: SAVED_AT)
+
     async def scenario() -> tuple[dict[str, Any], bytes]:
         config = Config(
             {
@@ -269,7 +283,7 @@ def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path) -> None:
                         "payload": {"media": media_id, "mime": "video/webm", "seconds": 4},
                     },
                 )
-                opened = _find_item(after["content"], "视频 0:04")
+                opened = _find_item(after["content"], "视频 11-11 03:41")
                 assert opened is not None
                 detail = await _request(
                     ws, "4", "ui", "event", {"handler": opened, "payload": {}}
@@ -282,7 +296,7 @@ def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path) -> None:
 
     after, fetched = asyncio.run(scenario())
 
-    assert _titles(after) == ["视频 0:04"]
+    assert _titles(after) == ["视频 11-11 03:41"]
     assert fetched == b"video-bytes"
 
 
