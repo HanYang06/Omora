@@ -9,6 +9,7 @@ import { prop, textOf, type NodeComponentProps } from "./shared";
 import { Chip, Tile } from "./tiles";
 import { VideoCapture } from "./video-capture";
 import { VideoPlayer } from "./video-player";
+import { Waveform } from "./waveform";
 
 /** column：纵向堆叠。 */
 export function Column({ children }: NodeComponentProps): ReactNode {
@@ -191,6 +192,7 @@ export const components: Record<string, ComponentType<NodeComponentProps>> = {
   audio_capture: AudioCapture,
   video_capture: VideoCapture,
   video: VideoPlayer,
+  waveform: Waveform,
   list: List,
   item: Item,
   empty: Empty,
