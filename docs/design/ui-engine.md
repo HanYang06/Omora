@@ -73,10 +73,10 @@ src/
 
 ```json
 {
-  "pages": [{"name": "ideas", "label": "灵感", "count": 3}],
+  "pages": [{ "name": "ideas", "label": "灵感", "count": 3 }],
   "page": "ideas",
   "meta": "3 条",
-  "content": {"type": "column", "props": {}, "children": []}
+  "content": { "type": "column", "props": {}, "children": [] }
 }
 ```
 
@@ -93,26 +93,26 @@ src/
 
 ## 7. 组件
 
-| type | props | 渲染 |
-|---|---|---|
-| column | — | 纵向 flex |
-| row | spread? | 横向 flex；`spread` 时两头分开（标题在左、动作在右） |
-| text | text、kind? | span；kind 只映射样式类（title / muted / 默认） |
-| button | text、on_click、variant? | button；点击发事件；variant = ghost 时是列表行里的文字动作 |
-| input | placeholder、value?、on_submit | 一行输入：回车把值塞进事件载荷；`value` 用于预填（改名），用户改过就以用户为准 |
-| recorder | on_submit | 录音条：点一下录，再点一下停；停后把 base64 音频交给事件 |
-| audio | media | 播放按钮：点的时候按需向 media 服务取，不预载 |
+| type          | props                                                                                  | 渲染                                                                                                    |
+| ------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| column        | —                                                                                      | 纵向 flex                                                                                               |
+| row           | spread?                                                                                | 横向 flex；`spread` 时两头分开（标题在左、动作在右）                                                    |
+| text          | text、kind?                                                                            | span；kind 只映射样式类（title / muted / 默认）                                                         |
+| button        | text、on_click、variant?                                                               | button；点击发事件；variant = ghost 时是列表行里的文字动作                                              |
+| input         | placeholder、value?、on_submit                                                         | 一行输入：回车把值塞进事件载荷；`value` 用于预填（改名），用户改过就以用户为准                          |
+| recorder      | on_submit                                                                              | 录音条：点一下录，再点一下停；停后把 base64 音频交给事件                                                |
+| audio         | media                                                                                  | 播放按钮：点的时候按需向 media 服务取，不预载                                                           |
 | audio_capture | on_submit、upload_url、quality?、noise_reduction?、max_seconds?、autostart?、pausable? | 录音主体：门禁 + 多设备 + 实时波形 + 暂停；停即上传即提交。`max_seconds=0` 不限，`autostart` 一挂上就录 |
-| video_capture | on_submit、upload_url、quality?、max_seconds?、pausable? | 视频主体：门禁 + 实时预览 + 暂停；停止即上传并提交，上传失败给重试 |
-| video | media、src? | 视频播放器；`src` 是媒体通道地址，没有就写"媒体通道未就绪" |
-| hotkey | key、on_press、on_release | 不画东西，只在 document 上挂监听：按下发 on_press，松开发 on_release（焦点在输入框里不触发） |
-| waveform | src | 静态波形：`src` 是媒体通道里那条音频的地址，交给 wavesurfer 自己取音频、自己画；只负责看，不负责播 |
-| list | — | 账本容器（ul） |
-| item | meta、title | 账本行：左栏 meta、右栏标题、子节点是这一行的动作 |
-| empty | title、hint? | 空状态；没有 hint 就不画第二行 |
-| search | placeholder、value、on_query、on_submit | 搜索框：防抖 200ms 问后端；children 是下拉建议；回车 / 按钮提交 |
-| suggestion | value、title、meta?、highlight?、on_pick | 下拉一条：点它把 value 交回去；highlight 在 title 里标出来 |
-| result | title、snippet、meta、highlight?、on_click | 结果行：标题可点；snippet 里把命中的词标出来 |
+| video_capture | on_submit、upload_url、quality?、max_seconds?、pausable?                               | 视频主体：门禁 + 实时预览 + 暂停；停止即上传并提交，上传失败给重试                                      |
+| video         | media、src?                                                                            | 视频播放器；`src` 是媒体通道地址，没有就写"媒体通道未就绪"                                              |
+| hotkey        | key、on_press、on_release                                                              | 不画东西，只在 document 上挂监听：按下发 on_press，松开发 on_release（焦点在输入框里不触发）            |
+| waveform      | src                                                                                    | 静态波形：`src` 是媒体通道里那条音频的地址，交给 wavesurfer 自己取音频、自己画；只负责看，不负责播      |
+| list          | —                                                                                      | 账本容器（ul）                                                                                          |
+| item          | meta、title                                                                            | 账本行：左栏 meta、右栏标题、子节点是这一行的动作                                                       |
+| empty         | title、hint?                                                                           | 空状态；没有 hint 就不画第二行                                                                          |
+| search        | placeholder、value、on_query、on_submit                                                | 搜索框：防抖 200ms 问后端；children 是下拉建议；回车 / 按钮提交                                         |
+| suggestion    | value、title、meta?、highlight?、on_pick                                               | 下拉一条：点它把 value 交回去；highlight 在 title 里标出来                                              |
+| result        | title、snippet、meta、highlight?、on_click                                             | 结果行：标题可点；snippet 里把命中的词标出来                                                            |
 
 - 未知 `type` → 占位框 + `console.warn`。
 - 没有子节点的 `children` 也得是数组。

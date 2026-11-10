@@ -6,11 +6,11 @@
 
 ## 1. 四个词，五个方法
 
-| 词 | 方法 | 做什么 |
-|---|---|---|
-| 加持 | `Kernel.install(plugin)` | 装一个插件 |
-| 持有 | `Kernel.running(name)`、`Kernel.names()` | 记着谁在 |
-| 引用 | `Kernel.resolve(name)` | 按名字取服务 |
+| 词   | 方法                                          | 做什么                               |
+| ---- | --------------------------------------------- | ------------------------------------ |
+| 加持 | `Kernel.install(plugin)`                      | 装一个插件                           |
+| 持有 | `Kernel.running(name)`、`Kernel.names()`      | 记着谁在                             |
+| 引用 | `Kernel.resolve(name)`                        | 按名字取服务                         |
 | 运行 | `Kernel.uninstall(name)`、`Context.dispose()` | 跑 apply；卸载时逆序撤销它登记的一切 |
 
 插件手里拿到的是 `Context`：`provide` / `resolve` / `has` / `effect` / `dispose` / `extend`。
@@ -70,13 +70,13 @@ uninstall(name):
 
 ## 5. 错误模型
 
-| 情况 | 抛什么 | 谁接 |
-|---|---|---|
-| 服务不存在 | `LookupError` | 调用方 |
-| 同一作用域重复提供服务 | `ValueError` | 插件自己 |
-| 插件重名 | `ValueError` | 调 `install` 的人 |
-| 撤销后再登记 | `RuntimeError` | 插件 |
-| 撤销动作自己抛错 | 现状是直接上抛，后面的撤销不跑 | 未定，见第 7 节 |
+| 情况                   | 抛什么                         | 谁接              |
+| ---------------------- | ------------------------------ | ----------------- |
+| 服务不存在             | `LookupError`                  | 调用方            |
+| 同一作用域重复提供服务 | `ValueError`                   | 插件自己          |
+| 插件重名               | `ValueError`                   | 调 `install` 的人 |
+| 撤销后再登记           | `RuntimeError`                 | 插件              |
+| 撤销动作自己抛错       | 现状是直接上抛，后面的撤销不跑 | 未定，见第 7 节   |
 
 ## 6. 不变量
 
@@ -102,14 +102,14 @@ uninstall(name):
 
 形状参照 **cordis**——DSH 的内核就是它，随包在 `@deepseek-ai/cordis`（源码在 `src/`，未压缩）。
 
-| 这里 | cordis |
-|---|---|
+| 这里                          | cordis                                                     |
+| ----------------------------- | ---------------------------------------------------------- |
 | `Context.provide` / `resolve` | `ctx.provide` / `ctx.set` / `ctx.get`，以及 `Service` 基类 |
-| `Context.effect` | `ctx.effect()` |
-| `Context.dispose` | `ctx.fiber.dispose()` |
-| `Context.extend` | `ctx.extend(meta)` / `ctx.fork()` |
-| `Kernel.install` | `ctx.plugin()`，返回 Fiber |
-| 插件 `name` + `apply(ctx)` | 函数 `(ctx, config)`，或 `{ apply, inject }` |
+| `Context.effect`              | `ctx.effect()`                                             |
+| `Context.dispose`             | `ctx.fiber.dispose()`                                      |
+| `Context.extend`              | `ctx.extend(meta)` / `ctx.fork()`                          |
+| `Kernel.install`              | `ctx.plugin()`，返回 Fiber                                 |
+| 插件 `name` + `apply(ctx)`    | 函数 `(ctx, config)`，或 `{ apply, inject }`               |
 
 **抄 `context.ts` / `registry.ts` 的形状，不要抄 `fiber.ts`。** 后者是异步激活、重启、配置热更新、HMR 的合集，正是这里明确不做的。
 
@@ -119,10 +119,10 @@ cordis 有、这里没有的：`inject` 依赖注入、事件总线、异步 `ap
 
 将来要不要长回 cordis 的样子，是成本问题，不是对错问题。现在的形状已经留好了接缝：
 
-| 以后可能要的 | 现在怎么留 |
-|---|---|
-| 插件句柄（`install` 返回值、单独卸一个） | `install` 以后返回句柄即可，现在的 API 不用改 |
-| 依赖声明（`inject`） | 是插件的元数据 + 注册表里查一次，Context 不用改 |
-| 事件总线 | 做成服务，形状不变 |
+| 以后可能要的                             | 现在怎么留                                      |
+| ---------------------------------------- | ----------------------------------------------- |
+| 插件句柄（`install` 返回值、单独卸一个） | `install` 以后返回句柄即可，现在的 API 不用改   |
+| 依赖声明（`inject`）                     | 是插件的元数据 + 注册表里查一次，Context 不用改 |
+| 事件总线                                 | 做成服务，形状不变                              |
 
 真正会改形状的只有一个：`apply` 从同步变异步。这件事装载期不需要，所以不做。

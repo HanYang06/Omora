@@ -40,12 +40,12 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
   });
   const mode = recorder.mode;
   const hint = ready
-    ? recorder.error ??
+    ? (recorder.error ??
       (mode === "uploading"
         ? "上传中…"
         : mode === "paused"
           ? "已暂停"
-          : "摄像头只在你点的时候打开")
+          : "摄像头只在你点的时候打开"))
     : reason;
 
   return (
@@ -55,9 +55,7 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
       data-gate={ready ? "on" : "off"}
       data-mode={mode}
     >
-      {mode === "recording" || mode === "paused" ? (
-        <LiveVideo stream={recorder.stream} />
-      ) : null}
+      {mode === "recording" || mode === "paused" ? <LiveVideo stream={recorder.stream} /> : null}
       {recorder.previewUrl !== undefined ? (
         <video className="omora-video" src={recorder.previewUrl} controls playsInline />
       ) : null}

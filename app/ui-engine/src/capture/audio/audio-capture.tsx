@@ -9,7 +9,11 @@ import { useMediaDevices } from "../../capture/use-devices";
 const DEFAULT_SECONDS = 600;
 
 /** node.props 里的数字；不是数字就用兜底值。 */
-export function numberProp(node: NodeComponentProps["node"], name: string, fallback: number): number {
+export function numberProp(
+  node: NodeComponentProps["node"],
+  name: string,
+  fallback: number,
+): number {
   const value = node.props?.[name];
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
@@ -49,14 +53,14 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
   const idle = recorder.phase === "idle";
   const hint = !ready
     ? blocked
-    : recorder.error ??
+    : (recorder.error ??
       (recorder.phase === "recording"
         ? "点一下停"
         : recorder.phase === "paused"
           ? "已暂停，可以继续或直接停"
           : recorder.phase === "uploading"
             ? "上传中…"
-            : "点一下开始，按住空格说");
+            : "点一下开始，按住空格说"));
 
   return (
     <div

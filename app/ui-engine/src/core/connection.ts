@@ -1,9 +1,4 @@
-import {
-  FrameError,
-  makeCall,
-  parseInboundFrame,
-  type JsonObject,
-} from "./protocol";
+import { FrameError, makeCall, parseInboundFrame, type JsonObject } from "./protocol";
 
 /** net 插件的默认端点。改这里就换地址。 */
 export const DEFAULT_URL = "ws://127.0.0.1:8765";
@@ -22,8 +17,7 @@ export interface WebSocketLike {
 
 export type WebSocketFactory = (url: string) => WebSocketLike;
 
-const defaultFactory: WebSocketFactory = (url) =>
-  new WebSocket(url) as unknown as WebSocketLike;
+const defaultFactory: WebSocketFactory = (url) => new WebSocket(url) as unknown as WebSocketLike;
 
 /** 调用失败：code 来自错误帧，或连接层的 not_connected / connection_closed。 */
 export class CallError extends Error {
@@ -112,10 +106,7 @@ export class Connection {
       if (this.socket !== socket) {
         return;
       }
-      this.disconnect(
-        new CallError("connection_failed", `无法连接 ${this.url}`),
-        "failed",
-      );
+      this.disconnect(new CallError("connection_failed", `无法连接 ${this.url}`), "failed");
     };
 
     socket.onclose = () => {
@@ -123,10 +114,7 @@ export class Connection {
         return;
       }
       const next: ConnectionStatus = this.current === "failed" ? "failed" : "closed";
-      this.disconnect(
-        new CallError("connection_closed", "连接已断开"),
-        next,
-      );
+      this.disconnect(new CallError("connection_closed", "连接已断开"), next);
     };
   }
 
@@ -137,9 +125,7 @@ export class Connection {
   call(target: string, method: string, args: JsonObject = {}): Promise<unknown> {
     const socket = this.socket;
     if (this.current !== "open" || socket === null) {
-      return Promise.reject(
-        new CallError("not_connected", `未连接（${this.current}），不发请求`),
-      );
+      return Promise.reject(new CallError("not_connected", `未连接（${this.current}），不发请求`));
     }
 
     const id = String(++this.nextId);
@@ -151,11 +137,7 @@ export class Connection {
         socket.send(JSON.stringify(frame));
       } catch (error) {
         this.pending.delete(id);
-        reject(
-          error instanceof Error
-            ? error
-            : new CallError("send_failed", String(error)),
-        );
+        reject(error instanceof Error ? error : new CallError("send_failed", String(error)));
       }
     });
   }
@@ -204,9 +186,7 @@ export class Connection {
     }
 
     if (frame.type === "error" && frame.id === null) {
-      console.error(
-        `[omora] 错误帧没有 id，无法配对: ${frame.code} ${frame.message}`,
-      );
+      console.error(`[omora] 错误帧没有 id，无法配对: ${frame.code} ${frame.message}`);
       return;
     }
 

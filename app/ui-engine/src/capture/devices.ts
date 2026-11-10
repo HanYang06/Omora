@@ -157,9 +157,7 @@ export function openMediaStream(
  * 只枚举、不要权限：用户没点过就不该弹窗。没有 mediaDevices 或没有设备就返回空——
  * 没上报等于没有能力，manager 会据此关掉对应插件。
  */
-export async function detectCapabilities(
-  source?: DeviceSource,
-): Promise<readonly Capability[]> {
+export async function detectCapabilities(source?: DeviceSource): Promise<readonly Capability[]> {
   const tracker = createDeviceTracker(source ?? defaultDeviceSource());
   try {
     return capabilitiesOf(await tracker.refresh());

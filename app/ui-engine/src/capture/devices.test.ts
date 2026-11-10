@@ -196,9 +196,9 @@ describe("设备词表", () => {
   });
 
   it("能力名与插件元数据一致", () => {
-    expect(capabilitiesOf({ ...pendingState(), audioinput: [{ deviceId: "a", label: "" }] })).toEqual([
-      "microphone",
-    ]);
+    expect(
+      capabilitiesOf({ ...pendingState(), audioinput: [{ deviceId: "a", label: "" }] }),
+    ).toEqual(["microphone"]);
     expect(
       capabilitiesOf({
         ...pendingState(),
@@ -226,7 +226,9 @@ describe("设备词表", () => {
   it("getUserMedia 的错翻成人话", () => {
     expect(captureErrorReason(errorNamed("NotAllowedError"), "audioinput")).toBe("需要麦克风权限");
     expect(captureErrorReason(errorNamed("NotFoundError"), "videoinput")).toBe("未检测到摄像头");
-    expect(captureErrorReason(errorNamed("NotReadableError"), "videoinput")).toBe("摄像头被别的程序占用");
+    expect(captureErrorReason(errorNamed("NotReadableError"), "videoinput")).toBe(
+      "摄像头被别的程序占用",
+    );
     expect(captureErrorReason(new Error("?"), "audioinput")).toBe("打不开麦克风");
   });
 });

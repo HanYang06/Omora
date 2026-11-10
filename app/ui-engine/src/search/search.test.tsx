@@ -8,19 +8,25 @@ import type { Node } from "../core/types";
 
 function noop(): void {}
 
-function childButton(element: ReactElement<{ children?: unknown }>): ReactElement<{ onClick: () => void }> {
+function childButton(
+  element: ReactElement<{ children?: unknown }>,
+): ReactElement<{ onClick: () => void }> {
   const children = Array.isArray(element.props.children)
     ? (element.props.children as unknown[])
     : [element.props.children];
-  const button = children.find(
-    (child) => (child as ReactElement | null)?.type === "button",
-  );
+  const button = children.find((child) => (child as ReactElement | null)?.type === "button");
   return button as ReactElement<{ onClick: () => void }>;
 }
 
 const suggestionA: Node = {
   type: "suggestion",
-  props: { value: "买牛奶", title: "买牛奶", meta: "刚刚", highlight: "牛奶", on_pick: "ideas:2:2" },
+  props: {
+    value: "买牛奶",
+    title: "买牛奶",
+    meta: "刚刚",
+    highlight: "牛奶",
+    on_pick: "ideas:2:2",
+  },
   children: [],
 };
 
@@ -178,7 +184,11 @@ describe("Suggestion", () => {
 
   it("没有 on_pick 时点了不发事件", () => {
     const onEvent = vi.fn();
-    const bare: Node = { type: "suggestion", props: { value: "买牛奶", title: "买牛奶" }, children: [] };
+    const bare: Node = {
+      type: "suggestion",
+      props: { value: "买牛奶", title: "买牛奶" },
+      children: [],
+    };
 
     const element = Suggestion({ node: bare, onEvent }) as unknown as ReactElement<{
       onClick: () => void;

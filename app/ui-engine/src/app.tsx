@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { reportCapabilitiesOnce } from "./core/capability-report";
 import { Connection, type ConnectionStatus } from "./core/connection";
 import type { Logger } from "./core/log";

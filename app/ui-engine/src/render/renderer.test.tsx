@@ -94,9 +94,7 @@ describe("renderTree", () => {
     const withHint: Node[] = [
       { type: "empty", props: { title: "还没有灵感。", hint: "在上面写第一条。" }, children: [] },
     ];
-    const withoutHint: Node[] = [
-      { type: "empty", props: { title: "还没有项目。" }, children: [] },
-    ];
+    const withoutHint: Node[] = [{ type: "empty", props: { title: "还没有项目。" }, children: [] }];
 
     const html = renderToString(<>{renderTree(withHint)}</>);
     const bare = renderToString(<>{renderTree(withoutHint)}</>);
@@ -182,9 +180,7 @@ describe("renderTree", () => {
   });
 
   it("audio 点击把 media id 交给 loadMedia", () => {
-    const loadMedia = vi.fn(
-      (_media: string): Promise<MediaData> => new Promise(() => {}),
-    );
+    const loadMedia = vi.fn((_media: string): Promise<MediaData> => new Promise(() => {}));
     const node: Node = { type: "audio", props: { media: "abc" }, children: [] };
 
     const element = Audio({ node, loadMedia }) as unknown as ReactElement<{

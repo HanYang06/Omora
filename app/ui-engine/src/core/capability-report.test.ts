@@ -61,7 +61,11 @@ describe("reportCapabilities", () => {
     await flush();
 
     expect(connection.calls).toEqual([
-      { target: CAPABILITY_TARGET, method: CAPABILITY_METHOD, args: { capabilities: ["microphone", "camera"] } },
+      {
+        target: CAPABILITY_TARGET,
+        method: CAPABILITY_METHOD,
+        args: { capabilities: ["microphone", "camera"] },
+      },
     ]);
     expect(detect).toHaveBeenCalledTimes(1);
   });
@@ -109,4 +113,3 @@ describe("reportClientCapabilities", () => {
     ]);
   });
 });
-

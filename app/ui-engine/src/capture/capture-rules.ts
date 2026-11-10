@@ -138,8 +138,7 @@ export function resumeClock(clock: RecordClock, now: number): RecordClock {
 
 /** 已经录了多久（秒）；暂停中返回冻结的值。 */
 export function clockSeconds(clock: RecordClock, now: number): number {
-  const paused =
-    clock.pausedMs + (clock.pausedAt === null ? 0 : Math.max(0, now - clock.pausedAt));
+  const paused = clock.pausedMs + (clock.pausedAt === null ? 0 : Math.max(0, now - clock.pausedAt));
   return Math.max(0, (now - clock.startedAt - paused) / 1000);
 }
 

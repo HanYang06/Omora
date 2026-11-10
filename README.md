@@ -16,13 +16,13 @@
 
 ## 目录
 
-| 位置 | 是什么 |
-|---|---|
-| `app/core/` | 内核：`omora-core`（workspace member） |
-| `app/sdk/` | 插件 API：`omora-sdk`（workspace member） |
-| `app/packages/` | 系统插件：`omora-plugin-*`（workspace member） |
-| `app/ui-engine/` | 渲染引擎（TS） |
-| `docs/` | 事实来源 |
+| 位置             | 是什么                                         |
+| ---------------- | ---------------------------------------------- |
+| `app/core/`      | 内核：`omora-core`（workspace member）         |
+| `app/sdk/`       | 插件 API：`omora-sdk`（workspace member）      |
+| `app/packages/`  | 系统插件：`omora-plugin-*`（workspace member） |
+| `app/ui-engine/` | 渲染引擎（TS）                                 |
+| `docs/`          | 事实来源                                       |
 
 Python 侧是一个 uv workspace：一个 lock、一个 venv；每个包有自己的 pyproject / 依赖 / 代码 / tests，import 命名空间是 `omora.*`。
 
@@ -55,13 +55,13 @@ uv run python scripts/check.py
 
 ## 脚本
 
-| 脚本 | 作用 |
-|---|---|
-| `app/cli/` | `omora` 命令：一条命令起内核 + 渲染引擎（`omora dev`） |
-| `scripts/check.py` | 统一门禁：体量预算、测试、lint、类型、前端测试与构建 |
-| `scripts/typecheck.py` | 类型检查：workspace 的包 + 组装根 + 测试 |
-| `scripts/budget.py` | 体量预算：文档与代码的文件行数上限，读 `budget.json` |
-| `scripts/docs_links.py` | 文档相对链接检查：README、AGENTS、docs 与项目 skill |
-| `scripts/sync_version.py` | 把 `VERSION` 同步到各 package 元数据 |
-| `scripts/build.py` | 发布构建，产物在 `dist/omora-<version>.zip` |
-| `scripts/commit_msg.py` | 提交信息校验，由 `commit-msg` 钩子调用 |
+| 脚本                      | 作用                                                   |
+| ------------------------- | ------------------------------------------------------ |
+| `app/cli/`                | `omora` 命令：一条命令起内核 + 渲染引擎（`omora dev`） |
+| `scripts/check.py`        | 统一门禁：体量预算、测试、lint、类型、前端测试与构建   |
+| `scripts/typecheck.py`    | 类型检查：workspace 的包 + 组装根 + 测试               |
+| `scripts/budget.py`       | 体量预算：文档与代码的文件行数上限，读 `budget.json`   |
+| `scripts/docs_links.py`   | 文档相对链接检查：README、AGENTS、docs 与项目 skill    |
+| `scripts/sync_version.py` | 把 `VERSION` 同步到各 package 元数据                   |
+| `scripts/build.py`        | 发布构建，产物在 `dist/omora-<version>.zip`            |
+| `scripts/commit_msg.py`   | 提交信息校验，由 `commit-msg` 钩子调用                 |

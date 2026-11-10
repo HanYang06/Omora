@@ -21,11 +21,7 @@ export const FLUSH_MS = 100;
 export const MAX_BATCH = 20;
 
 /** 把一行送出去。和 Connection.call 同形，测试里可以打桩。 */
-export type LogCall = (
-  target: string,
-  method: string,
-  args: JsonObject,
-) => Promise<unknown>;
+export type LogCall = (target: string, method: string, args: JsonObject) => Promise<unknown>;
 
 /** 与内核落盘的一行同形。 */
 export interface LogEntry {
@@ -53,22 +49,15 @@ export interface LoggerOptions {
 /** 取逗号前那一段级别；认不出（含通道写法）就回默认。 */
 export function levelOf(text: string | undefined): Level {
   const head = (text ?? "").split(",")[0]?.split(":")[0]?.trim().toLowerCase() ?? "";
-  return Object.prototype.hasOwnProperty.call(LEVELS, head)
-    ? (head as Level)
-    : DEFAULT_LEVEL;
+  return Object.prototype.hasOwnProperty.call(LEVELS, head) ? (head as Level) : DEFAULT_LEVEL;
 }
 
 /**
  * 开关只认两个来源：?log=debug 优先，其次 VITE_OMORA_LOG。
  * 没配置、off、false、0 都是关（默认关）。
  */
-export function resolveSettings(
-  envValue: string | undefined,
-  search: string,
-): LogSettings {
-  const query = new URLSearchParams(
-    search.startsWith("?") ? search.slice(1) : search,
-  ).get("log");
+export function resolveSettings(envValue: string | undefined, search: string): LogSettings {
+  const query = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search).get("log");
   const raw = (query ?? envValue ?? "").trim().toLowerCase();
   if (raw === "" || raw === "off" || raw === "false" || raw === "0" || raw === "no") {
     return { enabled: false, level: DEFAULT_LEVEL };
@@ -102,8 +91,7 @@ function cleanData(data: Record<string, unknown> | undefined): Record<string, un
 
 function mirror(entry: LogEntry): void {
   const prefix = `[engine] [${entry.ch}]`;
-  const tail =
-    Object.keys(entry.data).length > 0 ? ` ${JSON.stringify(entry.data)}` : "";
+  const tail = Object.keys(entry.data).length > 0 ? ` ${JSON.stringify(entry.data)}` : "";
   const line = `${prefix} ${entry.msg}${tail}`;
 
   if (entry.lvl === "error") {
@@ -184,11 +172,7 @@ export class Logger {
     }
 
     const entries = this.state.queue.splice(0);
-    if (
-      entries.length === 0 ||
-      this.call === undefined ||
-      !this.settings.enabled
-    ) {
+    if (entries.length === 0 || this.call === undefined || !this.settings.enabled) {
       return;
     }
 
@@ -211,11 +195,7 @@ export class Logger {
     }
   }
 
-  private emit(
-    lvl: Level,
-    msg: string,
-    data?: Record<string, unknown>,
-  ): void {
+  private emit(lvl: Level, msg: string, data?: Record<string, unknown>): void {
     if (!this.settings.enabled || LEVELS[lvl] < LEVELS[this.settings.level]) {
       return;
     }

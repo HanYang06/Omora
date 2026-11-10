@@ -1,11 +1,4 @@
-import {
-  Children,
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
+import { Children, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { IconGlyph } from "../shell/icons";
 import { highlightParts, keyAction, moveActive } from "./searchText";
 import { prop, type NodeComponentProps } from "../core/shared";

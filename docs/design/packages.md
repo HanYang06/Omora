@@ -33,13 +33,13 @@ app/packages/<name>/
 
 分类轴是**来源**，不是产出。
 
-| | 系统插件 | 运行后插件 |
-|---|---|---|
-| 位置 | `app/packages/` | 待定 |
-| 来源 | 随包 | 单独装 |
-| 开关 | 启动期的配置决定 | 用户装 |
-| 例子 | store、manager、media、ui、audio、video、ideas、projects、requirements、net | —（现在一个都没有） |
-| 缺了会怎样 | 应用降级；后果由插件自己说清 | 少一个功能 |
+|            | 系统插件                                                                    | 运行后插件          |
+| ---------- | --------------------------------------------------------------------------- | ------------------- |
+| 位置       | `app/packages/`                                                             | 待定                |
+| 来源       | 随包                                                                        | 单独装              |
+| 开关       | 启动期的配置决定                                                            | 用户装              |
+| 例子       | store、manager、media、ui、audio、video、ideas、projects、requirements、net | —（现在一个都没有） |
+| 缺了会怎样 | 应用降级；后果由插件自己说清                                                | 少一个功能          |
 
 产出页面不是分类轴：两种插件都可能产出页面，都可能只是给服务。运行后插件同样是 package，目录和打包格式还没定。
 
@@ -133,14 +133,14 @@ class Media:
 
 捕捉拆成**两个插件**，不是一个插件的两半：没有麦克风只该关掉音频，没有摄像头只该关掉视频。
 
-| | audio | video |
-|---|---|---|
-| package | `app/packages/audio/` | `app/packages/video/` |
-| 服务 | `audio` | `video` |
-| 元数据 | `capabilities = ["microphone"]` | `capabilities = ["camera"]` |
-| 配置段 | `[audio]` | `[video]` |
-| 管什么 | 音质档、降噪、时限、后期处理钩子 | 清晰度档、时限、大小上限、后期处理钩子 |
-| 字节怎么来 | base64（协议 v0） | HTTP 媒体通道，事件只带 media id |
+|            | audio                            | video                                  |
+| ---------- | -------------------------------- | -------------------------------------- |
+| package    | `app/packages/audio/`            | `app/packages/video/`                  |
+| 服务       | `audio`                          | `video`                                |
+| 元数据     | `capabilities = ["microphone"]`  | `capabilities = ["camera"]`            |
+| 配置段     | `[audio]`                        | `[video]`                              |
+| 管什么     | 音质档、降噪、时限、后期处理钩子 | 清晰度档、时限、大小上限、后期处理钩子 |
+| 字节怎么来 | base64（协议 v0）                | HTTP 媒体通道，事件只带 media id       |
 
 共同点：
 

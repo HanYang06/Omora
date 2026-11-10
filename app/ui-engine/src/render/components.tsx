@@ -51,8 +51,7 @@ export function Text({ node }: NodeComponentProps): ReactNode {
 export function Button({ node, onEvent }: NodeComponentProps): ReactNode {
   const handler = prop(node, "on_click");
   const variant = prop(node, "variant");
-  const className =
-    variant === "ghost" ? "omora-button omora-button--ghost" : "omora-button";
+  const className = variant === "ghost" ? "omora-button omora-button--ghost" : "omora-button";
   const clickable = handler !== undefined && handler.length > 0;
 
   return (
@@ -165,10 +164,7 @@ export function Item({ node, onEvent, children }: NodeComponentProps): ReactNode
           <span className="omora-item-title">{title}</span>
         )}
         {clickable ? (
-          <span
-            className="omora-item-actions"
-            onClick={(event) => event.stopPropagation()}
-          >
+          <span className="omora-item-actions" onClick={(event) => event.stopPropagation()}>
             {children}
           </span>
         ) : (
@@ -185,9 +181,7 @@ export function Empty({ node }: NodeComponentProps): ReactNode {
   return (
     <div className="omora-empty" data-type="empty">
       <p className="omora-empty-title">{prop(node, "title") ?? ""}</p>
-      {hint !== undefined && hint.length > 0 ? (
-        <p className="omora-empty-hint">{hint}</p>
-      ) : null}
+      {hint !== undefined && hint.length > 0 ? <p className="omora-empty-hint">{hint}</p> : null}
     </div>
   );
 }

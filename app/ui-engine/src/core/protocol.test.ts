@@ -1,13 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import {
-  BAD_FRAME,
-  FrameError,
-  isCallFrame,
-  makeCall,
-  parseInboundFrame,
-} from "./protocol";
+import { BAD_FRAME, FrameError, isCallFrame, makeCall, parseInboundFrame } from "./protocol";
 
 interface ValidCallCase {
   name: string;
@@ -51,13 +45,8 @@ interface Fixture {
   snapshots: SnapshotCase[];
 }
 
-const FIXTURE_URL = new URL(
-  "../../../sdk/tests/fixtures/protocol.json",
-  import.meta.url,
-);
-const fixture = JSON.parse(
-  readFileSync(fileURLToPath(FIXTURE_URL), "utf8"),
-) as Fixture;
+const FIXTURE_URL = new URL("../../../sdk/tests/fixtures/protocol.json", import.meta.url);
+const fixture = JSON.parse(readFileSync(fileURLToPath(FIXTURE_URL), "utf8")) as Fixture;
 const cases = fixture.calls;
 
 const validCalls = cases.filter((item): item is ValidCallCase => item.ok);
@@ -114,9 +103,7 @@ describe("协议：页面快照的 fixture", () => {
     if (first === undefined) {
       return;
     }
-    const byType = new Map(
-      walk(first.snapshot.content).map((node) => [node.type, node]),
-    );
+    const byType = new Map(walk(first.snapshot.content).map((node) => [node.type, node]));
     const search = byType.get("search");
     const suggestion = byType.get("suggestion");
     const result = byType.get("result");
