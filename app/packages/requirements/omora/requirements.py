@@ -20,7 +20,7 @@ class RequirementsPlugin:
         def build() -> Page:
             return Page(content=Empty("还没有需求。"))
 
-        ui.page(ctx, "requirements", "需求", build)
+        ui.page(ctx, "requirements", "需求", build, icon="requirements")
 
 
 __all__ = ["RequirementsPlugin"]

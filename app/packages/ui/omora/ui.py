@@ -17,10 +17,13 @@ Counter = Callable[[], int]
 
 
 class _Page:
-    def __init__(self, label: str, build: Builder, count: Counter | None) -> None:
+    def __init__(
+        self, label: str, build: Builder, count: Counter | None, icon: str | None
+    ) -> None:
         self.label = label
         self.build = build
         self.count = count
+        self.icon = icon
         self.generation = 0
         self.handlers: dict[str, Handler] = {}
 
@@ -36,11 +39,12 @@ class Ui:
         label: str,
         build: Builder,
         count: Counter | None = None,
+        icon: str | None = None,
     ) -> None:
-        """登记一页；插件卸载时页面跟着消失。"""
+        """登记一页；插件卸载时页面跟着消失。icon 是母页面图标栏用的名字。"""
         if name in self._pages:
             raise ValueError(f"页面重复登记: {name}")
-        self._pages[name] = _Page(label, build, count)
+        self._pages[name] = _Page(label, build, count, icon)
 
         def remove() -> None:
             self._pages.pop(name, None)
@@ -86,6 +90,8 @@ class Ui:
         pages: list[dict[str, Any]] = []
         for key, item in self._pages.items():
             entry_data: dict[str, Any] = {"name": key, "label": item.label}
+            if item.icon is not None:
+                entry_data["icon"] = item.icon
             if item.count is not None:
                 entry_data["count"] = item.count()
             pages.append(entry_data)

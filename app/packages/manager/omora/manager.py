@@ -317,6 +317,7 @@ class Manager:
             "插件",
             self._build_page,
             count=lambda: len(self._manifest),
+            icon="settings",
         )
         self._ui = ui
 
