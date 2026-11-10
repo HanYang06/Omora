@@ -6,9 +6,11 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from typing import Any
 
+from omora.core.log import Log, NullLog
 from omora.sdk import Context
 from omora.sdk.ui import Handler, Page, serialize
 
@@ -29,8 +31,9 @@ class _Page:
 
 
 class Ui:
-    def __init__(self) -> None:
+    def __init__(self, log: Log | None = None) -> None:
         self._pages: dict[str, _Page] = {}
+        self._log = log if log is not None else NullLog()
 
     def page(
         self,
@@ -59,15 +62,24 @@ class Ui:
         entry = self._entry(name)
         entry.generation += 1
         entry.handlers.clear()
-        return self._draw(name, entry)
+        started = time.perf_counter()
+        snapshot = self._draw(name, entry)
+        self._log.debug("render", page=name, ms=(time.perf_counter() - started) * 1000)
+        return snapshot
 
     def event(self, handler: str, payload: dict[str, Any]) -> dict[str, Any]:
         """把载荷交给 handler，然后重画它所属的那一页。"""
         for name, entry in self._pages.items():
             callback = entry.handlers.get(handler)
             if callback is not None:
+                started = time.perf_counter()
                 callback(payload)
-                return self._draw(name, entry)
+                snapshot = self._draw(name, entry)
+                self._log.info(
+                    "event", h=handler, page=name, ms=(time.perf_counter() - started) * 1000
+                )
+                return snapshot
+        self._log.warning("event 未知", h=handler)
         raise LookupError(f"未知 handler: {handler}")
 
     def _entry(self, page: str) -> _Page:
@@ -108,7 +120,7 @@ class UiPlugin:
     name = "ui"
 
     def apply(self, ctx: Context) -> None:
-        ctx.provide("ui", Ui())
+        ctx.provide("ui", Ui(ctx.log))
 
 
 __all__ = ["Ui", "UiPlugin"]
