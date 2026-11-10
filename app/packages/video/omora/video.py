@@ -15,6 +15,8 @@ from typing import Any
 from omora.sdk import Context
 from omora.sdk.ui import Handler, VideoCapture
 
+from . import _transcode
+
 QUALITIES = ("480p", "720p", "1080p")
 DEFAULT_SECONDS = 120
 DEFAULT_MB = 64
@@ -32,6 +34,7 @@ class Video:
         quality: str = "720p",
         max_seconds: int | str = DEFAULT_SECONDS,
         max_mb: int | str = DEFAULT_MB,
+        post_process: bool | str = True,
     ) -> None:
         if quality not in QUALITIES:
             raise ValueError(f"未知清晰度: {quality}（可选 {', '.join(QUALITIES)}）")
@@ -40,6 +43,7 @@ class Video:
         self.quality = quality
         self.max_seconds = int(max_seconds)
         self.max_bytes = int(max_mb) * 1024 * 1024
+        self.post_process = _flag(post_process)
         self._processors: list[Processor] = []
 
     def settings(self) -> dict[str, Any]:
@@ -97,7 +101,27 @@ class Video:
             return None
         for process in self._processors:
             process(media_id, info)
+        if self.post_process:
+            media_id = self._repack(media_id)
         return media_id
+
+    def _repack(self, media_id: str) -> str:
+        """过一遍后处理：降噪、去闪烁、重编码。失败保留原件，不能吃掉用户的录像。"""
+        log = self._ctx.log.child("video")
+        try:
+            before = self._media.info(media_id)
+            processed, mime = _transcode.process(self._media.read(media_id)["data"])
+            fresh = str(self._media.save(processed, mime))
+            self._media.delete(media_id)
+            log.info(
+                "video.post_process",
+                before=int(before["size"]),
+                after=len(processed),
+            )
+            return fresh
+        except Exception as exc:  # noqa: BLE001 — 后处理坏了也要把原片还给用户
+            log.warning("video.post_process.failed", err=type(exc).__name__)
+            return media_id
 
     def _drop(self, media_id: str) -> None:
         try:
@@ -114,10 +138,12 @@ class VideoPlugin:
         quality: str = "720p",
         max_seconds: int | str = DEFAULT_SECONDS,
         max_mb: int | str = DEFAULT_MB,
+        post_process: bool | str = True,
     ) -> None:
         self.quality = str(quality)
         self.max_seconds = max_seconds
         self.max_mb = max_mb
+        self.post_process = post_process
 
     def apply(self, ctx: Context) -> None:
         media = ctx.resolve("media")
@@ -129,8 +155,15 @@ class VideoPlugin:
                 quality=self.quality,
                 max_seconds=self.max_seconds,
                 max_mb=self.max_mb,
+                post_process=self.post_process,
             ),
         )
+
+
+def _flag(value: bool | str) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() not in {"false", "0", "no", "off", "none", ""}
 
 
 def _seconds(payload: dict[str, Any]) -> float:

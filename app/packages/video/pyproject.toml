@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "视频捕捉：分辨率档、时限、大小上限与后期处理钩子"
 requires-python = ">=3.14"
 dependencies = [
+    "imageio-ffmpeg>=0.8.1",
     "omora-sdk",
 ]
 
