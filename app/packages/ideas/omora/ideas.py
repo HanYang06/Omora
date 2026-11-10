@@ -83,7 +83,7 @@ class IdeasPlugin:
             pinned="pinned",
         )
         state: dict[str, Any] = {"mode": HOME, "query": "", "open": None, "filter": "all"}
-        capture = _capture.Capture(ideas, audio_service, video_service)
+        capture = _capture.Capture(ideas, media, audio_service, video_service)
         history: list[tuple[str, str | None]] = []
         found: list[Any] = []
 

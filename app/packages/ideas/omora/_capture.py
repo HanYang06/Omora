@@ -32,10 +32,12 @@ class Capture:
     def __init__(
         self,
         ideas: Any,
+        media: Any,
         audio: Callable[[], Any],
         video: Callable[[], Any],
     ) -> None:
         self._ideas = ideas
+        self._media = media
         self._audio = audio
         self._video = video
         self._state: dict[str, Any] = {}
@@ -148,7 +150,10 @@ class Capture:
 
     def _save_audio(self, payload: dict[str, Any]) -> None:
         service = self._audio()
-        if service is None or seconds(payload) < _MIN_SECONDS:
+        if service is None:
+            return
+        if seconds(payload) < _MIN_SECONDS:
+            self._discard(payload)
             return
         media_id = service.capture(payload)
         if not media_id:
@@ -157,12 +162,25 @@ class Capture:
 
     def _save_video(self, payload: dict[str, Any]) -> None:
         service = self._video()
-        if service is None or seconds(payload) < _MIN_SECONDS:
+        if service is None:
+            return
+        if seconds(payload) < _MIN_SECONDS:
+            self._discard(payload)
             return
         media_id = service.capture(payload)
         if not media_id:
             return
         self._settle(VIDEO, media_id, payload, caption(now(), "视频"))
+
+    def _discard(self, payload: dict[str, Any]) -> None:
+        """太短丢掉的录制：字节已经由引擎传进媒体通道，别留成孤儿文件。"""
+        media_id = str(payload.get("media", ""))
+        if not media_id:
+            return
+        try:
+            self._media.delete(media_id)
+        except LookupError:
+            return
 
     def _settle(self, mode: str, media_id: str, payload: dict[str, Any], title: str) -> None:
         """落库之后切到已保存条；面板早收起（或换了捕捉）就只落库。
