@@ -18,12 +18,10 @@ interface Batch {
 
 function makeCall() {
   const calls: Batch[] = [];
-  const call = vi.fn(
-    async (target: string, method: string, args: JsonObject): Promise<number> => {
-      calls.push({ target, method, entries: (args as { entries: LogEntry[] }).entries });
-      return 0;
-    },
-  );
+  const call = vi.fn(async (target: string, method: string, args: JsonObject): Promise<number> => {
+    calls.push({ target, method, entries: (args as { entries: LogEntry[] }).entries });
+    return 0;
+  });
   return { call, calls };
 }
 
@@ -50,9 +48,7 @@ describe("级别", () => {
     await vi.advanceTimersByTimeAsync(FLUSH_MS);
 
     expect(debug).not.toHaveBeenCalled();
-    expect(info).toHaveBeenCalledWith(
-      expect.stringContaining("[engine] [render] 看得见"),
-    );
+    expect(info).toHaveBeenCalledWith(expect.stringContaining("[engine] [render] 看得见"));
     expect(calls).toHaveLength(1);
     expect(calls[0]?.entries).toEqual([
       { proc: "engine", ch: "render", lvl: "info", msg: "看得见", data: { page: "ideas" } },

@@ -306,10 +306,12 @@ describe("item 的可点标题", () => {
 
   it("没有 on_click 时标题还是静态 span，整行不接点击", () => {
     const onEvent = vi.fn();
-    const element = asElement(Item({
-      node: { type: "item", props: { meta: "刚刚", title: "买牛奶" }, children: [] },
-      onEvent,
-    }));
+    const element = asElement(
+      Item({
+        node: { type: "item", props: { meta: "刚刚", title: "买牛奶" }, children: [] },
+        onEvent,
+      }),
+    );
     const html = htmlOf([{ type: "item", props: { meta: "刚刚", title: "买牛奶" }, children: [] }]);
 
     expect(html).toContain("omora-item-title");
@@ -330,14 +332,22 @@ describe("panel", () => {
             type: "row",
             props: {},
             children: [
-              { type: "chip", props: { text: "全部", active: true, on_click: "ideas:6:2" }, children: [] },
+              {
+                type: "chip",
+                props: { text: "全部", active: true, on_click: "ideas:6:2" },
+                children: [],
+              },
             ],
           },
           {
             type: "column",
             props: {},
             children: [
-              { type: "card", props: { title: "买牛奶", meta: "刚刚", on_click: "ideas:6:3" }, children: [] },
+              {
+                type: "card",
+                props: { title: "买牛奶", meta: "刚刚", on_click: "ideas:6:3" },
+                children: [],
+              },
             ],
           },
         ],
@@ -378,14 +388,22 @@ describe("注册表", () => {
             type: "rail",
             props: { title: "全部灵感" },
             children: [
-              { type: "item", props: { meta: "刚刚", title: "买牛奶", on_click: "ideas:6:0" }, children: [] },
+              {
+                type: "item",
+                props: { meta: "刚刚", title: "买牛奶", on_click: "ideas:6:0" },
+                children: [],
+              },
             ],
           },
           {
             type: "column",
             props: {},
             children: [
-              { type: "tile", props: { icon: "mic", title: "录音", on_click: "ideas:6:1" }, children: [] },
+              {
+                type: "tile",
+                props: { icon: "mic", title: "录音", on_click: "ideas:6:1" },
+                children: [],
+              },
               {
                 type: "panel",
                 props: {},
@@ -394,14 +412,27 @@ describe("注册表", () => {
                     type: "row",
                     props: {},
                     children: [
-                      { type: "chip", props: { text: "全部", active: true, on_click: "ideas:6:2" }, children: [] },
+                      {
+                        type: "chip",
+                        props: { text: "全部", active: true, on_click: "ideas:6:2" },
+                        children: [],
+                      },
                     ],
                   },
                   {
                     type: "column",
                     props: {},
                     children: [
-                      { type: "card", props: { title: "买牛奶", text: "顺路", meta: "刚刚", on_click: "ideas:6:3" }, children: [] },
+                      {
+                        type: "card",
+                        props: {
+                          title: "买牛奶",
+                          text: "顺路",
+                          meta: "刚刚",
+                          on_click: "ideas:6:3",
+                        },
+                        children: [],
+                      },
                     ],
                   },
                 ],
@@ -426,18 +457,26 @@ describe("注册表", () => {
 
   it("spread 的行两头分开：标题在左、动作在右", () => {
     const spread = renderToString(
-      <>{renderTree([{
-        type: "row",
-        props: { spread: true },
-        children: [{ type: "text", props: { text: "录音" }, children: [] }],
-      }])}</>,
+      <>
+        {renderTree([
+          {
+            type: "row",
+            props: { spread: true },
+            children: [{ type: "text", props: { text: "录音" }, children: [] }],
+          },
+        ])}
+      </>,
     );
     const plain = renderToString(
-      <>{renderTree([{
-        type: "row",
-        props: {},
-        children: [{ type: "text", props: { text: "录音" }, children: [] }],
-      }])}</>,
+      <>
+        {renderTree([
+          {
+            type: "row",
+            props: {},
+            children: [{ type: "text", props: { text: "录音" }, children: [] }],
+          },
+        ])}
+      </>,
     );
 
     expect(spread).toContain("omora-row--spread");

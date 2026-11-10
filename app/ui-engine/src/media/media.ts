@@ -1,11 +1,7 @@
 import type { JsonObject } from "../core/protocol";
 import type { MediaData } from "../core/types";
 
-export type Caller = (
-  target: string,
-  method: string,
-  args: JsonObject,
-) => Promise<unknown>;
+export type Caller = (target: string, method: string, args: JsonObject) => Promise<unknown>;
 
 /**
  * 取一件媒体。参数名是 media_id，必须和 Python 的 `Media.load(media_id)` 对齐：
@@ -32,11 +28,7 @@ export type FetchLike = (
  * 把一段视频传到 HTTP 媒体通道，拿回 media id。
  * 视频不走 base64：base64 会把一份视频涨三分之一，还得整段塞进 JSON。
  */
-export async function uploadMedia(
-  fetchImpl: FetchLike,
-  url: string,
-  blob: Blob,
-): Promise<string> {
+export async function uploadMedia(fetchImpl: FetchLike, url: string, blob: Blob): Promise<string> {
   const response = await fetchImpl(url, {
     method: "POST",
     headers: { "Content-Type": blob.type || "application/octet-stream" },

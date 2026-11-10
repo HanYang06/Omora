@@ -1,0 +1,21 @@
+# 依赖与构建产物
+node_modules/
+dist/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# 本地数据
+.omora/
+coverage/
+
+# 锁文件与第三方资产
+pnpm-lock.yaml
+uv.lock
+skills-lock.json
+.agents/
+
+# Python 交给 ruff
+*.py

@@ -106,9 +106,7 @@ export function Recorder({ node, onEvent }: NodeComponentProps): ReactNode {
         <span className="omora-record-dot" aria-hidden="true" />
         {recording ? `录音中 ${clock(seconds)}` : "录音"}
       </button>
-      <span className="omora-record-hint">
-        {recording ? "再点一下停" : "说出口，比打字快"}
-      </span>
+      <span className="omora-record-hint">{recording ? "再点一下停" : "说出口，比打字快"}</span>
     </div>
   );
 }
@@ -135,9 +133,7 @@ export function Audio({ node, loadMedia }: NodeComponentProps): ReactNode {
             currentAudio?.pause();
             const audio = new window.Audio(`data:${mime};base64,${data}`);
             currentAudio = audio;
-            void audio
-              .play()
-              .catch((error: unknown) => console.error("[omora] 播放失败:", error));
+            void audio.play().catch((error: unknown) => console.error("[omora] 播放失败:", error));
           })
           .catch((error: unknown) => console.error("[omora] 取媒体失败:", error));
       }}

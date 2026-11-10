@@ -22,30 +22,32 @@ export function Hotkey({ node, onEvent }: NodeComponentProps): ReactNode {
   }, [key, onPress, onRelease, onEvent]);
 
   useEffect(() => {
-    const handle = (phase: "down" | "up") => (event: KeyboardEvent): void => {
-      const current = latest.current;
-      const decision = hotkeyDecision({
-        configured: current.key,
-        code: event.code,
-        key: event.key,
-        repeat: event.repeat,
-        editing: isTypingTarget(event.target),
-        held: held.current,
-        phase,
-      });
-      if (decision.preventDefault) {
-        event.preventDefault();
-      }
-      held.current = decision.held;
-      if (decision.action === null) {
-        return;
-      }
-      const handler = decision.action === "press" ? current.onPress : current.onRelease;
-      if (handler === undefined || handler.length === 0) {
-        return;
-      }
-      current.onEvent?.(handler, {});
-    };
+    const handle =
+      (phase: "down" | "up") =>
+      (event: KeyboardEvent): void => {
+        const current = latest.current;
+        const decision = hotkeyDecision({
+          configured: current.key,
+          code: event.code,
+          key: event.key,
+          repeat: event.repeat,
+          editing: isTypingTarget(event.target),
+          held: held.current,
+          phase,
+        });
+        if (decision.preventDefault) {
+          event.preventDefault();
+        }
+        held.current = decision.held;
+        if (decision.action === null) {
+          return;
+        }
+        const handler = decision.action === "press" ? current.onPress : current.onRelease;
+        if (handler === undefined || handler.length === 0) {
+          return;
+        }
+        current.onEvent?.(handler, {});
+      };
     const onDown = handle("down");
     const onUp = handle("up");
     document.addEventListener("keydown", onDown);

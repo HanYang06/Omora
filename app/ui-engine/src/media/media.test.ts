@@ -4,12 +4,10 @@ import type { JsonObject } from "../core/protocol";
 
 describe("fetchMedia", () => {
   it("调 media.load 时用 media_id，并把 mime / data 取回来", async () => {
-    const call = vi.fn(
-      async (_target: string, _method: string, _args: JsonObject) => ({
-        mime: "audio/webm",
-        data: "aGVsbG8=",
-      }),
-    );
+    const call = vi.fn(async (_target: string, _method: string, _args: JsonObject) => ({
+      mime: "audio/webm",
+      data: "aGVsbG8=",
+    }));
 
     const result = await fetchMedia(call, "abc");
 
@@ -49,9 +47,9 @@ describe("uploadMedia", () => {
       json: async () => ({}),
     }));
 
-    await expect(uploadMedia(fetchImpl, "http://127.0.0.1:8766/media", new Blob([]))).rejects.toThrow(
-      "上传失败（413）",
-    );
+    await expect(
+      uploadMedia(fetchImpl, "http://127.0.0.1:8766/media", new Blob([])),
+    ).rejects.toThrow("上传失败（413）");
   });
 
   it("返回里没有 media_id 就报错", async () => {

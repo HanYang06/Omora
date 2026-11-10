@@ -17,14 +17,14 @@
 
 boot 在 manager 之前装一个最小的 `host` 插件，把下面这份接口挂到服务表：
 
-| 方法 | 作用 |
-|---|---|
-| `manifest()` | boot 声明的有序插件名 |
-| `names()` | 现在装着的插件 |
-| `install(name)` | 按入口点构造并装一个插件 |
-| `uninstall(name)` | 卸一个插件 |
-| `has_service(name)` | 检查 `requires` 用的服务在不在 |
-| `default_enabled(name)` | config.ini 给的默认开关 |
+| 方法                    | 作用                           |
+| ----------------------- | ------------------------------ |
+| `manifest()`            | boot 声明的有序插件名          |
+| `names()`               | 现在装着的插件                 |
+| `install(name)`         | 按入口点构造并装一个插件       |
+| `uninstall(name)`       | 卸一个插件                     |
+| `has_service(name)`     | 检查 `requires` 用的服务在不在 |
+| `default_enabled(name)` | config.ini 给的默认开关        |
 
 `host` 自己不是系统插件，不在 manifest 里，也不出现在清单中。
 
@@ -49,7 +49,7 @@ boot 在 manager 之前装一个最小的 `host` 插件，把下面这份接口�
       "enabled": true,
       "phase": "active",
       "reason": null,
-      "conditions": {"platforms": [], "capabilities": [], "requires": ["store", "media", "ui"]}
+      "conditions": { "platforms": [], "capabilities": [], "requires": ["store", "media", "ui"] }
     }
   ]
 }
@@ -97,8 +97,13 @@ requires = ["store", "media"]             # 需要的服务名
 客户端能力（麦克风 / 摄像头）只有引擎知道。引擎在连接 open 之后发一次普通 call：
 
 ```json
-{"id": "1", "type": "call", "target": "manager", "method": "report_capabilities",
- "args": {"capabilities": ["microphone", "camera"]}}
+{
+  "id": "1",
+  "type": "call",
+  "target": "manager",
+  "method": "report_capabilities",
+  "args": { "capabilities": ["microphone", "camera"] }
+}
 ```
 
 - 不新增帧类型，走现有协议。

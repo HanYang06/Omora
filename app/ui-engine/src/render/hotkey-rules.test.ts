@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  hotkeyDecision,
-  isTypingTarget,
-  keyMatches,
-  type HotkeyFacts,
-} from "./hotkey-rules";
+import { hotkeyDecision, isTypingTarget, keyMatches, type HotkeyFacts } from "./hotkey-rules";
 
 /** 一次普通的空格按下：不在输入框、没长按、还没按住过。 */
 function facts(overrides: Partial<HotkeyFacts> = {}): HotkeyFacts {

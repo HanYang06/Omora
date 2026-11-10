@@ -15,11 +15,7 @@ LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)")
 
 
 def _files() -> list[Path]:
-    found = [
-        ROOT / name
-        for name in ("README.md", "AGENTS.md")
-        if (ROOT / name).is_file()
-    ]
+    found = [ROOT / name for name in ("README.md", "AGENTS.md") if (ROOT / name).is_file()]
     docs = ROOT / "docs"
     if docs.is_dir():
         found.extend(sorted(docs.rglob("*.md")))
@@ -50,9 +46,7 @@ def check() -> list[str]:
             for match in LINK_RE.finditer(line):
                 resolved = _target(path, match.group(1))
                 if resolved is not None and not resolved.exists():
-                    problems.append(
-                        f"{relative}:{lineno}: 链接目标不存在: {match.group(1)}"
-                    )
+                    problems.append(f"{relative}:{lineno}: 链接目标不存在: {match.group(1)}")
     return problems
 
 

@@ -92,7 +92,6 @@ WebSocket 端到端都有行为测试。
 
 ## 已完成：媒体与捕获基础
 
-
 证明了「录音 → 媒体落盘 → 条目落库 → 列表播放」这条链路。
 
 - `media` 插件：文件 + `index.json`，`save` / `load`
@@ -138,6 +137,7 @@ WebSocket 端到端都有行为测试。
 - 时长上限：`[audio] max_seconds = 0`（不限）、`[video] max_seconds = 1800`
 
 验收：`uv run python scripts/check.py` 全绿；headless 浏览器 + 假麦克风走通「点开→录→暂停→继续→停→改名→收起」与「按住空格→松手落库」。
+
 ## 接下来（顺序待定）
 
 - **手机当摄像头（Android 客户端）**：桌面自带的摄像头往往很差，手机的好得多。

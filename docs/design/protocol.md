@@ -27,12 +27,12 @@ error  {"id": "1", "type": "error",  "code": "unknown_target", "message": "服�
 
 ## 3. 错误码
 
-| code | 什么时候 |
-|---|---|
-| `bad_frame` | JSON 不合法、不是对象、缺 `id` / `target` / `method`、`type` 不是 `call`、`args` 不是对象 |
-| `unknown_target` | 这个名字没有服务 |
-| `unknown_method` | 服务没有这个方法，或它不是可调用的 |
-| `call_failed` | 方法抛了异常；`message` 是 `str(exc)`，不带 traceback |
+| code             | 什么时候                                                                                  |
+| ---------------- | ----------------------------------------------------------------------------------------- |
+| `bad_frame`      | JSON 不合法、不是对象、缺 `id` / `target` / `method`、`type` 不是 `call`、`args` 不是对象 |
+| `unknown_target` | 这个名字没有服务                                                                          |
+| `unknown_method` | 服务没有这个方法，或它不是可调用的                                                        |
+| `call_failed`    | 方法抛了异常；`message` 是 `str(exc)`，不带 traceback                                     |
 
 ## 4. 方向与并发
 
@@ -45,25 +45,24 @@ error  {"id": "1", "type": "error",  "code": "unknown_target", "message": "服�
 
 manager 是普通服务，不新增帧类型：
 
-| 调用 | args | 返回 |
-|---|---|---|
-| `manager.inventory` | `{}` | 清单快照 |
-| `manager.report_capabilities` | `{"capabilities": ["microphone"]}` | 清单快照 |
-| `manager.set_enabled` | `{"name": "ideas", "enabled": false}` | 清单快照 |
+| 调用                          | args                                  | 返回     |
+| ----------------------------- | ------------------------------------- | -------- |
+| `manager.inventory`           | `{}`                                  | 清单快照 |
+| `manager.report_capabilities` | `{"capabilities": ["microphone"]}`    | 清单快照 |
+| `manager.set_enabled`         | `{"name": "ideas", "enabled": false}` | 清单快照 |
 
 能力是客户端的事实：引擎在连接 open 后上报一次，Python 侧不探测硬件。
 
 ## 5. 页面快照与节点
 
-
 `ui.render` / `ui.event` 的 `result.value` 是一份页面快照：
 
 ```json
 {
-  "pages": [{"name": "ideas", "label": "灵感", "count": 3}],
+  "pages": [{ "name": "ideas", "label": "灵感", "count": 3 }],
   "page": "ideas",
   "meta": "3 条",
-  "content": {"type": "column", "props": {}, "children": []}
+  "content": { "type": "column", "props": {}, "children": [] }
 }
 ```
 
@@ -73,9 +72,11 @@ manager 是普通服务，不新增帧类型：
 节点：
 
 ```json
-{"type": "column", "props": {}, "children": [
-  {"type": "text", "props": {"text": "灵感", "kind": "title"}, "children": []}
-]}
+{
+  "type": "column",
+  "props": {},
+  "children": [{ "type": "text", "props": { "text": "灵感", "kind": "title" }, "children": [] }]
+}
 ```
 
 - `children` 永远是数组，没有子节点就是 `[]`。

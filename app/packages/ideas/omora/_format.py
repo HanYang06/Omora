@@ -61,7 +61,6 @@ def seconds(payload: dict[str, Any]) -> float:
         return 0.0
 
 
-
 def caption(created: datetime, kind: str) -> str:
     """捕捉的默认名：保存时刻的时间轴（月-日 时:分），不是时长。"""
     return f"{kind} {created.month:02d}-{created.day:02d} {created.hour:02d}:{created.minute:02d}"

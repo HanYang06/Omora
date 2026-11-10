@@ -155,9 +155,7 @@ class NullLog(Log):
     def child(self, channel: str) -> Log:
         return self
 
-    def _log(
-        self, level: str, msg: str, extra: dict[str, Any], data: dict[str, Any]
-    ) -> None:
+    def _log(self, level: str, msg: str, extra: dict[str, Any], data: dict[str, Any]) -> None:
         return
 
 

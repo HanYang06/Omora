@@ -41,10 +41,26 @@ export interface VideoRecorder {
  * 只管行为，不管长什么样——界面在 video-capture.tsx。
  */
 export function useVideoRecorder(options: VideoRecorderOptions): VideoRecorder {
-  const { devices, refresh, ready, pausable, maxSeconds, quality, selected, handler, uploadUrl, onEvent } =
-    options;
+  const {
+    devices,
+    refresh,
+    ready,
+    pausable,
+    maxSeconds,
+    quality,
+    selected,
+    handler,
+    uploadUrl,
+    onEvent,
+  } = options;
   const timer = useRecordTimer();
-  const { stop: stopTimer, start: startTimer, pause: pauseTimer, resume: resumeTimer, elapsed } = timer;
+  const {
+    stop: stopTimer,
+    start: startTimer,
+    pause: pauseTimer,
+    resume: resumeTimer,
+    elapsed,
+  } = timer;
   const [mode, setMode] = useState<VideoMode>("idle");
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -142,34 +158,37 @@ export function useVideoRecorder(options: VideoRecorderOptions): VideoRecorder {
   }, [pausable, resumeTimer]);
 
   /** 字节 → HTTP 媒体通道 → on_submit；失败原地留着等重试。 */
-  const upload = useCallback(async (recorded: Blob) => {
-    const target = latest.current;
-    if (!unmounted.current) {
-      setError(undefined);
-      setMode("uploading");
-    }
-    const { mediaId, plan } = await uploadRecorded(target.uploadUrl, recorded, unmounted.current);
-    if (plan.submit && mediaId !== undefined && target.handler !== undefined) {
-      submitted.current = true;
-      target.onEvent?.(target.handler, {
-        media: mediaId,
-        mime: recorded.type || "video/webm",
-        seconds: recordedSeconds.current,
-      });
-    }
-    if (plan.log) {
-      console.error("[omora] 视频没存上，组件已卸载，这段只留在内存里:", plan.reason);
-    }
-    if (!plan.updateUi) {
-      return;
-    }
-    setError(plan.reason.length > 0 ? plan.reason : undefined);
-    setMode(plan.phase);
-    if (!plan.keepBlob) {
-      pending.current = null;
-      showPreview(null);
-    }
-  }, [showPreview]);
+  const upload = useCallback(
+    async (recorded: Blob) => {
+      const target = latest.current;
+      if (!unmounted.current) {
+        setError(undefined);
+        setMode("uploading");
+      }
+      const { mediaId, plan } = await uploadRecorded(target.uploadUrl, recorded, unmounted.current);
+      if (plan.submit && mediaId !== undefined && target.handler !== undefined) {
+        submitted.current = true;
+        target.onEvent?.(target.handler, {
+          media: mediaId,
+          mime: recorded.type || "video/webm",
+          seconds: recordedSeconds.current,
+        });
+      }
+      if (plan.log) {
+        console.error("[omora] 视频没存上，组件已卸载，这段只留在内存里:", plan.reason);
+      }
+      if (!plan.updateUi) {
+        return;
+      }
+      setError(plan.reason.length > 0 ? plan.reason : undefined);
+      setMode(plan.phase);
+      if (!plan.keepBlob) {
+        pending.current = null;
+        showPreview(null);
+      }
+    },
+    [showPreview],
+  );
 
   const start = useCallback(async () => {
     if (handler === undefined || !ready || started.current) {

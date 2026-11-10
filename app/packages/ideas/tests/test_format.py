@@ -36,6 +36,3 @@ def test_a_capture_s_default_name_is_the_moment_it_was_saved() -> None:
     assert caption(saved_at, "语音") == "语音 11-11 03:41"
     assert caption(saved_at, "视频") == "视频 11-11 03:41"
     assert caption(datetime(2027, 1, 2, 23, 5), "语音") == "语音 01-02 23:05"
-
-
-

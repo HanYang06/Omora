@@ -73,16 +73,7 @@ const GLYPHS: Record<string, ReactNode> = {
 
 /** 空位：虚线圆角框，明确表示"这个名字没有图标"。 */
 function EmptySlot(): ReactNode {
-  return (
-    <rect
-      x="3.6"
-      y="3.6"
-      width="12.8"
-      height="12.8"
-      rx="2.4"
-      strokeDasharray="2 2.4"
-    />
-  );
+  return <rect x="3.6" y="3.6" width="12.8" height="12.8" rx="2.4" strokeDasharray="2 2.4" />;
 }
 
 export interface IconGlyphProps {

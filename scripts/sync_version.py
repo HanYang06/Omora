@@ -51,7 +51,9 @@ def sync_json(path: Path, version: str) -> bool:
     if data.get("version") == version:
         return False
     data["version"] = version
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
     return True
 
 

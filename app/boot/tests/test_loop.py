@@ -159,14 +159,10 @@ def test_clicking_archive_over_the_socket_updates_the_page(tmp_path: Path) -> No
                 )
                 opened = _find_item(before["content"], "买牛奶")
                 assert opened is not None
-                detail = await _request(
-                    ws, "4", "ui", "event", {"handler": opened, "payload": {}}
-                )
+                detail = await _request(ws, "4", "ui", "event", {"handler": opened, "payload": {}})
                 handler = _find_button(detail["content"], "归档")
                 assert handler is not None
-                after = await _request(
-                    ws, "5", "ui", "event", {"handler": handler, "payload": {}}
-                )
+                after = await _request(ws, "5", "ui", "event", {"handler": handler, "payload": {}})
                 return empty, before, after
         finally:
             await net.stop()
@@ -183,9 +179,7 @@ def test_clicking_archive_over_the_socket_updates_the_page(tmp_path: Path) -> No
     assert _nodes(after["content"], "empty")[0]["props"]["title"] == "还没有灵感。"
 
 
-def test_audio_capture_and_media_load_over_the_socket(
-    tmp_path: Path, monkeypatch: Any
-) -> None:
+def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path, monkeypatch: Any) -> None:
     # 默认名读的是保存时刻：把捕捉的钟钉住，断言才不会随分钟漂。
     monkeypatch.setattr(ideas_capture, "now", lambda: SAVED_AT)
 
@@ -227,9 +221,7 @@ def test_audio_capture_and_media_load_over_the_socket(
                 )
                 opened = _find_item(after["content"], "语音 11-11 03:41")
                 assert opened is not None
-                detail = await _request(
-                    ws, "4", "ui", "event", {"handler": opened, "payload": {}}
-                )
+                detail = await _request(ws, "4", "ui", "event", {"handler": opened, "payload": {}})
                 media_id = str(_nodes(detail["content"], "audio")[0]["props"]["media"])
                 loaded = await _request(ws, "5", "media", "load", {"media_id": media_id})
                 assert isinstance(loaded, dict)
@@ -243,9 +235,7 @@ def test_audio_capture_and_media_load_over_the_socket(
     assert base64.b64decode(str(loaded["data"])) == b"hello"
 
 
-def test_video_capture_uploads_over_http_and_plays_back(
-    tmp_path: Path, monkeypatch: Any
-) -> None:
+def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path, monkeypatch: Any) -> None:
     monkeypatch.setattr(ideas_capture, "now", lambda: SAVED_AT)
 
     async def scenario() -> tuple[dict[str, Any], bytes]:
@@ -285,9 +275,7 @@ def test_video_capture_uploads_over_http_and_plays_back(
                 )
                 opened = _find_item(after["content"], "视频 11-11 03:41")
                 assert opened is not None
-                detail = await _request(
-                    ws, "4", "ui", "event", {"handler": opened, "payload": {}}
-                )
+                detail = await _request(ws, "4", "ui", "event", {"handler": opened, "payload": {}})
                 src = str(_nodes(detail["content"], "video")[0]["props"]["src"])
                 fetched = await _get(src)
                 return after, fetched
