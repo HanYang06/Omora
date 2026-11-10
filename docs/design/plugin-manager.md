@@ -140,7 +140,7 @@ manager 通过 ui 插件登记 `plugins` 页（导航标签「插件」）：每
   卸载清理、设置页、元数据校验。
 - `app/boot/tests/test_boot_manager.py`：boot 顺序、配置只当默认、manager 关掉的降级路径。
 - `app/boot/tests/test_loop.py`：真 WebSocket 上 inventory / 上报 / 开关。
-- 门禁：`uv run python scripts/check.py`。
+- 门禁：`.github/workflows/ci.yml`（命令清单见 `docs/design/ci.md`）。
 
 ## 10. 未做
 

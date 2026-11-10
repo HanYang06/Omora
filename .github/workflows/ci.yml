@@ -2,7 +2,9 @@ name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -13,26 +15,322 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  gate:
+  python-lint:
+    name: python-lint
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.12.22"
           enable-cache: true
-      - uses: pnpm/action-setup@v6
+      - name: Install Python dependencies
+        run: uv sync --frozen --all-groups
+      - name: ruff check
+        run: uv run ruff check .
+      - name: ruff format
+        run: uv run ruff format --check .
+
+  python-types:
+    name: python-types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.22"
+          enable-cache: true
+      - name: Install Python dependencies
+        run: uv sync --frozen --all-groups
+      - name: mypy packages
+        run: uv run mypy -p omora.cli -p omora.core -p omora.sdk
+      - name: mypy modules
+        run: uv run mypy -m omora.store -m omora.manager -m omora.media -m omora.ui -m omora.audio -m omora.video -m omora.ideas -m omora.projects -m omora.requirements -m omora.net
+      - name: mypy entrypoints and tests
+        run: uv run mypy app/boot.py app/main.py app/boot/tests app/core/tests app/sdk/tests app/packages/audio/tests app/packages/ideas/tests app/packages/manager/tests app/packages/media/tests app/packages/net/tests app/packages/store/tests app/packages/ui/tests app/packages/video/tests
+
+  python-tests:
+    name: python-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      code-quality: write
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.22"
+          enable-cache: true
+      - name: Install Python dependencies
+        run: uv sync --frozen --all-groups
+      - name: pytest
+        run: uv run pytest --cov=app --cov-report=term-missing --cov-report=xml
+      - name: Fetch base branch
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: git fetch --no-tags --unshallow origin "$BASE_REF" 2>/dev/null || git fetch --no-tags origin "$BASE_REF"
+      - name: Changed-line coverage
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: uvx diff-cover coverage.xml --compare-branch="origin/$BASE_REF" --fail-under=90
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: python-coverage
+          path: coverage.xml
+          retention-days: 14
+      - name: Upload coverage to Code Quality
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        uses: actions/upload-code-coverage@2b21a77928be8d5168c2b9581a67f2adbebacc52 # v1
+        with:
+          file: coverage.xml
+          language: Python
+          label: python/pytest
+          fail-on-error: false
+
+  ts-lint:
+    name: ts-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           version: "12.18.0"
-      - uses: actions/setup-node@v7
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "24"
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - name: 安装 Python 依赖
-        run: uv sync --frozen --all-groups
-      - name: 安装前端依赖
+      - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
-      - name: 跑门禁
-        run: uv run python scripts/check.py
+      - name: eslint
+        run: pnpm exec eslint app/ui-engine/src app/shell/main.cjs
+      - name: prettier
+        run: pnpm exec prettier --check .
+
+  ts-types:
+    name: ts-types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+        with:
+          version: "12.18.0"
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: tsc
+        run: pnpm --dir app/ui-engine exec tsc --noEmit
+
+  ts-tests:
+    name: ts-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      code-quality: write
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+        with:
+          version: "12.18.0"
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: vitest
+        run: pnpm --dir app/ui-engine exec vitest run --coverage
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: typescript-coverage
+          path: app/ui-engine/coverage/
+          retention-days: 14
+      - name: Upload coverage to Code Quality
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        uses: actions/upload-code-coverage@2b21a77928be8d5168c2b9581a67f2adbebacc52 # v1
+        with:
+          file: app/ui-engine/coverage/cobertura-coverage.xml
+          language: TypeScript
+          label: ui-engine/vitest
+          fail-on-error: false
+
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.22"
+          enable-cache: true
+      - name: Install Python dependencies
+        run: uv sync --frozen --all-groups
+      - name: uv audit
+        run: uv audit
+      - name: Setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+        with:
+          version: "12.18.0"
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: pnpm audit
+        run: pnpm audit --audit-level high
+      - name: actionlint
+        run: uvx --from actionlint-py actionlint -ignore 'unknown permission scope "code-quality"'
+      - name: zizmor
+        run: uvx zizmor --format plain .
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: never
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+        with:
+          version: "12.18.0"
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build renderer
+        run: pnpm --dir app/ui-engine build
+      - name: Setup uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.22"
+          enable-cache: true
+      - name: Install Python dependencies
+        run: uv sync --frozen --all-groups
+      - name: Size budget
+        run: uv run python scripts/budget.py
+      - name: Docs links
+        run: uv run python scripts/docs_links.py
+
+  windows:
+    name: windows
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.22"
+          enable-cache: true
+      - name: Install Python dependencies
+        run: uv sync --frozen --all-groups
+      - name: pytest
+        run: uv run pytest
+      - name: Setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+        with:
+          version: "12.18.0"
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: tsc
+        run: pnpm --dir app/ui-engine exec tsc --noEmit
+
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    needs:
+      - python-lint
+      - python-types
+      - python-tests
+      - ts-lint
+      - ts-types
+      - ts-tests
+      - security
+      - build
+      - windows
+    if: always()
+    steps:
+      - name: Fail if any required job failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - name: Summary
+        run: echo "All required jobs passed."

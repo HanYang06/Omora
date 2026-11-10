@@ -1,6 +1,6 @@
 """体量预算：文档与代码的文件行数上限。
 
-唯一真相是仓库根的 budget.json；scripts/check.py 与 CI 都只读这一份。
+唯一真相是仓库根的 budget.json；CI 只读这一份。
 合并顺序是 defaults < suffixes < paths < names，最后按文件名兜底，
 所以测试文件不会被按目录的预算压回去。
 """
