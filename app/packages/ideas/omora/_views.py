@@ -38,7 +38,7 @@ def back_bar(handler: Handler) -> Node:
 def workspace(title: str, body: Node, on_collapse: Handler) -> Panel:
     """工作区：一行头部（媒体名 + 收起）+ 主体。"""
     return Panel(
-        Row(Text(title), Button("收起", variant="ghost", on_click=on_collapse)),
+        Row(Text(title), Button("收起", variant="ghost", on_click=on_collapse), spread=True),
         body,
     )
 

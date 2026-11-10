@@ -1,0 +1,284 @@
+/* 捕获与播放 */
+
+.omora-recorder {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s1) 0 var(--s3);
+}
+
+.omora-record {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.omora-record:hover {
+  border-color: var(--accent);
+}
+
+.omora-record.is-recording {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.omora-record:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.omora-record-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.omora-record.is-recording .omora-record-dot {
+  background: var(--danger);
+  animation: omora-pulse 1s ease-in-out infinite;
+}
+
+.omora-record-hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.omora-audio {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--paper);
+  color: var(--accent);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.omora-audio:hover {
+  border-color: var(--accent);
+}
+
+.omora-audio:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+@keyframes omora-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omora-record.is-recording .omora-record-dot {
+    animation: none;
+  }
+}
+/* 音频 / 视频捕捉条与设备选择 */
+
+/* 录音主体：大圆钮 → 计时 → 一行提示 → 整条波形 → 一行动作。 */
+.omora-record-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) 0 0;
+}
+
+.omora-video-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s3);
+  padding: var(--s1) 0 var(--s3);
+}
+
+.omora-video-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+
+.omora-device {
+  max-width: 220px;
+  padding: var(--s1) var(--s2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+}
+
+.omora-device:disabled {
+  opacity: 0.5;
+}
+
+.omora-video {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #10130f;
+  object-fit: cover;
+}
+
+.omora-video:not([src]) {
+  min-height: 120px;
+}
+
+/*
+ * 实时预览是"照镜子"：左右翻转才符合自拍直觉。
+ * 只翻这一块；录下来的文件不翻（否则画面里的字会反）。
+ */
+.omora-video[data-type="video-live"] {
+  transform: scaleX(-1);
+}
+
+.omora-video-missing {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.omora-record-bar[data-gate="off"] .omora-record-hint,
+.omora-video-bar[data-gate="off"] .omora-record-hint {
+  color: var(--warn);
+}
+
+/* 上传失败：字节还在内存里，说明用 warn 色，别当成普通提示。 */
+.omora-video-bar[data-mode="failed"] .omora-record-hint {
+  color: var(--warn);
+}
+/* 录音的主按钮：一个大圆点，录的时候变方块。 */
+.omora-talk {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--paper);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.omora-talk:hover {
+  background: var(--accent-strong);
+}
+
+.omora-talk[data-phase="recording"] {
+  background: var(--danger);
+}
+
+.omora-talk[data-phase="paused"] {
+  background: var(--muted);
+}
+
+.omora-talk:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.omora-talk-stop {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--paper);
+}
+
+.omora-record-clock {
+  font-size: 21px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.omora-record-clock small {
+  margin-left: var(--s2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.omora-record-bar .omora-record-hint {
+  font-size: 13px;
+}
+
+.omora-record-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 28px;
+}
+
+/* 波形：中线镜像的面积图；宽度跟着柱子数走，容器铺满。 */
+.omora-wave {
+  display: block;
+  width: 100%;
+  height: 56px;
+}
+
+.omora-wave-area {
+  fill: var(--tint);
+}
+
+.omora-wave-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.omora-wave--live .omora-wave-line {
+  stroke: var(--accent-strong);
+}
+
+.omora-waveform {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  width: 100%;
+}
+
+.omora-waveform .omora-wave {
+  flex: 1 1 auto;
+  height: 32px;
+}
+
+.omora-waveform-seconds {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 暂停 / 继续：跟主按钮并排，但弱一档，别和"停止"抢。 */
+.omora-record--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.omora-record--quiet:hover {
+  border-color: var(--line);
+  color: var(--ink);
+}
