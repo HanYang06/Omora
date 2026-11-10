@@ -86,7 +86,9 @@ class Capture:
 
     def _tiles(self) -> list[Node]:
         nodes: list[Node] = []
-        if self._audio() is not None:
+        # 没有媒体通道就出不了捕捉节点：挂了也存不下，别给一个点了会消失的 Tile。
+        audio = self._audio()
+        if audio is not None and audio.node(self._save_audio) is not None:
             nodes.append(Tile(icon="mic", title="录音", on_click=self.open(AUDIO)))
         video = self._video()
         if video is not None and video.node(self._save_video) is not None:

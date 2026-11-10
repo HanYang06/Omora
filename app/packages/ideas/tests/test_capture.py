@@ -289,15 +289,17 @@ def test_a_capture_the_media_plugins_reject_never_reaches_the_store(tmp_path: Pa
         _click_button(ui, "收起")
 
 
-def test_the_capture_tiles_follow_the_capture_plugins(tmp_path: Path) -> None:
-    """没装 audio / video 只有文字；manager 收到能力上报后装上，Tile 跟着长出来。"""
+def test_the_capture_tiles_follow_the_capture_plugins_and_the_media_channel(
+    tmp_path: Path,
+) -> None:
+    """没装 audio / video 只有文字；装上插件但没有媒体通道也出不了录制的 Tile。"""
     kernel = _kernel(tmp_path, captures=False)
     ui = kernel.resolve("ui")
     assert list(_tiles(ui.render())) == ["文字"]
 
     kernel.install(AudioPlugin())
     kernel.install(VideoPlugin())
-    assert list(_tiles(ui.render())) == ["录音", "文字"]
+    assert list(_tiles(ui.render())) == ["文字"]
 
     kernel.install(_Net())
     assert list(_tiles(ui.render())) == ["录音", "视频", "文字"]
