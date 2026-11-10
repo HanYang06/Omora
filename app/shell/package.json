@@ -1,0 +1,13 @@
+{
+  "name": "@omora/shell",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Omora 桌面壳：一个薄 Electron 主进程，只管窗口和进程",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^45.2.3"
+  }
+}

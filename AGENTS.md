@@ -18,6 +18,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 | `app/sdk/` | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk` | Python |
 | `app/packages/` | 系统插件：`omora-plugin-*`，uv workspace 的 member | Python |
 | `app/ui-engine/` | 渲染引擎：组件注册表、槽位、事件 | TS |
+| `app/shell/` | 桌面壳：Electron 主进程（开发时由 `dev.py --shell` 拉起） | JS |
 | 运行后插件目录 | 生态插件，单独装；现在为空 | 待定 |
 | `docs/` | 架构与事实来源 | — |
 
