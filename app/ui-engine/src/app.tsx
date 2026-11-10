@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { reportCapabilitiesOnce } from "./capability-report";
 import { Connection, type ConnectionStatus } from "./connection";
 import type { Logger } from "./log";
 import { fetchMedia } from "./media";
@@ -87,11 +88,11 @@ export function App({ connection, logger }: AppProps): ReactNode {
       return;
     }
     if (status === "open") {
-      logs.conn.info("ws 连上", { endpoint: connection.endpoint });
+      logs.conn.info("conn.open", { endpoint: connection.endpoint });
     } else if (status === "closed") {
-      logs.conn.info("ws 断开", { endpoint: connection.endpoint });
+      logs.conn.info("conn.closed", { endpoint: connection.endpoint });
     } else if (status === "failed") {
-      logs.conn.error("连接失败", { endpoint: connection.endpoint });
+      logs.conn.error("conn.failed", { endpoint: connection.endpoint });
     }
   }, [status, connection, logs]);
 
@@ -110,7 +111,7 @@ export function App({ connection, logger }: AppProps): ReactNode {
           return;
         }
         if (method === "render") {
-          logs.render.debug("收到快照", {
+          logs.render.debug("render.received", {
             page: next.page,
             nodes: countNodes(next.content),
             ms: elapsedMs(started),
@@ -124,13 +125,20 @@ export function App({ connection, logger }: AppProps): ReactNode {
     [connection, logs],
   );
 
+  // 先报能力、再画首屏：audio / video 是按能力装的，装完页面才多两个捕捉块
   useEffect(() => {
     if (status !== "open" || requested.current) {
       return;
     }
     requested.current = true;
-    void send("render", {});
-  }, [status, send]);
+    void reportCapabilitiesOnce(connection)
+      .catch((error: unknown) => {
+        logs.conn.warning("capability.report_failed", { err: errorText(error) });
+      })
+      .finally(() => {
+        void send("render", {});
+      });
+  }, [status, connection, send, logs]);
 
   const navigate = useCallback(
     (page: string) => {
@@ -142,7 +150,7 @@ export function App({ connection, logger }: AppProps): ReactNode {
   const handleEvent = useCallback(
     (handler: string, payload?: JsonObject) => {
       const body = payload ?? {};
-      logs.event.debug("发出事件", {
+      logs.event.debug("event.sent", {
         handler,
         keys: Object.keys(body).join(","),
       });
@@ -158,7 +166,7 @@ export function App({ connection, logger }: AppProps): ReactNode {
         (target, method, args) => connection.call(target, method, args),
         media,
       ).catch((error: unknown) => {
-        logs.media.error("加载失败", {
+        logs.media.error("media.failed", {
           media,
           ms: elapsedMs(started),
           err: errorText(error),
