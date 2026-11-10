@@ -107,8 +107,9 @@ export function useAudioRecorder(options: AudioRecorderOptions) {
 
   /** record-end：算时长、按规则决定要不要交，然后销毁波形实例。 */
   const settle = useCallback(
-    (blob: Blob) => {
-      const length = (record.current?.getDuration() ?? 0) / 1000;
+    (blob: Blob, millis: number) => {
+      // 卸载时 record.current 已经被清空：时长必须由调用方一起带进来。
+      const length = millis / 1000;
       const plan = planStop({
         submitted: submitted.current,
         hasData: blob.size > 0,
@@ -180,7 +181,7 @@ export function useAudioRecorder(options: AudioRecorderOptions) {
         }
       });
       plugin.on("record-end", (blob: Blob) => {
-        settle(blob);
+        settle(blob, plugin.getDuration());
         if (unmounted.current) {
           wave.destroy();
         }
