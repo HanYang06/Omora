@@ -158,3 +158,8 @@
 .omora-video-bar[data-gate="off"] .omora-record-hint {
   color: var(--warn);
 }
+
+/* 上传失败：字节还在内存里，说明用 warn 色，别当成普通提示。 */
+.omora-video-bar[data-mode="failed"] .omora-record-hint {
+  color: var(--warn);
+}

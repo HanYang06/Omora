@@ -1,7 +1,7 @@
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { LiveVideo } from "./live-video";
-import { QUALITY_BITRATE } from "./video-capture";
+import { QUALITY_BITRATE } from "./video-quality";
 
 /**
  * 回归：录制时只挂 srcObject 不会开始播放，画面就是黑的。
