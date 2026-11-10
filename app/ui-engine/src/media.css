@@ -141,6 +141,14 @@
   min-height: 120px;
 }
 
+/*
+ * 实时预览是"照镜子"：左右翻转才符合自拍直觉。
+ * 只翻这一块；录下来的文件不翻（否则画面里的字会反）。
+ */
+.omora-video[data-type="video-live"] {
+  transform: scaleX(-1);
+}
+
 .omora-video-missing {
   font-size: 11px;
   color: var(--muted);
