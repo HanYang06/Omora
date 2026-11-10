@@ -7,40 +7,21 @@ import {
 import { DeviceSelect } from "./device-select";
 import { LiveVideo } from "./live-video";
 import { numberProp } from "./audio-capture";
+import { planStop, planUpload, uploadFailureReason } from "./capture-rules";
 import { uploadMedia } from "./media";
 import { clock, prop, type NodeComponentProps } from "./shared";
 import { useMediaDevices } from "./use-devices";
+import { DEFAULT_SECONDS, WARMUP_MS, videoBitrate, videoConstraints } from "./video-quality";
 
-const QUALITY_SIZE: Record<string, { width: number; height: number }> = {
-  "480p": { width: 640, height: 480 },
-  "720p": { width: 1280, height: 720 },
-  "1080p": { width: 1920, height: 1080 },
-};
-
-/** 码率按分辨率给，别吃浏览器默认：低默认码率会把本来就不好的镜头糊得更惨。 */
-export const QUALITY_BITRATE: Record<string, number> = {
-  "480p": 1_200_000,
-  "720p": 2_800_000,
-  "1080p": 5_000_000,
-};
-
-/**
- * 开流之后先空转一会儿再录。
- *
- * 摄像头刚打开时曝光 / 白平衡在做第一次收敛，那几百毫秒画面会明显跳一下；
- * 不预热的话，这段跳变会被录进文件头部。
- */
-const WARMUP_MS = 400;
-
-const DEFAULT_SECONDS = 120;
-
-type Mode = "idle" | "recording" | "review" | "uploading";
+/** 录完直接上传，没有回看，也没有"保存"这一步。 */
+type Mode = "idle" | "recording" | "uploading" | "failed";
 
 /**
  * video_capture：视频捕捉条。
  *
- * 设备与权限在客户端；录的时候有实时预览，停下来的先给一次回看——满意再保存，
- * 不满意就重录。保存 = POST 到 HTTP 媒体通道拿 media_id，事件里只带 id。
+ * 设备与权限在客户端；录的时候有实时预览。停下来就上传 HTTP 媒体通道，成功即存，
+ * 事件里只带 media id。上传失败不提交，字节留在原地等重试；卸载时正在录，也把这段
+ * 停掉、传完、交出去——尽力而为，失败就只剩日志（这版没有重试队列）。
  */
 export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): ReactNode {
   const handler = prop(node, "on_submit");
@@ -61,39 +42,58 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const started = useRef(0);
-  const timer = useRef<number | null>(null);
-  const cancelled = useRef(false);
+  const elapsed = useRef(0);
+  const ticker = useRef<number | null>(null);
+  const unmounted = useRef(false);
+  const submitted = useRef(false);
+  const preview = useRef<string | undefined>(undefined);
+  /** 卸载之后 onstop 还要发事件：回调从 ref 取最新的一份。 */
+  const latest = useRef({ handler, onEvent, uploadUrl });
 
-  const clearPreview = useCallback(() => {
-    setPreviewUrl((current) => {
-      if (current !== undefined) {
-        URL.revokeObjectURL(current);
-      }
-      return undefined;
-    });
+  useEffect(() => {
+    latest.current = { handler, onEvent, uploadUrl };
+  }, [handler, onEvent, uploadUrl]);
+
+  /** 换预览地址：旧的先撤销，不然 blob 一直占着内存。 */
+  const showPreview = useCallback((recorded: Blob | null) => {
+    if (preview.current !== undefined) {
+      URL.revokeObjectURL(preview.current);
+      preview.current = undefined;
+    }
+    if (recorded === null) {
+      setPreviewUrl(undefined);
+      return;
+    }
+    preview.current = URL.createObjectURL(recorded);
+    setPreviewUrl(preview.current);
   }, []);
 
   const release = useCallback(() => {
     stream.current?.getTracks().forEach((track) => track.stop());
     stream.current = null;
-    if (timer.current !== null) {
-      window.clearInterval(timer.current);
-      timer.current = null;
+    if (ticker.current !== null) {
+      window.clearInterval(ticker.current);
+      ticker.current = null;
     }
   }, []);
 
   useEffect(() => {
-    cancelled.current = false;
+    unmounted.current = false;
     return () => {
-      cancelled.current = true;
+      unmounted.current = true;
+      if (preview.current !== undefined) {
+        URL.revokeObjectURL(preview.current);
+        preview.current = undefined;
+      }
       const active = recorder.current;
       if (active !== null && active.state !== "inactive") {
+        // 还在录：停下来交给 onstop 上传。这里只动 ref，不碰界面。
         active.stop();
+        return;
       }
       release();
-      clearPreview();
     };
-  }, [clearPreview, release]);
+  }, [release]);
 
   const stop = useCallback(() => {
     const active = recorder.current;
@@ -102,34 +102,74 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
     }
   }, []);
 
+  /** 字节 → HTTP 媒体通道 → on_submit；失败原地留着等重试。 */
+  const upload = useCallback(async (recorded: Blob, length: number) => {
+    const target = latest.current;
+    if (!unmounted.current) {
+      setError(undefined);
+      setMode("uploading");
+    }
+    let mediaId: string | undefined;
+    let failure: unknown;
+    try {
+      if (target.uploadUrl === undefined || target.handler === undefined) {
+        throw new Error("媒体通道未就绪");
+      }
+      mediaId = await uploadMedia((url, init) => fetch(url, init), target.uploadUrl, recorded);
+    } catch (upstream) {
+      failure = upstream;
+    }
+    const plan = planUpload({
+      ok: mediaId !== undefined,
+      reason: uploadFailureReason(failure),
+      unmounted: unmounted.current,
+    });
+    if (plan.submit && mediaId !== undefined && target.handler !== undefined) {
+      submitted.current = true;
+      target.onEvent?.(target.handler, {
+        media: mediaId,
+        mime: recorded.type || "video/webm",
+        seconds: length,
+      });
+    }
+    if (plan.log) {
+      console.error("[omora] 视频没存上，组件已卸载，这段只留在内存里:", plan.reason);
+    }
+    if (!plan.updateUi) {
+      return;
+    }
+    setError(plan.reason.length > 0 ? plan.reason : undefined);
+    setMode(plan.phase);
+    if (!plan.keepBlob) {
+      setBlob(null);
+      showPreview(null);
+    }
+  }, [showPreview]);
+
   const start = useCallback(async () => {
     if (handler === undefined || !ready) {
       return;
     }
     setError(undefined);
     setBlob(null);
-    clearPreview();
-    const size = QUALITY_SIZE[quality] ?? QUALITY_SIZE["720p"];
-    const video: MediaTrackConstraints = {
-      width: { ideal: size?.width ?? 1280 },
-      height: { ideal: size?.height ?? 720 },
-      // 16:9 要显式要：有的摄像头默认给 4:3，拿 640×480 凑 720p 的框
-      aspectRatio: { ideal: 16 / 9 },
-      frameRate: { ideal: 30, max: 30 },
-      resizeMode: "none",
-    };
-    if (selected !== undefined && selected.length > 0) {
-      video.deviceId = { ideal: selected };
-    }
+    showPreview(null);
+    submitted.current = false;
     try {
-      const opened = await openMediaStream(devices, { video, audio: false });
+      const opened = await openMediaStream(devices, {
+        video: videoConstraints(quality, selected),
+        audio: false,
+      });
       stream.current = opened;
       // 先让 ISP 收敛，别把开头那次亮度跳变录进去
       await new Promise((done) => {
         setTimeout(done, WARMUP_MS);
       });
+      if (unmounted.current) {
+        release();
+        return;
+      }
       const media = new MediaRecorder(opened, {
-        videoBitsPerSecond: QUALITY_BITRATE[quality] ?? QUALITY_BITRATE["720p"],
+        videoBitsPerSecond: videoBitrate(quality),
       });
       chunks.current = [];
       media.ondataavailable = (event: BlobEvent) => {
@@ -139,73 +179,71 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
       };
       media.onstop = () => {
         release();
-        setMode("review");
-        if (cancelled.current) {
-          return;
-        }
-        if (chunks.current.length === 0) {
-          setError("没有录到画面");
-          setMode("idle");
-          return;
-        }
+        elapsed.current = (Date.now() - started.current) / 1000;
         const recorded = new Blob(chunks.current, { type: media.mimeType || "video/webm" });
-        setBlob(recorded);
-        setPreviewUrl((current) => {
-          if (current !== undefined) {
-            URL.revokeObjectURL(current);
-          }
-          return URL.createObjectURL(recorded);
+        const plan = planStop({
+          submitted: submitted.current,
+          hasData: recorded.size > 0,
+          hasHandler: latest.current.handler !== undefined,
+          unmounted: unmounted.current,
         });
+        if (plan.updateUi) {
+          if (recorded.size === 0) {
+            setError("没有录到画面");
+            setMode("idle");
+          } else {
+            setBlob(recorded);
+            showPreview(recorded);
+            setMode("uploading");
+          }
+        }
+        if (plan.submit) {
+          void upload(recorded, elapsed.current);
+        }
       };
       recorder.current = media;
       started.current = Date.now();
       setSeconds(0);
       setMode("recording");
-      timer.current = window.setInterval(() => {
-        const elapsed = Math.floor((Date.now() - started.current) / 1000);
-        setSeconds(elapsed);
-        if (elapsed >= maxSeconds) {
+      ticker.current = window.setInterval(() => {
+        const running = Math.floor((Date.now() - started.current) / 1000);
+        setSeconds(running);
+        if (running >= maxSeconds) {
           stop();
         }
       }, 250);
       media.start();
       refresh();
-    } catch (error) {
-      setError(captureErrorReason(error, "videoinput"));
+    } catch (upstream) {
       release();
+      if (unmounted.current) {
+        return;
+      }
+      setError(captureErrorReason(upstream, "videoinput"));
       setMode("idle");
     }
-  }, [devices, clearPreview, handler, maxSeconds, quality, ready, refresh, release, selected, stop]);
+  }, [devices, handler, maxSeconds, quality, ready, refresh, release, showPreview, selected, stop, upload]);
 
-  const retake = useCallback(() => {
-    setBlob(null);
-    setError(undefined);
-    clearPreview();
-    setMode("idle");
-  }, [clearPreview]);
-
-  const save = useCallback(async () => {
-    if (blob === null || uploadUrl === undefined || handler === undefined) {
+  const retry = useCallback(() => {
+    if (blob === null) {
       return;
     }
-    setError(undefined);
-    setMode("uploading");
-    try {
-      const mediaId = await uploadMedia((url, init) => fetch(url, init), uploadUrl, blob);
-      onEvent?.(handler, { media: mediaId, mime: blob.type || "video/webm", seconds });
-      setMode("idle");
-      setBlob(null);
-      clearPreview();
-    } catch (upstream) {
-      setError(upstream instanceof Error ? upstream.message : "上传失败");
-      setMode("review");
-    }
-  }, [blob, clearPreview, handler, onEvent, seconds, uploadUrl]);
+    void upload(blob, elapsed.current);
+  }, [blob, upload]);
+
+  const hint = ready
+    ? error ?? (mode === "uploading" ? "上传中…" : "摄像头只在你点的时候打开")
+    : reason;
 
   return (
-    <div className="omora-video-bar" data-type="video_capture" data-gate={ready ? "on" : "off"}>
+    <div
+      className="omora-video-bar"
+      data-type="video_capture"
+      data-gate={ready ? "on" : "off"}
+      data-mode={mode}
+    >
       {mode === "recording" ? <LiveVideo stream={stream.current} /> : null}
-      {mode === "review" && previewUrl !== undefined ? (
+      {previewUrl !== undefined ? (
         <video className="omora-video" src={previewUrl} controls playsInline />
       ) : null}
       <div className="omora-video-actions">
@@ -226,17 +264,11 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
             {clock(seconds)} 停止
           </button>
         ) : null}
-        {mode === "review" ? (
-          <>
-            <button type="button" className="omora-record" onClick={() => void save()}>
-              保存
-            </button>
-            <button type="button" className="omora-record" onClick={retake}>
-              重录
-            </button>
-          </>
+        {mode === "failed" ? (
+          <button type="button" className="omora-record" onClick={retry}>
+            重试
+          </button>
         ) : null}
-        {mode === "uploading" ? <span className="omora-record-hint">上传中…</span> : null}
         {ready && mode === "idle" && camera.devices.length > 1 ? (
           <DeviceSelect
             devices={camera.devices}
@@ -245,36 +277,8 @@ export function VideoCapture({ node, onEvent, devices }: NodeComponentProps): Re
             onChange={setSelected}
           />
         ) : null}
-        <span className="omora-record-hint">
-          {ready
-            ? error ?? (mode === "review" ? "满意就保存，不满意就重录" : "摄像头只在你点的时候打开")
-            : reason}
-        </span>
+        <span className="omora-record-hint">{hint}</span>
       </div>
     </div>
-  );
-}
-
-/** video：一条视频。播放走 HTTP 媒体通道，字节不进快照。 */
-export function VideoPlayer({ node }: NodeComponentProps): ReactNode {
-  const src = prop(node, "src");
-  const media = prop(node, "media") ?? "";
-  if (src === undefined || src.length === 0) {
-    return (
-      <span className="omora-video-missing" data-type="video" data-media={media}>
-        媒体通道未就绪
-      </span>
-    );
-  }
-  return (
-    <video
-      className="omora-video"
-      data-type="video"
-      data-media={media}
-      src={src}
-      controls
-      preload="metadata"
-      playsInline
-    />
   );
 }

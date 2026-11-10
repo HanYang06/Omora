@@ -7,7 +7,8 @@ import { Panel, Rail, Split } from "./layout";
 import { Result, Search, Suggestion } from "./search";
 import { prop, textOf, type NodeComponentProps } from "./shared";
 import { Chip, Tile } from "./tiles";
-import { VideoCapture, VideoPlayer } from "./video-capture";
+import { VideoCapture } from "./video-capture";
+import { VideoPlayer } from "./video-player";
 
 /** column：纵向堆叠。 */
 export function Column({ children }: NodeComponentProps): ReactNode {
