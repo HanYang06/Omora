@@ -28,7 +28,7 @@
 ```bash
 uv run omora dev --shell            # 内核 + 引擎 + 壳
 uv run omora dev --shell --devtools # 顺带开 DevTools
-pnpm --dir app/shell install                    # 第一次
+pnpm install                                    # 第一次（根目录 workspace，装齐引擎与壳）
 ```
 
 壳的输出并进同一条日志时间线（`[shell]` 前缀）；页面自己的日志照旧走 `log.write_many`。

@@ -48,7 +48,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 ## 环境
 
 - 系统 `python` 是 Windows 商店占位，不可用；Python 命令一律走 `uv run`。
-- 前端依赖走 `pnpm`。
+- 前端依赖走 `pnpm`；根目录一个 workspace，一次 `pnpm install` 装齐 `app/ui-engine` 与 `app/shell`。
 - Python 侧是 uv workspace：`uv sync` 一个 lock / 一个 venv；每个包自己的 pyproject / 依赖 / `omora` 命名空间 / tests。
 - 开发：`uv run omora dev`（内核 + 渲染引擎；`--shell` 连桌面壳；`-v` 看 debug 日志）。
 - 仓库统一 LF；不提交 `.venv/`、`node_modules/`、`dist/`、本地数据。

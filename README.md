@@ -34,7 +34,7 @@ Python 侧是一个 uv workspace：一个 lock、一个 venv；每个包有自�
 
 ```
 uv sync
-pnpm --dir app/ui-engine install
+pnpm install
 ```
 
 之后一条命令起内核和渲染引擎：

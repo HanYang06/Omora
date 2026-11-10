@@ -199,7 +199,7 @@ def main(argv: list[str] | None = None) -> int:
     if want_shell:
         exe = _electron()
         if exe is None:
-            print(f"{BAD}壳还没装：先跑 pnpm --dir app/shell install{RESET}", file=sys.stderr)
+            print(f"{BAD}壳还没装：先跑 pnpm install{RESET}", file=sys.stderr)
             return 2
         shell_env = {
             **env,
