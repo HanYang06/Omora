@@ -28,3 +28,12 @@ export function Rail({ node, children }: NodeComponentProps): ReactNode {
     </aside>
   );
 }
+
+/** panel：一块 inset 面，第一个子节点通常是工具条。 */
+export function Panel({ children }: NodeComponentProps): ReactNode {
+  return (
+    <div className="omora-panel" data-type="panel">
+      {children}
+    </div>
+  );
+}
