@@ -4,10 +4,10 @@
 
 ## 现在
 
-- 母 UI（浅色）+ 界面库 v1 + 灵感页 + 音频 / 视频捕获已落。
+- 母 UI（浅色，三栏）+ 界面库 v1 + 灵感页（三栏工作台）+ 音频 / 视频捕获已落。
 - 仓库是 uv workspace：`omora-core` / `omora-sdk` / 每个 `omora-plugin-*` 都是 member；import 命名空间 `omora.*`。
 - 存储：SQLite（`.omora/omora.db`）；媒体文件（`.omora/media`）。
-- 测试：Python 202 条、TS 82 条，全绿。
+- 测试：Python 203 条、TS 104 条，全绿。
 - 门禁：`uv run python scripts/check.py` 全绿。
 - 灵感页有传统（非 AI）搜索：建议下拉、结果视图、详情与返回。
 - 插件管理器已落：清单、`[tool.omora]` 条件（平台 / 能力 / 依赖服务）、开关与设置页；
@@ -37,6 +37,16 @@
   音频仍走 base64
 - ideas 按服务名组装捕捉条：audio / video 不在，页面就只剩文字与搜索
 - 验收：`check.py` 全绿；两个插件的设备门禁、时限、后期钩子、HTTP 通道的错误分支都有行为测试
+
+## 已完成：三栏首页
+
+灵感页从“一页账本”变成三栏工作台，页面结构第一次写进 [三栏首页](design/ui-home.md)：
+
+- 母页面：56px 图标栏（页面导航，每页一个图标）+ 主区；不再 720px 居中
+- 词表：`split` / `rail` / `icon` / `tile` / `chip` / `card`，`Item` 加 `on_click`（整行可点）
+- ideas：`Split(Rail(全部灵感), 主区)`，主区六种模式——首页（搜索 + 三个捕捉大按钮 +
+  筛选 + 推荐 feed）、结果、详情、文字 / 录音 / 视频捕捉；置顶与归档只在详情里
+- 验收：`check.py` 全绿；headless 浏览器截图核对三栏渲染
 
 ## 已完成：传统搜索
 
