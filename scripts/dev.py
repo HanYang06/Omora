@@ -8,6 +8,7 @@
     uv run python scripts/dev.py            # 内核 + 引擎
     uv run python scripts/dev.py --kernel   # 只起内核（调协议用）
     uv run python scripts/dev.py --web      # 只起引擎（内核已在跑）
+    uv run python scripts/dev.py --shell    # 再起桌面壳（Electron，装 vite dev server）
     uv run python scripts/dev.py -v         # OMORA_LOG=debug
 """
 
@@ -31,6 +32,7 @@ RESET = "\x1b[0m"
 DIM = "\x1b[2m"
 KERNEL_COLOR = "\x1b[36m"
 VITE_COLOR = "\x1b[35m"
+SHELL_COLOR = "\x1b[34m"
 WARN = "\x1b[33m"
 BAD = "\x1b[31m"
 
@@ -39,6 +41,13 @@ def _pnpm(*args: str) -> list[str]:
     if sys.platform == "win32":
         return ["cmd", "/c", "pnpm", *args]
     return ["pnpm", *args]
+
+
+def _electron() -> Path | None:
+    """桌面壳的可执行文件；没装就返回 None，别把整条启动链拖死。"""
+    base = ROOT / "app" / "shell" / "node_modules" / "electron" / "dist"
+    exe = base / ("electron.exe" if sys.platform == "win32" else "electron")
+    return exe if exe.exists() else None
 
 
 def _busy(port: int) -> bool:
@@ -141,11 +150,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Omora 开发环境")
     parser.add_argument("--kernel", action="store_true", help="只起内核")
     parser.add_argument("--web", action="store_true", help="只起引擎")
+    parser.add_argument("--shell", action="store_true", help="再起桌面壳（Electron）")
+    parser.add_argument("--devtools", action="store_true", help="壳里自动打开 DevTools")
     parser.add_argument("-v", "--verbose", action="store_true", help="日志开到 debug")
     args = parser.parse_args()
 
     want_kernel = not args.web
-    want_web = not args.kernel
+    want_web = not args.kernel or args.shell
+    want_shell = args.shell
 
     if want_kernel and _busy(KERNEL_PORT):
         _explain_busy(KERNEL_PORT, "内核")
@@ -183,6 +195,22 @@ def main() -> int:
         processes.append(("引擎", web))
         threads.append(threading.Thread(target=_pump, args=(web, "[vite]", VITE_COLOR), daemon=True))
 
+    if want_shell:
+        exe = _electron()
+        if exe is None:
+            print(f"{BAD}壳还没装：先跑 pnpm --dir app/shell install{RESET}", file=sys.stderr)
+            return 2
+        shell_env = {
+            **env,
+            "OMORA_DEV_URL": f"http://127.0.0.1:{WEB_PORT}",
+            "OMORA_DEVTOOLS": "1" if args.devtools else "0",
+        }
+        # 某些编辑器 / CI 会设这个：它让 electron.exe 退化成 node，壳直接起不来
+        shell_env.pop("ELECTRON_RUN_AS_NODE", None)
+        shell = _spawn([str(exe), str(ROOT / "app" / "shell")], env=shell_env)
+        processes.append(("壳", shell))
+        threads.append(threading.Thread(target=_pump, args=(shell, "[shell]", SHELL_COLOR), daemon=True))
+
     for thread in threads:
         thread.start()
 
@@ -191,6 +219,8 @@ def main() -> int:
         print(f"内核 {DIM}ws://127.0.0.1:{KERNEL_PORT}{RESET}")
     if want_web:
         print(f"引擎 {DIM}http://127.0.0.1:{WEB_PORT}{RESET}")
+    if want_shell:
+        print("壳：Electron 窗口（--devtools 自动开 DevTools）")
     print("Ctrl+C 一起停；-v 看 debug。", flush=True)
 
     try:
