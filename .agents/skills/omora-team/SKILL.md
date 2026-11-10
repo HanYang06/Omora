@@ -56,7 +56,7 @@ description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teamma
 ## 4. teammate 的循环
 
 1. 从**集成分支**开 worktree：`git worktree add ../Omora-wt-<name> -b feat/<slug> origin/feat/<integration>`。
-2. sync：`uv sync`；`pnpm --dir app/ui-engine install`。
+2. sync：`uv sync`；`pnpm install`（根目录 workspace，一次装齐）。
 3. 实现 + 行为测试（omora-testing）。
 4. `uv run python scripts/check.py` 全绿。
 5. 逻辑提交（omora-git）；push 自己的分支（**不开 PR**）。
@@ -119,7 +119,7 @@ Requirements: ...
 Workflow:
 1. worktree from the integration branch:
    git fetch origin; git worktree add ../Omora-wt-<name> -b feat/<slug> origin/feat/<integration>
-2. uv sync; pnpm --dir app/ui-engine install; implement; behavioral tests;
+2. uv sync; pnpm install; implement; behavioral tests;
    uv run python scripts/check.py
 3. logical commits (omora-git); push your branch. Do NOT open a PR.
 4. send_message Lead: branch name, commits, gate output, decisions, conflicts, blockers.
