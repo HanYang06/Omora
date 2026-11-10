@@ -62,7 +62,7 @@ _EMPTY = {
 class IdeasPlugin:
     name = "ideas"
 
-    def apply(self, ctx: Context) -> None:
+    def apply(self, ctx: Context) -> None:  # noqa: PLR0915 —— 插件装配的线性编排
         store: Any = ctx.resolve("store")
         media: Any = ctx.resolve("media")
         ui: Any = ctx.resolve("ui")

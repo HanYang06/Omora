@@ -55,11 +55,13 @@ def test_the_snapshot_fixture_keeps_the_shared_shape() -> None:
     for case in snapshots:
         snapshot = case["snapshot"]
         assert set(snapshot) == {"pages", "page", "meta", "content"}, case["name"]
-        assert isinstance(snapshot["pages"], list) and snapshot["pages"], case["name"]
+        assert isinstance(snapshot["pages"], list), case["name"]
+        assert snapshot["pages"], case["name"]
         assert isinstance(snapshot["page"], str), case["name"]
         assert isinstance(snapshot["meta"], str), case["name"]
         for node in _nodes(snapshot["content"]):
-            assert isinstance(node["type"], str) and node["type"], case["name"]
+            assert isinstance(node["type"], str), case["name"]
+            assert node["type"], case["name"]
             assert isinstance(node["props"], dict), case["name"]
             assert isinstance(node["children"], list), case["name"]
 

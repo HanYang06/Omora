@@ -43,7 +43,7 @@ def workspace(title: str, body: Node, on_collapse: Handler) -> Panel:
     )
 
 
-def saved(
+def saved(  # noqa: PLR0913 —— 面板装配的命名参数
     *,
     stamp: str,
     title: str,

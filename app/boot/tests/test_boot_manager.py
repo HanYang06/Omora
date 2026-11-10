@@ -66,7 +66,8 @@ def test_boot_installs_store_then_manager_and_the_manager_installs_the_rest() ->
     )
 
     assert calls == ["store", "manager", "a", "b"]
-    assert kernel.running("a") and kernel.running("b")
+    assert kernel.running("a")
+    assert kernel.running("b")
     assert kernel.resolve("manager").inventory()["plugins"][0]["name"] == "store"
 
 
@@ -110,7 +111,8 @@ def test_without_a_manager_boot_falls_back_to_the_old_ordered_install() -> None:
 
     assert calls == ["store", "a", "b"]
     assert kernel.running("manager") is False
-    assert kernel.running("a") and kernel.running("b")
+    assert kernel.running("a")
+    assert kernel.running("b")
     with pytest.raises(LookupError):
         kernel.resolve("host")
 

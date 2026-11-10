@@ -75,7 +75,7 @@ class Net:
         started = time.perf_counter()
         try:
             value: Any = method(**call.args)
-        except Exception as exc:  # noqa: BLE001 — 服务抛什么都变成一帧错误
+        except Exception as exc:
             self._log.warning(
                 "net.call.failed", target=call.target, method=call.method, err=type(exc).__name__
             )

@@ -3,8 +3,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from omora.core.kernel import Kernel
-from omora.core.log import NullLog, build_log
+from omora.core.log import DEFAULT_LEVEL, NullLog, build_log, level_of, log_path
 
 
 class _Plugin:
@@ -31,7 +33,9 @@ def test_a_line_lands_in_the_file_and_on_the_console(tmp_path: Path) -> None:
     assert record["data"] == {"h": "ideas:1:2", "ms": 1.4}
 
     shown = stream.getvalue()
-    assert "ideas" in shown and "event" in shown and "ms=1.4" in shown
+    assert "ideas" in shown
+    assert "event" in shown
+    assert "ms=1.4" in shown
 
 
 def test_the_level_filters_the_console_but_not_the_file(tmp_path: Path) -> None:
@@ -112,3 +116,25 @@ def test_an_engine_line_is_written_through_the_same_exit(tmp_path: Path) -> None
     assert record["ch"] == "render"
     assert record["msg"] == "收到快照"
     assert record["data"] == {"page": "ideas"}
+
+
+def test_an_unknown_level_falls_back_to_info(tmp_path: Path) -> None:
+    log = build_log(tmp_path / "dev.jsonl", stream=io.StringIO())
+
+    log.write({"lvl": "nope", "msg": "x"})
+
+    assert _lines(tmp_path / "dev.jsonl")[0]["lvl"] == "info"
+
+
+def test_level_of_parses_channels_and_rejects_garbage() -> None:
+    assert level_of("debug:net") == "debug"
+    assert level_of("nope") == DEFAULT_LEVEL
+    assert level_of(None) == DEFAULT_LEVEL
+
+
+def test_log_path_honours_the_environment_override(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("OMORA_LOG_FILE", str(tmp_path / "x.jsonl"))
+
+    assert log_path(tmp_path) == tmp_path / "x.jsonl"

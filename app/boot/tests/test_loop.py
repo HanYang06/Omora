@@ -77,7 +77,7 @@ async def _request(
 
 def _media_port(net: Any) -> int:
     url = str(net.media_url)
-    return int(url.split(":")[2].split("/")[0])
+    return int(url.split(":")[2].split("/", maxsplit=1)[0])
 
 
 async def _post(port: int, body: bytes, mime: str) -> tuple[int, bytes]:

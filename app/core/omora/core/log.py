@@ -80,11 +80,14 @@ class _Human(logging.Formatter):
         return f"{color}{line}\x1b[0m" if color else line
 
 
+_MAX_TEXT = 60
+
+
 def _show(value: Any) -> str:
     if isinstance(value, float):
         return f"{value:.1f}"
     text = str(value)
-    return text if len(text) <= 60 else text[:57] + "…"
+    return text if len(text) <= _MAX_TEXT else text[: _MAX_TEXT - 3] + "…"
 
 
 class Log:
@@ -152,10 +155,10 @@ class NullLog(Log):
         self.proc = "-"
         self._level = logging.CRITICAL + 1
 
-    def child(self, channel: str) -> Log:
+    def child(self, _channel: str) -> Log:
         return self
 
-    def _log(self, level: str, msg: str, extra: dict[str, Any], data: dict[str, Any]) -> None:
+    def _log(self, _level: str, _msg: str, _extra: dict[str, Any], _data: dict[str, Any]) -> None:
         return
 
 
@@ -176,6 +179,8 @@ def build_log(
 ) -> Log:
     """装好日志出口：文件（轮转）+ 控制台。"""
     logger = logging.getLogger("omora")
+    for old in logger.handlers:
+        old.close()
     logger.handlers.clear()
     # 文件全收（DEBUG 起），终端按配置过滤：事后翻档永远比当时少开一格强。
     logger.setLevel(logging.DEBUG)

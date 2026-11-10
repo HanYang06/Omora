@@ -8,6 +8,11 @@ build/
 .pytest_cache/
 .ruff_cache/
 
+# 覆盖率产物
+.coverage
+coverage.xml
+htmlcov/
+
 # Node
 node_modules/
 *.tsbuildinfo

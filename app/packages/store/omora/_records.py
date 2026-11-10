@@ -16,6 +16,7 @@ _NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 _OPERATORS = frozenset({"$eq", "$ne", "$gt", "$gte", "$lt", "$lte", "$in"})
 # LIKE 的转义符：用 ! 而不是反斜杠，省得和 Python、SQL 各转义一层。
 _LIKE_ESCAPE = "!"
+_ORDER_PARTS = 2
 _SQL_TYPES = {"text": "TEXT", "int": "INTEGER", "float": "REAL", "bool": "INTEGER", "time": "TEXT"}
 
 
@@ -85,7 +86,7 @@ class Record(Mapping[str, Any]):
 class Collection:
     """一个 collection：建表、CRUD、结构化查询。"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917 —— 声明式 schema 的装配参数
         self,
         conn: sqlite3.Connection,
         name: str,
@@ -94,6 +95,7 @@ class Collection:
         dev: bool,
         searchable: tuple[str, ...] = (),
         pinned: str | None = None,
+        owner: object | None = None,
     ) -> None:
         self._conn = conn
         self._name = name
@@ -102,6 +104,7 @@ class Collection:
         self._dev = dev
         self._searchable = searchable
         self._pinned = pinned
+        self._owner = owner  # 持有 Store 强引用：collection 活着连接就不能被回收
         self._table = f"col_{name}"
         self._ensure()
 
@@ -109,14 +112,14 @@ class Collection:
         extra = set(values) - set(self._fields)
         if extra:
             raise ValueError(f"未知字段: {', '.join(sorted(extra))}")
-        now = datetime.now()
+        now = datetime.now()  # noqa: DTZ005 —— 本地时间约定，改 UTC 需要迁移
         data: dict[str, Any] = {"id": uuid.uuid4().hex, "created_at": now, "updated_at": now}
         for name, field in self._fields.items():
             data[name] = field.check(values.get(name))
         columns = ", ".join(f'"{name}"' for name in data)
         marks = ", ".join("?" for _ in data)
         self._conn.execute(
-            f'INSERT INTO "{self._table}" ({columns}) VALUES ({marks})',
+            f'INSERT INTO "{self._table}" ({columns}) VALUES ({marks})',  # noqa: S608
             [_encode(value) for value in data.values()],
         )
         self._conn.commit()
@@ -124,7 +127,8 @@ class Collection:
 
     def get(self, record_id: str) -> Record | None:
         row = self._conn.execute(
-            f'SELECT * FROM "{self._table}" WHERE "id" = ?', (record_id,)
+            f'SELECT * FROM "{self._table}" WHERE "id" = ?',  # noqa: S608
+            (record_id,),
         ).fetchone()
         return None if row is None else self._record(row)
 
@@ -135,10 +139,10 @@ class Collection:
         if extra:
             raise ValueError(f"未知字段: {', '.join(sorted(extra))}")
         changes = {name: self._fields[name].check(value) for name, value in values.items()}
-        changes["updated_at"] = datetime.now()
+        changes["updated_at"] = datetime.now()  # noqa: DTZ005 —— 同上
         assignments = ", ".join(f'"{name}" = ?' for name in changes)
         cursor = self._conn.execute(
-            f'UPDATE "{self._table}" SET {assignments} WHERE "id" = ?',
+            f'UPDATE "{self._table}" SET {assignments} WHERE "id" = ?',  # noqa: S608
             [_encode(value) for value in changes.values()] + [record_id],
         )
         if cursor.rowcount == 0:
@@ -146,11 +150,14 @@ class Collection:
             raise LookupError(f"记录不存在: {record_id}")
         self._conn.commit()
         record = self.get(record_id)
-        assert record is not None
+        assert record is not None  # noqa: S101 —— 刚写入，读不回是内部一致性错误
         return record
 
     def delete(self, record_id: str) -> None:
-        cursor = self._conn.execute(f'DELETE FROM "{self._table}" WHERE "id" = ?', (record_id,))
+        cursor = self._conn.execute(
+            f'DELETE FROM "{self._table}" WHERE "id" = ?',  # noqa: S608
+            (record_id,),
+        )
         if cursor.rowcount == 0:
             raise LookupError(f"记录不存在: {record_id}")
         self._conn.commit()
@@ -166,7 +173,7 @@ class Collection:
         _check_limit(limit)
         _check_offset(offset)
         conditions, params = self._conditions(where)
-        sql = f'SELECT * FROM "{self._table}"{_where_clause(conditions)}'
+        sql = f'SELECT * FROM "{self._table}"{_where_clause(conditions)}'  # noqa: S608
         if order is not None:
             sql += f" ORDER BY {self._order(order)}"
         sql += " LIMIT ? OFFSET ?"
@@ -206,7 +213,7 @@ class Collection:
             order.append(f'CASE WHEN "{self._pinned}" IS 1 THEN 0 ELSE 1 END')
         order.append('"created_at" DESC')
         sql = (
-            f'SELECT * FROM "{self._table}"{_where_clause(conditions)}'
+            f'SELECT * FROM "{self._table}"{_where_clause(conditions)}'  # noqa: S608
             f" ORDER BY {', '.join(order)} LIMIT ? OFFSET ?"
         )
         values = [*([pattern] * len(self._searchable)), *params, pattern, limit, offset]
@@ -216,9 +223,10 @@ class Collection:
     def count(self, where: Mapping[str, Any] | None = None) -> int:
         conditions, params = self._conditions(where)
         row = self._conn.execute(
-            f'SELECT COUNT(*) FROM "{self._table}"{_where_clause(conditions)}', params
+            f'SELECT COUNT(*) FROM "{self._table}"{_where_clause(conditions)}',  # noqa: S608
+            params,
         ).fetchone()
-        assert row is not None
+        assert row is not None  # noqa: S101 —— COUNT(*) 必有行
         return int(row[0])
 
     def _conditions(self, where: Mapping[str, Any] | None) -> tuple[list[str], list[Any]]:
@@ -252,11 +260,11 @@ class Collection:
         if len(parts) not in (1, 2):
             raise ValueError(f"order 格式不对: {order!r}")
         field = parts[0]
-        if len(parts) == 2 and parts[1].lower() not in {"asc", "desc"}:
+        if len(parts) == _ORDER_PARTS and parts[1].lower() not in {"asc", "desc"}:
             raise ValueError(f"order 方向只能是 asc/desc: {order!r}")
         if field not in {"created_at", "updated_at"} and field not in self._fields:
             raise ValueError(f"未知 order 字段: {field}")
-        direction = "DESC" if len(parts) == 2 and parts[1].lower() == "desc" else "ASC"
+        direction = "DESC" if len(parts) == _ORDER_PARTS and parts[1].lower() == "desc" else "ASC"
         return f'"{field}" {direction}'
 
     def _ensure(self) -> None:

@@ -26,7 +26,7 @@ Processor = Callable[[str, dict[str, Any]], None]
 
 
 class Video:
-    def __init__(
+    def __init__(  # noqa: PLR0913 —— 插件装配的声明式参数
         self,
         ctx: Context,
         media: Any,
@@ -120,7 +120,7 @@ class Video:
                 after=len(processed),
             )
             return fresh
-        except Exception as exc:  # noqa: BLE001 — 后处理坏了也要把原片还给用户
+        except Exception as exc:
             log.warning("video.post_process.failed", err=type(exc).__name__)
             return media_id
 

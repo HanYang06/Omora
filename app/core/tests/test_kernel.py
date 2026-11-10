@@ -155,3 +155,57 @@ def test_glue_plugin_only_wires_two_capabilities() -> None:
     kernel.install(_Plugin("glue", glue))
 
     assert calls == ["open:a"]
+
+
+def test_a_context_rejects_use_after_dispose() -> None:
+    ctx = Context()
+    ctx.dispose()
+
+    assert ctx.disposed
+    ctx.dispose()
+    with pytest.raises(RuntimeError, match="已撤销"):
+        ctx.provide("x", 1)
+
+
+def test_providing_the_same_service_twice_is_rejected() -> None:
+    ctx = Context()
+    ctx.provide("x", 1)
+
+    with pytest.raises(ValueError, match="重复"):
+        ctx.provide("x", 2)
+
+
+def test_dispose_reports_every_failure_as_a_group() -> None:
+    ctx = Context()
+
+    def bad() -> None:
+        raise RuntimeError("bad")
+
+    ctx.effect(bad)
+    ctx.effect(bad)
+
+    with pytest.raises(BaseExceptionGroup) as info:
+        ctx.dispose()
+
+    assert len(info.value.exceptions) == 2
+
+
+def test_a_handle_repr_names_the_plugin() -> None:
+    handle = Kernel().install(_Plugin("store", lambda ctx: ctx.provide("store", {})))
+
+    assert repr(handle) == "Handle('store')"
+
+
+def test_a_failed_install_notes_a_rollback_failure() -> None:
+    def boom(ctx: Context) -> None:
+        def undo() -> None:
+            raise RuntimeError("undo boom")
+
+        ctx.effect(undo)
+        raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError) as info:
+        Kernel().install(_Plugin("broken", boom))
+
+    notes = "\n".join(info.value.__notes__ or [])
+    assert "回滚时又出错" in notes

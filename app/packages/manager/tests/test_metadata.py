@@ -81,6 +81,7 @@ def test_the_installed_catalog_reads_every_system_package() -> None:
         )
     manager_record = records["manager"]
     ideas_record = records["ideas"]
-    assert manager_record is not None and ideas_record is not None
+    assert manager_record is not None
+    assert ideas_record is not None
     assert manager_record.metadata.requires == ("store",)
     assert ideas_record.metadata.requires == ("store", "media", "ui")

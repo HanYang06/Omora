@@ -7,27 +7,30 @@ from typing import Any
 
 _WEEKDAYS = ("周一", "周二", "周三", "周四", "周五", "周六", "周日")
 _SNIPPET = 40
+_MINUTE = 60
+_HOUR = 3600
+_WEEK = 7
 
 
 def now() -> datetime:
     """页面的钟。测试换掉它，「现在」就定了。"""
-    return datetime.now()
+    return datetime.now()  # noqa: DTZ005 —— 本地时间约定，改 UTC 需要迁移
 
 
 def when(created: datetime, current: datetime | None = None) -> str:
     """把时间写成索引栏左栏那一句话。"""
     moment = current or now()
     seconds = (moment - created).total_seconds()
-    if seconds < 60:
+    if seconds < _MINUTE:
         return "刚刚"
-    if seconds < 3600:
-        return f"{int(seconds // 60)} 分钟前"
+    if seconds < _HOUR:
+        return f"{int(seconds // _MINUTE)} 分钟前"
     if created.date() == moment.date():
-        return f"{int(seconds // 3600)} 小时前"
+        return f"{int(seconds // _HOUR)} 小时前"
     days = (moment.date() - created.date()).days
     if days == 1:
         return "昨天"
-    if days < 7:
+    if days < _WEEK:
         return _WEEKDAYS[created.weekday()]
     return f"{created.month} 月 {created.day} 日"
 

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from omora.core.context import Context
 from omora.media import Media
+from omora.media_http import MediaHttp
 from omora.net import Net
 
 ORIGIN = "http://127.0.0.1:5173"
@@ -207,3 +208,40 @@ def test_uploading_without_the_media_service_is_503(tmp_path: Path) -> None:
             await net.stop()
 
     assert asyncio.run(scenario()) == 503
+
+
+def _handle_raw(tmp_path: Path, raw: bytes) -> tuple[int, dict[str, str], bytes]:
+    async def scenario() -> tuple[int, dict[str, str], bytes]:
+        server = MediaHttp(_ctx(tmp_path))
+        reader = asyncio.StreamReader()
+        reader.feed_data(raw)
+        reader.feed_eof()
+        return await server._handle(reader)
+
+    return asyncio.run(scenario())
+
+
+def test_a_malformed_request_line_is_400(tmp_path: Path) -> None:
+    status, _, _ = _handle_raw(tmp_path, b"NOPE\r\n\r\n")
+
+    assert status == 400
+
+
+def test_a_truncated_body_is_400(tmp_path: Path) -> None:
+    raw = b"POST /media HTTP/1.1\r\nContent-Type: video/webm\r\nContent-Length: 10\r\n\r\nab"
+
+    status, _, _ = _handle_raw(tmp_path, raw)
+
+    assert status == 400
+
+
+def test_a_header_without_a_name_is_400(tmp_path: Path) -> None:
+    status, _, _ = _handle_raw(tmp_path, b"GET /media/x HTTP/1.1\r\n: nope\r\n\r\n")
+
+    assert status == 400
+
+
+def test_an_unknown_route_is_404(tmp_path: Path) -> None:
+    status, _, _ = _handle_raw(tmp_path, b"DELETE /nope HTTP/1.1\r\n\r\n")
+
+    assert status == 404

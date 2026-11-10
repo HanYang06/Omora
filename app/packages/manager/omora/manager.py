@@ -118,8 +118,8 @@ class Manager:
         }
         self._records: dict[str, PluginRecord | None] = {}
         self._record_errors: dict[str, str] = {}
-        self._phase = {name: PENDING for name in self._manifest}
-        self._reason: dict[str, Reason | None] = {name: None for name in self._manifest}
+        self._phase = dict.fromkeys(self._manifest, PENDING)
+        self._reason: dict[str, Reason | None] = dict.fromkeys(self._manifest)
         self._enabled: dict[str, bool] = {}
         self._capabilities: tuple[str, ...] = ()
         self._available: frozenset[str] = frozenset()
@@ -138,11 +138,11 @@ class Manager:
             if name in self._owned:
                 self._host.uninstall(name)
         self._owned.clear()
-        self._phase = {name: DISABLED for name in self._manifest}
+        self._phase = dict.fromkeys(self._manifest, DISABLED)
         self._reason = {
             name: Reason("manager-stopped", "manager 已卸载") for name in self._manifest
         }
-        self._enabled = {name: False for name in self._manifest}
+        self._enabled = dict.fromkeys(self._manifest, False)
         self._ui = None
 
     # 对外服务：net 按方法名转发这三件事
@@ -225,7 +225,7 @@ class Manager:
         self._enabled[name] = True
         try:
             self._host.install(name)
-        except Exception as exc:  # noqa: BLE001 — 一个插件装不上不能拖垮其余
+        except Exception as exc:
             self._phase[name] = FAILED
             self._reason[name] = Reason("install-failed", str(exc))
             return
@@ -358,7 +358,7 @@ class Manager:
         )
 
     def _toggler(self, name: str) -> Callable[[dict[str, Any]], None]:
-        def toggle(payload: dict[str, Any]) -> None:
+        def toggle(_payload: dict[str, Any]) -> None:
             self.set_enabled(name, not self._row(name).enabled)
 
         return toggle
