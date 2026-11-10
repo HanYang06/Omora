@@ -131,10 +131,17 @@ def test_clicking_a_tile_turns_the_capture_region_into_a_workspace_in_place(
 
     workspace = _click_tile(ui, "录音")
 
-    assert [child["type"] for child in _main(workspace)["children"]] == ["search", "panel", "panel"]
+    assert [child["type"] for child in _main(workspace)["children"]] == [
+        "search",
+        "panel",
+        "panel",
+        "hotkey",
+    ]
     assert _rail_titles(workspace) == ["买牛奶"]
     assert _nodes(_main(workspace), "tile") == []
-    assert _nodes(_main(workspace), "audio_capture")
+    assert _nodes(_main(workspace), "audio_capture")[0]["props"].get("autostart") is None, (
+        "点 Tile 是手动开录，不该替用户按下录音"
+    )
     assert _texts(_capture_region(workspace)) == ["录音"]
     assert _button_texts(_capture_region(workspace)) == ["收起"]
     assert _cards(workspace) == ["买牛奶"]
@@ -320,3 +327,76 @@ def test_the_capture_tiles_follow_the_capture_plugins_and_the_media_channel(
 
     kernel.install(_Net())
     assert list(_tiles(ui.render())) == ["录音", "视频", "文字"]
+
+def _hotkey(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """主区里的那个空格热键：整页只有一个，且不在会被换掉的捕捉区里。"""
+    keys = _nodes(_main(snapshot), "hotkey")
+    assert len(keys) == 1, f"主区里应恰好有一个 Hotkey，实际 {len(keys)}"
+    return keys[0]
+
+
+def test_the_hotkey_stays_in_the_main_area_while_the_capture_region_changes(
+    tmp_path: Path,
+) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    home = ui.render()
+
+    assert _nodes(_capture_region(home), "hotkey") == []
+    held = ui.event(str(_hotkey(home)["props"]["on_press"]), {})
+
+    assert _nodes(_capture_region(held), "hotkey") == []
+    assert _hotkey(held)["props"]["key"] == "space"
+
+
+def test_holding_space_opens_the_audio_workspace_already_recording(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    key = _hotkey(ui.render())
+
+    held = ui.event(str(key["props"]["on_press"]), {})
+
+    recorder = _nodes(_main(held), "audio_capture")[0]
+    assert recorder["props"]["autostart"] is True
+    assert _tiles(held) == {}
+    assert _texts(_capture_region(held)) == ["录音"]
+
+
+def test_releasing_space_folds_the_capture_region_back_to_the_tiles(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    held = ui.event(str(_hotkey(ui.render())["props"]["on_press"]), {})
+
+    released = ui.event(str(_hotkey(held)["props"]["on_release"]), {})
+
+    assert list(_tiles(released)) == ["录音", "视频", "文字"]
+    assert _nodes(_main(released), "audio_capture") == []
+
+
+def test_a_held_take_is_stored_when_the_engine_submits_on_release(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    """松手这条按速记处理：只落库、回首页，不出命名条。"""
+    _pin_clock(monkeypatch)
+    kernel = _kernel(tmp_path)
+    ui = kernel.resolve("ui")
+    uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
+    key = _hotkey(ui.render())
+    held = ui.event(str(key["props"]["on_press"]), {})
+    recorder = _nodes(_main(held), "audio_capture")[0]
+
+    # 引擎手里是按下之前那份快照的 id：松手先画回 Tile，卸载时才提交。
+    released = ui.event(str(key["props"]["on_release"]), {})
+    settled = ui.event(str(recorder["props"]["on_submit"]), _audio_take(uploaded, 3))
+
+    assert list(_tiles(released)) == ["录音", "视频", "文字"]
+    assert list(_tiles(settled)) == ["录音", "视频", "文字"]
+    assert _nodes(_main(settled), "input") == []
+    assert _cards(settled) == ["语音 11-11 03:41"]
+    assert settled["pages"][0]["count"] == 1
+
+
+def test_holding_space_without_the_audio_plugin_keeps_the_tiles(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path, captures=False).resolve("ui")
+    key = _hotkey(ui.render())
+
+    after = ui.event(str(key["props"]["on_press"]), {})
+
+    assert list(_tiles(after)) == ["文字"]

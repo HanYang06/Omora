@@ -21,6 +21,7 @@ from omora.sdk.ui import (
     Column,
     Empty,
     Handler,
+    Hotkey,
     List,
     Node,
     Page,
@@ -206,6 +207,8 @@ class IdeasPlugin:
                     search_bar(True),
                     capture.region(),
                     Panel(Row(*chips), feed(filtered(items))),
+                    # 常驻在捕捉区外面：工作区换形态时它不能被卸载，否则收不到松手。
+                    Hotkey(key="space", on_press=capture.hold_start, on_release=capture.hold_end),
                 ),
                 meta=f"{len(items)} 条",
             )

@@ -10,9 +10,21 @@ audio / video 由各自的插件按服务名提供，可能比 ideas 装得晚�
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from typing import Any
 
-from omora.sdk.ui import Audio, Button, Handler, Input, Node, Panel, Row, Text, Tile
+from omora.sdk.ui import (
+    Audio,
+    AudioCapture,
+    Button,
+    Handler,
+    Input,
+    Node,
+    Panel,
+    Row,
+    Text,
+    Tile,
+)
 
 from . import _views
 from ._format import caption, clock, now, seconds
@@ -49,6 +61,17 @@ class Capture:
 
         return run
 
+    def hold_start(self, _: dict[str, Any]) -> None:
+        """按住空格：工作区直接进录音，引擎一挂上就开录。"""
+        if self._audio() is None:
+            return
+        self.clear()
+        self._state.update(mode=AUDIO, phase="live", autostart=True)
+
+    def hold_end(self, _: dict[str, Any]) -> None:
+        """松开：回三个 Tile；落库交给引擎卸载组件时的那次提交，不出命名条。"""
+        self.clear()
+
     def region(self) -> Node:
         """捕捉区：没有工作区就是三个 Tile，有就把这一块换成工作区。"""
         if self._state:
@@ -80,7 +103,12 @@ class Capture:
             return Input(placeholder="记一条灵感…", on_submit=self._save_text)
         if mode == AUDIO:
             service = self._audio()
-            return None if service is None else service.node(self._save_audio)
+            if service is None:
+                return None
+            node: AudioCapture | None = service.node(self._save_audio)
+            if node is not None and self._state.get("autostart"):
+                node = replace(node, autostart=True)
+            return node
         service = self._video()
         return None if service is None else service.node(self._save_video)
 

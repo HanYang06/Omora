@@ -163,9 +163,10 @@ def test_the_home_is_three_regions_with_the_toolbar_and_feed_in_a_panel(
 ) -> None:
     snapshot = _kernel(tmp_path).resolve("ui").render()
     main = _main(snapshot)
-    _, tiles_row, panel = main["children"]
+    _, tiles_row, panel, hotkey = main["children"]
 
-    assert [child["type"] for child in main["children"]] == ["search", "row", "panel"]
+    assert [child["type"] for child in main["children"]] == ["search", "row", "panel", "hotkey"]
+    assert hotkey["props"]["key"] == "space"
     assert list(_tiles(snapshot)) == ["录音", "视频", "文字"]
     assert all("hint" not in tile["props"] for tile in tiles_row["children"])
     assert list(_chips(snapshot)) == ["全部", "置顶", "最近", "久未打开"]
