@@ -138,7 +138,9 @@ def _watch(processes: list[tuple[str, subprocess.Popen[bytes]]]) -> int:
         for name, process in processes:
             code = process.poll()
             if code is not None:
-                print(f"{BAD}{name} 退出（code={code}），其余进程一并停止。{RESET}", file=sys.stderr)
+                print(
+                    f"{BAD}{name} 退出（code={code}），其余进程一并停止。{RESET}", file=sys.stderr
+                )
                 return code if code != 0 else 1
         time.sleep(POLL_SECONDS)
 
@@ -183,18 +185,29 @@ def main(argv: list[str] | None = None) -> int:
     if want_kernel:
         kernel = _spawn([sys.executable, str(ROOT / "app" / "main.py")], env=env)
         processes.append(("内核", kernel))
-        threads.append(threading.Thread(target=_pump, args=(kernel, "[kernel]", KERNEL_COLOR), daemon=True))
+        threads.append(
+            threading.Thread(target=_pump, args=(kernel, "[kernel]", KERNEL_COLOR), daemon=True)
+        )
 
     if want_web:
         web = _spawn(
             _pnpm(
-                "--dir", "app/ui-engine", "exec", "vite",
-                "--host", "127.0.0.1", "--port", str(WEB_PORT), "--strictPort",
+                "--dir",
+                "app/ui-engine",
+                "exec",
+                "vite",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(WEB_PORT),
+                "--strictPort",
             ),
             env=env,
         )
         processes.append(("引擎", web))
-        threads.append(threading.Thread(target=_pump, args=(web, "[vite]", VITE_COLOR), daemon=True))
+        threads.append(
+            threading.Thread(target=_pump, args=(web, "[vite]", VITE_COLOR), daemon=True)
+        )
 
     if want_shell:
         exe = _electron()
@@ -210,7 +223,9 @@ def main(argv: list[str] | None = None) -> int:
         shell_env.pop("ELECTRON_RUN_AS_NODE", None)
         shell = _spawn([str(exe), str(ROOT / "app" / "shell")], env=shell_env)
         processes.append(("壳", shell))
-        threads.append(threading.Thread(target=_pump, args=(shell, "[shell]", SHELL_COLOR), daemon=True))
+        threads.append(
+            threading.Thread(target=_pump, args=(shell, "[shell]", SHELL_COLOR), daemon=True)
+        )
 
     for thread in threads:
         thread.start()

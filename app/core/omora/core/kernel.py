@@ -34,9 +34,7 @@ class Handle:
 class Kernel:
     """装上插件、记着谁在、按名字给服务。"""
 
-    def __init__(
-        self, log: Log | None = None, services: Mapping[str, Any] | None = None
-    ) -> None:
+    def __init__(self, log: Log | None = None, services: Mapping[str, Any] | None = None) -> None:
         self._log = log if log is not None else NullLog()
         self._root = Context(dict(services or {}), log=self._log)
         self._plugins: dict[str, Context] = {}

@@ -75,7 +75,13 @@ def test_a_whole_batch_of_engine_lines_comes_through_one_frame(tmp_path: Path) -
     count = log.write_many(
         [
             {"proc": "engine", "ch": "conn", "lvl": "info", "msg": "ws 连上"},
-            {"proc": "engine", "ch": "render", "lvl": "debug", "msg": "收到快照", "data": {"page": "ideas"}},
+            {
+                "proc": "engine",
+                "ch": "render",
+                "lvl": "debug",
+                "msg": "收到快照",
+                "data": {"page": "ideas"},
+            },
             "不是一条日志",  # 送坏的东西进来也不能崩
         ]
     )
@@ -92,7 +98,13 @@ def test_an_engine_line_is_written_through_the_same_exit(tmp_path: Path) -> None
     service = {"write": log.write}
 
     service["write"](
-        {"proc": "engine", "ch": "render", "lvl": "debug", "msg": "收到快照", "data": {"page": "ideas"}}
+        {
+            "proc": "engine",
+            "ch": "render",
+            "lvl": "debug",
+            "msg": "收到快照",
+            "data": {"page": "ideas"},
+        }
     )
 
     record = _lines(tmp_path / "dev.jsonl")[0]
