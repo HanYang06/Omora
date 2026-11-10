@@ -26,8 +26,10 @@ class _Page:
         self.build = build
         self.count = count
         self.icon = icon
-        self.generation = 0
+        # serial 只增不减：handler id 永不复用，陈旧的 id 打不到别人的回调上。
+        self.serial = 0
         self.handlers: dict[str, Handler] = {}
+        self.previous: dict[str, Handler] = {}
 
 
 class Ui:
@@ -55,23 +57,30 @@ class Ui:
         ctx.effect(remove)
 
     def render(self, page: str | None = None) -> dict[str, Any]:
-        """画一页；不指定就画第一个登记的。上一代的 handler 全部作废。"""
+        """画一页；不指定就画第一个登记的。"""
         name = page if page is not None else next(iter(self._pages), None)
         if name is None:
             raise LookupError("没有登记任何页面")
         entry = self._entry(name)
-        entry.generation += 1
-        entry.handlers.clear()
         started = time.perf_counter()
         snapshot = self._draw(name, entry)
         self._log.debug("ui.render", page=name, ms=(time.perf_counter() - started) * 1000)
         return snapshot
 
     def event(self, handler: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """把载荷交给 handler，然后重画它所属的那一页。"""
+        """把载荷交给 handler，然后重画它所属的那一页。
+
+        上一代的 handler 还留着一次宽限：组件卸载时提交的事件（例如录制中点
+        「收起」，引擎在卸载时停止并提交）带的 id 属于上一代，不能静默丢掉。
+        """
         for name, entry in self._pages.items():
             callback = entry.handlers.get(handler)
+            late = callback is None
+            if callback is None:
+                callback = entry.previous.get(handler)
             if callback is not None:
+                if late:
+                    self._log.info("ui.event.stale", handler=handler, page=name)
                 started = time.perf_counter()
                 callback(payload)
                 snapshot = self._draw(name, entry)
@@ -90,10 +99,14 @@ class Ui:
 
     def _draw(self, name: str, entry: _Page) -> dict[str, Any]:
         next_id = 0
+        entry.serial += 1
+        held = entry.serial
+        entry.previous = entry.handlers
+        entry.handlers = {}
 
         def register(callback: Handler) -> str:
             nonlocal next_id
-            handler = f"{name}:{entry.generation}:{next_id}"
+            handler = f"{name}:{held}:{next_id}"
             next_id += 1
             entry.handlers[handler] = callback
             return handler
