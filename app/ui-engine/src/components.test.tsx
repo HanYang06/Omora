@@ -353,6 +353,20 @@ describe("panel", () => {
   });
 });
 
+describe("hotkey", () => {
+  it("注册表认识它，但不画任何东西——它只挂键盘监听", () => {
+    const html = htmlOf([
+      {
+        type: "hotkey",
+        props: { key: "space", on_press: "ideas:7:0", on_release: "ideas:7:1" },
+        children: [],
+      },
+    ]);
+
+    expect(html).toBe("");
+  });
+});
+
 describe("注册表", () => {
   it("新节点都从注册表画出来", () => {
     const html = htmlOf([

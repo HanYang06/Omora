@@ -2,6 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 import { AudioCapture } from "./audio-capture";
 import { Card } from "./cards";
 import { Audio, Recorder } from "./capture";
+import { Hotkey } from "./hotkey";
 import { Icon } from "./icons";
 import { Panel, Rail, Split } from "./layout";
 import { Result, Search, Suggestion } from "./search";
@@ -192,6 +193,7 @@ export const components: Record<string, ComponentType<NodeComponentProps>> = {
   audio_capture: AudioCapture,
   video_capture: VideoCapture,
   video: VideoPlayer,
+  hotkey: Hotkey,
   waveform: Waveform,
   list: List,
   item: Item,
