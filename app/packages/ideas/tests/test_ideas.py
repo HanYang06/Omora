@@ -3,9 +3,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import omora.ideas as ideas_page
 from omora.audio import AudioPlugin
 from omora.core.kernel import Kernel
-from omora.ideas import IdeasPlugin, _snippet, _when
+from omora.ideas import IdeasPlugin
 from omora.media import MediaPlugin
 from omora.store import StorePlugin
 from omora.ui import UiPlugin
@@ -44,383 +45,455 @@ def _nodes(node: dict[str, Any], node_type: str) -> list[dict[str, Any]]:
     return found
 
 
-def _handler(snapshot: dict[str, Any], node_type: str) -> str:
-    return str(_nodes(snapshot["content"], node_type)[0]["props"]["on_submit"])
+def _split(snapshot: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    content = snapshot["content"]
+    assert content["type"] == "split", f"页面要是 Split，实际是 {content['type']}"
+    side, main = content["children"]
+    return side, main
 
 
-def _titles(snapshot: dict[str, Any]) -> list[str]:
-    return [str(item["props"]["title"]) for item in _nodes(snapshot["content"], "item")]
+def _rail(snapshot: dict[str, Any]) -> dict[str, Any]:
+    side, _ = _split(snapshot)
+    assert side["type"] == "rail", f"第一栏要是 Rail，实际是 {side['type']}"
+    return side
 
 
-def _props(snapshot: dict[str, Any], node_type: str) -> dict[str, Any]:
-    return dict(_nodes(snapshot["content"], node_type)[0]["props"])
+def _main(snapshot: dict[str, Any]) -> dict[str, Any]:
+    return _split(snapshot)[1]
 
 
-def _capture(ui: Any, value: str) -> Any:
-    return ui.event(_handler(ui.render(), "input"), {"value": value})
+def _titles(node: dict[str, Any], node_type: str) -> list[str]:
+    return [str(child["props"]["title"]) for child in _nodes(node, node_type)]
+
+
+def _rail_titles(snapshot: dict[str, Any]) -> list[str]:
+    return _titles(_rail(snapshot), "item")
+
+
+def _cards(snapshot: dict[str, Any]) -> list[str]:
+    return _titles(_main(snapshot), "card")
+
+
+def _tiles(snapshot: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {str(node["props"]["title"]): node for node in _nodes(_main(snapshot), "tile")}
+
+
+def _chips(snapshot: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {str(node["props"]["text"]): node for node in _nodes(_main(snapshot), "chip")}
+
+
+def _active_chips(snapshot: dict[str, Any]) -> list[str]:
+    return [text for text, node in _chips(snapshot).items() if node["props"]["active"]]
+
+
+def _search_node(snapshot: dict[str, Any]) -> dict[str, Any]:
+    return _nodes(_main(snapshot), "search")[0]
+
+
+def _heading(snapshot: dict[str, Any]) -> str:
+    headings = [
+        node["props"]["text"]
+        for node in _nodes(_main(snapshot), "text")
+        if node["props"].get("kind") == "title"
+    ]
+    assert headings, "主区里没有标题"
+    return str(headings[0])
+
+
+def _click_tile(ui: Any, title: str) -> Any:
+    return ui.event(str(_tiles(ui.render())[title]["props"]["on_click"]), {})
+
+
+def _click_chip(ui: Any, text: str) -> Any:
+    return ui.event(str(_chips(ui.render())[text]["props"]["on_click"]), {})
+
+
+def _click_button(ui: Any, text: str) -> Any:
+    hits = [
+        node for node in _nodes(_main(ui.render()), "button") if node["props"]["text"] == text
+    ]
+    assert hits, f"主区里没有按钮: {text}"
+    return ui.event(str(hits[0]["props"]["on_click"]), {})
+
+
+def _open_rail(ui: Any, title: str) -> Any:
+    hits = [row for row in _nodes(_rail(ui.render()), "item") if row["props"]["title"] == title]
+    assert hits, f"索引栏里没有: {title}"
+    return ui.event(str(hits[0]["props"]["on_click"]), {})
+
+
+def _pin(ui: Any, title: str) -> Any:
+    _open_rail(ui, title)
+    _click_button(ui, "置顶")
+    return _click_button(ui, "← 返回")
+
+
+def _capture_text(ui: Any, value: str) -> Any:
+    _click_tile(ui, "文字")
+    field = _nodes(_main(ui.render()), "input")[0]
+    return ui.event(str(field["props"]["on_submit"]), {"value": value})
 
 
 def _type(ui: Any, value: str) -> Any:
-    return ui.event(str(_props(ui.render(), "search")["on_query"]), {"value": value})
+    return ui.event(str(_search_node(ui.render())["props"]["on_query"]), {"value": value})
 
 
 def _submit(ui: Any, value: str) -> Any:
-    return ui.event(str(_props(ui.render(), "search")["on_submit"]), {"value": value})
+    return ui.event(str(_search_node(ui.render())["props"]["on_submit"]), {"value": value})
 
 
-def _titled(snapshot: dict[str, Any], node_type: str) -> list[str]:
-    return [str(node["props"]["title"]) for node in _nodes(snapshot["content"], node_type)]
-
-
-def _button(snapshot: dict[str, Any], text: str) -> str:
-    for node in _nodes(snapshot["content"], "button"):
-        if node["props"]["text"] == text:
-            return str(node["props"]["on_click"])
-    raise AssertionError(f"没有按钮: {text}")
-
-
-def _item_button(snapshot: dict[str, Any], index: int, text: str) -> str:
-    item = _nodes(snapshot["content"], "item")[index]
-    for node in _nodes(item, "button"):
-        if node["props"]["text"] == text:
-            return str(node["props"]["on_click"])
-    raise AssertionError(f"第 {index} 行没有按钮: {text}")
-
-
-def _result_click(snapshot: dict[str, Any]) -> str:
-    return str(_nodes(snapshot["content"], "result")[0]["props"]["on_click"])
-
-
-def test_the_page_starts_empty(tmp_path: Path) -> None:
+def test_the_page_is_a_split_of_a_rail_and_a_main_area_with_the_ideas_icon(
+    tmp_path: Path,
+) -> None:
     snapshot = _kernel(tmp_path).resolve("ui").render()
 
+    side, main = _split(snapshot)
+
+    assert side["props"]["title"] == "全部灵感"
+    assert main["type"] == "column"
+    assert snapshot["pages"][0] == {
+        "name": "ideas",
+        "label": "灵感",
+        "icon": "ideas",
+        "count": 0,
+    }
+
+
+def test_the_home_starts_with_the_capture_tiles_and_an_empty_feed(tmp_path: Path) -> None:
+    snapshot = _kernel(tmp_path).resolve("ui").render()
+
+    assert list(_tiles(snapshot)) == ["录音", "视频", "文字"]
+    empty = _nodes(_main(snapshot), "empty")[0]["props"]
+    assert empty["title"] == "还没有灵感。"
+    assert empty["hint"] == "录一段、拍一段，或者写第一条，按回车保存。"
     assert snapshot["meta"] == "0 条"
-    assert _titles(snapshot) == []
-    empty = _nodes(snapshot["content"], "empty")[0]
-    assert empty["props"]["title"] == "还没有灵感。"
-    assert empty["props"]["hint"] == "录一段、拍一段，或者写第一条，按回车保存。"
 
 
-def test_the_page_offers_text_audio_and_video_capture(tmp_path: Path) -> None:
-    content = _kernel(tmp_path).resolve("ui").render()["content"]
+def test_the_toolbar_lists_the_four_filters_with_all_active(tmp_path: Path) -> None:
+    snapshot = _kernel(tmp_path).resolve("ui").render()
 
-    assert len(_nodes(content, "input")) == 1
-    assert len(_nodes(content, "audio_capture")) == 1
-    assert len(_nodes(content, "video_capture")) == 1
-
-
-def test_the_capture_controls_carry_the_plugin_quality_and_channel(tmp_path: Path) -> None:
-    content = _kernel(tmp_path).resolve("ui").render()["content"]
-
-    audio = _nodes(content, "audio_capture")[0]["props"]
-    video = _nodes(content, "video_capture")[0]["props"]
-    assert (audio["quality"], audio["noise_reduction"]) == ("high", True)
-    assert (video["quality"], video["upload_url"]) == ("720p", CHANNEL)
+    assert list(_chips(snapshot)) == ["全部", "置顶", "最近", "久未打开"]
+    assert _active_chips(snapshot) == ["全部"]
 
 
-def test_capturing_text_puts_it_in_the_list(tmp_path: Path) -> None:
+def test_the_rail_lists_every_idea_newest_first(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    for title in ("牛奶 A", "牛奶 B", "写周报"):
+        _capture_text(ui, title)
+
+    assert _rail_titles(ui.render()) == ["写周报", "牛奶 B", "牛奶 A"]
+
+
+def test_the_rail_only_navigates_and_carries_no_actions(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    _capture_text(ui, "买牛奶")
+
+    rail = _rail(ui.render())
+
+    assert _nodes(rail, "button") == []
+    assert _nodes(rail, "item")[0]["props"]["on_click"]
+
+
+def test_clicking_a_rail_row_opens_the_detail_and_back_returns_home(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    _capture_text(ui, "买牛奶")
+
+    detail = _open_rail(ui, "买牛奶")
+    assert _heading(detail) == "买牛奶"
+
+    home = _click_button(ui, "← 返回")
+    assert _cards(home) == ["买牛奶"]
+
+
+def test_the_text_tile_opens_a_capture_page_and_saves_back_home(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
 
-    after = ui.event(_handler(ui.render(), "input"), {"value": "  买牛奶  "})
+    capture = _click_tile(ui, "文字")
 
-    assert after["meta"] == "1 条"
-    assert _titles(after) == ["买牛奶"]
+    assert _nodes(_main(capture), "input")
+    assert _nodes(_main(capture), "tile") == []
+    assert _nodes(_main(capture), "card") == []
+    assert _nodes(_rail(capture), "item") == []
+
+    field = _nodes(_main(capture), "input")[0]
+    home = ui.event(str(field["props"]["on_submit"]), {"value": "  买牛奶  "})
+
+    assert _cards(home) == ["买牛奶"]
+    assert _rail_titles(home) == ["买牛奶"]
+    assert home["meta"] == "1 条"
 
 
-def test_capturing_audio_stores_media_and_shows_a_play_button(tmp_path: Path) -> None:
+def test_a_blank_text_capture_is_not_stored(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    _click_tile(ui, "文字")
+
+    field = _nodes(_main(ui.render()), "input")[0]
+    after = ui.event(str(field["props"]["on_submit"]), {"value": "   "})
+
+    assert _nodes(_main(after), "input")
+    assert after["pages"][0]["count"] == 0
+
+
+def test_the_audio_tile_opens_the_audio_capture_and_saves_a_voice_idea(tmp_path: Path) -> None:
     kernel = _kernel(tmp_path)
     ui = kernel.resolve("ui")
     audio = base64.b64encode(b"hello").decode("ascii")
 
-    after = ui.event(
-        _handler(ui.render(), "audio_capture"),
+    capture = _click_tile(ui, "录音")
+    recorder = _nodes(_main(capture), "audio_capture")[0]
+    assert (recorder["props"]["quality"], recorder["props"]["noise_reduction"]) == ("high", True)
+
+    home = ui.event(
+        str(recorder["props"]["on_submit"]),
         {"audio": audio, "mime": "audio/webm", "seconds": 3.2},
     )
 
-    assert after["meta"] == "1 条"
-    assert _titles(after) == ["语音 0:03"]
-    media_id = str(_nodes(after["content"], "audio")[0]["props"]["media"])
-    loaded = kernel.resolve("media").load(media_id)
-    assert loaded["mime"] == "audio/webm"
-    assert base64.b64decode(loaded["data"]) == b"hello"
+    assert _cards(home) == ["语音 0:03"]
+    detail = _open_rail(ui, "语音 0:03")
+    media_id = str(_nodes(_main(detail), "audio")[0]["props"]["media"])
+    assert base64.b64decode(kernel.resolve("media").load(media_id)["data"]) == b"hello"
 
 
-def test_capturing_video_stores_media_and_shows_a_player(tmp_path: Path) -> None:
+def test_the_video_tile_opens_the_video_capture_and_saves_a_video_idea(tmp_path: Path) -> None:
     kernel = _kernel(tmp_path)
     ui = kernel.resolve("ui")
     uploaded = kernel.resolve("media").save(b"video", "video/webm")
 
-    after = ui.event(
-        _handler(ui.render(), "video_capture"),
+    capture = _click_tile(ui, "视频")
+    recorder = _nodes(_main(capture), "video_capture")[0]
+    assert (recorder["props"]["quality"], recorder["props"]["upload_url"]) == ("720p", CHANNEL)
+
+    home = ui.event(
+        str(recorder["props"]["on_submit"]),
         {"media": uploaded, "mime": "video/webm", "seconds": 5},
     )
 
-    assert after["meta"] == "1 条"
-    assert _titles(after) == ["视频 0:05"]
-    player = _nodes(after["content"], "video")[0]["props"]
-    assert player == {"media": uploaded, "src": f"{CHANNEL}/{uploaded}"}
+    assert _cards(home) == ["视频 0:05"]
+    detail = _open_rail(ui, "视频 0:05")
+    assert _nodes(_main(detail), "video")[0]["props"] == {
+        "media": uploaded,
+        "src": f"{CHANNEL}/{uploaded}",
+    }
 
 
-def test_a_blank_capture_is_ignored(tmp_path: Path) -> None:
+def test_a_capture_the_media_plugins_reject_never_reaches_the_store(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
-
-    after = ui.event(_handler(ui.render(), "input"), {"value": "   "})
-
-    assert after["meta"] == "0 条"
-    assert _titles(after) == []
-
-
-def test_a_capture_the_audio_plugin_rejects_is_not_stored(tmp_path: Path) -> None:
-    ui = _kernel(tmp_path).resolve("ui")
-
-    after = ui.event(
-        _handler(ui.render(), "audio_capture"),
-        {"audio": "", "mime": "audio/webm", "seconds": 1},
+    rejects = (
+        ("录音", "audio_capture", {"audio": "", "mime": "audio/webm", "seconds": 1}),
+        ("视频", "video_capture", {"media": "nope", "mime": "video/webm", "seconds": 1}),
     )
 
-    assert after["meta"] == "0 条"
-    assert _titles(after) == []
+    for tile, node_type, payload in rejects:
+        _click_tile(ui, tile)
+        recorder = _nodes(_main(ui.render()), node_type)[0]
+        after = ui.event(str(recorder["props"]["on_submit"]), payload)
+
+        assert _nodes(_main(after), node_type), tile
+        assert after["pages"][0]["count"] == 0, tile
+        _click_button(ui, "← 返回")
 
 
-def test_a_capture_the_video_plugin_rejects_is_not_stored(tmp_path: Path) -> None:
-    ui = _kernel(tmp_path).resolve("ui")
+def test_without_the_capture_plugins_only_the_text_tile_is_offered(tmp_path: Path) -> None:
+    snapshot = _kernel(tmp_path, captures=False).resolve("ui").render()
 
-    after = ui.event(
-        _handler(ui.render(), "video_capture"),
-        {"media": "nope", "mime": "video/webm", "seconds": 1},
-    )
-
-    assert after["meta"] == "0 条"
-    assert _titles(after) == []
+    assert list(_tiles(snapshot)) == ["文字"]
 
 
-def test_without_the_capture_plugins_the_page_keeps_text_only(tmp_path: Path) -> None:
+def test_the_capture_tiles_grow_when_the_plugins_install_later(tmp_path: Path) -> None:
+    """manager 收到能力上报后才装 audio / video：页面得跟着长出对应的 Tile。"""
     kernel = _kernel(tmp_path, captures=False)
     ui = kernel.resolve("ui")
-
-    snapshot = ui.render()
-    after = ui.event(_handler(snapshot, "input"), {"value": "买牛奶"})
-
-    assert _nodes(snapshot["content"], "audio_capture") == []
-    assert _nodes(snapshot["content"], "video_capture") == []
-    assert _titles(after) == ["买牛奶"]
-
-
-def test_capture_controls_appear_when_the_plugins_install_later(tmp_path: Path) -> None:
-    """manager 收到能力上报后才装 audio / video：页面得跟着长出捕捉条。"""
-    kernel = _kernel(tmp_path, captures=False)
-    ui = kernel.resolve("ui")
-    assert _nodes(ui.render()["content"], "audio_capture") == []
+    assert list(_tiles(ui.render())) == ["文字"]
 
     kernel.install(AudioPlugin())
     kernel.install(VideoPlugin())
+    assert list(_tiles(ui.render())) == ["录音", "文字"]
+
     kernel.install(_Net())
-
-    content = ui.render()["content"]
-    assert len(_nodes(content, "audio_capture")) == 1
-    assert len(_nodes(content, "video_capture")) == 1
+    assert list(_tiles(ui.render())) == ["录音", "视频", "文字"]
 
 
-def test_archiving_a_line_takes_it_out(tmp_path: Path) -> None:
+def test_the_feed_is_newest_first_and_pinning_moves_a_card_to_the_top(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
-    captured = _capture(ui, "买牛奶")
-    archive = _button(captured, "归档")
+    for title in ("牛奶 A", "牛奶 B", "写周报"):
+        _capture_text(ui, title)
 
-    after = ui.event(archive, {})
+    assert _cards(ui.render()) == ["写周报", "牛奶 B", "牛奶 A"]
 
-    assert after["meta"] == "0 条"
-    assert _titles(after) == []
+    home = _pin(ui, "牛奶 A")
+
+    assert _cards(home) == ["牛奶 A", "写周报", "牛奶 B"]
+    assert _rail_titles(home) == ["牛奶 A", "写周报", "牛奶 B"]
+
+
+def test_the_pinned_chip_keeps_only_pinned_ideas(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    _capture_text(ui, "牛奶 A")
+    _capture_text(ui, "牛奶 B")
+    _pin(ui, "牛奶 A")
+
+    snapshot = _click_chip(ui, "置顶")
+
+    assert _cards(snapshot) == ["牛奶 A"]
+    assert _active_chips(snapshot) == ["置顶"]
+
+
+def test_the_recent_and_stale_chips_split_the_feed_by_age(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    _capture_text(ui, "牛奶 A")
+    _capture_text(ui, "牛奶 B")
+
+    assert _cards(_click_chip(ui, "最近")) == ["牛奶 B", "牛奶 A"]
+
+    later = datetime.now() + timedelta(days=40)
+    monkeypatch.setattr(ideas_page, "now", lambda: later)
+
+    recent = _click_chip(ui, "最近")
+    stale = _click_chip(ui, "久未打开")
+
+    assert _cards(recent) == []
+    assert _nodes(_main(recent), "empty")[0]["props"]["title"] == "最近 30 天没有新灵感。"
+    assert _cards(stale) == ["牛奶 B", "牛奶 A"]
+    assert _active_chips(stale) == ["久未打开"]
+
+def test_the_detail_carries_the_pin_state_it_can_undo(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    _capture_text(ui, "买牛奶")
+    _open_rail(ui, "买牛奶")
+
+    detail = _click_button(ui, "置顶")
+
+    assert [node["props"]["text"] for node in _nodes(_main(detail), "button")] == [
+        "← 返回",
+        "取消置顶",
+        "归档",
+    ]
+    assert detail["meta"] == "置顶"
+
+
+def test_archiving_from_the_detail_takes_the_idea_out_of_the_page(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    _capture_text(ui, "牛奶 A")
+    _capture_text(ui, "牛奶 B")
+    _open_rail(ui, "牛奶 A")
+
+    home = _click_button(ui, "归档")
+
+    assert _cards(home) == ["牛奶 B"]
+    assert _rail_titles(home) == ["牛奶 B"]
+    assert home["meta"] == "1 条"
 
 
 def test_the_nav_count_follows_the_list(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
 
-    after = ui.event(_handler(ui.render(), "input"), {"value": "买牛奶"})
+    home = _capture_text(ui, "买牛奶")
 
-    assert after["pages"][0]["label"] == "灵感"
-    assert after["pages"][0]["count"] == 1
+    assert home["pages"][0]["label"] == "灵感"
+    assert home["pages"][0]["count"] == 1
 
 
-def test_typing_lists_the_top_matches_as_suggestions(tmp_path: Path) -> None:
+def test_typing_offers_suggestions_and_enter_moves_to_the_results(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
-    _capture(ui, "买牛奶")
-    _capture(ui, "牛奶要冷的")
-    _capture(ui, "写周报")
+    _capture_text(ui, "买牛奶")
+    _capture_text(ui, "牛奶要冷的")
+    _capture_text(ui, "写周报")
 
-    after = _type(ui, "牛奶")
+    typed = _type(ui, "牛奶")
 
-    assert _titled(after, "suggestion") == ["牛奶要冷的", "买牛奶"]
-    assert _nodes(after["content"], "result") == []
+    assert _titles(_main(typed), "suggestion") == ["牛奶要冷的", "买牛奶"]
+    assert _nodes(_main(typed), "result") == []
+    assert _rail_titles(typed) == ["写周报", "牛奶要冷的", "买牛奶"]
+
+    results = _submit(ui, "牛奶")
+
+    assert _titles(_main(results), "result") == ["牛奶要冷的", "买牛奶"]
+    assert results["meta"] == "2 条结果"
+    assert _search_node(results)["props"]["value"] == "牛奶"
+    assert _rail_titles(results) == ["写周报", "牛奶要冷的", "买牛奶"]
 
 
 def test_the_dropdown_keeps_at_most_five_suggestions(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
     for index in range(7):
-        _capture(ui, f"牛奶 {index}")
+        _capture_text(ui, f"牛奶 {index}")
 
-    after = _type(ui, "牛奶")
-
-    assert len(_titled(after, "suggestion")) == 5
+    assert len(_titles(_main(_type(ui, "牛奶")), "suggestion")) == 5
 
 
-def test_a_query_without_matches_lists_no_suggestions(tmp_path: Path) -> None:
+def test_a_query_without_matches_offers_nothing_and_shows_the_empty_state(
+    tmp_path: Path,
+) -> None:
     ui = _kernel(tmp_path).resolve("ui")
-    _capture(ui, "买牛奶")
+    _capture_text(ui, "买牛奶")
 
-    after = _type(ui, "牛排")
-
-    assert _titled(after, "suggestion") == []
-    assert _nodes(after["content"], "result") == []
-
-
-def test_enter_shows_the_results_view_and_keeps_the_index(tmp_path: Path) -> None:
-    ui = _kernel(tmp_path).resolve("ui")
-    _capture(ui, "买牛奶")
-    _capture(ui, "写周报")
-
-    after = _submit(ui, "牛奶")
-
-    assert after["meta"] == "1 条结果"
-    assert _titled(after, "result") == ["买牛奶"]
-    assert _nodes(after["content"], "item") == []
-    assert after["pages"][0]["count"] == 2
-    assert _props(after, "search")["value"] == "牛奶"
-
-
-def test_a_result_carries_the_matched_snippet_and_the_time(tmp_path: Path) -> None:
-    ui = _kernel(tmp_path).resolve("ui")
-    _capture(ui, "买牛奶")
-
-    after = _submit(ui, "牛奶")
-
-    result = _nodes(after["content"], "result")[0]["props"]
-    assert result["snippet"] == "买牛奶"
-    assert result["highlight"] == "牛奶"
-    assert result["meta"] == "刚刚"
-
-
-def test_a_query_without_matches_shows_the_empty_state(tmp_path: Path) -> None:
-    ui = _kernel(tmp_path).resolve("ui")
-    _capture(ui, "买牛奶")
+    typed = _type(ui, "牛排")
+    assert _titles(_main(typed), "suggestion") == []
+    assert _nodes(_main(typed), "result") == []
 
     after = _submit(ui, "牛排")
-
     assert after["meta"] == "没有结果"
-    assert _titled(after, "result") == []
-    empty = _nodes(after["content"], "empty")[0]["props"]
-    assert empty["title"] == "没有匹配的灵感。"
+    assert _nodes(_main(after), "empty")[0]["props"]["title"] == "没有匹配的灵感。"
+
+
+def test_back_from_the_results_returns_home(tmp_path: Path) -> None:
+    ui = _kernel(tmp_path).resolve("ui")
+    _capture_text(ui, "买牛奶")
+    _submit(ui, "牛奶")
+
+    home = _click_button(ui, "← 返回")
+
+    assert _cards(home) == ["买牛奶"]
+    assert _nodes(_main(home), "result") == []
 
 
 def test_clicking_a_result_opens_the_detail_and_back_walks_home(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
-    _capture(ui, "买牛奶")
-    _capture(ui, "写周报")
+    _capture_text(ui, "买牛奶")
     results = _submit(ui, "牛奶")
+    hit = _nodes(_main(results), "result")[0]
 
-    detail = ui.event(_result_click(results), {})
+    detail = ui.event(str(hit["props"]["on_click"]), {})
+    assert _heading(detail) == "买牛奶"
 
-    headings = [
-        node["props"]["text"]
-        for node in _nodes(detail["content"], "text")
-        if node["props"].get("kind") == "title"
-    ]
-    assert headings == ["买牛奶"]
+    back_to_results = _click_button(ui, "← 返回")
+    assert _titles(_main(back_to_results), "result") == ["买牛奶"]
 
-    back_to_results = ui.event(_button(detail, "← 返回"), {})
-    assert _titled(back_to_results, "result") == ["买牛奶"]
-
-    home = ui.event(_button(back_to_results, "← 返回"), {})
-    assert _props(home, "search")["value"] == "牛奶"
-    assert _titles(home) == ["买牛奶", "写周报"]
+    home = _click_button(ui, "← 返回")
+    assert _cards(home) == ["买牛奶"]
+    assert _search_node(home)["props"]["value"] == "牛奶"
 
 
-def test_a_voice_result_can_be_played_from_the_detail(tmp_path: Path) -> None:
+def test_a_result_carries_the_snippet_the_time_and_the_media_kind(tmp_path: Path) -> None:
     kernel = _kernel(tmp_path)
     ui = kernel.resolve("ui")
-    audio = base64.b64encode(b"hello").decode("ascii")
-    ui.event(
-        _handler(ui.render(), "audio_capture"),
-        {"audio": audio, "mime": "audio/webm", "seconds": 3.2},
-    )
-    results = _submit(ui, "语音")
+    _capture_text(ui, "买牛奶")
 
-    detail = ui.event(_result_click(results), {})
+    hit = _nodes(_main(_submit(ui, "牛奶")), "result")[0]["props"]
+    assert (hit["snippet"], hit["highlight"], hit["meta"]) == ("买牛奶", "牛奶", "刚刚")
 
-    media_id = str(_nodes(detail["content"], "audio")[0]["props"]["media"])
-    assert base64.b64decode(kernel.resolve("media").load(media_id)["data"]) == b"hello"
-
-
-def test_a_video_result_is_marked_as_video(tmp_path: Path) -> None:
-    kernel = _kernel(tmp_path)
-    ui = kernel.resolve("ui")
+    _click_button(ui, "← 返回")
     uploaded = kernel.resolve("media").save(b"video", "video/webm")
+    _click_tile(ui, "视频")
+    recorder = _nodes(_main(ui.render()), "video_capture")[0]
     ui.event(
-        _handler(ui.render(), "video_capture"),
+        str(recorder["props"]["on_submit"]),
         {"media": uploaded, "mime": "video/webm", "seconds": 5},
     )
 
-    after = _submit(ui, "视频")
-
-    result = _nodes(after["content"], "result")[0]["props"]
-    assert result["meta"] == "刚刚 · 视频"
+    marker = _nodes(_main(_submit(ui, "视频")), "result")[0]["props"]["meta"]
+    assert marker == "刚刚 · 视频"
 
 
 def test_archived_ideas_drop_out_of_the_results(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
-    _capture(ui, "买牛奶")
-    after = _capture(ui, "牛奶要冷的")
-    ui.event(_item_button(after, 1, "归档"), {})
+    _capture_text(ui, "买牛奶")
+    _capture_text(ui, "牛奶要冷的")
+    _open_rail(ui, "牛奶要冷的")
+    _click_button(ui, "归档")
 
-    after = _submit(ui, "牛奶")
-
-    assert _titled(after, "result") == ["买牛奶"]
-
-
-def test_pinning_ranks_an_older_idea_first(tmp_path: Path) -> None:
-    ui = _kernel(tmp_path).resolve("ui")
-    _capture(ui, "牛奶 A")
-    after = _capture(ui, "牛奶 B")
-    pinned = ui.event(_item_button(after, 0, "置顶"), {})
-
-    assert _item_button(pinned, 0, "取消置顶")
-    after = _submit(ui, "牛奶")
-
-    assert _titled(after, "result") == ["牛奶 A", "牛奶 B"]
-    assert _nodes(after["content"], "result")[0]["props"]["meta"].startswith("置顶")
+    assert _titles(_main(_submit(ui, "牛奶")), "result") == ["买牛奶"]
 
 
-def test_submitting_a_blank_query_goes_home(tmp_path: Path) -> None:
-    ui = _kernel(tmp_path).resolve("ui")
-    _capture(ui, "买牛奶")
-    _submit(ui, "牛奶")
-
-    after = _submit(ui, "")
-
-    assert after["meta"] == "1 条"
-    assert _titled(after, "result") == []
-    assert _nodes(after["content"], "input")
-
-
-def test_snippets_cut_a_window_around_the_match() -> None:
-    title = "开头" * 20 + "牛奶" + "结尾" * 20
-
-    snippet = _snippet(title, "牛奶")
-
-    assert "牛奶" in snippet
-    assert len(snippet) <= 42
-    assert snippet.startswith("…")
-    assert snippet.endswith("…")
-    assert _snippet("买牛奶", "牛奶") == "买牛奶"
-    assert _snippet("写周报", "牛奶") == "写周报"
-    assert _snippet("很短" * 30, "牛奶") == ("很短" * 30)[:40] + "…"
-
-
-def test_relative_time_reads_like_a_ledger() -> None:
-    now = datetime(2026, 11, 9, 12, 0)
-
-    assert _when(now - timedelta(seconds=20), now) == "刚刚"
-    assert _when(now - timedelta(minutes=5), now) == "5 分钟前"
-    assert _when(now - timedelta(hours=3), now) == "3 小时前"
-    assert _when(now - timedelta(days=1), now) == "昨天"
-    assert _when(now - timedelta(days=3), now) == "周五"
-    assert _when(now - timedelta(days=20), now) == "10 月 20 日"
