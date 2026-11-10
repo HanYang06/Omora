@@ -101,6 +101,14 @@ async function dumpLayout(window) {
   })()`;
   try {
     const value = await window.webContents.executeJavaScript(script);
+    const extra = process.env.OMORA_EVAL ?? "";
+    if (extra.length > 0) {
+      try {
+        value.eval = await window.webContents.executeJavaScript(extra);
+      } catch (error) {
+        value.eval = "EVAL FAILED: " + error;
+      }
+    }
     fs.writeFileSync(SHOT + ".json", JSON.stringify(value, null, 2));
   } catch (error) {
     console.error("[shell] 布局导出失败 " + error);
@@ -153,6 +161,8 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // 窗口在后面时也别降频：截图 / 采样要和前台一样
+      backgroundThrottling: false,
     },
   });
 
