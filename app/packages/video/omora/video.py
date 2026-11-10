@@ -18,7 +18,7 @@ from omora.sdk.ui import Handler, VideoCapture
 from . import _transcode
 
 QUALITIES = ("480p", "720p", "1080p")
-DEFAULT_SECONDS = 120
+DEFAULT_SECONDS = 1800
 DEFAULT_MB = 64
 
 Processor = Callable[[str, dict[str, Any]], None]
