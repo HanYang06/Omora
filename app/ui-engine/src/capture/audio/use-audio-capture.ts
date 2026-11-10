@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type WaveSurfer from "wavesurfer.js";
 import type RecordPlugin from "wavesurfer.js/dist/plugins/record.js";
 import type { EventHandler } from "../../core/types";
-import { planStop, planUpload, uploadFailureReason } from "../capture-rules";
-import { uploadMedia } from "../media-upload";
+import { planStop } from "../capture-rules";
+import { uploadRecorded } from "../media-upload";
 
 export type AudioPhase = "idle" | "recording" | "paused" | "uploading" | "failed";
 
@@ -81,21 +81,9 @@ export function useAudioRecorder(options: AudioRecorderOptions) {
       setPhase("uploading");
       setError(undefined);
     }
-    let mediaId: string | undefined;
-    let failure: unknown;
-    try {
-      if (target.uploadUrl === undefined || target.handler === undefined) {
-        throw new Error("媒体通道未就绪");
-      }
-      mediaId = await uploadMedia((url, init) => fetch(url, init), target.uploadUrl, blob);
-    } catch (upstream) {
-      failure = upstream;
-    }
-    const plan = planUpload({
-      ok: mediaId !== undefined,
-      reason: uploadFailureReason(failure),
-      unmounted: unmounted.current,
-    });
+    const attempt = await uploadRecorded(target.uploadUrl, blob, unmounted.current);
+    const plan = attempt.plan;
+    const mediaId = attempt.mediaId;
     if (plan.submit && mediaId !== undefined && target.handler !== undefined) {
       submitted.current = true;
       target.onEvent?.(target.handler, {
