@@ -222,7 +222,7 @@ class Ui:
 
 - `Page(content, meta)`：content 是节点树，meta 是标题旁那句话（比如“3 条”）。
 - 词表：`Column`、`Row`、`Text`、`Button`、`Input`、`Recorder`、`Audio`、`List`、`Item`、`Empty`、
-  `Search`、`Suggestion`、`Result`、`AudioCapture`、`VideoCapture`、`Video`。
+  `Search`、`Suggestion`、`Result`、`AudioCapture`、`VideoCapture`、`Video`、`Hotkey`、`Waveform`。
 
 ## 8. 产出页面的插件
 

@@ -40,7 +40,8 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 - 不确定就问，不猜需求；有多种解释就列出来。
 - 一次只做一件事；不顺手改邻近代码。
-- 多区任务走 Agent 团队：Lead 拆任务（写域/依赖）→ 每个 teammate 自己的 worktree/分支 → PR → Lead review + merge commit 合并；review 问题回给 owner 改（PR 评论留档），Lead 不亲自改别人的分支/worktree；详见 [omora-team](.agents/skills/omora-team/SKILL.md)。
+- 多区任务走 Agent 团队：Lead 拆任务（写域/依赖）→ 每个 teammate 自己的 worktree/分支 → 合成一条集成分支 → **只开一个 PR** → Lead review + merge commit；review 问题回给 owner 改，Lead 不亲自改别人的分支/worktree；详见 [omora-team](.agents/skills/omora-team/SKILL.md)。
+- **一个功能 = 一个 PR**：同一件事的文档、实现、测试放在同一个 PR 里，PR 内按事件拆提交。多区并行也只提一个 PR。只有要独立回滚、或一次 review 看不完（净变更 > 800 行）才拆。
 - 跑过才算完成；跑不了就明说没验证。
 - 不用"应该可以""理论上没问题"。
 
