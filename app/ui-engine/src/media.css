@@ -196,3 +196,21 @@
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* 暂停 / 继续：跟主按钮并排，但弱一档，别和"停止"抢。 */
+.omora-record--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.omora-record--quiet:hover {
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+/* 实时电平：捕捉条里给固定宽度，别把提示挤走。 */
+.omora-record-bar > .omora-peaks {
+  flex: none;
+  width: 160px;
+}
