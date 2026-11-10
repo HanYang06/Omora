@@ -71,6 +71,7 @@ class Video:
             upload_url=url,
             quality=self.quality,
             max_seconds=self.max_seconds,
+            pausable=True,
         )
 
     def src(self, media_id: str) -> str | None:

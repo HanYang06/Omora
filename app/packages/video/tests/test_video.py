@@ -64,6 +64,7 @@ def test_the_node_carries_the_upload_url_quality_and_the_time_limit(tmp_path: Pa
             "upload_url": CHANNEL,
             "quality": "1080p",
             "max_seconds": 45,
+            "pausable": True,
         },
         "children": [],
     }

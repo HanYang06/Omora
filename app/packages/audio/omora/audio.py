@@ -71,6 +71,7 @@ class Audio:
             quality=self.quality,
             noise_reduction=self.noise_reduction,
             max_seconds=self.max_seconds,
+            pausable=True,
         )
 
     def add_processor(self, process: Processor) -> None:

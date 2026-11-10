@@ -78,6 +78,7 @@ def test_the_node_carries_the_upload_url_quality_noise_reduction_and_the_limit(
             "quality": "low",
             "noise_reduction": False,
             "max_seconds": 30,
+            "pausable": True,
         },
         "children": [],
     }
