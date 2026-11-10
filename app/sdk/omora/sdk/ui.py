@@ -239,12 +239,11 @@ class Icon(Node):
 
 @dataclass(frozen=True)
 class Tile(Node):
-    """捕捉大按钮：图标 + 标题 + 一句说明。"""
+    """捕捉大按钮：图标 + 标题。不写说明文字——那是说明书，不是按钮。"""
 
     type: ClassVar[str] = "tile"
     icon: str = ""
     title: str = ""
-    hint: str = ""
     on_click: Handler | None = None
 
 
@@ -282,6 +281,17 @@ class Card(Node):
         object.__setattr__(self, "text", text)
         object.__setattr__(self, "meta", meta)
         object.__setattr__(self, "on_click", on_click)
+        object.__setattr__(self, "children", tuple(children))
+
+
+@dataclass(frozen=True, init=False)
+class Panel(Node):
+    """内嵌面板：一块 inset 面，装工具条和行。子节点通常是一行工具条 + 内容。"""
+
+    type: ClassVar[str] = "panel"
+    children: tuple[Node, ...]
+
+    def __init__(self, *children: Node) -> None:
         object.__setattr__(self, "children", tuple(children))
 
 
@@ -325,6 +335,7 @@ __all__ = [
     "List",
     "Node",
     "Page",
+    "Panel",
     "Rail",
     "Recorder",
     "Result",
