@@ -6,7 +6,7 @@ import { Hotkey } from "./hotkey";
 import { Icon } from "../shell/icons";
 import { Panel, Rail, Split } from "../shell/layout";
 import { Result, Search, Suggestion } from "../search/search";
-import { prop, textOf, type NodeComponentProps } from "../core/shared";
+import { flag, prop, textOf, type NodeComponentProps } from "../core/shared";
 import { Chip, Tile } from "./tiles";
 import { VideoCapture } from "../capture/video/video-capture";
 import { VideoPlayer } from "../capture/video/video-player";
@@ -23,7 +23,7 @@ export function Column({ children }: NodeComponentProps): ReactNode {
 
 /** row：横向排列；spread 时两头分开。 */
 export function Row({ node, children }: NodeComponentProps): ReactNode {
-  const spread = prop(node, "spread") === true;
+  const spread = flag(node, "spread");
   return (
     <div className={spread ? "omora-row omora-row--spread" : "omora-row"} data-type="row">
       {children}

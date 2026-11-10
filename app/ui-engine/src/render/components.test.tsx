@@ -423,4 +423,24 @@ describe("注册表", () => {
     expect(html).toContain('data-type="icon"');
     expect(html).not.toContain("omora-unknown");
   });
+
+  it("spread 的行两头分开：标题在左、动作在右", () => {
+    const spread = renderToString(
+      <>{renderTree([{
+        type: "row",
+        props: { spread: true },
+        children: [{ type: "text", props: { text: "录音" }, children: [] }],
+      }])}</>,
+    );
+    const plain = renderToString(
+      <>{renderTree([{
+        type: "row",
+        props: {},
+        children: [{ type: "text", props: { text: "录音" }, children: [] }],
+      }])}</>,
+    );
+
+    expect(spread).toContain("omora-row--spread");
+    expect(plain).not.toContain("omora-row--spread");
+  });
 });
