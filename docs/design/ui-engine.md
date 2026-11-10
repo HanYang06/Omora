@@ -52,7 +52,9 @@ src/
 4. 捕捉：
    - 打字回车 → `ui.event({handler, payload: {value}})`；
    - 录音停 → `ui.event({handler, payload: {audio, mime, seconds}})`，`audio` 是 base64；
-   - 录像保存 → 先 `POST` 到媒体通道拿 media id → `ui.event({handler, payload: {media, mime, seconds}})`。
+   - 录像停 → 自动 `POST` 到媒体通道拿 media id → `ui.event({handler, payload: {media, mime, seconds}})`；
+     不再有「回看再确认」这一步。
+   - 组件卸载时如果还在录，也要停止并把这段交出去（录了即存，见 [捕捉工作区](../design/ui-capture.md)）。
 5. 设备：引擎一挂上就 `enumerateDevices`，之后跟着 `devicechange` 重新枚举；没有对应设备
    （或还没有权限、还没枚举完）就把捕捉按钮禁用，并把原因写在旁边。`getUserMedia` 只在
    用户点按钮那一下调——权限只在手势里给。多设备给选择器，选中的 deviceId 进 constraints。
@@ -99,7 +101,7 @@ src/
 | recorder | on_submit | 录音条：点一下录，再点一下停；停后把 base64 音频交给事件 |
 | audio | media | 播放按钮：点的时候按需向 media 服务取，不预载 |
 | audio_capture | on_submit、quality?、noise_reduction?、max_seconds? | 音频捕捉条：设备门禁 + 多设备选择 + 录音；停后把 base64 交给事件 |
-| video_capture | on_submit、upload_url、quality?、max_seconds? | 视频捕捉条：门禁 + 实时预览 + 回看重录 + 上传；保存后只交 media id |
+| video_capture | on_submit、upload_url、quality?、max_seconds? | 视频捕捉条：门禁 + 实时预览 + 上传；停止即上传并提交（不再回看），上传失败给重试 |
 | video | media、src? | 视频播放器；`src` 是媒体通道地址，没有就写"媒体通道未就绪" |
 | list | — | 账本容器（ul） |
 | item | meta、title | 账本行：左栏 meta、右栏标题、子节点是这一行的动作 |
