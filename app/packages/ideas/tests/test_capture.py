@@ -3,7 +3,6 @@
 工作区不换页：搜索区、索引栏、列表面板都还在，只有捕捉区那一块换了样子。
 """
 
-import base64
 from pathlib import Path
 from typing import Any
 
@@ -105,12 +104,9 @@ def _recording(ui: Any, tile: str, node_type: str) -> tuple[str, dict[str, Any]]
     return str(node["props"]["on_submit"]), node
 
 
-def _audio_take(seconds: float) -> dict[str, Any]:
-    return {
-        "audio": base64.b64encode(b"hello").decode("ascii"),
-        "mime": "audio/webm",
-        "seconds": seconds,
-    }
+def _audio_take(media_id: str, seconds: float) -> dict[str, Any]:
+    """引擎交上来的载荷：字节已经在 HTTP 媒体通道里，帧里只有 media id。"""
+    return {"media": media_id, "mime": "audio/webm", "seconds": seconds}
 
 
 def _video_take(media_id: str, seconds: float = 5) -> dict[str, Any]:
@@ -162,18 +158,18 @@ def test_a_blank_text_capture_is_not_stored(tmp_path: Path) -> None:
 def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(tmp_path: Path) -> None:
     kernel = _kernel(tmp_path)
     ui = kernel.resolve("ui")
+    uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
     handler, recorder = _recording(ui, "录音", "audio_capture")
     assert (recorder["props"]["quality"], recorder["props"]["noise_reduction"]) == ("high", True)
 
-    saved = ui.event(handler, _audio_take(12.4))
+    saved = ui.event(handler, _audio_take(uploaded, 12.4))
 
     bar = _capture_region(saved)
     assert [child["type"] for child in bar["children"]] == ["row"]
     assert _nodes(bar, "audio_capture") == []
     assert _texts(bar) == ["已保存 · 0:12"]
     assert _button_texts(bar) == ["再录一条", "收起"]
-    media_id = str(_nodes(bar, "audio")[0]["props"]["media"])
-    assert base64.b64decode(kernel.resolve("media").load(media_id)["data"]) == b"hello"
+    assert _nodes(bar, "audio")[0]["props"]["media"] == uploaded
     assert _cards(saved) == ["语音 0:12"]
     assert _rail_titles(saved) == ["语音 0:12"]
     assert saved["pages"][0]["count"] == 1
@@ -185,9 +181,11 @@ def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(tmp_path: Path) -
 
 
 def test_the_saved_bar_records_again_and_collapses_to_the_tiles(tmp_path: Path) -> None:
-    ui = _kernel(tmp_path).resolve("ui")
+    kernel = _kernel(tmp_path)
+    ui = kernel.resolve("ui")
+    uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
     handler, _ = _recording(ui, "录音", "audio_capture")
-    ui.event(handler, _audio_take(3))
+    ui.event(handler, _audio_take(uploaded, 3))
 
     again = _click_button(ui, "再录一条")
 
@@ -228,9 +226,11 @@ def test_a_saved_video_offers_no_inline_player(tmp_path: Path) -> None:
 
 def test_the_saved_bar_is_gone_after_a_page_change(tmp_path: Path) -> None:
     """已保存条不是持久状态：换页再回来就是三个 Tile。"""
-    ui = _kernel(tmp_path).resolve("ui")
+    kernel = _kernel(tmp_path)
+    ui = kernel.resolve("ui")
+    uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
     handler, _ = _recording(ui, "录音", "audio_capture")
-    ui.event(handler, _audio_take(3))
+    ui.event(handler, _audio_take(uploaded, 3))
 
     _click_rail(ui, "语音 0:03")
     home = _click_button(ui, "← 返回")
@@ -243,7 +243,9 @@ def test_collapsing_while_recording_stores_the_take_without_reopening_the_bar(
     tmp_path: Path,
 ) -> None:
     """录制中点收起：引擎在卸载时停止并提交，带的 id 属于上一代；只落库，别把面板变回来。"""
-    ui = _kernel(tmp_path).resolve("ui")
+    kernel = _kernel(tmp_path)
+    ui = kernel.resolve("ui")
+    uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
     workspace = _click_tile(ui, "录音")
     # 两个 id 来自同一份快照，就像引擎手里那份；收起之后录制组件才卸载并提交。
     handler = str(_nodes(_main(workspace), "audio_capture")[0]["props"]["on_submit"])
@@ -252,7 +254,7 @@ def test_collapsing_while_recording_stores_the_take_without_reopening_the_bar(
     collapsed = ui.event(collapse, {})
     assert list(_tiles(collapsed)) == ["录音", "视频", "文字"]
 
-    settled = ui.event(handler, _audio_take(3))
+    settled = ui.event(handler, _audio_take(uploaded, 3))
 
     assert _cards(settled) == ["语音 0:03"]
     assert settled["pages"][0]["count"] == 1
@@ -273,7 +275,7 @@ def test_collapsing_the_workspace_goes_back_to_the_three_tiles(tmp_path: Path) -
 def test_a_capture_the_media_plugins_reject_never_reaches_the_store(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
     rejects = (
-        ("录音", "audio_capture", {"audio": "", "mime": "audio/webm", "seconds": 1}),
+        ("录音", "audio_capture", {"media": "", "mime": "audio/webm", "seconds": 1}),
         ("视频", "video_capture", {"media": "nope", "mime": "video/webm", "seconds": 1}),
     )
 
