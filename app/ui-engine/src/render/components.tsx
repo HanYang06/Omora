@@ -21,10 +21,11 @@ export function Column({ children }: NodeComponentProps): ReactNode {
   );
 }
 
-/** row：横向排列。 */
-export function Row({ children }: NodeComponentProps): ReactNode {
+/** row：横向排列；spread 时两头分开。 */
+export function Row({ node, children }: NodeComponentProps): ReactNode {
+  const spread = prop(node, "spread") === true;
   return (
-    <div className="omora-row" data-type="row">
+    <div className={spread ? "omora-row omora-row--spread" : "omora-row"} data-type="row">
       {children}
     </div>
   );

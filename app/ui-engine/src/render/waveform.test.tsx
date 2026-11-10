@@ -1,6 +1,7 @@
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { renderTree } from "./renderer";
+import { wavePaths, waveformBars } from "./waveform";
 
 /** 一条静态波形节点。 */
 function waveform(peaks: unknown, seconds: unknown): ReturnType<typeof renderTree> {
@@ -13,43 +14,59 @@ function waveform(peaks: unknown, seconds: unknown): ReturnType<typeof renderTre
   ]);
 }
 
-describe("静态波形", () => {
-  it("每根柱子按峰值给高度，时长用 M:SS 标在旁边", () => {
+describe("波形路径", () => {
+  it("以中线镜像：峰值 100 撑满上下，峰值 0 落在中线上", () => {
+    const quiet = wavePaths([0]);
+    const loud = wavePaths([100]);
+
+    expect(quiet.line).toContain("0.50,50.00");
+    expect(quiet.area).toContain("0.50,50.00");
+    expect(loud.line).toContain("0.50,0.00");
+    expect(loud.area).toContain("0.50,100.00");
+  });
+
+  it("面积是闭合的、折线是开口的：同一条峰值不会画成直方图", () => {
+    const { area, line } = wavePaths([10, 90, 30]);
+
+    expect(area.startsWith("M")).toBe(true);
+    expect(area.endsWith(" Z")).toBe(true);
+    expect(line.startsWith("M")).toBe(true);
+    expect(line).not.toContain("Z");
+  });
+
+  it("没有峰值就两条路径都不给，别画出半截线", () => {
+    expect(wavePaths([])).toEqual({ area: "", line: "" });
+  });
+});
+
+describe("波形数据的清洗", () => {
+  it("越界和非数字的峰值被夹回 0–100 / 丢掉", () => {
+    expect(waveformBars([150, -5, "x", 42.6])).toEqual([100, 0, 43]);
+  });
+
+  it("不是数组就给空，不崩", () => {
+    expect(waveformBars(undefined)).toEqual([]);
+    expect(waveformBars("1,2,3")).toEqual([]);
+  });
+});
+
+describe("静态波形节点", () => {
+  it("按峰值画出面积与折线，时长用 M:SS 标在旁边", () => {
     const html = renderToString(<>{waveform([0, 50, 100], 65)}</>);
 
     expect(html).toContain('data-type="waveform"');
     expect(html).toContain('data-bars="3"');
-    expect(html).toContain("height:0%");
-    expect(html).toContain("height:50%");
-    expect(html).toContain("height:100%");
+    expect(html).toContain("omora-wave-area");
+    expect(html).toContain("omora-wave-line");
     expect(html).toContain("1:05");
   });
 
-  it("越界和非数字的峰值被夹回 0–100 / 丢掉，不把柱子画到框外", () => {
-    const html = renderToString(<>{waveform([150, -5, "x", 42.6], 0)}</>);
-
-    expect(html).toContain('data-bars="3"');
-    expect(html).toContain("height:100%");
-    expect(html).toContain("height:0%");
-    expect(html).toContain("height:43%");
-    expect(html).toContain("0:00");
-  });
-
-  it("没有峰值就一根柱子都不画，但时长照样标出来", () => {
+  it("没有峰值就一根线都不画，但时长照样标出来", () => {
     const html = renderToString(<>{waveform([], 3)}</>);
 
     expect(html).toContain('data-bars="0"');
-    expect(html).not.toContain("omora-peak\"");
+    expect(html).not.toContain("omora-wave-line");
     expect(html).toContain("0:03");
-  });
-
-  it("柱子太少时重复展开：三秒录音的几根柱子不该横铺成一排虚线", () => {
-    const html = renderToString(<>{waveform([10, 90], 3)}</>);
-
-    expect(html).toContain('data-bars="2"');
-    const drawn = (html.match(/omora-peak"/g) ?? []).length;
-    expect(drawn).toBeGreaterThanOrEqual(120);
-    expect(drawn % 2).toBe(0);
   });
 
   it("缺 seconds 时按 0:00 标，而不是空白", () => {

@@ -30,11 +30,15 @@ class Column(Node):
 
 @dataclass(frozen=True, init=False)
 class Row(Node):
+    """横向排列；spread 把两头分开（一头一个，中间留空）。"""
+
     type: ClassVar[str] = "row"
     children: tuple[Node, ...]
+    spread: bool = False
 
-    def __init__(self, *children: Node) -> None:
+    def __init__(self, *children: Node, spread: bool = False) -> None:
         object.__setattr__(self, "children", tuple(children))
+        object.__setattr__(self, "spread", spread)
 
 
 @dataclass(frozen=True, init=False)

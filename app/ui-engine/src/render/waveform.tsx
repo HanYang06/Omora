@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import { clock, type NodeComponentProps } from "../core/shared";
 
-/**
- * peaks 是 Python 侧的 tuple[int]（0–100）。坏数据别把柱子画到框外：
+/** 峰值是 Python 侧的 tuple[int]（0–100）。坏数据别把波形画到框外：
  * 非数字丢掉、越界夹回 0–100、小数取整。
  */
 export function waveformBars(value: unknown): number[] {
@@ -19,43 +18,68 @@ export function waveformBars(value: unknown): number[] {
   return bars;
 }
 
-/** 一排柱子；实时电平和静态波形共用。高度是百分比，容器给固定高度。 */
-export function PeakBars({ peaks }: { peaks: readonly number[] }): ReactNode {
+/** 画布高度：和中线一起定死，只让宽度随柱子数伸缩。 */
+const HEIGHT = 100;
+const MIDDLE = 50;
+
+/**
+ * 峰值 → 两条路径：一条合并的镜像面积（上下对称），一条顶部折线。
+ *
+ * 峰值是采样出来的「音量」（0–100），不是音频曲线；镜像画出来才像录音软件里的波形，
+ * 单边柱状图看着像直方图。宽度等于柱子数，靠 preserveAspectRatio="none" 铺满容器，
+ * 所以滑窗只要换 peaks 就行，不用改布局。
+ */
+export function wavePaths(peaks: readonly number[]): { area: string; line: string } {
+  if (peaks.length === 0) {
+    return { area: "", line: "" };
+  }
+  const width = peaks.length;
+  const top: string[] = [];
+  const bottom: string[] = [];
+
+  peaks.forEach((raw, index) => {
+    const half = Math.min(100, Math.max(0, raw)) / 2;
+    const x = ((index + 0.5) * width) / peaks.length;
+    top.push(`${x.toFixed(2)},${(MIDDLE - half).toFixed(2)}`);
+    bottom.push(`${x.toFixed(2)},${(MIDDLE + half).toFixed(2)}`);
+  });
+
+  return {
+    area: `M${top.join(" L")} L${bottom.reverse().join(" L")} Z`,
+    line: `M${top.join(" L")}`,
+  };
+}
+
+/** 一条波形。live 只影响描边深浅，形状一样。 */
+export function WaveformChart({
+  peaks,
+  live = false,
+}: {
+  peaks: readonly number[];
+  live?: boolean;
+}): ReactNode {
+  const paths = wavePaths(peaks);
+
   return (
-    <span className="omora-peaks" aria-hidden="true">
-      {peaks.map((peak, index) => (
-        <span
-          key={index}
-          className="omora-peak"
-          style={{ height: `${Math.min(100, Math.max(0, peak))}%` }}
-        />
-      ))}
-    </span>
+    <svg
+      className={live ? "omora-wave omora-wave--live" : "omora-wave"}
+      viewBox={`0 0 ${Math.max(peaks.length, 1)} ${HEIGHT}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      data-bars={peaks.length}
+    >
+      {paths.area === "" ? null : <path className="omora-wave-area" d={paths.area} />}
+      {paths.line === "" ? null : (
+        <path className="omora-wave-line" d={paths.line} vectorEffect="non-scaling-stroke" />
+      )}
+    </svg>
   );
 }
 
 /**
  * waveform：一条静态波形。只负责看，不负责播（播放是 Audio）。
- * 时长用和计时一样的 clock 格式（M:SS），放在柱子旁边。
+ * 时长用和计时一样的 clock 格式（M:SS），放在波形旁边。
  */
-/** 少于这个数就把柱子重复展开：三秒钟几根柱子横铺一整条看着像虚线。 */
-const MIN_BARS = 120;
-
-/** 展开到至少 MIN_BARS 根；超过就不动。 */
-export function spreadBars(bars: readonly number[]): number[] {
-  if (bars.length === 0 || bars.length >= MIN_BARS) {
-    return [...bars];
-  }
-  const times = Math.ceil(MIN_BARS / bars.length);
-  const out: number[] = [];
-  for (const bar of bars) {
-    for (let i = 0; i < times; i += 1) {
-      out.push(bar);
-    }
-  }
-  return out;
-}
-
 export function Waveform({ node }: NodeComponentProps): ReactNode {
   const bars = waveformBars(node.props?.peaks);
   const rawSeconds = node.props?.seconds;
@@ -64,7 +88,7 @@ export function Waveform({ node }: NodeComponentProps): ReactNode {
 
   return (
     <div className="omora-waveform" data-type="waveform" data-bars={bars.length}>
-      <PeakBars peaks={spreadBars(bars)} />
+      <WaveformChart peaks={bars} />
       <span className="omora-waveform-seconds">{clock(seconds)}</span>
     </div>
   );

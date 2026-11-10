@@ -240,6 +240,12 @@ body {
   gap: var(--s3);
 }
 
+/* 两头各一个：标题在左，动作在右。 */
+.omora-row--spread {
+  justify-content: space-between;
+  align-items: center;
+}
+
 /* 捕捉块那一行：三个块等高撑满 */
 .omora-row:has(.omora-tile) {
   align-items: stretch;

@@ -1,15 +1,16 @@
 import { useState, type ReactNode } from "react";
-import { captureGate } from "../devices";
-import { DeviceSelect } from "../device-select";
-import { PeakBars } from "../../render/waveform";
+import { captureGate } from "../../capture/devices";
+import { DeviceSelect } from "../../capture/device-select";
+import { WaveformChart } from "../../render/waveform";
+import { IconGlyph } from "../../shell/icons";
 import { clock, flag, prop, type NodeComponentProps } from "../../core/shared";
 import { useAudioRecorder } from "./use-audio-capture";
-import { useMediaDevices } from "../use-devices";
+import { useMediaDevices } from "../../capture/use-devices";
 
 const DEFAULT_SECONDS = 600;
 
-/** 实时电平只画最近这么多根：300 根塞不进一条捕捉条，静态波形才用全量。 */
-const LIVE_BARS = 60;
+/** 实时波形只看最近这么久：定宽滑动窗口，边录边往左滚。 */
+const LIVE_WINDOW = 200;
 
 /** node.props 里的数字；不是数字就用兜底值。 */
 export function numberProp(node: NodeComponentProps["node"], name: string, fallback: number): number {
@@ -20,8 +21,8 @@ export function numberProp(node: NodeComponentProps["node"], name: string, fallb
 /**
  * audio_capture：音频捕捉的主体。
  *
- * 设备门禁、多设备选择、实时电平、暂停都在本机；录制机制在 useAudioRecorder，
- * 这里只管长什么样。max_seconds = 0 表示不限时长，autostart 一挂上就录。
+ * 版式：大圆钮 + 计时 + 提示，下面一整条滑动波形，再下面一行动作。
+ * 设备门禁、多设备选择、暂停都在本机；录制机制在 useAudioRecorder。
  */
 export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): ReactNode {
   const handler = prop(node, "on_submit");
@@ -49,17 +50,19 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
     uploadUrl,
     onEvent,
   });
+
   const active = recorder.phase === "recording" || recorder.phase === "paused";
+  const idle = recorder.phase === "idle";
   const hint = !ready
     ? blocked
     : recorder.error ??
       (recorder.phase === "recording"
-        ? "再点一下停"
+        ? "点一下停"
         : recorder.phase === "paused"
-          ? "已暂停"
+          ? "已暂停，可以继续或直接停"
           : recorder.phase === "uploading"
             ? "上传中…"
-            : "说出口，比打字快");
+            : "点一下开始，按住空格说");
 
   return (
     <div
@@ -70,50 +73,57 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
     >
       <button
         type="button"
-        className={active ? "omora-record is-recording" : "omora-record"}
+        className="omora-talk"
+        data-phase={recorder.phase}
         data-handler={handler}
+        aria-label={idle ? "开始录音" : "停止录音"}
         disabled={!ready || recorder.phase === "uploading" || recorder.phase === "failed"}
         onClick={() => {
-          if (active) {
-            recorder.stop();
-          } else {
+          if (idle) {
             recorder.start();
+          } else {
+            recorder.stop();
           }
         }}
       >
-        <span className="omora-record-dot" aria-hidden="true" />
-        {recorder.phase === "recording"
-          ? `录音中 ${clock(recorder.seconds)}`
-          : recorder.phase === "paused"
-            ? `已暂停 ${clock(recorder.seconds)}`
-            : "录音"}
+        {idle ? <IconGlyph name="mic" size={28} /> : <span className="omora-talk-stop" />}
       </button>
-      {pausable && recorder.phase === "recording" ? (
-        <button type="button" className="omora-record omora-record--quiet" onClick={recorder.pause}>
-          暂停
-        </button>
-      ) : null}
-      {pausable && recorder.phase === "paused" ? (
-        <button type="button" className="omora-record omora-record--quiet" onClick={recorder.resume}>
-          继续
-        </button>
-      ) : null}
-      {recorder.phase === "failed" ? (
-        <button type="button" className="omora-record" onClick={recorder.retry}>
-          重试
-        </button>
-      ) : null}
-      {active ? <PeakBars peaks={recorder.live.slice(-LIVE_BARS)} /> : null}
-      {ready && gate.devices.length > 1 && !active ? (
-        <DeviceSelect
-          devices={gate.devices}
-          kind="audioinput"
-          value={selected ?? gate.devices[0]?.deviceId}
-          disabled={recorder.phase !== "idle"}
-          onChange={setSelected}
-        />
-      ) : null}
+      {idle ? null : (
+        <span className="omora-record-clock">
+          {clock(recorder.seconds)}
+          {recorder.phase === "paused" ? <small>已暂停</small> : null}
+        </span>
+      )}
       <span className="omora-record-hint">{hint}</span>
+      {recorder.live.length === 0 ? null : (
+        <WaveformChart peaks={recorder.live.slice(-LIVE_WINDOW)} live={active} />
+      )}
+      <div className="omora-record-actions">
+        {pausable && recorder.phase === "recording" ? (
+          <button type="button" className="omora-button" onClick={recorder.pause}>
+            暂停
+          </button>
+        ) : null}
+        {pausable && recorder.phase === "paused" ? (
+          <button type="button" className="omora-button" onClick={recorder.resume}>
+            继续
+          </button>
+        ) : null}
+        {recorder.phase === "failed" ? (
+          <button type="button" className="omora-button" onClick={recorder.retry}>
+            重试
+          </button>
+        ) : null}
+        {ready && gate.devices.length > 1 && !active ? (
+          <DeviceSelect
+            devices={gate.devices}
+            kind="audioinput"
+            value={selected ?? gate.devices[0]?.deviceId}
+            disabled={recorder.phase !== "idle"}
+            onChange={setSelected}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }
