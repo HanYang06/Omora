@@ -108,9 +108,7 @@ def _click_chip(ui: Any, text: str) -> Any:
 
 
 def _click_button(ui: Any, text: str) -> Any:
-    hits = [
-        node for node in _nodes(_main(ui.render()), "button") if node["props"]["text"] == text
-    ]
+    hits = [node for node in _nodes(_main(ui.render()), "button") if node["props"]["text"] == text]
     assert hits, f"主区里没有按钮: {text}"
     return ui.event(str(hits[0]["props"]["on_click"]), {})
 
@@ -239,9 +237,7 @@ def test_the_pinned_chip_keeps_only_pinned_ideas(tmp_path: Path) -> None:
     assert _active_chips(snapshot) == ["置顶"]
 
 
-def test_the_recent_and_stale_chips_split_the_feed_by_age(
-    tmp_path: Path, monkeypatch: Any
-) -> None:
+def test_the_recent_and_stale_chips_split_the_feed_by_age(tmp_path: Path, monkeypatch: Any) -> None:
     ui = _kernel(tmp_path).resolve("ui")
     _capture_text(ui, "牛奶 A")
     _capture_text(ui, "牛奶 B")
@@ -386,5 +382,3 @@ def test_archived_ideas_drop_out_of_the_results(tmp_path: Path) -> None:
     _click_button(ui, "归档")
 
     assert _titles(_main(_submit(ui, "牛奶")), "result") == ["买牛奶"]
-
-

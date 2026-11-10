@@ -1,16 +1,12 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { captureGate } from "../../capture/devices";
 import { DeviceSelect } from "../../capture/device-select";
-import { WaveformChart } from "../../render/waveform";
 import { IconGlyph } from "../../shell/icons";
 import { clock, flag, prop, type NodeComponentProps } from "../../core/shared";
 import { useAudioRecorder } from "./use-audio-capture";
 import { useMediaDevices } from "../../capture/use-devices";
 
 const DEFAULT_SECONDS = 600;
-
-/** 实时波形只看最近这么久：定宽滑动窗口，边录边往左滚。 */
-const LIVE_WINDOW = 200;
 
 /** node.props 里的数字；不是数字就用兜底值。 */
 export function numberProp(node: NodeComponentProps["node"], name: string, fallback: number): number {
@@ -21,14 +17,13 @@ export function numberProp(node: NodeComponentProps["node"], name: string, fallb
 /**
  * audio_capture：音频捕捉的主体。
  *
- * 版式：大圆钮 + 计时 + 提示，下面一整条滑动波形，再下面一行动作。
- * 设备门禁、多设备选择、暂停都在本机；录制机制在 useAudioRecorder。
+ * 版式：大圆钮 + 计时 + 提示，下面一整条波形，再下面一行动作。
+ * 波形与录音本身交给 wavesurfer 的 record 插件（见 useAudioRecorder）。
  */
 export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): ReactNode {
   const handler = prop(node, "on_submit");
   const uploadUrl = prop(node, "upload_url");
   const quality = prop(node, "quality") ?? "high";
-  const noiseReduction = node.props?.noise_reduction === true;
   const maxSeconds = numberProp(node, "max_seconds", DEFAULT_SECONDS);
   const autostart = flag(node, "autostart");
   const pausable = flag(node, "pausable");
@@ -37,15 +32,14 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
   const ready = gate.enabled && uploadUrl !== undefined && handler !== undefined;
   const blocked = gate.enabled ? "媒体通道未就绪" : gate.reason;
   const [selected, setSelected] = useState<string | undefined>(undefined);
+  const stage = useRef<HTMLDivElement | null>(null);
   const recorder = useAudioRecorder({
-    devices,
-    refresh,
+    container: stage,
     ready,
     autostart,
     maxSeconds,
     quality,
-    noiseReduction,
-    selected,
+    deviceId: selected,
     handler,
     uploadUrl,
     onEvent,
@@ -79,8 +73,9 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
         aria-label={idle ? "开始录音" : "停止录音"}
         disabled={!ready || recorder.phase === "uploading" || recorder.phase === "failed"}
         onClick={() => {
+          refresh();
           if (idle) {
-            recorder.start();
+            void recorder.start();
           } else {
             recorder.stop();
           }
@@ -121,9 +116,7 @@ export function AudioCapture({ node, onEvent, devices }: NodeComponentProps): Re
           />
         ) : null}
       </div>
-      {recorder.live.length === 0 ? null : (
-        <WaveformChart peaks={recorder.live.slice(-LIVE_WINDOW)} live={active} />
-      )}
+      <div className="omora-wave" ref={stage} data-live={active ? "on" : "off"} />
     </div>
   );
 }

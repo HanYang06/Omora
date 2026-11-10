@@ -169,6 +169,7 @@ def test_a_processor_rewrites_the_bytes_into_a_new_media(tmp_path: Path) -> None
 def test_a_failing_processor_keeps_the_original_recording(tmp_path: Path) -> None:
     ctx = _ctx(tmp_path)
     uploaded = _stored(ctx)
+
     def boom(_data: bytes, _mime: str) -> bytes:
         raise ValueError("降噪炸了")
 

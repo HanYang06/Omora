@@ -106,7 +106,7 @@ src/
 | video_capture | on_submit、upload_url、quality?、max_seconds?、pausable? | 视频主体：门禁 + 实时预览 + 暂停；停止即上传并提交，上传失败给重试 |
 | video | media、src? | 视频播放器；`src` 是媒体通道地址，没有就写"媒体通道未就绪" |
 | hotkey | key、on_press、on_release | 不画东西，只在 document 上挂监听：按下发 on_press，松开发 on_release（焦点在输入框里不触发） |
-| waveform | peaks、seconds | 静态波形：peaks 是 0–100 的采样强度，画成中线镜像的面积图 + 折线；只负责看，不负责播 |
+| waveform | src | 静态波形：`src` 是媒体通道里那条音频的地址，交给 wavesurfer 自己取音频、自己画；只负责看，不负责播 |
 | list | — | 账本容器（ul） |
 | item | meta、title | 账本行：左栏 meta、右栏标题、子节点是这一行的动作 |
 | empty | title、hint? | 空状态；没有 hint 就不画第二行 |

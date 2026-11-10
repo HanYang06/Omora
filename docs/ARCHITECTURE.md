@@ -66,6 +66,7 @@
 ```python
 from omora.sdk.ui import Button, Column, Input, Item, Page
 
+
 class Ideas:
     def apply(self, ctx):
         ctx.resolve("ui").page(ctx, "ideas", "灵感", self.build)
@@ -75,8 +76,10 @@ class Ideas:
             meta=f"{len(self.store.items())} 条",
             content=Column(
                 Input(placeholder="记一条", on_submit=self.capture),
-                *[Item(i.when, i.title, Button("归档", on_click=self.archive(i)))
-                  for i in self.store.items()],
+                *[
+                    Item(i.when, i.title, Button("归档", on_click=self.archive(i)))
+                    for i in self.store.items()
+                ],
             ),
         )
 ```

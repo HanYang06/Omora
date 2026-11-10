@@ -79,7 +79,7 @@ def _pin_clock(monkeypatch: Any) -> None:
 
 
 def _audio_take(media_id: str, seconds: float) -> dict[str, Any]:
-    return {"media": media_id, "mime": "audio/webm", "seconds": seconds, "peaks": [0, 50, 100]}
+    return {"media": media_id, "mime": "audio/webm", "seconds": seconds}
 
 
 def _hotkey(snapshot: dict[str, Any]) -> dict[str, Any]:

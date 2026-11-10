@@ -48,15 +48,15 @@ def saved(
     stamp: str,
     title: str,
     audio: str | None,
-    peaks: tuple[int, ...],
-    seconds: float,
+    wave: str | None,
     on_rename: Handler,
     on_again: Handler,
     on_collapse: Handler,
 ) -> Panel:
     """已保存条：第一行给一次命名与动作，音频再加一行静态波形。
 
-    audio 是刚存那条的 media id；视频没有内联播放，也就没有波形。
+    audio 是刚存那条的 media id；wave 是它的媒体地址（没有通道就没有波形）。
+    视频没有内联播放，也就没有波形。
     """
     top: list[Node] = [
         Text(f"已保存 · {stamp}"),
@@ -67,8 +67,8 @@ def saved(
     top.append(Button("再录一条", on_click=on_again))
     top.append(Button("收起", variant="ghost", on_click=on_collapse))
     rows: list[Node] = [Row(*top)]
-    if audio is not None:
-        rows.append(Waveform(peaks=peaks, seconds=seconds))
+    if wave is not None:
+        rows.append(Waveform(src=wave))
     return Panel(*rows)
 
 

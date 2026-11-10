@@ -31,9 +31,7 @@ class Media:
                 raw = None
             if isinstance(raw, dict):
                 self._index = {
-                    str(key): dict(value)
-                    for key, value in raw.items()
-                    if isinstance(value, dict)
+                    str(key): dict(value) for key, value in raw.items() if isinstance(value, dict)
                 }
         self.max_bytes = int(max_mb) * 1024 * 1024
 
@@ -92,9 +90,7 @@ class Media:
         return self._root / media_id
 
     def _write_index(self) -> None:
-        self._index_path.write_text(
-            json.dumps(self._index, ensure_ascii=False), encoding="utf-8"
-        )
+        self._index_path.write_text(json.dumps(self._index, ensure_ascii=False), encoding="utf-8")
 
 
 class MediaPlugin:

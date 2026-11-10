@@ -252,23 +252,29 @@
   stroke: var(--accent-strong);
 }
 
+/* 静态波形：wavesurfer 自己插一层 div，宽度得给它，不然被 flex 压成 1px。 */
 .omora-waveform {
   display: flex;
   align-items: center;
-  gap: var(--s2);
   width: 100%;
-}
-
-.omora-waveform .omora-wave {
-  flex: 1 1 auto;
   height: 32px;
 }
 
-.omora-waveform-seconds {
-  flex: none;
-  font-size: 11px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+.omora-waveform > div {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+}
+
+/* 实时波形：容器本身就是 wavesurfer 的挂载点。 */
+.omora-wave {
+  width: 100%;
+  height: 56px;
+  overflow: hidden;
+}
+
+.omora-wave > div {
+  height: 100%;
 }
 
 /* 暂停 / 继续：跟主按钮并排，但弱一档，别和"停止"抢。 */

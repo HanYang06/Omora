@@ -1,334 +1,264 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { openAnalyser, type AnalyserTap } from "./audio-level";
-import { PEAK_INTERVAL_MS, planStop, pushPeak } from "../capture-rules";
-import { captureErrorReason, openMediaStream, type DeviceSource } from "../devices";
-import { uploadRecorded } from "../media-upload";
+import type WaveSurfer from "wavesurfer.js";
+import type RecordPlugin from "wavesurfer.js/dist/plugins/record.js";
 import type { EventHandler } from "../../core/types";
-import { useRecordTimer } from "../use-record-timer";
+import { planStop } from "../capture-rules";
+import { uploadRecorded } from "../media-upload";
 
 export type AudioPhase = "idle" | "recording" | "paused" | "uploading" | "failed";
 
-/** 一段录完、等着上传的音频：失败后重试要用同一份字节、同样的时长与峰值。 */
-export interface PendingAudio {
-  blob: Blob;
-  seconds: number;
-  peaks: number[];
-}
+/** 波形观感：和 styles 里的 accent 一档，别在两端各写一份色值。 */
+const ACCENT = "#27664b";
+const ACCENT_STRONG = "#1e523c";
+
+/** 实时波形看最近多少秒。 */
+const WAVE_WINDOW_SECONDS = 10;
 
 export interface AudioRecorderOptions {
-  devices?: DeviceSource;
-  refresh(): void;
-  /** 设备门禁 + 媒体通道都就绪 */
+  container: React.RefObject<HTMLDivElement | null>;
   ready: boolean;
   autostart: boolean;
   maxSeconds: number;
   quality: string;
-  noiseReduction: boolean;
-  selected?: string;
+  deviceId?: string;
   handler?: string;
   uploadUrl?: string;
   onEvent?: EventHandler;
 }
 
-export interface AudioRecorder {
-  phase: AudioPhase;
-  seconds: number;
-  /** 实时电平；暂停时不涨 */
-  live: number[];
-  error?: string;
-  start(): void;
-  stop(): void;
-  pause(): void;
-  resume(): void;
-  retry(): void;
+let loading: Promise<[typeof WaveSurfer, typeof RecordPlugin]> | null = null;
+
+/** 静态引入会让 node 环境的测试直接炸；用到时再拉，只拉一次。 */
+function loadLibrary(): Promise<[typeof WaveSurfer, typeof RecordPlugin]> {
+  if (loading === null) {
+    loading = Promise.all([
+      import("wavesurfer.js"),
+      import("wavesurfer.js/dist/plugins/record.js"),
+    ]).then(([wave, record]) => [wave.default, record.default]);
+  }
+  return loading;
 }
 
 /**
- * audio_capture 的录制机制：开流、录音、实时电平、暂停、上传、卸载即提交。
- * 只管行为，不管长什么样——界面在 audio-capture.tsx。
+ * 录音：MediaRecorder、实时波形、暂停全交给 wavesurfer 的 record 插件，
+ * 这里只管 Omora 自己的那几步 —— 设备门禁、上传、失败重试、卸载即提交。
  */
-export function useAudioRecorder(options: AudioRecorderOptions): AudioRecorder {
+export function useAudioRecorder(options: AudioRecorderOptions) {
   const {
-    devices,
-    refresh,
+    container,
     ready,
     autostart,
     maxSeconds,
     quality,
-    noiseReduction,
-    selected,
+    deviceId,
     handler,
     uploadUrl,
     onEvent,
   } = options;
-  const timer = useRecordTimer();
-  const {
-    stop: stopTimer,
-    start: startTimer,
-    pause: pauseTimer,
-    resume: resumeTimer,
-    paused: isPaused,
-    elapsed,
-  } = timer;
   const [phase, setPhase] = useState<AudioPhase>("idle");
-  const [live, setLive] = useState<number[]>([]);
-  const [pending, setPending] = useState<PendingAudio | null>(null);
+  const [seconds, setSeconds] = useState(0);
+  /** wavesurfer 是异步加载的：加载完之前不能开录，否则 autostart 会扑空。 */
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
-  const recorder = useRef<MediaRecorder | null>(null);
-  const stream = useRef<MediaStream | null>(null);
-  const chunks = useRef<Blob[]>([]);
-  const tap = useRef<AnalyserTap | undefined>(undefined);
-  const peaks = useRef<number[]>([]);
-  const sampler = useRef<number | null>(null);
-  const unmounted = useRef(false);
+  const wavesurfer = useRef<WaveSurfer | null>(null);
+  const record = useRef<RecordPlugin | null>(null);
+  const pending = useRef<{ blob: Blob; seconds: number } | null>(null);
   const submitted = useRef(false);
-  const starting = useRef(false);
-  const autostarted = useRef(false);
-  /** 卸载之后 onstop 还要发事件：回调从 ref 取最新的一份。 */
-  const latest = useRef({ handler, onEvent, uploadUrl });
+  const unmounted = useRef(false);
+  const latest = useRef({ handler, uploadUrl, onEvent });
+  const limit = useRef(maxSeconds);
 
   useEffect(() => {
-    latest.current = { handler, onEvent, uploadUrl };
-  }, [handler, onEvent, uploadUrl]);
-
-  /** 撤掉取样口与采样计时器；可重复调。 */
-  const stopSampling = useCallback(() => {
-    if (sampler.current !== null) {
-      window.clearInterval(sampler.current);
-      sampler.current = null;
-    }
-    tap.current?.close();
-    tap.current = undefined;
-  }, []);
-
-  const release = useCallback(() => {
-    stream.current?.getTracks().forEach((track) => track.stop());
-    stream.current = null;
-    stopTimer();
-    stopSampling();
-  }, [stopSampling, stopTimer]);
+    latest.current = { handler, uploadUrl, onEvent };
+  }, [handler, uploadUrl, onEvent]);
 
   useEffect(() => {
-    unmounted.current = false;
-    return () => {
-      unmounted.current = true;
-      const active = recorder.current;
-      if (active !== null && active.state !== "inactive") {
-        // 还在录：先停采样，再停下来交给 onstop 上传。这里只动 ref，不碰界面。
-        stopSampling();
-        active.stop();
-        return;
-      }
-      release();
-    };
-  }, [release, stopSampling]);
+    limit.current = maxSeconds;
+  }, [maxSeconds]);
 
-  /** 字节 → HTTP 媒体通道 → on_submit；失败原地留着等重试。 */
-  const upload = useCallback(async (recorded: Blob, length: number, recordedPeaks: number[]) => {
+  /** 交给 on_submit；失败就停在失败态，字节还在内存里等重试。 */
+  const upload = useCallback(async (blob: Blob, length: number) => {
     const target = latest.current;
     if (!unmounted.current) {
-      setError(undefined);
       setPhase("uploading");
+      setError(undefined);
     }
-    const { mediaId, plan } = await uploadRecorded(target.uploadUrl, recorded, unmounted.current);
+    const attempt = await uploadRecorded(target.uploadUrl, blob, unmounted.current);
+    const plan = attempt.plan;
+    const mediaId = attempt.mediaId;
     if (plan.submit && mediaId !== undefined && target.handler !== undefined) {
       submitted.current = true;
       target.onEvent?.(target.handler, {
         media: mediaId,
-        mime: recorded.type || "audio/webm",
+        mime: blob.type || "audio/webm",
         seconds: length,
-        peaks: recordedPeaks,
       });
     }
     if (plan.log) {
-      console.error("[omora] 音频没存上，组件已卸载，这段只留在内存里:", plan.reason);
+      console.error("[omora] 录音没存上，组件已卸载，这段只留在内存里:", plan.reason);
     }
+    pending.current = plan.keepBlob ? { blob, seconds: length } : null;
     if (!plan.updateUi) {
       return;
     }
     setError(plan.reason.length > 0 ? plan.reason : undefined);
     setPhase(plan.phase);
-    setPending(
-      plan.keepBlob ? { blob: recorded, seconds: length, peaks: recordedPeaks } : null,
-    );
   }, []);
 
-  const stop = useCallback(() => {
-    const active = recorder.current;
-    if (active !== null && active.state !== "inactive") {
-      active.stop();
-    }
-  }, []);
+  /** record-end：算时长、按规则决定要不要交，然后销毁波形实例。 */
+  const settle = useCallback(
+    (blob: Blob, millis: number) => {
+      // 卸载时 record.current 已经被清空：时长必须由调用方一起带进来。
+      const length = millis / 1000;
+      const plan = planStop({
+        submitted: submitted.current,
+        hasData: blob.size > 0,
+        hasHandler: latest.current.handler !== undefined,
+        unmounted: unmounted.current,
+      });
+      if (plan.updateUi) {
+        setPhase("idle");
+      }
+      if (plan.submit) {
+        void upload(blob, length);
+      }
+    },
+    [upload],
+  );
 
-  /** 采一根柱子；暂停中不采（暂停那段的静音不该被记进波形）。 */
-  const sample = useCallback(() => {
-    const current = tap.current;
-    if (current === undefined || unmounted.current) {
-      return;
-    }
-    peaks.current = pushPeak(peaks.current, current.sample());
-    setLive(peaks.current);
-  }, []);
+  useEffect(() => {
+    unmounted.current = false;
+    let disposed = false;
+
+    void loadLibrary().then(([WaveSurferClass, RecordClass]) => {
+      if (disposed || container.current === null) {
+        return;
+      }
+      const wave = WaveSurferClass.create({
+        container: container.current,
+        height: 56,
+        waveColor: ACCENT,
+        progressColor: ACCENT_STRONG,
+        barWidth: 2,
+        barGap: 1,
+        barRadius: 2,
+        cursorWidth: 0,
+        interact: false,
+        normalize: true,
+      });
+      const plugin = wave.registerPlugin(
+        RecordClass.create({
+          mimeType: "audio/webm",
+          audioBitsPerSecond: quality === "low" ? 64000 : 128000,
+          scrollingWaveform: true,
+          scrollingWaveformWindow: WAVE_WINDOW_SECONDS,
+          renderRecordedAudio: false,
+        }),
+      );
+      wavesurfer.current = wave;
+      record.current = plugin;
+      setLoaded(true);
+
+      // wavesurfer 的进度是毫秒；Omora 这边一律按秒。
+      plugin.on("record-progress", (millis: number) => {
+        if (unmounted.current) {
+          return;
+        }
+        const duration = millis / 1000;
+        setSeconds(duration);
+        if (limit.current > 0 && duration >= limit.current) {
+          plugin.stopRecording();
+        }
+      });
+      plugin.on("record-pause", () => {
+        if (!unmounted.current) {
+          setPhase("paused");
+        }
+      });
+      plugin.on("record-resume", () => {
+        if (!unmounted.current) {
+          setPhase("recording");
+        }
+      });
+      plugin.on("record-end", (blob: Blob) => {
+        settle(blob, plugin.getDuration());
+        if (unmounted.current) {
+          wave.destroy();
+        }
+      });
+    });
+
+    return () => {
+      disposed = true;
+      unmounted.current = true;
+      const plugin = record.current;
+      const wave = wavesurfer.current;
+      record.current = null;
+      wavesurfer.current = null;
+      if (plugin === null || wave === null) {
+        return;
+      }
+      if (plugin.isActive()) {
+        // 还在录：停下来，等 record-end 传完再销毁；组件已经没了，回调只发事件。
+        plugin.stopRecording();
+        return;
+      }
+      wave.destroy();
+    };
+  }, [container, quality, settle]);
 
   const start = useCallback(async () => {
-    if (handler === undefined || !ready || starting.current) {
+    const plugin = record.current;
+    if (plugin === null || !ready) {
       return;
     }
-    starting.current = true;
     setError(undefined);
-    setPending(null);
     submitted.current = false;
-    const audio: MediaTrackConstraints = {
-      echoCancellation: noiseReduction,
-      noiseSuppression: noiseReduction,
-      autoGainControl: true,
-    };
-    if (selected !== undefined && selected.length > 0) {
-      audio.deviceId = { ideal: selected };
-    }
+    pending.current = null;
     try {
-      const opened = await openMediaStream(devices, { audio });
-      if (unmounted.current) {
-        // 等权限的时候人已经走了：别偷偷录下去，麦克风也别占着
-        opened.getTracks().forEach((track) => track.stop());
-        return;
+      await plugin.startRecording(deviceId === undefined ? {} : { deviceId: { ideal: deviceId } });
+      if (!unmounted.current) {
+        setPhase("recording");
       }
-      stream.current = opened;
-      const options: MediaRecorderOptions =
-        quality === "low" ? { audioBitsPerSecond: 64000 } : {};
-      const media = new MediaRecorder(opened, options);
-      chunks.current = [];
-      peaks.current = [];
-      setLive([]);
-      media.ondataavailable = (event: BlobEvent) => {
-        if (event.data.size > 0) {
-          chunks.current.push(event.data);
-        }
-      };
-      media.onstop = () => {
-        release();
-        const length = elapsed();
-        const recordedPeaks = peaks.current;
-        const recorded = new Blob(chunks.current, { type: media.mimeType || "audio/webm" });
-        const plan = planStop({
-          submitted: submitted.current,
-          hasData: recorded.size > 0,
-          hasHandler: latest.current.handler !== undefined,
-          unmounted: unmounted.current,
-        });
-        if (plan.updateUi) {
-          if (recorded.size === 0) {
-            setError("没有录到声音");
-            setPhase("idle");
-          } else {
-            setPhase("uploading");
-          }
-        }
-        if (plan.submit) {
-          void upload(recorded, length, recordedPeaks);
-        }
-      };
-      recorder.current = media;
-      startTimer(maxSeconds, stop);
-      setPhase("recording");
-      if (autostart) {
-        autostarted.current = true;
-      }
-      media.start();
-      tap.current = openAnalyser(opened);
-      if (tap.current !== undefined) {
-        sampler.current = window.setInterval(() => {
-          if (!isPaused()) {
-            sample();
-          }
-        }, PEAK_INTERVAL_MS);
-      }
-      refresh();
     } catch (upstream) {
-      release();
-      if (unmounted.current) {
-        return;
+      if (!unmounted.current) {
+        setError(captureReason(upstream));
+        setPhase("idle");
       }
-      setError(captureErrorReason(upstream, "audioinput"));
-      setPhase("idle");
-    } finally {
-      starting.current = false;
     }
-  }, [
-    autostart,
-    devices,
-    elapsed,
-    handler,
-    isPaused,
-    maxSeconds,
-    noiseReduction,
-    quality,
-    ready,
-    refresh,
-    release,
-    sample,
-    selected,
-    startTimer,
-    stop,
-    upload,
-  ]);
+  }, [deviceId, ready]);
 
-  /** autostart 只在真开起来之后算数；等设备枚举完、通道就绪才起手。 */
+  // 按住空格进来的：波形库加载完、设备就绪之后立刻开录。
   useEffect(() => {
-    if (!autostart || !ready || autostarted.current || starting.current) {
+    if (!autostart || !ready || !loaded) {
       return;
     }
     void start();
-  }, [autostart, ready, start]);
+  }, [autostart, loaded, ready, start]);
+
+  const stop = useCallback(() => {
+    record.current?.stopRecording();
+  }, []);
 
   const pause = useCallback(() => {
-    const active = recorder.current;
-    if (active === null || active.state !== "recording") {
-      return;
-    }
-    try {
-      active.pause();
-    } catch (upstream) {
-      console.error("[omora] 暂停失败:", upstream);
-      return;
-    }
-    pauseTimer();
-    setPhase("paused");
-  }, [pauseTimer]);
+    record.current?.pauseRecording();
+  }, []);
 
   const resume = useCallback(() => {
-    const active = recorder.current;
-    if (active === null || active.state !== "paused") {
-      return;
-    }
-    try {
-      active.resume();
-    } catch (upstream) {
-      console.error("[omora] 继续失败:", upstream);
-      return;
-    }
-    resumeTimer();
-    setPhase("recording");
-  }, [resumeTimer]);
+    record.current?.resumeRecording();
+  }, []);
 
   const retry = useCallback(() => {
-    if (pending === null) {
-      return;
+    const last = pending.current;
+    if (last !== null) {
+      void upload(last.blob, last.seconds);
     }
-    void upload(pending.blob, pending.seconds, pending.peaks);
-  }, [pending, upload]);
+  }, [upload]);
 
-  return {
-    phase,
-    seconds: timer.seconds,
-    live,
-    error,
-    start: () => {
-      void start();
-    },
-    stop,
-    pause,
-    resume,
-    retry,
-  };
+  return { phase, seconds, error, start, stop, pause, resume, retry };
+}
+
+function captureReason(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.length > 0 ? message : "打不开麦克风";
 }

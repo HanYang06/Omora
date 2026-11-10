@@ -76,7 +76,7 @@ target=log  method=write_many  args={entries: [{proc, ch, lvl, msg, data}, ...]}
 
 ```python
 def apply(self, ctx: Context) -> None:
-    log = ctx.log            # 通道名就是插件名
+    log = ctx.log  # 通道名就是插件名
     log.info("装了", count=12)
     log.warning("服务缺失", service="audio")
 ```
