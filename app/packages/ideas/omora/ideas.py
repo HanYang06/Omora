@@ -1,9 +1,9 @@
 """ideas：灵感页。
 
 三栏由页面自己排：Split(索引栏, 主区)。索引栏只导航；主区在同一页里换模式——
-首页（搜索区、捕捉区、列表面板）、结果、详情、三种捕捉。
-捕捉：文字是自己的；录音 / 录像由 audio / video 插件按服务名提供——它们没有，
-对应的 Tile 就不出现。置顶 / 归档只在详情里做。
+首页（搜索区、捕捉区、列表面板）、结果、详情。捕捉就地做：点 Tile 只把捕捉区换成
+工作区，不换页；停止录制就是落库，收起回三个 Tile。录音 / 录像由 audio / video
+插件按服务名提供——它们没有，对应的 Tile 就不出现。置顶 / 归档只在详情里做。
 
 不 import 别的插件；store / media / ui 必须有，audio / video 有就用。
 """
@@ -45,10 +45,10 @@ _STALE_DAYS = 30
 HOME = "home"
 RESULTS = "results"
 DETAIL = "detail"
-CAPTURE_TEXT = "capture_text"
-CAPTURE_AUDIO = "capture_audio"
-CAPTURE_VIDEO = "capture_video"
-_CAPTURES = (CAPTURE_TEXT, CAPTURE_AUDIO, CAPTURE_VIDEO)
+AUDIO = "audio"
+VIDEO = "video"
+TEXT = "text"
+_TITLES = {AUDIO: "录音", VIDEO: "视频", TEXT: "文字"}
 _CHIPS = (
     ("all", "全部"),
     ("pinned", "置顶"),
@@ -87,6 +87,7 @@ class IdeasPlugin:
             pinned="pinned",
         )
         state: dict[str, Any] = {"mode": HOME, "query": "", "open": None, "filter": "all"}
+        capture: dict[str, Any] = {}
         history: list[tuple[str, str | None]] = []
         found: list[Any] = []
 
@@ -97,18 +98,15 @@ class IdeasPlugin:
             history.append((str(state["mode"]), None if opened is None else str(opened)))
             state["mode"] = mode
             state["open"] = record_id
+            if mode != HOME:
+                # 换页就没了：捕捉区不是持久状态。
+                capture.clear()
 
         def back(_: dict[str, Any]) -> None:
             if history:
                 mode, record_id = history.pop()
                 state["mode"] = mode
                 state["open"] = record_id
-
-        def enter(mode: str) -> Handler:
-            def run(_: dict[str, Any]) -> None:
-                go(mode)
-
-            return run
 
         def choose(key: str) -> Handler:
             def run(_: dict[str, Any]) -> None:
@@ -133,12 +131,24 @@ class IdeasPlugin:
             found[:] = search(value)
             go(RESULTS if value else HOME)
 
+        def open_capture(mode: str) -> Handler:
+            """点 Tile：只换捕捉区，不换页面模式。"""
+
+            def run(_: dict[str, Any]) -> None:
+                capture.clear()
+                capture.update(mode=mode, phase="live")
+
+            return run
+
+        def collapse(_: dict[str, Any]) -> None:
+            capture.clear()
+
         def save_text(payload: dict[str, Any]) -> None:
             value = str(payload.get("value", "")).strip()
             if not value:
                 return
             ideas.add(title=value, archived=False, pinned=False, media=None)
-            go(HOME)
+            capture.clear()
 
         def save_audio(payload: dict[str, Any]) -> None:
             service = audio_service()
@@ -148,7 +158,7 @@ class IdeasPlugin:
             if not media_id:
                 return
             ideas.add(title=spoken_title(payload), archived=False, pinned=False, media=media_id)
-            go(HOME)
+            capture.clear()
 
         def save_video(payload: dict[str, Any]) -> None:
             service = video_service()
@@ -158,7 +168,7 @@ class IdeasPlugin:
             if not media_id:
                 return
             ideas.add(title=video_title(payload), archived=False, pinned=False, media=media_id)
-            go(HOME)
+            capture.clear()
 
         def opener(record_id: str) -> Handler:
             def run(_: dict[str, Any]) -> None:
@@ -226,12 +236,47 @@ class IdeasPlugin:
         def tiles() -> list[Node]:
             nodes: list[Node] = []
             if audio_service() is not None:
-                nodes.append(Tile(icon="mic", title="录音", on_click=enter(CAPTURE_AUDIO)))
+                nodes.append(Tile(icon="mic", title="录音", on_click=open_capture(AUDIO)))
             video = video_service()
             if video is not None and video.node(save_video) is not None:
-                nodes.append(Tile(icon="video", title="视频", on_click=enter(CAPTURE_VIDEO)))
-            nodes.append(Tile(icon="text", title="文字", on_click=enter(CAPTURE_TEXT)))
+                nodes.append(Tile(icon="video", title="视频", on_click=open_capture(VIDEO)))
+            nodes.append(Tile(icon="text", title="文字", on_click=open_capture(TEXT)))
             return nodes
+
+        def recorder(mode: str) -> Node | None:
+            """工作区的主体：audio / video 插件给的捕捉节点，props 不变。"""
+            if mode == AUDIO:
+                service = audio_service()
+                return None if service is None else service.node(save_audio)
+            service = video_service()
+            return None if service is None else service.node(save_video)
+
+        def workspace() -> Node | None:
+            """工作区：一行头部（媒体名 + 收起）+ 主体那个节点。"""
+            mode = str(capture.get("mode", ""))
+            body: Node | None
+            if mode == TEXT:
+                body = Input(placeholder="记一条灵感…", on_submit=save_text)
+            else:
+                body = recorder(mode)
+            if body is None:
+                return None
+            return Panel(
+                Row(
+                    Text(_TITLES[mode]),
+                    Button("收起", variant="ghost", on_click=collapse),
+                ),
+                body,
+            )
+
+        def capture_region() -> Node:
+            """捕捉区：没有工作区就是三个 Tile，有就把这一块换成工作区。"""
+            if capture:
+                opened = workspace()
+                if opened is not None:
+                    return opened
+                capture.clear()
+            return Row(*tiles())
 
         def feed(items: list[Any]) -> Node:
             if not items:
@@ -248,7 +293,7 @@ class IdeasPlugin:
             return Page(
                 content=Column(
                     search_bar(True),
-                    Row(*tiles()),
+                    capture_region(),
                     Panel(Row(*chips), feed(filtered(items))),
                 ),
                 meta=f"{len(items)} 条",
@@ -294,20 +339,6 @@ class IdeasPlugin:
             )
             return Page(content=Column(*parts), meta="置顶" if record.pinned else "")
 
-        def capture(mode: str) -> Page:
-            body: list[Node] = []
-            if mode == CAPTURE_TEXT:
-                body.append(Input(placeholder="记一条灵感…", on_submit=save_text))
-            else:
-                audio = mode == CAPTURE_AUDIO
-                service = audio_service() if audio else video_service()
-                node = None if service is None else service.node(save_audio if audio else save_video)
-                if node is not None:
-                    body.append(node)
-            if not body:
-                body.append(Empty("这条捕捉暂时用不了。", "回首页再试。"))
-            return Page(content=Column(_views.back_bar(back), *body))
-
         def page() -> Page:
             mode = str(state["mode"])
             if mode == DETAIL:
@@ -316,8 +347,6 @@ class IdeasPlugin:
                     return opened
             if mode == RESULTS:
                 return results()
-            if mode in _CAPTURES:
-                return capture(mode)
             return home()
 
         def build() -> Page:
