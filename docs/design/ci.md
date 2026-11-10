@@ -45,8 +45,8 @@
 ## 门禁规则
 
 - `main` 只接受 merge commit；不允许 squash / rebase。
-- branch ruleset `main-rules` 要求状态检查 `gate`（本 workflow 汇总 job）与 `check`（提交信息校验）。
-- Code Quality 的 `Restrict code coverage` 规则在覆盖率上传稳定后开启：Python / TS 各自地板 + 最大下降限制。若仓库套餐不支持该规则，则以 CI 内的 `fail_under` / vitest 阈值为准。
+- branch ruleset `main-rules`：required checks = `gate`（本 workflow 汇总 job）+ `check`（提交信息校验）；CodeQL 与 Code Quality 保持开启；`Restrict code coverage` 已设“最大下降 1 个百分点”（最低覆盖率地板不放进 ruleset，由 CI 阈值自己卡：Python 95%、TS 54%）。
+- GitHub Code Quality 的覆盖率数据依赖功能开启；当前仓库的上传接口返回 404，上传步骤按尽力而为处理，覆盖率门禁以 CI 阈值 + artifact 为准。
 
 ## 本地怎么跑
 
