@@ -84,9 +84,11 @@ export function Input({ node, onEvent }: NodeComponentProps): ReactNode {
 
   return (
     <div className="omora-capture" data-type="input">
-      <span className="omora-capture-plus" aria-hidden="true">
-        +
-      </span>
+      {value === undefined ? (
+        <span className="omora-capture-plus" aria-hidden="true">
+          +
+        </span>
+      ) : null}
       <input
         className="omora-capture-input"
         placeholder={placeholder}
@@ -103,9 +105,11 @@ export function Input({ node, onEvent }: NodeComponentProps): ReactNode {
           event.currentTarget.value = "";
         }}
       />
-      <span className="omora-capture-hint" aria-hidden="true">
-        回车
-      </span>
+      {value === undefined ? (
+        <span className="omora-capture-hint" aria-hidden="true">
+          回车
+        </span>
+      ) : null}
     </div>
   );
 }

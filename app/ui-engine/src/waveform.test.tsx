@@ -43,6 +43,15 @@ describe("静态波形", () => {
     expect(html).toContain("0:03");
   });
 
+  it("柱子太少时重复展开：三秒录音的几根柱子不该横铺成一排虚线", () => {
+    const html = renderToString(<>{waveform([10, 90], 3)}</>);
+
+    expect(html).toContain('data-bars="2"');
+    const drawn = (html.match(/omora-peak"/g) ?? []).length;
+    expect(drawn).toBeGreaterThanOrEqual(120);
+    expect(drawn % 2).toBe(0);
+  });
+
   it("缺 seconds 时按 0:00 标，而不是空白", () => {
     const html = renderToString(<>{waveform([30], undefined)}</>);
 
