@@ -64,7 +64,7 @@ class Ui:
         entry.handlers.clear()
         started = time.perf_counter()
         snapshot = self._draw(name, entry)
-        self._log.debug("render", page=name, ms=(time.perf_counter() - started) * 1000)
+        self._log.debug("ui.render", page=name, ms=(time.perf_counter() - started) * 1000)
         return snapshot
 
     def event(self, handler: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -76,10 +76,10 @@ class Ui:
                 callback(payload)
                 snapshot = self._draw(name, entry)
                 self._log.info(
-                    "event", h=handler, page=name, ms=(time.perf_counter() - started) * 1000
+                    "ui.event", handler=handler, page=name, ms=(time.perf_counter() - started) * 1000
                 )
                 return snapshot
-        self._log.warning("event 未知", h=handler)
+        self._log.warning("ui.event.unknown", handler=handler)
         raise LookupError(f"未知 handler: {handler}")
 
     def _entry(self, page: str) -> _Page:

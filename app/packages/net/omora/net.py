@@ -77,11 +77,11 @@ class Net:
             value: Any = method(**call.args)
         except Exception as exc:  # noqa: BLE001 — 服务抛什么都变成一帧错误
             self._log.warning(
-                "call 失败", target=call.target, method=call.method, err=type(exc).__name__
+                "net.call.failed", target=call.target, method=call.method, err=type(exc).__name__
             )
             return error_frame(call.id, CALL_FAILED, str(exc))
         self._log.trace(
-            "call",
+            "net.call",
             target=call.target,
             method=call.method,
             ms=(time.perf_counter() - started) * 1000,
@@ -109,7 +109,7 @@ class Net:
             self._server = None
 
     async def _connection(self, ws: ServerConnection) -> None:
-        self._log.debug("ws 连上")
+        self._log.debug("net.connected")
         try:
             async for message in ws:
                 try:
@@ -119,7 +119,7 @@ class Net:
                     continue
                 await ws.send(_encode(self.handle(raw)))
         finally:
-            self._log.debug("ws 断开")
+            self._log.debug("net.disconnected")
 
 
 class NetPlugin:

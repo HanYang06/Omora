@@ -38,7 +38,7 @@ def main() -> int:
 
     # 必须在 build 之后：认领是插件取配置时发生的
     for section in config.unclaimed():
-        boot_log.warning("配置段没有插件认领", section=section)
+        boot_log.warning("config.unclaimed", section=section)
     net: Net = kernel.resolve("net")
     try:
         asyncio.run(_run(net, boot_log))
@@ -49,9 +49,9 @@ def main() -> int:
 
 async def _run(net: Net, log: Log) -> None:
     port = await net.serve()
-    log.info("内核已起", ws=f"ws://{net.host}:{port}")
+    log.info("boot.started", ws=f"ws://{net.host}:{port}")
     if net.media_url is not None:
-        log.info("媒体通道已起", url=net.media_url)
+        log.info("boot.media.started", url=net.media_url)
     try:
         await asyncio.Event().wait()
     finally:
