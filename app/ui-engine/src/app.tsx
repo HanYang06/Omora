@@ -5,10 +5,11 @@ import type { Logger } from "./core/log";
 import { fetchMedia } from "./media/media";
 import type { JsonObject } from "./core/protocol";
 import { applySnapshotUpdate, isSnapshot } from "./render/patch";
+import { initialSnapshot, isStale } from "./render/boot";
 import { withContributions } from "./render/view";
 import { topicsToSync } from "./core/topics";
 import { Shell } from "./shell/shell";
-import type { Node, Snapshot } from "./core/types";
+import type { Node, PageEntry, Snapshot } from "./core/types";
 
 /** 视图变化的唯一推送 topic：payload 里 content 是全量、ops 是补丁。 */
 const SNAPSHOT_TOPIC = "ui.snapshot";
@@ -42,7 +43,8 @@ function errorText(error: unknown): string {
  * 视图变化只走 ui.snapshot 事件；用户导航才决定当前页。
  */
 export function App({ connection, logger }: AppProps): ReactNode {
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  // 先画构建期冻结的骨架，不等后端；连上之后第一份真快照把它换掉。
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(() => initialSnapshot());
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const snapshotRef = useRef<Snapshot | null>(null);
   /** 用户想看的页；推送不能改它。 */
@@ -54,6 +56,8 @@ export function App({ connection, logger }: AppProps): ReactNode {
   /** open 的代号：断线 / 重连之后，旧的那次重放不再往下走。 */
   const replaySeq = useRef(0);
   const lastStatus = useRef<ConnectionStatus | null>(null);
+  /** 启动骨架的导航；第一次拿到真快照时比对一次。 */
+  const bootPages = useRef<PageEntry[] | null>(snapshot?.pages ?? null);
   /** 这条连接上已经订了哪些 topic：快照声明变了就补订 / 退订。 */
   const subscribed = useRef<string[]>([]);
 
@@ -139,6 +143,14 @@ export function App({ connection, logger }: AppProps): ReactNode {
           return;
         }
         const next = value;
+        if (snapshotRef.current === null) {
+          const booted = bootPages.current;
+          if (booted !== null && isStale(booted, next.pages)) {
+            logs.render.warning("static.stale", {
+              pages: next.pages.map((entry) => entry.name).join(","),
+            });
+          }
+        }
         logs.render.debug("render.received", {
           page: next.page,
           nodes: countNodes(next.content),
