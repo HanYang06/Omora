@@ -97,3 +97,43 @@ def test_rendered_artifacts_are_sorted(tmp_path: Path) -> None:
     assert ts_source.index('"demo.alpha"') < ts_source.index('"demo.beta"')
     index_source = rendered[keys.INDEX_OUT]
     assert index_source.index('"demo.alpha"') < index_source.index('"demo.beta"')
+
+
+def test_format_list_names_the_owner_and_use_count(tmp_path: Path) -> None:
+    root = _tree(
+        tmp_path,
+        {
+            "app/packages/demo/omora/a.py": (
+                'a = Slot(key="demo.slot")\nui.contribute(ctx, "demo.slot", build)\n'
+            )
+        },
+    )
+
+    text = keys.format_list(keys.scan(root))
+
+    assert "demo.slot  ← demo  (1 处使用)" in text
+    assert "om.window.page  ← ui  (0 处使用)" in text
+
+
+def test_format_key_shows_both_sides(tmp_path: Path) -> None:
+    root = _tree(
+        tmp_path,
+        {
+            "app/packages/demo/omora/a.py": (
+                'a = Slot(key="demo.slot")\nui.contribute(ctx, "demo.slot", build)\n'
+            )
+        },
+    )
+
+    text = keys.format_key(keys.scan(root)["demo.slot"])
+
+    assert "声明者: demo" in text
+    assert "声明: app/packages/demo/omora/a.py:1" in text
+    assert "使用: app/packages/demo/omora/a.py:2（demo）" in text
+
+
+def test_a_builtin_key_has_no_declaration_site(tmp_path: Path) -> None:
+    text = keys.format_key(keys.scan(_tree(tmp_path, {}))["om.window.page"])
+
+    assert "声明: （内置）" in text
+    assert "使用: 还没有人来挂" in text

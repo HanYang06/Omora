@@ -215,6 +215,7 @@ Panel(content=self.feed()),
 - `scripts/keys.py` 扫源码里的字面量（`Slot(key=...)` 声明、`contribute(..., target)` 使用），不跑插件。
 - 产物三份（都是生成的，别手改）：`app/sdk/omora/sdk/keys.py`、`app/ui-engine/src/generated/keys.ts`、`keys.json`。
 - CI：`uv run python scripts/keys.py --check` 校验产物最新；重复声明、格式不对、常量撞名都会失败。
+- 查询：`--list` 列全部键、`--who KEY` 看声明与使用位置、`--json` 给工具读（编辑器扩展用这份）。
 - 编辑器：先要 VS Code 扩展（跳声明处、悬浮说明、谁在用），LSP 等要支持第二个编辑器时再说。
 
 ## 13. 任务分解
@@ -258,6 +259,7 @@ P2-2 前半（贡献级 diff：树按字段改、成员变了整表替换、只�
 P2-4（订阅声明化：快照带 topics，客户端按它补订 / 退订）。
 P3-1 / P3-3（启动骨架：脚本空数据生成、启动先画骨架、真快照替换、导航不符记警告）。
 P2-6 补全（引擎侧 12 个控件对应的 SDK 节点 + 事件载荷类型）。
+P6-1（键索引查询：--list / --who / --json）。
 剩余任务未开始；验收标准与依赖见上面那张表。
 
 ## 14. 未定

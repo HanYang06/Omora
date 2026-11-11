@@ -225,9 +225,37 @@ def _check(entries: dict[str, Entry]) -> list[str]:
     return problems
 
 
+def format_list(entries: dict[str, Entry]) -> str:
+    """一行一把键：声明者与使用处数量。"""
+    lines = []
+    for entry in entries.values():
+        declared = f"← {entry.declared_by}"
+        uses = f"{len(entry.uses)} 处使用"
+        lines.append(f"{entry.key}  {declared}  ({uses})")
+    return "\n".join(lines)
+
+
+def format_key(entry: Entry) -> str:
+    """一把键的详情：声明与使用都带 file:line。"""
+    lines = [f"{entry.key}", f"  声明者: {entry.declared_by}"]
+    if entry.declarations:
+        lines.extend(f"  声明: {hit.path}:{hit.line}" for hit in entry.declarations)
+    else:
+        lines.append("  声明: （内置）")
+    if entry.uses:
+        lines.extend(f"  使用: {hit.path}:{hit.line}（{hit.owner}）" for hit in entry.uses)
+    else:
+        lines.append("  使用: 还没有人来挂")
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="界面键索引：生成 Python / TS 常量与 keys.json")
-    parser.add_argument("--check", action="store_true", help="只校验产物是否最新，不写")
+    parser = argparse.ArgumentParser(description="界面键索引：生成产物，或查询键")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true", help="只校验产物是否最新，不写")
+    mode.add_argument("--list", action="store_true", help="列出所有键")
+    mode.add_argument("--who", metavar="KEY", help="看一把键的声明与使用")
+    mode.add_argument("--json", action="store_true", help="打印索引 JSON（给工具读）")
     args = parser.parse_args(argv)
     try:
         entries = scan()
@@ -236,15 +264,38 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.check:
-        problems = _check(entries)
-        if problems:
-            print("FAIL keys")
-            for problem in problems:
-                print(f"  {problem}")
-            print("  跑 uv run python scripts/keys.py 重新生成")
-            return 1
-        print("PASS keys")
-        return 0
+        return _report_check(entries)
+
+    text, code = _dispatch(args, entries)
+    if text:
+        print(text, end="" if args.json else "\n")
+    return code
+
+
+def _dispatch(args: argparse.Namespace, entries: dict[str, Entry]) -> tuple[str, int]:
+    """--list / --who / --json 的输出与退出码；什么都不给就是写产物。"""
+    if args.list:
+        return format_list(entries), 0
+    if args.who is not None:
+        entry = entries.get(args.who)
+        if entry is None:
+            return f"没有这把键: {args.who}", 1
+        return format_key(entry), 0
+    if args.json:
+        return _index(entries), 0
+    return "", 0
+
+
+def _report_check(entries: dict[str, Entry]) -> int:
+    problems = _check(entries)
+    if problems:
+        print("FAIL keys")
+        for problem in problems:
+            print(f"  {problem}")
+        print("  跑 uv run python scripts/keys.py 重新生成")
+        return 1
+    print("PASS keys")
+    return 0
 
     for path, content in render(entries).items():
         path.parent.mkdir(parents=True, exist_ok=True)
