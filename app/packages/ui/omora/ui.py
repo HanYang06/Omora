@@ -46,9 +46,11 @@ class _Page:
         self, label: str, build: Builder | None, count: Counter | None, icon: str | None
     ) -> None:
         self.label = label
-        # 两种登记方式：build 回调（拉取式，旧写法）或插件自己 set 上来的树（推送式）。
+        # 三种：build 回调（拉取式，旧写法）、插件 set 上来的树（推送式）、
+        # rebuild 钩子（只在客户端明确要一页时重建，用来吸收插件装卸这类外部变化）。
         self.build = build
         self.tree: Page | None = None
+        self.rebuild: Builder | None = None
         self.count = count
         self.icon = icon
         # serial 只增不减：handler id 永不复用，陈旧的 id 打不到别人的回调上。
@@ -75,6 +77,10 @@ class _PageHandle:
     def refresh(self) -> None:
         """把这一页当前那棵树再交一次（数据变了、树也重建过时用）。"""
         self._ui.refresh_page(self.name)
+
+    def rebuild(self, builder: Builder) -> None:
+        """登记重建回调：客户端明确要这一页时由 ui 调一次，吸收插件装卸这类外部变化。"""
+        self._ui.bind_rebuild(self.name, builder)
 
 
 class Ui:
@@ -158,6 +164,9 @@ class Ui:
             return
         self._push(name, entry, self._draw(name, entry))
 
+    def bind_rebuild(self, name: str, builder: Builder) -> None:
+        self._entry(name).rebuild = builder
+
     def refresh_page(self, name: str) -> None:
         """把这一页当前那棵树重交给客户端一次（全量兜底）。"""
         entry = self._entry(name)
@@ -172,6 +181,9 @@ class Ui:
             raise LookupError("没有登记任何页面")
         entry = self._entry(name)
         started = time.perf_counter()
+        if entry.rebuild is not None:
+            # 明确要一页 = 可以重建：插件装卸、外部数据变化都在这一次吸收掉。
+            entry.tree = entry.rebuild()
         snapshot = self._deliver(entry, self._draw(name, entry))
         self._log.debug("ui.render", page=name, ms=(time.perf_counter() - started) * 1000)
         return snapshot
