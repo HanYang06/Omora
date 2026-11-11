@@ -54,7 +54,7 @@ class List(Node):
 
 @dataclass(frozen=True, init=False)
 class Item(Node):
-    """清单里的一行：左栏 meta，右边标题，子节点是这一行的动作。
+    """清单里的一行：标题在前，左栏的 meta 可选，子节点是这一行的动作。
 
     on_click 让整行可点（索引栏用）；不给就是一个静态行。
     """
@@ -66,7 +66,7 @@ class Item(Node):
     children: tuple[Node, ...]
 
     def __init__(
-        self, meta: str, title: str, *actions: Node, on_click: Handler | None = None
+        self, title: str, *actions: Node, meta: str = "", on_click: Handler | None = None
     ) -> None:
         object.__setattr__(self, "meta", meta)
         object.__setattr__(self, "title", title)
@@ -322,6 +322,14 @@ class Waveform(Node):
     src: str = ""
 
 
+@dataclass(frozen=True)
+class Slot(Node):
+    """一个可被别的插件挂东西的位置：key 是全限定键，别人按它挂。"""
+
+    type: ClassVar[str] = "slot"
+    key: str = ""
+
+
 @dataclass(frozen=True, init=False)
 class Panel(Node):
     """内嵌面板：一块 inset 面，装工具条和行。子节点通常是一行工具条 + 内容。"""
@@ -380,6 +388,7 @@ __all__ = [
     "Result",
     "Row",
     "Search",
+    "Slot",
     "Split",
     "Suggestion",
     "Text",

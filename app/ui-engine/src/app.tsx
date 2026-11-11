@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { reportCapabilitiesOnce } from "./core/capability-report";
+import { reportDevicesOnce } from "./core/device-report";
 import { Connection, type ConnectionStatus } from "./core/connection";
 import type { Logger } from "./core/log";
 import { fetchMedia } from "./media/media";
 import type { JsonObject } from "./core/protocol";
-import { applySnapshotUpdate } from "./render/patch";
+import { applySnapshotUpdate, isSnapshot } from "./render/patch";
+import { initialSnapshot, isStale } from "./render/boot";
+import { withContributions } from "./render/view";
+import { topicsToSync } from "./core/topics";
 import { Shell } from "./shell/shell";
-import type { Node, Snapshot } from "./core/types";
+import type { Node, PageEntry, Snapshot } from "./core/types";
 
 /** 视图变化的唯一推送 topic：payload 里 content 是全量、ops 是补丁。 */
 const SNAPSHOT_TOPIC = "ui.snapshot";
@@ -14,30 +17,6 @@ const SNAPSHOT_TOPIC = "ui.snapshot";
 export interface AppProps {
   connection: Connection;
   logger: Logger;
-}
-
-/** ui.render 的返回值必须是页面快照；不是就丢掉，别把壳画坏。 */
-function asSnapshot(value: unknown): Snapshot | null {
-  if (typeof value !== "object" || value === null) {
-    return null;
-  }
-  const record = value as Record<string, unknown>;
-  if (!Array.isArray(record.pages)) {
-    return null;
-  }
-  if (typeof record.page !== "string") {
-    return null;
-  }
-  if (typeof record.meta !== "string") {
-    return null;
-  }
-  if (typeof record.content !== "object" || record.content === null) {
-    return null;
-  }
-  if (typeof record.version !== "number") {
-    return null;
-  }
-  return value as Snapshot;
 }
 
 /** 快照里有多少个节点：只数，不看内容。 */
@@ -64,7 +43,8 @@ function errorText(error: unknown): string {
  * 视图变化只走 ui.snapshot 事件；用户导航才决定当前页。
  */
 export function App({ connection, logger }: AppProps): ReactNode {
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  // 先画构建期冻结的骨架，不等后端；连上之后第一份真快照把它换掉。
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(() => initialSnapshot());
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const snapshotRef = useRef<Snapshot | null>(null);
   /** 用户想看的页；推送不能改它。 */
@@ -76,6 +56,10 @@ export function App({ connection, logger }: AppProps): ReactNode {
   /** open 的代号：断线 / 重连之后，旧的那次重放不再往下走。 */
   const replaySeq = useRef(0);
   const lastStatus = useRef<ConnectionStatus | null>(null);
+  /** 启动骨架的导航；第一次拿到真快照时比对一次。 */
+  const bootPages = useRef<PageEntry[] | null>(snapshot?.pages ?? null);
+  /** 这条连接上已经订了哪些 topic：快照声明变了就补订 / 退订。 */
+  const subscribed = useRef<string[]>([]);
 
   const logs = useMemo(
     () => ({
@@ -87,11 +71,38 @@ export function App({ connection, logger }: AppProps): ReactNode {
     [logger],
   );
 
+  /** 按快照声明的 topic 补订 / 退订；引擎不写死插件 topic。 */
+  const syncTopics = useCallback(
+    async (next: Snapshot) => {
+      const { add, remove } = topicsToSync(subscribed.current, next.topics ?? [SNAPSHOT_TOPIC]);
+      if (add.length === 0 && remove.length === 0) {
+        return;
+      }
+      try {
+        if (remove.length > 0) {
+          const result = await connection.unsubscribe(remove);
+          subscribed.current = result.topics;
+        }
+        if (add.length > 0) {
+          const result = await connection.subscribe(add);
+          subscribed.current = result.topics;
+        }
+      } catch (error) {
+        logs.conn.warning("subscribe.failed", { err: errorText(error) });
+      }
+    },
+    [connection, logs],
+  );
+
   // 只换视图，不改"用户想看的页"：当前页由导航和 render 的结果决定，推送不能切页。
-  const applySnapshot = useCallback((next: Snapshot) => {
-    snapshotRef.current = next;
-    setSnapshot(next);
-  }, []);
+  const applySnapshot = useCallback(
+    (next: Snapshot) => {
+      snapshotRef.current = next;
+      setSnapshot(next);
+      void syncTopics(next);
+    },
+    [syncTopics],
+  );
 
   useEffect(() => connection.subscribeStatus(setStatus), [connection]);
 
@@ -127,10 +138,18 @@ export function App({ connection, logger }: AppProps): ReactNode {
           logs.render.debug("render.stale", { page: page ?? "" });
           return;
         }
-        const next = asSnapshot(value);
-        if (next === null) {
+        if (!isSnapshot(value)) {
           console.error("[omora] ui 返回的不是页面快照:", value);
           return;
+        }
+        const next = value;
+        if (snapshotRef.current === null) {
+          const booted = bootPages.current;
+          if (booted !== null && isStale(booted, next.pages)) {
+            logs.render.warning("static.stale", {
+              pages: next.pages.map((entry) => entry.name).join(","),
+            });
+          }
         }
         logs.render.debug("render.received", {
           page: next.page,
@@ -152,6 +171,8 @@ export function App({ connection, logger }: AppProps): ReactNode {
   useEffect(() => {
     if (status !== "open") {
       replayed.current = false;
+      // 服务端断线即清空订阅，这里跟着复位，重连后从快照重新订。
+      subscribed.current = [];
       return;
     }
     if (replayed.current) {
@@ -163,7 +184,7 @@ export function App({ connection, logger }: AppProps): ReactNode {
 
     void (async () => {
       try {
-        await reportCapabilitiesOnce(connection);
+        await reportDevicesOnce(connection);
       } catch (error) {
         logs.conn.warning("capability.report_failed", { err: errorText(error) });
       }
@@ -173,6 +194,7 @@ export function App({ connection, logger }: AppProps): ReactNode {
 
       try {
         const result = await connection.subscribe([SNAPSHOT_TOPIC]);
+        subscribed.current = result.topics;
         logs.conn.debug("subscribe.done", { topics: result.topics });
       } catch (error) {
         logs.conn.warning("subscribe.failed", { err: errorText(error) });
@@ -255,9 +277,12 @@ export function App({ connection, logger }: AppProps): ReactNode {
     [connection, logs],
   );
 
+  // 组合是纯函数：快照一变就重算，未触碰的子树保持引用（memo 靠它）。
+  const view = useMemo(() => withContributions(snapshot), [snapshot]);
+
   return (
     <Shell
-      snapshot={snapshot}
+      snapshot={view}
       status={status}
       endpoint={connection.endpoint}
       onNavigate={navigate}

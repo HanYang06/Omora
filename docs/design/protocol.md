@@ -86,20 +86,20 @@ event  {"type": "event", "topic": "ui.snapshot", "payload": {...}}
 
 - `call` 默认 30s 超时，超时 reject `CallError{code:"timeout"}`；长调用显式传 `timeout: 0` 关掉。
 - 断线后指数退避重连（0.5s → 10s，带抖动）。连接状态仍是 `idle` / `connecting` / `open` / `closed` / `failed`。
-- 重连成功后**客户端重放**：上报能力（`manager.report_capabilities`）、重画当前页（`ui.render`）、
+- 重连成功后**客户端重放**：上报设备（`manager.report_devices`）、重画当前页（`ui.render`）、
   重建订阅（`net.subscribe`）。订阅挂在连接上，服务端不需要会话恢复，也不需要记住谁是谁。
 
 ### 4.2 插件管理调用
 
 manager 是普通服务，不新增帧类型：
 
-| 调用                          | args                                  | 返回     |
-| ----------------------------- | ------------------------------------- | -------- |
-| `manager.inventory`           | `{}`                                  | 清单快照 |
-| `manager.report_capabilities` | `{"capabilities": ["microphone"]}`    | 清单快照 |
-| `manager.set_enabled`         | `{"name": "ideas", "enabled": false}` | 清单快照 |
+| 调用                     | args                                  | 返回     |
+| ------------------------ | ------------------------------------- | -------- |
+| `manager.inventory`      | `{}`                                  | 清单快照 |
+| `manager.report_devices` | `{"devices": ["audioinput"]}`         | 清单快照 |
+| `manager.set_enabled`    | `{"name": "ideas", "enabled": false}` | 清单快照 |
 
-能力是客户端的事实：引擎在连接 open 后上报一次，Python 侧不探测硬件。
+设备是客户端的事实：引擎在连接 open 后上报一次原始设备种类；Python 侧不探测硬件，也不拿它决定装不装。
 
 ## 5. 订阅与推送
 
@@ -126,11 +126,15 @@ manager 是普通服务，不新增帧类型：
   "page": "ideas",
   "meta": "3 条",
   "content": { "type": "column", "props": {}, "children": [] },
+  "contributions": [],
+  "topics": ["ui.snapshot", "audio.peaks"],
   "version": 12
 }
 ```
 
 - `version` 是页面自己的单调计数，由 ui 插件给；net 不解释它，只负责运。
+- `topics` 是这一页要订的推送 topic（可选，缺省只订 `ui.snapshot`）；客户端按它订阅与退订。
+- `contributions` 是别的插件交来的视图块（可选）；引擎组合后才画。
 - 增量走 event：`{"topic": "ui.snapshot", "payload": {"page": "ideas", "version": 13, "base": 12, "ops": [...]}}`。
 - 客户端只在 `base` 等于自己当前版本时应用；不匹配、或遇到不认识的 op，就发一次 `ui.render` 求全量。
   **永远有全量兜底**，补丁是加速不是唯一路径。

@@ -12,14 +12,30 @@ from omora.video import Video, VideoPlugin
 CHANNEL = "http://127.0.0.1:8766/media"
 
 
+class _Manager:
+    """manager 的替身：只回答设备事实，不参与判断。"""
+
+    def __init__(self, devices: tuple[str, ...]) -> None:
+        self._devices = devices
+
+    def devices(self) -> tuple[str, ...]:
+        return self._devices
+
+    def reported(self) -> bool:
+        return True
+
+
 class _Net:
     def __init__(self, media_url: str | None) -> None:
         self.media_url = media_url
 
 
-def _ctx(tmp_path: Path, *, channel: str | None = CHANNEL) -> Context:
+def _ctx(
+    tmp_path: Path, *, channel: str | None = CHANNEL, devices: tuple[str, ...] = ("videoinput",)
+) -> Context:
     ctx = Context()
     ctx.provide("media", Media(tmp_path / "media"))
+    ctx.provide("manager", _Manager(devices))
     if channel is not None:
         ctx.provide("net", _Net(channel if channel != "" else None))
     return ctx
@@ -47,6 +63,12 @@ def test_a_channel_that_has_not_started_means_no_capture_node(tmp_path: Path) ->
     ctx = Context()
     ctx.provide("media", Media(tmp_path / "media"))
     ctx.provide("net", _Net(None))
+
+    assert _video(ctx).node(_noop) is None
+
+
+def test_no_device_of_this_kind_means_no_capture_node(tmp_path: Path) -> None:
+    ctx = _ctx(tmp_path, devices=("audioinput",))
 
     assert _video(ctx).node(_noop) is None
 

@@ -280,6 +280,12 @@ jobs:
         run: uv run python scripts/budget.py
       - name: Docs links
         run: uv run python scripts/docs_links.py
+      - name: Key index
+        run: uv run python scripts/keys.py --check
+      - name: Static skeleton
+        run: uv run python scripts/static_ui.py --check
+      - name: End-to-end smoke
+        run: uv run python scripts/smoke.py
 
   windows:
     name: windows

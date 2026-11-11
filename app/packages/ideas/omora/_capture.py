@@ -26,6 +26,10 @@ _MIN_SECONDS = 0.4
 """短于这个长度就当手滑：按住即录最容易按一下就松，不落库、不出已保存条。"""
 
 
+def _noop() -> None:
+    pass
+
+
 class Capture:
     """捕捉区：点 Tile 进工作区，提交成功之后出一条已保存条。"""
 
@@ -35,11 +39,14 @@ class Capture:
         media: Any,
         audio: Callable[[], Any],
         video: Callable[[], Any],
+        *,
+        changed: Callable[[], None] | None = None,
     ) -> None:
         self._ideas = ideas
         self._media = media
         self._audio = audio
         self._video = video
+        self._changed = changed if changed is not None else _noop
         self._state: dict[str, Any] = {}
 
     def clear(self) -> None:
@@ -51,6 +58,7 @@ class Capture:
         def run(_: dict[str, Any]) -> None:
             self.clear()
             self._state.update(mode=mode, phase="live")
+            self._changed()
 
         return run
 
@@ -60,10 +68,12 @@ class Capture:
             return
         self.clear()
         self._state.update(mode=AUDIO, phase="live", autostart=True)
+        self._changed()
 
     def hold_end(self, _: dict[str, Any]) -> None:
         """松开：回三个 Tile；落库交给引擎卸载组件时的那次提交，不出命名条。"""
         self.clear()
+        self._changed()
 
     def region(self) -> Node:
         """捕捉区：没有工作区就是三个 Tile，有就把这一块换成工作区。"""
@@ -125,12 +135,14 @@ class Capture:
 
     def _collapse(self, _: dict[str, Any]) -> None:
         self.clear()
+        self._changed()
 
     def _again(self, _: dict[str, Any]) -> None:
         """再录一条：回到录制初始态，重新挂上捕捉组件。"""
         mode = str(self._state.get("mode", ""))
         self.clear()
         self._state.update(mode=mode, phase="live")
+        self._changed()
 
     def _rename(self, payload: dict[str, Any]) -> None:
         """给刚存的那条改名；空回车保留现在的名字，不清空标题。"""
@@ -141,6 +153,7 @@ class Capture:
         title = str(payload.get("value", "")).strip() or str(record.title)
         self._ideas.update(str(record_id), title=title)
         self._state["title"] = title
+        self._changed()
 
     def _save_text(self, payload: dict[str, Any]) -> None:
         value = str(payload.get("value", "")).strip()
@@ -148,6 +161,7 @@ class Capture:
             return
         self._ideas.add(title=value, archived=False, pinned=False, media=None)
         self.clear()
+        self._changed()
 
     def _save_audio(self, payload: dict[str, Any]) -> None:
         service = self._audio()
@@ -190,14 +204,14 @@ class Capture:
         这时不能再把面板变回来。
         """
         record = self._ideas.add(title=title, archived=False, pinned=False, media=media_id)
-        if self._state.get("mode") != mode or self._state.get("phase") != "live":
-            return
-        self.clear()
-        self._state.update(
-            mode=mode,
-            phase="saved",
-            media=media_id,
-            title=title,
-            seconds=seconds(payload),
-            record=record.id,
-        )
+        if self._state.get("mode") == mode and self._state.get("phase") == "live":
+            self.clear()
+            self._state.update(
+                mode=mode,
+                phase="saved",
+                media=media_id,
+                title=title,
+                seconds=seconds(payload),
+                record=record.id,
+            )
+        self._changed()

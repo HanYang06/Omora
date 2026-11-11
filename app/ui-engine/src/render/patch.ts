@@ -50,6 +50,12 @@ function applyFull(snapshot: Snapshot, payload: JsonObject): SnapshotUpdate {
   if (!isNode(payload.content)) {
     return fail("malformed");
   }
+  if (payload.contributions !== undefined && !Array.isArray(payload.contributions)) {
+    return fail("malformed");
+  }
+  if (payload.topics !== undefined && !isTopics(payload.topics)) {
+    return fail("malformed");
+  }
   return {
     ok: true,
     snapshot: {
@@ -58,6 +64,8 @@ function applyFull(snapshot: Snapshot, payload: JsonObject): SnapshotUpdate {
       meta: payload.meta,
       content: payload.content,
       version: payload.version,
+      ...(payload.contributions === undefined ? {} : { contributions: payload.contributions }),
+      ...(payload.topics === undefined ? {} : { topics: payload.topics }),
     },
   };
 }
@@ -256,6 +264,10 @@ function isNode(value: unknown): value is Node {
   return typeof value.type === "string" && isRecord(value.props) && Array.isArray(value.children);
 }
 
+function isTopics(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((topic) => isNonEmptyString(topic));
+}
+
 function isPageEntries(value: unknown): value is PageEntry[] {
   if (!Array.isArray(value)) {
     return false;
@@ -274,9 +286,18 @@ function isPageEntries(value: unknown): value is PageEntry[] {
   });
 }
 
-function isSnapshot(value: unknown): value is Snapshot {
+/** 快照形状校验：app 收 render 结果、patch 收补丁结果都用它。 */
+export function isSnapshot(value: unknown): value is Snapshot {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.contributions !== undefined && !Array.isArray(value.contributions)) {
+    return false;
+  }
+  if (value.topics !== undefined && !isTopics(value.topics)) {
+    return false;
+  }
   return (
-    isRecord(value) &&
     isPageEntries(value.pages) &&
     isNonEmptyString(value.page) &&
     typeof value.meta === "string" &&

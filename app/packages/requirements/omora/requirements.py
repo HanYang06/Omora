@@ -17,10 +17,8 @@ class RequirementsPlugin:
     def apply(self, ctx: Context) -> None:
         ui: Any = ctx.resolve("ui")
 
-        def build() -> Page:
-            return Page(content=Empty("还没有需求。"))
-
-        ui.page(ctx, "requirements", "需求", build, icon="requirements")
+        page = ui.page(ctx, "requirements", "需求", icon="requirements")
+        page.set(Page(content=Empty("还没有需求。")))
 
 
 __all__ = ["RequirementsPlugin"]

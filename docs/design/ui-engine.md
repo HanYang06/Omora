@@ -2,6 +2,8 @@
 
 位置：`app/ui-engine/`。职责：把节点树画出来，把交互发回去。它不持有真相。
 
+> 槽位模型已经换成"键 + 贡献 + 组合"，契约见 [UI 插件体系](ui-plugins.md)；本文的组件与事件部分仍然有效。
+
 ## 1. 技术
 
 TypeScript + React + Vite。
@@ -11,27 +13,18 @@ TypeScript + React + Vite。
 ```
 src/
   main.tsx        挂载
-  app.tsx         容器：快照 + 连接状态；连上 render，点导航 render，回车 / 动作 event，播放取媒体
-  shell.tsx       默认母页面：左侧导航 + 右侧一页纸
-  connection.ts   WebSocket：请求 / 响应按 id 配对；未连接不发请求
-  capability-report.ts  连上后把客户端能力报给 manager（检测在 capture 的 devices.ts）
-  protocol.ts     帧的类型与校验（读同一份 fixture）
-  renderer.tsx    节点树 → React；未知 type 画占位框
-  components.tsx  基础词表（column / row / text / button / input / list / item / empty）+ 注册表
-  capture.tsx     老录音条 / 音频播放（v0 形状，保留）
-  audio-capture.tsx  音频捕捉：设备门禁、多设备、录音
-  video-capture.tsx  视频捕捉：设备门禁、预览、重录、上传；加视频播放器
-  devices.ts      设备检测：枚举、门禁、热插拔、能力上报（纯函数，可直接测）
-  use-devices.ts  设备状态的 React 胶水
-  device-select.tsx  多设备时的选择器
-  media.ts        取媒体（media.load）+ 上传（HTTP 媒体通道）
-  shared.ts       组件共用的 props 与工具
-  search.tsx      搜索框、建议、结果
-  searchText.ts   命中切分与键盘决策（纯函数）
-  types.ts        节点、页面快照、媒体、handler 类型
-  styles.css      壳与基础词表
-  media.css       录音 / 播放
-  *.test.ts(x)    vitest：协议、连接、渲染、母页面
+  app.tsx         容器：快照 + 连接状态；启动先画静态骨架，连上后 render / 订阅 / 事件
+  core/           连接、协议、类型、日志、设备上报、topic 差集（topics.ts）
+  render/         节点树 → React（renderer）、组合器（compose）、视图合成（view）、
+                  启动骨架（boot）、补丁（patch）、基础词表（components / cards / tiles /
+                  hotkey / waveform）、控件（controls/）
+  shell/          默认窗口：三栏壳（shell）、布局原语（layout）、图标（icons）
+  capture/        设备枚举与门禁（devices）、音频 / 视频捕捉组件、上传
+  media/          媒体播放（按需取字节）与上传
+  search/         搜索框、建议、结果；命中切分（纯函数）
+  generated/      生成物：keys.ts、static-tree.ts（别手改，脚本产出）
+  styles/         壳与词表样式（styles.css / media.css）
+  *.test.ts(x)    vitest：协议、连接、渲染、组合、启动骨架、母页面
 ```
 
 测试：`pnpm --dir app/ui-engine test --run`。协议测试读 `app/sdk/tests/fixtures/protocol.json`——Python 与 TS 用同一份帧样例。
@@ -45,9 +38,10 @@ src/
 
 ## 4. 数据流
 
-1. 连上 → `manager.report_capabilities({capabilities})` 上报本客户端能力，然后
+1. 连上 → `manager.report_devices({devices})` 上报本客户端设备事实，然后
    `ui.render({})` → `result` 是页面快照 → `setState`。
-2. 渲染：`Shell` 用 `pages` 画导航、`page` 高亮、`label` + `meta` 画标题，`content` 画页面。
+2. 渲染：`Shell` 用 `pages` 画导航、`page` 高亮，`content` 与 `contributions` 组合后画页面。
+   快照里的 `topics` 决定这条连接订哪些推送；变了就补订 / 退订。
 3. 点导航 → 引擎直接发 `ui.render({page})`，不走事件。
 4. 捕捉：
    - 打字回车 → `ui.event({handler, payload: {value}})`；
@@ -84,12 +78,12 @@ src/
 - `page` 是当前页；`meta` 是标题旁那句话。
 - `content` 是节点树；媒体只放 id，不放字节。
 
-## 6. 母页面与槽位
+## 6. 窗口、区域与贡献
 
-- 默认母页面 = `shell.tsx`：侧栏骨架（引擎画）+ 导航（插件登记）+ 页面（插件填）。
-- 两个槽位：`nav`（页面的 name / label / count）和 `page`（当前页内容）。
-- 侧栏顶部留白：名字 / Logo 未定，设计不依赖它。
-- 以后要常驻辅助栏，再开第三个槽。
+原来的"母页面 + 两个槽位"已被 [UI 插件体系](ui-plugins.md) 取代：窗口声明区域，页面挂在区域上，
+任意插件用"键 + 四种挂接动作"往里交贡献，引擎组合出一棵 root tree。
+
+本文只留一句现状：默认窗口仍是三栏（56px 图标栏 + 主区），索引栏与主区由页面自己用 `Split` 排。
 
 ## 7. 组件
 
@@ -125,8 +119,8 @@ src/
 ## 9. 状态
 
 - 只持有三样：当前快照、连接状态、本机的设备状态（设备清单 / 枚举到没有）。
-- 设备能力上报一次：连接 open 后把 `detectCapabilities()` 的结果交给 manager 的
-  `report_capabilities`（谁上报、怎么报是 manager 那边的事；引擎只给检测结果，不重复报）。
+- 设备事实上报一次：连接 open 后把 `detectDevices()` 的结果交给 manager 的
+  `report_devices`（引擎只给原始设备种类，不翻译成产品词，也不决定装不装）。
   设备状态是本机事实，不上报成真相：它只决定这一台机器上的按钮能不能按。
 - 不缓存真相：数据在 Python 侧，这里只有当前这一份快照。
 - 媒体按需取、按需播；不把字节塞进快照。
@@ -141,7 +135,7 @@ src/
 - 不认识 Python 服务之外的领域。
 - 不做业务判断：点按钮就发事件，不自己改数据。
 - 不 import Python 侧任何东西。
-- 客户端能力由引擎检测并上报；检测只归 capture（`devices.ts`），不重复枚举。
+- 客户端设备由引擎枚举并上报原始种类；检测只归 capture（`devices.ts`），不重复枚举，也不翻译成产品词。
 - 只认 `{type, props, children}`、页面快照与 handler id。
 - 只跟 net 插件说话；net 是系统插件，不属于内核。
 
@@ -150,6 +144,7 @@ src/
 - TS 插件宿主（接管整个界面的那一层）。
 - 深色主题。
 - 本地转写 / AI 解读。
-- 关联 / 网图、局部更新 / diff。
-- 重连、请求超时、多客户端、窄屏适配。
+- 关联 / 网图。
+- 多客户端、窄屏适配。
 - 视频通道的 Range（拖进度）与鉴权；设备权限被拒后的引导。
+- 页面级"只重建脏贡献"：现在一次事件重建整页，线上只推补丁。

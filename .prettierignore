@@ -21,3 +21,7 @@ skills-lock.json
 
 # Python 交给 ruff
 *.py
+
+# 生成物（scripts/keys.py 产出，格式由生成器决定）
+app/ui-engine/src/generated/
+keys.json

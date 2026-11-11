@@ -19,6 +19,20 @@ export interface MediaData {
 
 export type MediaResolver = (media: string) => Promise<MediaData>;
 
+/**
+ * 一份贡献：某个插件交来的一棵树 + 落点键 + 顺序（协议 §2）。
+ *
+ * 归属打在贡献上，不逐节点盖戳：里面所有节点都归 owner。
+ */
+export interface Contribution {
+  owner: string;
+  target: string;
+  op: "replace" | "before" | "after" | "append";
+  order?: number;
+  seq?: number;
+  tree: Node;
+}
+
 /** 导航里的一项：页面登记时给的 name / label / 可选图标 / 可选数量。 */
 export interface PageEntry {
   name: string;
@@ -40,4 +54,8 @@ export interface Snapshot {
   meta: string;
   content: Node;
   version: number;
+  /** 别的插件交来的贡献；合成后才画。没有就是空。 */
+  contributions?: Contribution[];
+  /** 这一页要订的推送 topic；没有就只订视图通道。 */
+  topics?: string[];
 }

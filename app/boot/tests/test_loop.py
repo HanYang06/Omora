@@ -255,7 +255,7 @@ def test_a_snapshot_for_another_page_arrives_as_a_full_snapshot(tmp_path: Path) 
         )
         kernel = build(config, MANIFEST)
         # 上报能力这一步会让 manager 把设置页挂到 ui 上（boot 里 ui 是 manager 后装的）。
-        kernel.resolve("manager").report_capabilities([])
+        kernel.resolve("manager").report_devices([])
         net = kernel.resolve("net")
         port = await net.serve()
         try:
@@ -297,7 +297,7 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path, monkeypatc
         port = await net.serve()
         try:
             # 客户端上报能力之后，manager 才把 audio / video 装上。
-            kernel.resolve("manager").report_capabilities(["microphone", "camera"])
+            kernel.resolve("manager").report_devices(["audioinput", "videoinput"])
             status, payload = await _post(_media_port(net), b"hello", "audio/webm")
             assert status == 201, payload
             audio_id = str(json.loads(payload)["media_id"])
@@ -358,7 +358,7 @@ def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path, monkeypa
         net = kernel.resolve("net")
         port = await net.serve()
         try:
-            kernel.resolve("manager").report_capabilities(["microphone", "camera"])
+            kernel.resolve("manager").report_devices(["audioinput", "videoinput"])
             status, payload = await _post(_media_port(net), b"video-bytes", "video/webm")
             assert status == 201, payload
             media_id = str(json.loads(payload)["media_id"])
@@ -422,8 +422,8 @@ def test_plugin_inventory_and_toggle_over_the_socket(tmp_path: Path) -> None:
                     ws,
                     "2",
                     "manager",
-                    "report_capabilities",
-                    {"capabilities": ["microphone"]},
+                    "report_devices",
+                    {"devices": ["audioinput"]},
                 )
                 toggled = await _request(
                     ws,
@@ -442,7 +442,7 @@ def test_plugin_inventory_and_toggle_over_the_socket(tmp_path: Path) -> None:
     assert list(rows) == list(MANIFEST)
     assert rows["ideas"]["phase"] == "active"
     assert rows["store"]["bootstrap"] is True
-    assert reported["capabilities"] == ["microphone"]
+    assert reported["devices"] == ["audioinput"]
     after = {row["name"]: row for row in toggled["plugins"]}
     assert after["ideas"]["phase"] == "disabled"
     assert after["ideas"]["reason"]["code"] == "disabled-by-setting"

@@ -79,6 +79,13 @@ pnpm exec eslint app/ui-engine/src app/shell/main.cjs
 pnpm exec prettier --check .
 pnpm --dir app/ui-engine exec tsc --noEmit
 pnpm --dir app/ui-engine exec vitest run --coverage
+
+# 仓库级检查（build job）
+uv run python scripts/keys.py --check
+uv run python scripts/static_ui.py --check
+uv run python scripts/smoke.py
+uv run python scripts/budget.py
+uv run python scripts/docs_links.py
 ```
 
 提交信息由 `.githooks/commit-msg` 管；推送前 `.githooks/pre-push` 会拒绝推 `main`。

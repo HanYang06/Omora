@@ -49,7 +49,9 @@ def _page() -> Page:
             Input(placeholder="记一笔", on_submit=lambda payload: None),
             List(
                 Item(
-                    "昨天", "买牛奶", Button("归档", on_click=lambda payload: None, variant="ghost")
+                    "买牛奶",
+                    Button("归档", on_click=lambda payload: None, variant="ghost"),
+                    meta="昨天",
                 )
             ),
         ),

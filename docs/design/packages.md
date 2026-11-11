@@ -144,9 +144,9 @@ class Media:
 
 共同点：
 
-- **硬件检测在客户端**，不在 Python：`navigator.mediaDevices` 的 enumerateDevices / getUserMedia /
-  devicechange。没有设备 → 对应捕捉控件禁用并写原因；权限只在用户点按钮时才要（浏览器只认手势）；
-  多设备给选择器；热插拔实时更新。
+- **硬件枚举在引擎，判断在插件**：引擎只把设备种类（`audioinput` / `videoinput`）报给 manager，
+  不认识"麦克风"这种产品词；`audio` / `video` 自己读事实决定出不出捕捉节点。
+  设备门禁（没有设备时禁用按钮并写原因）在组件里；权限只在用户点按钮时才要；多设备给选择器；热插拔实时更新。
 - 插件不知道页面长什么样，只给节点：`audio.node(on_submit)` / `video.node(on_submit)`。
   页面（现在的 ideas）按服务名 `has()` 决定放不放、放哪。
 - 都依赖 `media`（元数据 `requires = ["media"]`）；video 还要求 net 的媒体通道已经起来，
@@ -186,16 +186,35 @@ class Ui:
         ctx: Context,
         name: str,
         label: str,
-        build: Callable[[], Page],
+        build: Callable[[], Page] | None = None,
         count: Callable[[], int] | None = None,
+        icon: str | None = None,
+    ) -> PageHandle: ...
+    def contribute(
+        self,
+        ctx: Context,
+        target: str,
+        build: Callable[[], Node],
+        *,
+        order: int = 0,
     ) -> None: ...
+    def topics(self, ctx: Context, *names: str) -> None: ...
     def render(self, page: str | None = None) -> dict[str, object]: ...
     def event(self, handler: str, payload: dict[str, object]) -> dict[str, object]: ...
 ```
 
+### 7.0 贡献
+
+- `contribute(ctx, target, build, order=0)` 往一个键挂一棵树；归属取 `ctx.name`（插件名）。
+- 快照里多一个 `contributions` 列表；页面主树仍是 `content`，引擎组合前会给它的根打上 `om.window.page`。
+- 落点键存不存在由引擎判断：键不在，引擎丢弃并记日志，不算错。
+
 ### 7.1 页面登记
 
 - `page()` 把 name / label / build / count 存进表，并在传入的 ctx 上登记一条移除副作用——插件卸载时页面自动消失。
+- 返回一个页面对象：`handle.set(Page(...))` 自己交树（推送式），`handle.refresh()` 把当前树重交一次，
+  `handle.rebuild(build)` 登记重建回调（客户端明确要这一页时重建，吸收插件装卸这类变化）；
+  给了 `build` 回调的还是拉取式。四个页面插件（ideas / projects / requirements / manager）都已用推送式。
 - 同名页面重复登记 → `ValueError`（v0 不允许覆盖）。
 - `render()` 不指定页面名时画第一个登记的。
 
@@ -222,8 +241,12 @@ class Ui:
 ### 7.4 页面与节点
 
 - `Page(content, meta)`：content 是节点树，meta 是标题旁那句话（比如“3 条”）。
-- 词表：`Column`、`Row`、`Text`、`Button`、`Input`、`Recorder`、`Audio`、`List`、`Item`、`Empty`、
-  `Search`、`Suggestion`、`Result`、`AudioCapture`、`VideoCapture`、`Video`、`Hotkey`、`Waveform`。
+- 词表：`omora.sdk.ui` 放核心节点（`Column`、`Row`、`Text`、`Button`、`Input`、`List`、`Item`、
+  `Empty`、`Search`、`Suggestion`、`Result`、`Split`、`Rail`、`Panel`、`Icon`、`Tile`、`Chip`、`Card`、
+  `Slot`、`Hotkey`、`Waveform`、`Recorder`、`Audio`、`AudioCapture`、`Video`、`VideoCapture`）；
+  `omora.sdk.controls` 放表单与反馈节点（`Switch`、`Checkbox`、`Radio`、`Select` + `Option`、`Textarea`、
+  `NumberInput`、`Slider`、`Field`、`ButtonGroup`、`Tabs`、`Accordion`、`Progress`）。
+- 事件载荷：`omora.sdk.events` 的 `Submit` / `Change` / `Recorded` / `RecordedWithPeaks`；回调参数标上它就有字段提示。
 
 ## 8. 产出页面的插件
 
@@ -259,13 +282,14 @@ class Ui:
 class Manager:
     def inventory(self) -> dict[str, object]: ...
     def set_enabled(self, name: str, enabled: bool) -> dict[str, object]: ...
-    def report_capabilities(self, capabilities: list[str]) -> dict[str, object]: ...
+    def report_devices(self, devices: list[str]) -> dict[str, object]: ...
 ```
 
 - 清单顺序 = boot 的 `SYSTEM_PLUGINS`；每行的元数据来自 package 的 `[tool.omora]`。
 - 开关存在 store 的 `settings` collection（`plugin` / `enabled`），config.ini 只给默认值。
 - 平台 / 能力 / 服务条件不满足 → `disabled` 并带原因；装失败 → `failed`。
-- 设置页通过 ui 插件登记：`plugins`，标签「插件」；store / manager 是启动项，不给开关。
+- 设置页通过 ui 插件登记：`plugins`，标签「插件」；用的是推送式（`handle.set`），状态一变就重交一次树。
+  store / manager 是启动项，不给开关。
 - 细节见 [插件管理器](plugin-manager.md)。
 
 ## 9. 边界

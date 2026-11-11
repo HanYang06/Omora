@@ -83,7 +83,14 @@ class IdeasPlugin:
             pinned="pinned",
         )
         state: dict[str, Any] = {"mode": HOME, "query": "", "open": None, "filter": "all"}
-        capture = _capture.Capture(ideas, media, audio_service, video_service)
+        handle: Any = None
+
+        def refresh() -> None:
+            """状态变了就重交一次树；客户端没在看这一页时 ui 不会推。"""
+            if handle is not None:
+                handle.set(build())
+
+        capture = _capture.Capture(ideas, media, audio_service, video_service, changed=refresh)
         history: list[tuple[str, str | None]] = []
         found: list[Any] = []
 
@@ -103,10 +110,12 @@ class IdeasPlugin:
                 mode, record_id = history.pop()
                 state["mode"] = mode
                 state["open"] = record_id
+            refresh()
 
         def choose(key: str) -> Handler:
             def run(_: dict[str, Any]) -> None:
                 state["filter"] = key
+                refresh()
 
             return run
 
@@ -120,22 +129,26 @@ class IdeasPlugin:
             value = str(payload.get("value", ""))
             state["query"] = value
             found[:] = search(value)
+            refresh()
 
         def submit(payload: dict[str, Any]) -> None:
             value = str(payload.get("value", "")).strip()
             state["query"] = value
             found[:] = search(value)
             go(RESULTS if value else HOME)
+            refresh()
 
         def opener(record_id: str) -> Handler:
             def run(_: dict[str, Any]) -> None:
                 go(DETAIL, record_id)
+                refresh()
 
             return run
 
         def pin(record_id: str, pinned: bool) -> Handler:
             def run(_: dict[str, Any]) -> None:
                 ideas.update(record_id, pinned=not pinned)
+                refresh()
 
             return run
 
@@ -143,6 +156,7 @@ class IdeasPlugin:
             def run(_: dict[str, Any]) -> None:
                 ideas.update(record_id, archived=True)
                 go(HOME)
+                refresh()
 
             return run
 
@@ -269,14 +283,15 @@ class IdeasPlugin:
             current = page()
             return Page(content=Split(rail(), current.content), meta=current.meta)
 
-        ui.page(
+        handle = ui.page(
             ctx,
             "ideas",
             "灵感",
-            build,
             count=lambda: ideas.count({"archived": False}),
             icon="ideas",
         )
+        handle.rebuild(build)
+        refresh()
 
 
 __all__ = ["IdeasPlugin"]
