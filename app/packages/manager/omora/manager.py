@@ -314,9 +314,9 @@ __all__ = [
     "DISABLED",
     "FAILED",
     "LOADING",
+    "PENDING",
     "Manager",
     "ManagerPlugin",
-    "PENDING",
     "Reason",
     "Row",
 ]
