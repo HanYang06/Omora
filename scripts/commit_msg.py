@@ -1,4 +1,4 @@
-"""校验提交信息格式。由 .githooks/commit-msg 调用。"""
+"""校验提交信息格式。由 .githooks/commit-msg 与 CI 的 commit-msg 共用。"""
 
 from __future__ import annotations
 
@@ -25,6 +25,10 @@ MAX_SUBJECT = 50
 MIN_SUBJECT = 4
 MAX_LINE = 72
 HEADER_RE = re.compile(r"^(?P<type>[a-z]+)(?:\((?P<scope>[a-z0-9][a-z0-9-]*)\))?: (?P<subject>.+)$")
+# 这些不是"一次变更"，是 Git 自己的机制或回滚：不套 type 格式。
+EXEMPT_PREFIXES = ("Merge ", "Revert ", "fixup! ", "squash! ", "amend! ")
+# 一次性特殊提交的出口：正文里写一行 footer，校验器直接放过。
+EXEMPT_TRAILER_RE = re.compile(r"^Commit-Format:\s*exempt\b.*$", re.IGNORECASE)
 
 
 def _lines(text: str) -> list[str]:
@@ -49,11 +53,13 @@ def validate(text: str) -> list[str]:
     lines = _lines(text)
     if not lines:
         return ["提交信息为空"]
+    if any(EXEMPT_TRAILER_RE.match(line.strip()) for line in lines[1:]):
+        return []
     header = lines[0]
+    if header.startswith(EXEMPT_PREFIXES):
+        return []
     if len(header) > MAX_HEADER:
         return [f"标题超过 {MAX_HEADER} 字符（当前 {len(header)}）"]
-    if header.startswith(("Merge ", "Revert ")):
-        return []
     match = HEADER_RE.match(header)
     if match is None:
         return ["标题格式必须是 type(scope): subject"]

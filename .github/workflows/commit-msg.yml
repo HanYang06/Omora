@@ -2,6 +2,7 @@ name: commit-msg
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
 
 permissions:
   contents: read
@@ -18,20 +19,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 0
+          ref: refs/pull/${{ github.event.pull_request.number }}/head
+          fetch-depth: 1
           persist-credentials: false
-      - name: 校验 PR 内每条提交
+      - name: 校验 PR 标题
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
+          TITLE: ${{ github.event.pull_request.title }}
         run: |
           set -euo pipefail
-          failed=0
-          for sha in $(git rev-list --no-merges "$BASE..$HEAD"); do
-            git log -1 --format=%B "$sha" > /tmp/commit-msg
-            if ! python3 scripts/commit_msg.py /tmp/commit-msg; then
-              echo "提交 $sha 不符合规范"
-              failed=1
-            fi
-          done
-          exit "$failed"
+          printf '%s\n' "$TITLE" > /tmp/pr-title
+          python3 scripts/commit_msg.py /tmp/pr-title
+      - name: 校验最新提交
+        run: |
+          set -euo pipefail
+          git log -1 --format=%B > /tmp/commit-msg
+          git log -1 --oneline
+          python3 scripts/commit_msg.py /tmp/commit-msg

@@ -50,10 +50,16 @@ Python 侧暂未接入：mutmut 3 按仓库相对路径推导模块名（期望 
 - CodeQL 保持 GitHub 默认 setup（actions / javascript-typescript / python），不搬进仓库，减少维护。
 - 仓库设置：secret scanning + push protection 已开；Dependabot alerts 与 security updates 已开。
 
+## 提交信息检查
+
+- 本地 `.githooks/commit-msg` 在创建提交时校验每条提交（`scripts/commit_msg.py`）。
+- CI 的 `check` workflow（`.github/workflows/commit-msg.yml`）只校验 PR 标题与 PR 最新一条提交；不遍历分支历史，历史提交不合规不会阻塞 PR。标题改了会因 `edited` 事件重跑。
+- 豁免：`Merge` / `Revert` / `fixup!` / `squash!` / `amend!` 开头，或正文 footer `Commit-Format: exempt`（一次性特殊提交，写清理由）。
+
 ## 门禁规则
 
 - `main` 只接受 merge commit；不允许 squash / rebase。
-- branch ruleset `main-rules`：required checks = `gate`（本 workflow 汇总 job）+ `check`（提交信息校验）；CodeQL 与 Code Quality 保持开启；`Restrict code coverage` 已设“最大下降 1 个百分点”（最低覆盖率地板不放进 ruleset，由 CI 阈值自己卡：Python 95%、TS 54%）。
+- branch ruleset `main-rules`：required checks = `gate`（本 workflow 汇总 job）+ `check`（PR 标题 + 最新提交格式）；CodeQL 与 Code Quality 保持开启；`Restrict code coverage` 已设“最大下降 1 个百分点”（最低覆盖率地板不放进 ruleset，由 CI 阈值自己卡：Python 95%、TS 54%）。
 - GitHub Code Quality 的覆盖率数据依赖功能开启；当前仓库的上传接口返回 404，上传步骤按尽力而为处理，覆盖率门禁以 CI 阈值 + artifact 为准。
 
 ## 本地怎么跑

@@ -51,8 +51,8 @@ omora-plugin-net = { workspace = true }
 members = ["app/cli", "app/core", "app/sdk", "app/packages/*"]
 
 [tool.pytest.ini_options]
-pythonpath = ["app"]
-testpaths = ["app"]
+pythonpath = ["app", "scripts"]
+testpaths = ["app", "scripts"]
 addopts = ["--strict-markers", "--strict-config"]
 filterwarnings = ["error"]
 
