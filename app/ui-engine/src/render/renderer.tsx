@@ -23,7 +23,7 @@ function NodeView({ node, onEvent, loadMedia }: NodeViewProps): ReactNode {
   const type = typeof node.type === "string" ? node.type : "";
   const Component = components[type];
   if (Component === undefined) {
-    console.warn(`[omora] 未知组件类型: ${type || "(空)"}`);
+    console.warn("[omora] 未知组件类型:", type || "(空)");
     return <UnknownNode type={type} />;
   }
 
