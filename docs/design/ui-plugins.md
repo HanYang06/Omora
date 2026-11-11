@@ -244,7 +244,8 @@ Panel(content=self.feed()),
 ## 13.1 进度
 
 已合入集成分支 `feat/ui-plugin-system`：P0-1（补丁跨语言 fixture）、P0-2（节点级错误边界）、
-P2-1（组合器）、P2-6 第一批（12 个基础控件 + 拆分到 `render/controls/`）、
+P2-1（组合器）、P2-3（memo / 错误边界 / 未知组件兜底）、
+P2-6 第一批（12 个基础控件 + 拆分到 `render/controls/`）、
 P1-3 前半（`Slot` 节点、`ui.contribute`、贡献上线、归属进 handler id）。
 剩余任务未开始；验收标准与依赖见上面那张表。
 
