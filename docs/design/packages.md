@@ -210,6 +210,8 @@ class Ui:
 ### 7.1 页面登记
 
 - `page()` 把 name / label / build / count 存进表，并在传入的 ctx 上登记一条移除副作用——插件卸载时页面自动消失。
+- 返回一个页面对象：`handle.set(Page(...))` 自己交树（推送式），`handle.refresh()` 把当前树重交一次；
+  给了 `build` 回调的还是拉取式。`projects` / `requirements` 已经用推送式。
 - 同名页面重复登记 → `ValueError`（v0 不允许覆盖）。
 - `render()` 不指定页面名时画第一个登记的。
 

@@ -42,9 +42,13 @@ SNAPSHOT_TOPIC = "ui.snapshot"
 
 
 class _Page:
-    def __init__(self, label: str, build: Builder, count: Counter | None, icon: str | None) -> None:
+    def __init__(
+        self, label: str, build: Builder | None, count: Counter | None, icon: str | None
+    ) -> None:
         self.label = label
+        # 两种登记方式：build 回调（拉取式，旧写法）或插件自己 set 上来的树（推送式）。
         self.build = build
+        self.tree: Page | None = None
         self.count = count
         self.icon = icon
         # serial 只增不减：handler id 永不复用，陈旧的 id 打不到别人的回调上。
@@ -57,6 +61,22 @@ class _Page:
         self.sent: dict[str, Any] | None = None
 
 
+class _PageHandle:
+    """页面对象：插件自己交树（推送式），不再把 build 回调交给 ui。"""
+
+    def __init__(self, ui: Ui, name: str) -> None:
+        self._ui = ui
+        self.name = name
+
+    def set(self, page: Page) -> None:
+        """交这一页当前的树；客户端正在看它就直接推过去。"""
+        self._ui.set_page(self.name, page)
+
+    def refresh(self) -> None:
+        """把这一页当前那棵树再交一次（数据变了、树也重建过时用）。"""
+        self._ui.refresh_page(self.name)
+
+
 class Ui:
     def __init__(self, log: Log | None = None, ctx: Context | None = None) -> None:
         self._pages: dict[str, _Page] = {}
@@ -67,17 +87,22 @@ class Ui:
         # 别的插件交来的贡献：往某个键挂一棵树。
         self._extras: list[_Extra] = []
         self._seq = 0
+        # 事件回调运行期间由 ui 负责推送，set 不要再推一次。
+        self._in_event = False
 
     def page(  # noqa: PLR0913, PLR0917 —— 页面登记的声明式参数
         self,
         ctx: Context,
         name: str,
         label: str,
-        build: Builder,
+        build: Builder | None = None,
         count: Counter | None = None,
         icon: str | None = None,
-    ) -> None:
-        """登记一页；插件卸载时页面跟着消失。icon 是母页面图标栏用的名字。"""
+    ) -> _PageHandle:
+        """登记一页；插件卸载时页面跟着消失。icon 是母页面图标栏用的名字。
+
+        返回页面对象：想自己交树就用 `handle.set(Page(...))`；给了 build 回调的就还是拉取式。
+        """
         if name in self._pages:
             raise ValueError(f"页面重复登记: {name}")
         self._pages[name] = _Page(label, build, count, icon)
@@ -86,6 +111,7 @@ class Ui:
             self._pages.pop(name, None)
 
         ctx.effect(remove)
+        return _PageHandle(self, name)
 
     def contribute(self, ctx: Context, target: str, build: ExtraBuilder, *, order: int = 0) -> None:
         """登记一份贡献：往 target 这个键挂一棵树。
@@ -105,6 +131,21 @@ class Ui:
                 self._extras.remove(extra)
 
         ctx.effect(remove)
+
+    def set_page(self, name: str, page: Page) -> None:
+        """插件交来一页当前的树；客户端正在看它就直接推一次，不等下一次事件。"""
+        entry = self._entry(name)
+        entry.tree = page
+        if self._in_event or self._current is None or self._current.get("page") != name:
+            return
+        self._push(name, entry, self._draw(name, entry))
+
+    def refresh_page(self, name: str) -> None:
+        """把这一页当前那棵树重交给客户端一次（全量兜底）。"""
+        entry = self._entry(name)
+        if self._current is None or self._current.get("page") != name:
+            return
+        self._emit(self._deliver(entry, self._draw(name, entry)))
 
     def render(self, page: str | None = None) -> dict[str, Any]:
         """画一页；不指定就画第一个登记的。result 是全量快照（带 version）。"""
@@ -134,7 +175,11 @@ class Ui:
                 if late:
                     self._log.info("ui.event.stale", handler=handler, page=name)
                 started = time.perf_counter()
-                callback(payload)
+                self._in_event = True
+                try:
+                    callback(payload)
+                finally:
+                    self._in_event = False
                 body = self._draw(name, entry)
                 pushed = self._push(name, entry, body)
                 self._log.info(
@@ -171,7 +216,7 @@ class Ui:
 
             return register
 
-        page = entry.build()
+        page = self._page_body(name, entry)
         pages: list[dict[str, Any]] = []
         for key, item in self._pages.items():
             entry_data: dict[str, Any] = {"name": key, "label": item.label}
@@ -219,6 +264,14 @@ class Ui:
                 }
             )
         return items
+
+    def _page_body(self, name: str, entry: _Page) -> Page:
+        """这一页现在长什么样：build 回调（拉取）或插件交上来的树（推送）。"""
+        if entry.build is not None:
+            return entry.build()
+        if entry.tree is not None:
+            return entry.tree
+        raise LookupError(f"页面还没交树: {name}")
 
     def _deliver(self, entry: _Page, body: dict[str, Any]) -> dict[str, Any]:
         """交给客户端一份新的全量快照：升版本，记成下一次补丁的基准。"""

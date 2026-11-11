@@ -17,10 +17,8 @@ class ProjectsPlugin:
     def apply(self, ctx: Context) -> None:
         ui: Any = ctx.resolve("ui")
 
-        def build() -> Page:
-            return Page(content=Empty("还没有项目。"))
-
-        ui.page(ctx, "projects", "项目", build, icon="projects")
+        page = ui.page(ctx, "projects", "项目", icon="projects")
+        page.set(Page(content=Empty("还没有项目。")))
 
 
 __all__ = ["ProjectsPlugin"]
