@@ -20,7 +20,7 @@ TYPES = {
     "revert",
 }
 GENERIC = {"update", "fix", "wip", "temp", "changes", "stuff", "commit"}
-MAX_HEADER = 72
+MAX_HEADER = 200
 MAX_SUBJECT = 50
 MIN_SUBJECT = 4
 MAX_LINE = 72
