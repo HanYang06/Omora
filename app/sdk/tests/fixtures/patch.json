@@ -704,6 +704,323 @@
         },
         "version": 12
       }
+    },
+    {
+      "name": "贡献里的树改了",
+      "previous": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "主体"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12,
+        "contributions": [
+          {
+            "owner": "audio",
+            "target": "main.extra",
+            "op": "append",
+            "order": 10,
+            "seq": 1,
+            "tree": {
+              "type": "text",
+              "props": {
+                "text": "旧"
+              },
+              "children": []
+            }
+          }
+        ]
+      },
+      "current": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "主体"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12,
+        "contributions": [
+          {
+            "owner": "audio",
+            "target": "main.extra",
+            "op": "append",
+            "order": 10,
+            "seq": 1,
+            "tree": {
+              "type": "text",
+              "props": {
+                "text": "新"
+              },
+              "children": []
+            }
+          }
+        ]
+      },
+      "ops": [
+        {
+          "op": "set",
+          "path": ["contributions", 0, "tree", "props", "text"],
+          "value": "新"
+        }
+      ],
+      "merged": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "主体"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12,
+        "contributions": [
+          {
+            "owner": "audio",
+            "target": "main.extra",
+            "op": "append",
+            "order": 10,
+            "seq": 1,
+            "tree": {
+              "type": "text",
+              "props": {
+                "text": "新"
+              },
+              "children": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "贡献成员变了",
+      "previous": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "主体"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12,
+        "contributions": [
+          {
+            "owner": "audio",
+            "target": "main.extra",
+            "op": "append",
+            "order": 10,
+            "seq": 1,
+            "tree": {
+              "type": "text",
+              "props": {
+                "text": "旧"
+              },
+              "children": []
+            }
+          }
+        ]
+      },
+      "current": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "主体"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12,
+        "contributions": [
+          {
+            "owner": "audio",
+            "target": "main.extra",
+            "op": "append",
+            "order": 10,
+            "seq": 1,
+            "tree": {
+              "type": "text",
+              "props": {
+                "text": "旧"
+              },
+              "children": []
+            }
+          },
+          {
+            "owner": "projects",
+            "target": "main.more",
+            "op": "append",
+            "order": 10,
+            "seq": 1,
+            "tree": {
+              "type": "text",
+              "props": {
+                "text": "多"
+              },
+              "children": []
+            }
+          }
+        ]
+      },
+      "ops": [
+        {
+          "op": "set",
+          "path": ["contributions"],
+          "value": [
+            {
+              "owner": "audio",
+              "target": "main.extra",
+              "op": "append",
+              "order": 10,
+              "seq": 1,
+              "tree": {
+                "type": "text",
+                "props": {
+                  "text": "旧"
+                },
+                "children": []
+              }
+            },
+            {
+              "owner": "projects",
+              "target": "main.more",
+              "op": "append",
+              "order": 10,
+              "seq": 1,
+              "tree": {
+                "type": "text",
+                "props": {
+                  "text": "多"
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      ],
+      "merged": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "主体"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12,
+        "contributions": [
+          {
+            "owner": "audio",
+            "target": "main.extra",
+            "op": "append",
+            "order": 10,
+            "seq": 1,
+            "tree": {
+              "type": "text",
+              "props": {
+                "text": "旧"
+              },
+              "children": []
+            }
+          },
+          {
+            "owner": "projects",
+            "target": "main.more",
+            "op": "append",
+            "order": 10,
+            "seq": 1,
+            "tree": {
+              "type": "text",
+              "props": {
+                "text": "多"
+              },
+              "children": []
+            }
+          }
+        ]
+      }
     }
   ],
   "page_changes": [

@@ -14,6 +14,16 @@ from omora.ui import Ui
 KEY = "ideas.home.after_capture"
 
 
+class _Net:
+    """net 的替身：记下推出去的东西，不解释。"""
+
+    def __init__(self) -> None:
+        self.sent: list[dict[str, Any]] = []
+
+    def emit(self, topic: str, payload: dict[str, Any], *, coalesce: bool = False) -> None:
+        self.sent.append(payload)
+
+
 def _text_button() -> Node:
     return Button("录音")
 
@@ -100,3 +110,37 @@ def test_order_and_seq_follow_registration() -> None:
 
     items = ui.render().get("contributions", [])
     assert [(item["order"], item["seq"]) for item in items] == [(30, 1), (0, 2)]
+
+
+def test_a_contribution_change_is_pushed_as_a_patch() -> None:
+    net = _Net()
+    ctx = Context(name="notes")
+    ctx.provide("net", net)
+    ui = Ui(ctx=ctx)
+    label = {"text": "旧"}
+
+    def build_page() -> Page:
+        return Page(Column(Slot(key=KEY)))
+
+    def build_extra() -> Node:
+        return Button(label["text"], on_click=toggle)
+
+    def toggle(_payload: dict[str, Any]) -> None:
+        label["text"] = "新"
+
+    ui.page(ctx, "notes", "笔记", build_page)
+    ui.contribute(ctx, KEY, build_extra)
+    snapshot = ui.render("notes")
+    handler = str(snapshot["contributions"][0]["tree"]["props"]["on_click"])
+
+    ui.event(handler, {})
+
+    payload = net.sent[-1]
+    # 补丁而不是全量：改的也只有那一份贡献（handler id 每代都会换，所以有两条 op）。
+    assert "content" not in payload
+    assert {
+        "op": "set",
+        "path": ["contributions", 0, "tree", "props", "text"],
+        "value": "新",
+    } in payload["ops"]
+    assert all(op["path"][:2] == ["contributions", 0] for op in payload["ops"])

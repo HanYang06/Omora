@@ -33,12 +33,55 @@ def diff_snapshot(
             merged[key] = previous.get("version")
         elif key == "content":
             merged[key] = _diff_node(previous[key], value, [key], ops)
+        elif key == "contributions":
+            merged[key] = _diff_contributions(previous.get(key) or [], value or [], [key], ops)
         elif previous.get(key) == value:
             merged[key] = previous[key]
         else:
             ops.append({"op": "set", "path": [key], "value": value})
             merged[key] = value
     return ops, merged
+
+
+def _identity(item: dict[str, Any]) -> tuple[Any, ...]:
+    """贡献的身份：同一插件、同一落点、同一动作、同一声明序号。"""
+    return (item.get("owner"), item.get("target"), item.get("op"), item.get("seq", 0))
+
+
+def _diff_contributions(
+    previous: list[Any], current: list[Any], path: Path, ops: list[Op]
+) -> list[Any]:
+    """贡献列表：成员没变就逐份 diff，成员变了整表替换（只影响这一块）。"""
+    if previous is current or previous == current:
+        return previous
+    if [_identity(item) for item in previous] != [_identity(item) for item in current]:
+        ops.append({"op": "set", "path": path, "value": current})
+        return current
+    return [
+        _diff_contribution(old, new, [*path, index], ops)
+        for index, (old, new) in enumerate(zip(previous, current, strict=True))
+    ]
+
+
+def _diff_contribution(
+    previous: dict[str, Any], current: dict[str, Any], path: Path, ops: list[Op]
+) -> dict[str, Any]:
+    """一份贡献：树走节点 diff，其余字段按值改；少字段只能整份换掉。"""
+    if previous == current:
+        return previous
+    if set(previous) - set(current):
+        ops.append({"op": "set", "path": path, "value": current})
+        return current
+    merged: dict[str, Any] = {}
+    for key, value in current.items():
+        if key == "tree":
+            merged[key] = _diff_node(previous.get("tree") or {}, value or {}, [*path, "tree"], ops)
+        elif previous.get(key) == value:
+            merged[key] = previous[key]
+        else:
+            ops.append({"op": "set", "path": [*path, key], "value": value})
+            merged[key] = value
+    return merged
 
 
 def _diff_node(

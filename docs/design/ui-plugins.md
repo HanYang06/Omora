@@ -253,6 +253,7 @@ P1-3 前半（`Slot` 节点、`ui.contribute`、贡献上线、归属进 handler
 P4-1（引擎只报设备事实、manager 不再拿硬件决定装不装、audio / video 自己判断）、
 P1-2 前半（页面对象 `set` / `refresh`，projects / requirements 已迁；`Item` 构造收口）。
 P1-4 / P1-5（键索引脚本、Python / TS 常量、keys.json、CI 校验）。
+P2-2 前半（贡献级 diff：树按字段改、成员变了整表替换、只推补丁）。
 剩余任务未开始；验收标准与依赖见上面那张表。
 
 ## 14. 未定
