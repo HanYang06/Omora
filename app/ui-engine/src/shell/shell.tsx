@@ -45,7 +45,7 @@ export function RailButton({ entry, active, onNavigate }: RailButtonProps): Reac
       data-icon={icon}
       onClick={() => onNavigate(entry.name)}
     >
-      <IconGlyph name={icon} />
+      <IconGlyph name={icon} path={entry.glyph} />
     </button>
   );
 }

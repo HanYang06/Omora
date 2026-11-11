@@ -103,8 +103,7 @@ class Input(Node):
 class Search(Node):
     """搜索框：打字（防抖）交回 on_query，回车或按钮交回 on_submit。
 
-    子节点是建议：下拉里按顺序列出来，上下键选，回车就按选中项提交。
-    引擎只管防抖、键盘和画下拉；搜什么、怎么排，全在插件里。
+    子节点是建议；怎么搜、怎么排全在插件里，引擎只管防抖和键盘。
     """
 
     type: ClassVar[str] = "search"
@@ -178,13 +177,10 @@ class Audio(Node):
 
 @dataclass(frozen=True)
 class AudioCapture(Node):
-    """录音工作区的主体：录完先 POST 到 HTTP 媒体通道，再把 media id 交给 on_submit。
+    """录音主体：录完先 POST 到媒体通道，再把 media id 交给 on_submit。
 
-    设备、权限、热插拔、波形、暂停都由客户端管；这里只说"去哪儿存、能录多长、怎么起手"。
-    - upload_url：媒体通道地址；没有就出不了这个节点（音频也走 HTTP 了，见协议文档）。
-    - max_seconds：0 表示不限时长。
-    - autostart：一挂上就开始录（按住快捷键起手的那条路）。
-    - pausable：给出暂停 / 继续。
+    设备、权限、热插拔、波形、暂停都由客户端管。
+    upload_url 没有就出不了节点；max_seconds=0 不限时；autostart 一挂上就录；pausable 给暂停。
     """
 
     type: ClassVar[str] = "audio_capture"
@@ -244,10 +240,11 @@ class Rail(Node):
 
 @dataclass(frozen=True)
 class Icon(Node):
-    """一个图标：name 是词表里的名字，引擎认不出就画一个空位。"""
+    """一个图标：name 是词表词，path 给了就画这串路径——插件自带图标，不改引擎。"""
 
     type: ClassVar[str] = "icon"
     name: str = ""
+    path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -256,6 +253,7 @@ class Tile(Node):
 
     type: ClassVar[str] = "tile"
     icon: str = ""
+    path: str | None = None
     title: str = ""
     on_click: Handler | None = None
 
@@ -299,10 +297,9 @@ class Card(Node):
 
 @dataclass(frozen=True)
 class Hotkey(Node):
-    """一个快捷键：按下发 on_press，松开发 on_release。
+    """一个快捷键：按下发 on_press，松开发 on_release；引擎只挂监听，不画。
 
-    引擎不画它，只挂监听；焦点在输入框里时不触发。按键名用 KeyboardEvent.code 的小写
-    形式（"space"、"keyr"）。它不持有状态：压着不放只在按下时发一次。
+    按键名用 KeyboardEvent.code 的小写形式（"space"、"keyr"）；压着不放只发一次按下。
     """
 
     type: ClassVar[str] = "hotkey"

@@ -122,7 +122,7 @@ manager 是普通服务，不新增帧类型：
 
 ```json
 {
-  "pages": [{ "name": "ideas", "label": "灵感", "count": 3 }],
+  "pages": [{ "name": "ideas", "label": "灵感", "icon": "ideas", "glyph": "M2 2h16", "count": 3 }],
   "page": "ideas",
   "meta": "3 条",
   "content": { "type": "column", "props": {}, "children": [] },

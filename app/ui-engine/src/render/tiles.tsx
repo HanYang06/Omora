@@ -23,7 +23,7 @@ export function Tile({ node, onEvent }: NodeComponentProps): ReactNode {
       }}
     >
       <span className="omora-tile-icon" aria-hidden="true">
-        <IconGlyph name={icon} />
+        <IconGlyph name={icon} path={prop(node, "path")} />
       </span>
       <span className="omora-tile-body">
         <span className="omora-tile-title">{title}</span>
