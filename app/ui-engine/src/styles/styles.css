@@ -822,3 +822,382 @@ mark {
 .omora-capture-input:focus-visible {
   outline: none;
 }
+
+/* 控件：表单与反馈。只走语义令牌：间距 4/8/12/16/24，圆角 6/10/12，字级 21/15/13/11。 */
+
+/* 开关 / 复选 / 单选：原生 input 画成控件本身，文字包在 label 里点得到 */
+
+.omora-switch,
+.omora-checkbox,
+.omora-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: 15px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.omora-switch:has(input:disabled),
+.omora-checkbox:has(input:disabled),
+.omora-radio:has(input:disabled) {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.omora-switch-input,
+.omora-checkbox-input,
+.omora-radio-input {
+  flex: none;
+  margin: 0;
+  border: 0;
+  appearance: none;
+  cursor: pointer;
+}
+
+.omora-switch-input:disabled,
+.omora-checkbox-input:disabled,
+.omora-radio-input:disabled {
+  cursor: default;
+}
+
+/* 开关：36 × 20 的药丸，16 的纸色圆点 */
+
+.omora-switch-input {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: var(--r-pill);
+  background: var(--line);
+  transition: background 120ms ease;
+}
+
+.omora-switch-input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--paper);
+  transition: transform 120ms ease;
+}
+
+.omora-switch-input:checked {
+  background: var(--accent);
+}
+
+.omora-switch-input:checked::after {
+  transform: translateX(16px);
+}
+
+/* 复选：18 的小方块 */
+
+.omora-checkbox-input {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-sm);
+  background: var(--surface-inset);
+}
+
+.omora-checkbox-input:checked {
+  background: var(--accent);
+}
+
+.omora-checkbox-input:checked::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--paper);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* 单选：18 的圆 */
+
+.omora-radio-input {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface-inset);
+}
+
+.omora-radio-input:checked {
+  background: var(--accent);
+}
+
+.omora-radio-input:checked::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+/* 下拉：inset 面，右侧一个自绘的小三角 */
+
+.omora-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.omora-select::after {
+  content: "▾";
+  position: absolute;
+  right: var(--s3);
+  color: var(--muted);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.omora-select-input {
+  min-width: 160px;
+  height: 36px;
+  padding: 0 var(--s6) 0 var(--s3);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface-inset);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.omora-select-input:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* 多行输入与数字输入：同一档 inset 面 */
+
+.omora-textarea,
+.omora-number {
+  padding: var(--s2) var(--s3);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface-inset);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.omora-textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+}
+
+.omora-number {
+  width: 120px;
+  font-variant-numeric: tabular-nums;
+}
+
+.omora-number::placeholder,
+.omora-textarea::placeholder {
+  color: var(--muted);
+}
+
+.omora-number:disabled,
+.omora-slider:disabled,
+.omora-textarea:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* 拖动条：细轨 + 圆点 */
+
+.omora-slider {
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  cursor: pointer;
+}
+
+.omora-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--line);
+}
+
+.omora-slider::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--accent);
+  appearance: none;
+}
+
+/* 表单行：label 13/600，控件在下，hint 11 次要 */
+
+.omora-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.omora-field-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.omora-field-control {
+  min-width: 0;
+}
+
+.omora-field-hint {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* 一组按钮：inset 槽，块圆角 10 */
+
+.omora-button-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: var(--s1);
+  border-radius: var(--r-md);
+  background: var(--surface-inset);
+}
+
+.omora-button-group > .omora-button {
+  background: transparent;
+}
+
+.omora-button-group > .omora-button:hover {
+  background: var(--hover);
+}
+
+/* 标签页：选中那页用 inset 底，不描边 */
+
+.omora-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.omora-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+.omora-tab {
+  padding: var(--s1) var(--s3);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.omora-tab:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.omora-tab[aria-selected="true"] {
+  background: var(--surface-inset);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.omora-tabs-panel {
+  min-width: 0;
+}
+
+.omora-tabs-panel[hidden] {
+  display: none;
+}
+
+/* 折叠面板：一节一条，节与节之间一条 1px 线 */
+
+.omora-accordion {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.omora-accordion-item + .omora-accordion-item {
+  border-top: 1px solid var(--line);
+}
+
+.omora-accordion-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  width: 100%;
+  padding: var(--s3) 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.omora-accordion-mark {
+  flex: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.omora-accordion-body {
+  padding: 0 0 var(--s3);
+}
+
+/* 进度：4 的细轨，药丸圆角 */
+
+.omora-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.omora-progress-track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--surface-inset);
+}
+
+.omora-progress-fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+}
+
+.omora-progress-text {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 键盘焦点：不是 button / input 的那两个 */
+.omora-select-input:focus-visible,
+.omora-textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
