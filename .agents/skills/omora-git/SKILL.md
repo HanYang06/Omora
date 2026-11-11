@@ -53,6 +53,18 @@ footer（可选：BREAKING CHANGE / Refs / Contract）
 - 不使用 `update` `fix` `wip` `temp` `changes` `stuff` 这类空话作 subject；
 - 一条提交只做一件事。
 
+### 特殊提交与豁免
+
+- Git 自己的机制不套 type：`Merge ...`、`Revert ...`、`fixup! ...`、`squash! ...`、`amend! ...`。
+- 一次性特殊提交（发布快照、迁移等）在正文加一行 footer：
+
+  ```
+  Commit-Format: exempt（写清楚为什么）
+  ```
+
+  校验器会放过这条提交；评审时也能看到理由。不要把它当日常出口。
+- 如果某种写法长期都要用，把它加进 `TYPES`，而不是每次写豁免。
+
 ### 例子
 
 好：
@@ -111,7 +123,7 @@ fix: 修改了一些问题，更新了相关逻辑，并且调整了测试
 
 ### PR 标题
 
-与提交标题同格式：`type(scope): subject`。
+与提交标题同格式：`type(scope): subject`。CI 会校验它；标题不合规直接改标题即可，不需要改写任何提交。
 
 ### PR 描述
 
@@ -160,10 +172,10 @@ fix: 修改了一些问题，更新了相关逻辑，并且调整了测试
 
 仓库启用了两个钩子（`git config core.hooksPath .githooks`）：
 
-- `commit-msg`：校验格式与字数（`scripts/commit_msg.py`）；
+- `commit-msg`：创建提交时校验格式与字数（`scripts/commit_msg.py`），每条都拦；
 - `pre-push`：拒绝推送到 `main`。
 
-钩子拦不住的（比如"这条提交是不是只做了一件事"），靠第 2 节的标准和评审。
+CI 的 `commit-msg` workflow 只校验 **PR 标题**与 **PR 的最新一条提交**，不遍历分支历史：历史提交不合规不会让 PR 永远卡住；最新一条不合规，`amend` 或再补一条合规提交即可。钩子拦不住的（比如"这条提交是不是只做了一件事"），靠第 2 节的标准和评审。
 
 ## 9. 提交前清单
 
@@ -174,3 +186,4 @@ fix: 修改了一些问题，更新了相关逻辑，并且调整了测试
 - [ ] 验证通过
 - [ ] 没有密钥与本地生成物
 - [ ] 分支名符合 `type/slug`
+- [ ] 特殊提交用了豁免并写清理由（如适用）
