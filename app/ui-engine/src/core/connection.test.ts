@@ -118,9 +118,12 @@ interface Setup {
   timers: FakeTimers;
 }
 
-function setup(): Setup {
+function setup(options: { random?: () => number } = {}): Setup {
   const timers = new FakeTimers();
-  const connection = new Connection("ws://test", (url) => new FakeSocket(url), { timers });
+  const connection = new Connection("ws://test", (url) => new FakeSocket(url), {
+    timers,
+    random: options.random ?? (() => 0),
+  });
   connection.connect();
   const socket = socketAt(0);
   socket.open();
@@ -436,5 +439,108 @@ describe("订阅", () => {
     await expect(connection.subscribe(["ui.snapshot"])).rejects.toMatchObject({
       code: "not_connected",
     });
+  });
+});
+
+describe("断线重连", () => {
+  it("断线 500ms 后自动重开一条 socket", () => {
+    const { connection, socket, timers } = setup();
+
+    socket.drop();
+
+    expect(connection.status).toBe("closed");
+    timers.advance(499);
+    expect(FakeSocket.instances).toHaveLength(1);
+    timers.advance(1);
+    expect(FakeSocket.instances).toHaveLength(2);
+  });
+
+  it("一次断线只重连一次：error 与 close 同时来也不会重复开 socket", () => {
+    const { socket, timers } = setup();
+
+    socket.fail();
+    socket.drop();
+    timers.advance(500);
+
+    expect(FakeSocket.instances).toHaveLength(2);
+  });
+
+  it("重连成功后重新连上，退避从 500ms 重新起算", () => {
+    const { socket, timers } = setup();
+    socket.drop();
+    timers.advance(500);
+    const retried = socketAt(1);
+    retried.open();
+
+    retried.drop();
+    timers.advance(499);
+    expect(FakeSocket.instances).toHaveLength(2);
+    timers.advance(1);
+    expect(FakeSocket.instances).toHaveLength(3);
+  });
+
+  it("指数退避 500ms 起、封顶 10s", () => {
+    const { socket, timers } = setup();
+    socket.drop();
+
+    for (const delay of [500, 1_000, 2_000, 4_000, 8_000, 10_000, 10_000]) {
+      const before = FakeSocket.instances.length;
+      timers.advance(delay - 1);
+      expect(FakeSocket.instances).toHaveLength(before);
+      timers.advance(1);
+      expect(FakeSocket.instances).toHaveLength(before + 1);
+      socketAt(before).fail();
+    }
+  });
+
+  it("重连延迟带抖动：随机源拉满时首个延迟是 600ms", () => {
+    const { socket, timers } = setup({ random: () => 1 });
+    socket.drop();
+
+    timers.advance(599);
+    expect(FakeSocket.instances).toHaveLength(1);
+    timers.advance(1);
+    expect(FakeSocket.instances).toHaveLength(2);
+  });
+
+  it("连接失败也自动重连，状态先 failed", () => {
+    const { connection, socket, timers } = setup();
+
+    socket.fail();
+    expect(connection.status).toBe("failed");
+
+    timers.advance(500);
+    expect(FakeSocket.instances).toHaveLength(2);
+  });
+
+  it("close() 之后不再重连", () => {
+    const { connection, socket, timers } = setup();
+
+    connection.close();
+    expect(connection.status).toBe("closed");
+
+    socket.drop();
+    timers.advance(60_000);
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
+
+  it("断线后 close() 取消已排好的重连", () => {
+    const { connection, socket, timers } = setup();
+
+    socket.drop();
+    connection.close();
+    timers.advance(60_000);
+
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
+
+  it("close() 之后手动 connect() 会重新连", () => {
+    const { connection } = setup();
+
+    connection.close();
+    connection.connect();
+
+    expect(connection.status).toBe("connecting");
+    expect(FakeSocket.instances).toHaveLength(2);
   });
 });

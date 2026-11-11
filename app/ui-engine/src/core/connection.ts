@@ -6,6 +6,11 @@ export const DEFAULT_URL = "ws://127.0.0.1:8765";
 /** call 的默认超时：30s。长调用显式传 timeout: 0 关掉。 */
 export const DEFAULT_CALL_TIMEOUT_MS = 30_000;
 
+/** 断线重连：500ms 起指数退避，封顶 10s，再在指数延迟上加 0–20% 抖动。 */
+export const RECONNECT_BASE_MS = 500;
+export const RECONNECT_MAX_MS = 10_000;
+const RECONNECT_JITTER = 0.2;
+
 export type ConnectionStatus = "idle" | "connecting" | "open" | "closed" | "failed";
 
 /** 只用到 WebSocket 的几个成员，测试里可以打桩。 */
@@ -29,6 +34,8 @@ export interface Timers {
 export interface ConnectionOptions {
   /** 定时器，默认全局 setTimeout；测试用来控制重连与超时。 */
   timers?: Timers;
+  /** 随机源，默认 Math.random；测试用来固定重连抖动。 */
+  random?: () => number;
 }
 
 export interface CallOptions {
@@ -73,18 +80,24 @@ interface PendingCall {
 /**
  * WebSocket 客户端：请求按 id 配对成 Promise，event 按 topic 派发给监听者。
  *
- * 断线不重连；重放（能力、订阅、当前页）由调用方按 open 状态做。
+ * 断线后自动重连（500ms 起指数退避到 10s）；close() 之后不再重连。
+ * 重连成功后的重放（能力、订阅、当前页）不归这里，由调用方按 open 状态做。
  */
 export class Connection {
   private readonly url: string;
   private readonly factory: WebSocketFactory;
   private readonly timers: Timers;
+  private readonly random: () => number;
   private socket: WebSocketLike | null = null;
   private readonly pending = new Map<string, PendingCall>();
   private readonly listeners = new Set<(status: ConnectionStatus) => void>();
   private readonly eventListeners = new Map<string, Set<EventListener>>();
   private current: ConnectionStatus = "idle";
   private nextId = 0;
+  private retryTimer: unknown = null;
+  private retryAttempt = 0;
+  /** connect() 之后为 true、close() 之后为 false：只有显式 close() 会停止自动重连。 */
+  private autoReconnect = false;
 
   constructor(
     url: string = DEFAULT_URL,
@@ -94,6 +107,7 @@ export class Connection {
     this.url = url;
     this.factory = factory;
     this.timers = options.timers ?? defaultTimers;
+    this.random = options.random ?? Math.random;
   }
 
   get status(): ConnectionStatus {
@@ -138,6 +152,8 @@ export class Connection {
 
   /** 建立连接；已有一条 socket（connecting / open）时什么都不做。 */
   connect(): void {
+    this.autoReconnect = true;
+    this.cancelRetry();
     if (this.socket !== null) {
       return;
     }
@@ -150,6 +166,7 @@ export class Connection {
     } catch (error) {
       console.error("[omora] 建立连接失败:", error);
       this.setStatus("failed");
+      this.scheduleReconnect();
       return;
     }
 
@@ -159,6 +176,7 @@ export class Connection {
       if (this.socket !== socket) {
         return;
       }
+      this.retryAttempt = 0;
       this.setStatus("open");
     };
 
@@ -245,6 +263,10 @@ export class Connection {
 
   /** 显式关闭：拒绝在途调用，取消重连。之后只有再调 connect() 才会重新连。 */
   close(): void {
+    this.autoReconnect = false;
+    this.cancelRetry();
+    this.retryAttempt = 0;
+
     const socket = this.socket;
     this.socket = null;
     if (socket !== null) {
@@ -345,6 +367,34 @@ export class Connection {
     }
     this.rejectAll(reason);
     this.setStatus(status);
+    this.scheduleReconnect();
+  }
+
+  /** 断线后按指数退避排下一次连接；显式 close() 之后不再排。 */
+  private scheduleReconnect(): void {
+    if (!this.autoReconnect || this.retryTimer !== null || this.socket !== null) {
+      return;
+    }
+
+    const exponent = Math.min(RECONNECT_BASE_MS * 2 ** this.retryAttempt, RECONNECT_MAX_MS);
+    this.retryAttempt += 1;
+    const jittered = Math.min(
+      Math.round(exponent * (1 + RECONNECT_JITTER * this.random())),
+      RECONNECT_MAX_MS,
+    );
+
+    this.retryTimer = this.timers.setTimeout(() => {
+      this.retryTimer = null;
+      this.connect();
+    }, jittered);
+  }
+
+  private cancelRetry(): void {
+    if (this.retryTimer === null) {
+      return;
+    }
+    this.timers.clearTimeout(this.retryTimer);
+    this.retryTimer = null;
   }
 
   private detach(socket: WebSocketLike): void {
