@@ -20,8 +20,8 @@ TYPES = {
     "revert",
 }
 GENERIC = {"update", "fix", "wip", "temp", "changes", "stuff", "commit"}
-MAX_HEADER = 200
-MAX_SUBJECT = 50
+MAX_HEADER = 150
+MAX_SUBJECT = 80
 MIN_SUBJECT = 4
 MAX_LINE = 72
 HEADER_RE = re.compile(r"^(?P<type>[a-z]+)(?:\((?P<scope>[a-z0-9][a-z0-9-]*)\))?: (?P<subject>.+)$")
