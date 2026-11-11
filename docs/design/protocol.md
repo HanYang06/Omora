@@ -102,9 +102,14 @@ manager 是普通服务，不新增帧类型：
 ## 5. 订阅与推送
 
 - `call {"target": "net", "method": "subscribe", "args": {"topics": ["ui.snapshot", "media.progress"]}}`
-  → `result {"topics": ["ui.snapshot"], "unknown": ["nope"]}`；`unsubscribe` 同形状。
+  → `result {"topics": ["ui.snapshot", "media.progress"]}`；`unsubscribe` 同形状。
+  两者都回操作完之后这条连接上的 topic 列表：去重、保持首次订阅的顺序。
 - topic 是普通字符串，不通配。订阅挂在连接上，断开即清空。
+- **net 不判断 topic 认不认识**：没有注册表、没有白名单，net 里不出现任何领域 topic 名。
+  subscribe 任何非空字符串都成功；没有生产者就永远收不到东西，这不是错误。
+  `args.topics` 不是非空字符串组成的数组 → `bad_frame`。
 - 没订阅的连接收不到该 topic 的 event：net 过滤，不靠客户端忽略。
+  不认识的 topic 的 event 静默忽略（§2）。
 - Python 侧发推送：`ctx.resolve("net").emit(topic, payload)`，同步、非阻塞、立即入队；没有连接就丢弃。
   SDK 给一层薄封装 `omora.sdk.realtime.emit(ctx, topic, payload)` —— 内核不新增概念，插件仍只靠服务名。
 - `emit(..., coalesce=True)`：队列里同 topic 的旧消息被这条替换。给"只关心最新值"的流用（进度、光标）。
