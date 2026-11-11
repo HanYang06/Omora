@@ -1,0 +1,30 @@
+{
+  "name": "omora-keys",
+  "displayName": "Omora Keys",
+  "description": "界面键的悬浮与跳转：读仓库根的 keys.json",
+  "version": "0.1.0",
+  "publisher": "omora",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:python"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "omora.listKeys",
+        "title": "Omora: 列出界面键"
+      },
+      {
+        "command": "omora.reloadKeys",
+        "title": "Omora: 重新读 keys.json"
+      }
+    ]
+  }
+}
