@@ -6,6 +6,9 @@ import type { Node } from "../core/types";
  *
  * 纯函数：入参不改；产出的新树里，没被碰到过的子树仍是入参里的原对象
  * （渲染端按节点引用 memo，补丁也靠它）。
+ *
+ * replace 之后键留在原处（由引擎打在替换树根上），所以同一个键可以被
+ * 后来的 replace 接着覆盖，覆盖链才接得下去。
  */
 export interface Contribution {
   owner: string;
@@ -67,6 +70,30 @@ function declaresKey(node: Node, key: string): boolean {
   return node.children.some((child) => declaresKey(child, key));
 }
 
+/**
+ * 只看根以下的子孙。replace 的根键由引擎打（见 stampKey），所以根这一层
+ * 不参与成环判断；子孙里再出现目标键仍然是环。
+ */
+function declaresKeyBelowRoot(node: Node, key: string): boolean {
+  return node.children.some((child) => declaresKey(child, key));
+}
+
+/**
+ * replace 之后键必须还在：替换树的根一律打上目标键，覆盖链才接得下去。
+ * 替换树根自带别的键时警告并强制改名（键是落点契约，不是树作者的装饰）。
+ * 只重建根这一层，children 仍是原来的引用，入参树不改。
+ */
+function stampKey(tree: Node, key: string, owner: string): Node {
+  const declared = keyOf(tree);
+  if (declared === key) {
+    return tree;
+  }
+  if (declared !== undefined) {
+    console.warn(`[compose] 替换树根自带键 ${declared}：owner=${owner} 强制改成 target=${key}`);
+  }
+  return { type: tree.type, props: { ...tree.props, key }, children: tree.children };
+}
+
 function compareStrings(left: string, right: string): number {
   if (left < right) {
     return -1;
@@ -113,7 +140,12 @@ function prepare(contributions: readonly Contribution[]): Contribution[] {
 
   const prepared: Contribution[] = [];
   for (const contribution of latest.values()) {
-    if (declaresKey(contribution.tree, contribution.target)) {
+    // 先查目标键是否在自己树里，再交给 apply 打键；replace 的根键由引擎打，只看子孙。
+    const cyclic =
+      contribution.op === "replace"
+        ? declaresKeyBelowRoot(contribution.tree, contribution.target)
+        : declaresKey(contribution.tree, contribution.target);
+    if (cyclic) {
       console.warn(
         `[compose] 拒绝成环贡献：owner=${contribution.owner} target=${contribution.target} op=${contribution.op}（目标在贡献自己的树里）`,
       );
@@ -178,16 +210,17 @@ function applyContribution(
   }
 
   if (op === "replace") {
+    const stamped = stampKey(tree, contribution.target, contribution.owner);
     const parent = target.parent;
     if (parent === null) {
-      // 目标就是整棵树的根：整棵换掉。
-      return frameOf(tree, null);
+      // 目标就是整棵树的根：整棵换掉，目标键打在新根上。
+      return frameOf(stamped, null);
     }
     const at = parent.children.indexOf(target);
     if (at < 0) {
       return null;
     }
-    parent.children[at] = frameOf(tree, parent);
+    parent.children[at] = frameOf(stamped, parent);
     return root;
   }
 

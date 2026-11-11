@@ -57,18 +57,20 @@ describe("compose：基本形状", () => {
 });
 
 describe("compose：四种挂接动作", () => {
-  it("replace：贡献的树顶替目标节点，索引里换成新树自己的键", () => {
+  it("replace：贡献的树顶替目标节点，键打在新树根上（覆盖链靠它接下去）", () => {
+    const other = slot("om.window.nav");
     const target = slot("om.window.page");
-    const root = node("column", {}, [slot("om.window.nav"), target]);
+    const root = node("column", {}, [other, target]);
 
     const { tree, index } = compose(root, [
-      contribution("ideas", "om.window.page", "replace", node("split", { key: "ideas.page" })),
+      contribution("ideas", "om.window.page", "replace", node("split")),
     ]);
 
-    expect(tree.children[1]).toEqual(node("split", { key: "ideas.page" }));
-    expect(index.get("ideas.page")).toBe(tree.children[1]);
-    // 目标节点被整棵换掉，它原来的键不再存在于结果树里。
-    expect(index.has("om.window.page")).toBe(false);
+    const composed = tree.children[1];
+    expect(composed?.type).toBe("split");
+    expect(composed?.props).toEqual({ key: "om.window.page" });
+    expect(index.get("om.window.page")).toBe(composed);
+    expect(tree.children[0]).toBe(other);
   });
 
   it("before：插在目标节点前面，目标与其它兄弟保持原引用", () => {
@@ -196,16 +198,18 @@ describe("compose：落点", () => {
     expect(tree.children[0]?.children[0]).toBe(feed);
   });
 
-  it("replace 的目标就是整棵树的根：整棵换掉", () => {
+  it("replace 的目标就是整棵树的根：整棵换掉，目标键打在新根上", () => {
     const root = slot("om.window.page", [node("text", { text: "旧" })]);
-    const replacement = node("split", { key: "ideas.page" });
+    const replacement = node("split");
 
     const { tree, index } = compose(root, [
       contribution("ideas", "om.window.page", "replace", replacement),
     ]);
 
-    expect(tree).toBe(replacement);
-    expect(index.get("ideas.page")).toBe(replacement);
+    expect(tree).not.toBe(root);
+    expect(tree.type).toBe("split");
+    expect(tree.props).toEqual({ key: "om.window.page" });
+    expect(index.get("om.window.page")).toBe(tree);
   });
 
   it("根节点没有兄弟：before / after 挂不上，按死键丢弃", () => {
@@ -231,6 +235,57 @@ describe("compose：落点", () => {
     expect(tree).toBe(root);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0]?.[0]).toContain("ideas.home.slot");
+  });
+});
+
+describe("compose：覆盖链（replace 之后键还在）", () => {
+  it("连续两次 replace 同一个键：后到的一份是结果，键仍在", () => {
+    const root = node("column", {}, [slot("home.slot")]);
+
+    const { tree, index } = compose(root, [
+      contribution("alpha", "home.slot", "replace", node("panel", { title: "先" }), 10),
+      contribution("beta", "home.slot", "replace", node("panel", { title: "后" }), 20),
+    ]);
+
+    expect(tree.children[0]?.props).toEqual({ title: "后", key: "home.slot" });
+    expect(index.get("home.slot")).toBe(tree.children[0]);
+  });
+
+  it("replace 之后再 after 到同一个键，仍然生效", () => {
+    const root = node("column", {}, [slot("home.slot")]);
+
+    const { tree } = compose(root, [
+      contribution("alpha", "home.slot", "replace", node("panel", { title: "新" }), 10),
+      contribution("beta", "home.slot", "after", row("beta.block"), 20),
+    ]);
+
+    expect(tree.children.map((child) => child.props.key)).toEqual(["home.slot", "beta.block"]);
+    expect(tree.children[0]?.props.title).toBe("新");
+  });
+
+  it("替换树根自带别的键：警告并强制改成目标键", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const root = node("column", {}, [slot("home.slot")]);
+
+    const { tree } = compose(root, [
+      contribution("ideas", "home.slot", "replace", node("panel", { key: "ideas.page" })),
+    ]);
+
+    expect(tree.children[0]?.props).toEqual({ key: "home.slot" });
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain("ideas.page");
+  });
+
+  it("替换树的子孙里带目标键：仍按成环拒绝", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const root = node("column", {}, [slot("home.slot")]);
+    const cyclic = node("panel", {}, [slot("home.slot")]);
+
+    const { tree } = compose(root, [contribution("ideas", "home.slot", "replace", cyclic)]);
+
+    expect(tree).toBe(root);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain("home.slot");
   });
 });
 
