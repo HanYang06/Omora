@@ -218,7 +218,8 @@ Panel(content=self.feed()),
 - 产物三份（都是生成的，别手改）：`app/sdk/omora/sdk/keys.py`、`app/ui-engine/src/generated/keys.ts`、`keys.json`。
 - CI：`uv run python scripts/keys.py --check` 校验产物最新；重复声明、格式不对、常量撞名都会失败。
 - 查询：`--list` 列全部键、`--who KEY` 看声明与使用位置、`--json` 给工具读（编辑器扩展用这份）。
-- 编辑器：先要 VS Code 扩展（跳声明处、悬浮说明、谁在用），LSP 等要支持第二个编辑器时再说。
+- 编辑器：`tools/vscode` 是一个零依赖的 VS Code 扩展（读 `keys.json`，悬浮 + F12 跳声明处 + 列表命令）；
+  纯逻辑有 `node tools/vscode/test.js` 兜底，编辑器那一层要人工验一次。LSP 等要支持第二个编辑器时再说。
 
 ## 13. 任务分解
 
@@ -263,6 +264,7 @@ P3-1 / P3-3（启动骨架：脚本空数据生成、启动先画骨架、真快
 P2-6 补全（引擎侧 12 个控件对应的 SDK 节点 + 事件载荷类型）。
 P6-1（键索引查询：--list / --who / --json）。
 P4-2（图标数据化：`path` / `glyph` 由插件自带，引擎词表只做默认）。
+P6-2 前半（`tools/vscode` 扩展：悬浮 / 跳转 / 列表，纯逻辑有测试；编辑器层未验）。
 P1-2 续（manager 设置页迁到 set / refresh，状态变化即推送）。
 P1-2 续（ideas 迁到 set / refresh / rebuild；捕捉区回调会通知重画）。
 端到端冒烟（`scripts/smoke.py`：真插件跑「首页 → 文字块 → 输入 → 落库 → 重画」，并核对静态骨架与运行时一致）。

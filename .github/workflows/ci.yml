@@ -286,6 +286,8 @@ jobs:
         run: uv run python scripts/static_ui.py --check
       - name: End-to-end smoke
         run: uv run python scripts/smoke.py
+      - name: Editor extension logic
+        run: node tools/vscode/test.js
 
   windows:
     name: windows
