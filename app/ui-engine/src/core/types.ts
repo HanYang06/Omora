@@ -56,4 +56,6 @@ export interface Snapshot {
   version: number;
   /** 别的插件交来的贡献；合成后才画。没有就是空。 */
   contributions?: Contribution[];
+  /** 这一页要订的推送 topic；没有就只订视图通道。 */
+  topics?: string[];
 }

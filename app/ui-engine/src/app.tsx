@@ -4,8 +4,9 @@ import { Connection, type ConnectionStatus } from "./core/connection";
 import type { Logger } from "./core/log";
 import { fetchMedia } from "./media/media";
 import type { JsonObject } from "./core/protocol";
-import { applySnapshotUpdate } from "./render/patch";
+import { applySnapshotUpdate, isSnapshot } from "./render/patch";
 import { withContributions } from "./render/view";
+import { topicsToSync } from "./core/topics";
 import { Shell } from "./shell/shell";
 import type { Node, Snapshot } from "./core/types";
 
@@ -15,30 +16,6 @@ const SNAPSHOT_TOPIC = "ui.snapshot";
 export interface AppProps {
   connection: Connection;
   logger: Logger;
-}
-
-/** ui.render 的返回值必须是页面快照；不是就丢掉，别把壳画坏。 */
-function asSnapshot(value: unknown): Snapshot | null {
-  if (typeof value !== "object" || value === null) {
-    return null;
-  }
-  const record = value as Record<string, unknown>;
-  if (!Array.isArray(record.pages)) {
-    return null;
-  }
-  if (typeof record.page !== "string") {
-    return null;
-  }
-  if (typeof record.meta !== "string") {
-    return null;
-  }
-  if (typeof record.content !== "object" || record.content === null) {
-    return null;
-  }
-  if (typeof record.version !== "number") {
-    return null;
-  }
-  return value as Snapshot;
 }
 
 /** 快照里有多少个节点：只数，不看内容。 */
@@ -77,6 +54,8 @@ export function App({ connection, logger }: AppProps): ReactNode {
   /** open 的代号：断线 / 重连之后，旧的那次重放不再往下走。 */
   const replaySeq = useRef(0);
   const lastStatus = useRef<ConnectionStatus | null>(null);
+  /** 这条连接上已经订了哪些 topic：快照声明变了就补订 / 退订。 */
+  const subscribed = useRef<string[]>([]);
 
   const logs = useMemo(
     () => ({
@@ -88,11 +67,38 @@ export function App({ connection, logger }: AppProps): ReactNode {
     [logger],
   );
 
+  /** 按快照声明的 topic 补订 / 退订；引擎不写死插件 topic。 */
+  const syncTopics = useCallback(
+    async (next: Snapshot) => {
+      const { add, remove } = topicsToSync(subscribed.current, next.topics ?? [SNAPSHOT_TOPIC]);
+      if (add.length === 0 && remove.length === 0) {
+        return;
+      }
+      try {
+        if (remove.length > 0) {
+          const result = await connection.unsubscribe(remove);
+          subscribed.current = result.topics;
+        }
+        if (add.length > 0) {
+          const result = await connection.subscribe(add);
+          subscribed.current = result.topics;
+        }
+      } catch (error) {
+        logs.conn.warning("subscribe.failed", { err: errorText(error) });
+      }
+    },
+    [connection, logs],
+  );
+
   // 只换视图，不改"用户想看的页"：当前页由导航和 render 的结果决定，推送不能切页。
-  const applySnapshot = useCallback((next: Snapshot) => {
-    snapshotRef.current = next;
-    setSnapshot(next);
-  }, []);
+  const applySnapshot = useCallback(
+    (next: Snapshot) => {
+      snapshotRef.current = next;
+      setSnapshot(next);
+      void syncTopics(next);
+    },
+    [syncTopics],
+  );
 
   useEffect(() => connection.subscribeStatus(setStatus), [connection]);
 
@@ -128,11 +134,11 @@ export function App({ connection, logger }: AppProps): ReactNode {
           logs.render.debug("render.stale", { page: page ?? "" });
           return;
         }
-        const next = asSnapshot(value);
-        if (next === null) {
+        if (!isSnapshot(value)) {
           console.error("[omora] ui 返回的不是页面快照:", value);
           return;
         }
+        const next = value;
         logs.render.debug("render.received", {
           page: next.page,
           nodes: countNodes(next.content),
@@ -153,6 +159,8 @@ export function App({ connection, logger }: AppProps): ReactNode {
   useEffect(() => {
     if (status !== "open") {
       replayed.current = false;
+      // 服务端断线即清空订阅，这里跟着复位，重连后从快照重新订。
+      subscribed.current = [];
       return;
     }
     if (replayed.current) {
@@ -174,6 +182,7 @@ export function App({ connection, logger }: AppProps): ReactNode {
 
       try {
         const result = await connection.subscribe([SNAPSHOT_TOPIC]);
+        subscribed.current = result.topics;
         logs.conn.debug("subscribe.done", { topics: result.topics });
       } catch (error) {
         logs.conn.warning("subscribe.failed", { err: errorText(error) });

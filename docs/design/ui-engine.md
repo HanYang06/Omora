@@ -49,7 +49,8 @@ src/
 
 1. 连上 → `manager.report_devices({devices})` 上报本客户端设备事实，然后
    `ui.render({})` → `result` 是页面快照 → `setState`。
-2. 渲染：`Shell` 用 `pages` 画导航、`page` 高亮、`label` + `meta` 画标题，`content` 画页面。
+2. 渲染：`Shell` 用 `pages` 画导航、`page` 高亮，`content` 与 `contributions` 组合后画页面。
+   快照里的 `topics` 决定这条连接订哪些推送；变了就补订 / 退订。
 3. 点导航 → 引擎直接发 `ui.render({page})`，不走事件。
 4. 捕捉：
    - 打字回车 → `ui.event({handler, payload: {value}})`；

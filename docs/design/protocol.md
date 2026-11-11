@@ -126,11 +126,15 @@ manager 是普通服务，不新增帧类型：
   "page": "ideas",
   "meta": "3 条",
   "content": { "type": "column", "props": {}, "children": [] },
+  "contributions": [],
+  "topics": ["ui.snapshot", "audio.peaks"],
   "version": 12
 }
 ```
 
 - `version` 是页面自己的单调计数，由 ui 插件给；net 不解释它，只负责运。
+- `topics` 是这一页要订的推送 topic（可选，缺省只订 `ui.snapshot`）；客户端按它订阅与退订。
+- `contributions` 是别的插件交来的视图块（可选）；引擎组合后才画。
 - 增量走 event：`{"topic": "ui.snapshot", "payload": {"page": "ideas", "version": 13, "base": 12, "ops": [...]}}`。
 - 客户端只在 `base` 等于自己当前版本时应用；不匹配、或遇到不认识的 op，就发一次 `ui.render` 求全量。
   **永远有全量兜底**，补丁是加速不是唯一路径。

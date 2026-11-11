@@ -89,6 +89,8 @@ class Ui:
         self._seq = 0
         # 事件回调运行期间由 ui 负责推送，set 不要再推一次。
         self._in_event = False
+        # 这一页还要订哪些推送 topic：写进快照，客户端按它订阅。
+        self._topics: list[str] = []
 
     def page(  # noqa: PLR0913, PLR0917 —— 页面登记的声明式参数
         self,
@@ -131,6 +133,22 @@ class Ui:
                 self._extras.remove(extra)
 
         ctx.effect(remove)
+
+    def topics(self, ctx: Context, *names: str) -> None:
+        """声明还要订哪些推送 topic；插件卸载时一起撤销。"""
+        for name in names:
+            topic = name.strip()
+            if not topic:
+                raise ValueError("topic 不能是空串")
+            if topic in self._topics:
+                continue
+            self._topics.append(topic)
+
+            def remove(topic: str = topic) -> None:
+                if topic in self._topics:
+                    self._topics.remove(topic)
+
+            ctx.effect(remove)
 
     def set_page(self, name: str, page: Page) -> None:
         """插件交来一页当前的树；客户端正在看它就直接推一次，不等下一次事件。"""
@@ -236,6 +254,9 @@ class Ui:
         if extras:
             # 没有贡献就不写这个键：快照形状对没用到它的页面保持原样。
             body["contributions"] = extras
+        if self._topics:
+            # 同样的道理：没有额外 topic 就不写，客户端按 ui.snapshot 即可。
+            body["topics"] = [SNAPSHOT_TOPIC, *self._topics]
         return body
 
     def _contributions(
