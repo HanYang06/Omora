@@ -99,6 +99,9 @@ known-first-party = ["boot", "main", "omora"]
 [tool.ruff.lint.per-file-ignores]
 # 测试本来就用 assert；断言值就是具体常量；夹具参数为对齐接口而存在。
 # scripts 与 app/cli 是给人看的命令入口，print 与子进程是本职。
+# 冒烟脚本就是一组断言：它跑在 CI 里，跟测试同性质。
+"scripts/smoke.py" = ["S101"]
+
 "**/tests/**" = [
     "S101",
     "S603",

@@ -158,6 +158,12 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0912, PLR0915 ——
     want_web = not args.kernel or args.shell
     want_shell = args.shell
 
+    # 壳能不能起，先查：这一步失败必须发生在起进程之前，否则内核和 vite 会被留在后台。
+    shell_exe = _electron() if want_shell else None
+    if want_shell and shell_exe is None:
+        print(f"{BAD}壳还没装：先跑 pnpm install{RESET}", file=sys.stderr)
+        return 2
+
     if want_kernel and _busy(KERNEL_PORT):
         _explain_busy(KERNEL_PORT, "内核")
         return 2
@@ -205,11 +211,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0912, PLR0915 ——
             threading.Thread(target=_pump, args=(web, "[vite]", VITE_COLOR), daemon=True)
         )
 
-    if want_shell:
-        exe = _electron()
-        if exe is None:
-            print(f"{BAD}壳还没装：先跑 pnpm install{RESET}", file=sys.stderr)
-            return 2
+    if want_shell and shell_exe is not None:
         shell_env = {
             **env,
             "OMORA_DEV_URL": f"http://127.0.0.1:{WEB_PORT}",
@@ -217,7 +219,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0912, PLR0915 ——
         }
         # 某些编辑器 / CI 会设这个：它让 electron.exe 退化成 node，壳直接起不来
         shell_env.pop("ELECTRON_RUN_AS_NODE", None)
-        shell = _spawn([str(exe), str(ROOT / "app" / "shell")], env=shell_env)
+        shell = _spawn([str(shell_exe), str(ROOT / "app" / "shell")], env=shell_env)
         processes.append(("壳", shell))
         threads.append(
             threading.Thread(target=_pump, args=(shell, "[shell]", SHELL_COLOR), daemon=True)
