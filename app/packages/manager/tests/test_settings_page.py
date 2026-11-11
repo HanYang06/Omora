@@ -6,6 +6,7 @@ event 的 result 只剩确认，客户端要么应用补丁、要么求一次全
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from omora._metadata import Metadata, PluginRecord
@@ -183,3 +184,17 @@ def test_the_settings_page_lists_plugins_and_its_toggle_changes_one() -> None:
     assert notes_after is not None
     assert _find_action(notes_after, "启用") is not None
     assert kernel.running("notes") is False
+
+
+def test_a_device_report_pushes_the_settings_page_when_it_is_open() -> None:
+    kernel = _scene()
+    ui = kernel.resolve("ui")
+    net = kernel.resolve("net")
+
+    ui.render("plugins")
+    before = len(net.sent)
+
+    kernel.resolve("manager").report_devices(["audioinput"])
+
+    assert len(net.sent) == before + 1
+    assert "audioinput" in json.dumps(net.sent[-1], ensure_ascii=False)

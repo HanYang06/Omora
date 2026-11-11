@@ -286,7 +286,8 @@ class Manager:
 - 清单顺序 = boot 的 `SYSTEM_PLUGINS`；每行的元数据来自 package 的 `[tool.omora]`。
 - 开关存在 store 的 `settings` collection（`plugin` / `enabled`），config.ini 只给默认值。
 - 平台 / 能力 / 服务条件不满足 → `disabled` 并带原因；装失败 → `failed`。
-- 设置页通过 ui 插件登记：`plugins`，标签「插件」；store / manager 是启动项，不给开关。
+- 设置页通过 ui 插件登记：`plugins`，标签「插件」；用的是推送式（`handle.set`），状态一变就重交一次树。
+  store / manager 是启动项，不给开关。
 - 细节见 [插件管理器](plugin-manager.md)。
 
 ## 9. 边界
