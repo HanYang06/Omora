@@ -14,17 +14,28 @@ from omora.video import VideoPlugin
 CHANNEL = "http://127.0.0.1:8766/media"
 
 
+_NETS: list[_Net] = []
+
+
 class _Net:
+    """net 的替身：记下推出去的东西，不解释。"""
+
     name = "net"
 
     def __init__(self, media_url: str = CHANNEL) -> None:
         self.media_url = media_url
+        self.sent: list[tuple[str, dict[str, Any]]] = []
+        _NETS.append(self)
 
     def apply(self, ctx: Any) -> None:
         ctx.provide("net", self)
 
+    def emit(self, topic: str, payload: dict[str, Any], *, coalesce: bool = False) -> None:
+        self.sent.append((topic, payload))
+
 
 def _kernel(tmp_path: Path, *, captures: bool = True) -> Kernel:
+    _NETS.clear()
     kernel = Kernel()
     kernel.install(StorePlugin(path=str(tmp_path / "omora.db")))
     kernel.install(MediaPlugin(root=str(tmp_path / "media")))
@@ -35,6 +46,28 @@ def _kernel(tmp_path: Path, *, captures: bool = True) -> Kernel:
         kernel.install(_Net())
     kernel.install(IdeasPlugin())
     return kernel
+
+
+def _push() -> dict[str, Any]:
+    """最近一次推出去的 ui.snapshot。"""
+    assert _NETS, "用例没有装 net 替身"
+    assert _NETS[-1].sent, "这次事件没有推 ui.snapshot"
+    topic, payload = _NETS[-1].sent[-1]
+    assert topic == "ui.snapshot", f"推错了 topic: {topic}"
+    return payload
+
+
+def _fire(ui: Any, handler: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    """发一次事件：result 只有确认，视图走 ui.snapshot；再取全量快照给断言用。"""
+    assert ui.event(str(handler), payload or {}) == {}
+    pushed = _push()
+    if "content" in pushed:
+        assert pushed["version"] >= 1
+    else:
+        assert pushed["version"] > pushed["base"], "补丁的版本必须往上走"
+        assert pushed["ops"], "补丁不许是空的"
+    snapshot: dict[str, Any] = ui.render()
+    return snapshot
 
 
 def _nodes(node: dict[str, Any], node_type: str) -> list[dict[str, Any]]:
@@ -100,23 +133,23 @@ def _heading(snapshot: dict[str, Any]) -> str:
 
 
 def _click_tile(ui: Any, title: str) -> Any:
-    return ui.event(str(_tiles(ui.render())[title]["props"]["on_click"]), {})
+    return _fire(ui, _tiles(ui.render())[title]["props"]["on_click"])
 
 
 def _click_chip(ui: Any, text: str) -> Any:
-    return ui.event(str(_chips(ui.render())[text]["props"]["on_click"]), {})
+    return _fire(ui, _chips(ui.render())[text]["props"]["on_click"])
 
 
 def _click_button(ui: Any, text: str) -> Any:
     hits = [node for node in _nodes(_main(ui.render()), "button") if node["props"]["text"] == text]
     assert hits, f"主区里没有按钮: {text}"
-    return ui.event(str(hits[0]["props"]["on_click"]), {})
+    return _fire(ui, hits[0]["props"]["on_click"])
 
 
 def _open_rail(ui: Any, title: str) -> Any:
     hits = [row for row in _nodes(_rail(ui.render()), "item") if row["props"]["title"] == title]
     assert hits, f"索引栏里没有: {title}"
-    return ui.event(str(hits[0]["props"]["on_click"]), {})
+    return _fire(ui, hits[0]["props"]["on_click"])
 
 
 def _pin(ui: Any, title: str) -> Any:
@@ -128,15 +161,15 @@ def _pin(ui: Any, title: str) -> Any:
 def _capture_text(ui: Any, value: str) -> Any:
     _click_tile(ui, "文字")
     field = _nodes(_main(ui.render()), "input")[0]
-    return ui.event(str(field["props"]["on_submit"]), {"value": value})
+    return _fire(ui, field["props"]["on_submit"], {"value": value})
 
 
 def _type(ui: Any, value: str) -> Any:
-    return ui.event(str(_search_node(ui.render())["props"]["on_query"]), {"value": value})
+    return _fire(ui, _search_node(ui.render())["props"]["on_query"], {"value": value})
 
 
 def _submit(ui: Any, value: str) -> Any:
-    return ui.event(str(_search_node(ui.render())["props"]["on_submit"]), {"value": value})
+    return _fire(ui, _search_node(ui.render())["props"]["on_submit"], {"value": value})
 
 
 def test_the_page_is_a_split_of_a_rail_and_a_main_area_with_the_ideas_icon(
@@ -342,7 +375,7 @@ def test_clicking_a_result_opens_the_detail_and_back_walks_home(tmp_path: Path) 
     results = _submit(ui, "牛奶")
     hit = _nodes(_main(results), "result")[0]
 
-    detail = ui.event(str(hit["props"]["on_click"]), {})
+    detail = _fire(ui, hit["props"]["on_click"])
     assert _heading(detail) == "买牛奶"
 
     back_to_results = _click_button(ui, "← 返回")
@@ -365,8 +398,9 @@ def test_a_result_carries_the_snippet_the_time_and_the_media_kind(tmp_path: Path
     uploaded = kernel.resolve("media").save(b"video", "video/webm")
     _click_tile(ui, "视频")
     recorder = _nodes(_main(ui.render()), "video_capture")[0]
-    ui.event(
-        str(recorder["props"]["on_submit"]),
+    _fire(
+        ui,
+        recorder["props"]["on_submit"],
         {"media": uploaded, "mime": "video/webm", "seconds": 5},
     )
 

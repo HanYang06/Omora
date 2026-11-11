@@ -22,17 +22,28 @@ CHANNEL = "http://127.0.0.1:8766/media"
 SAVED_AT = datetime(2026, 11, 11, 3, 41)
 
 
+_NETS: list[_Net] = []
+
+
 class _Net:
+    """net 的替身：记下推出去的东西，不解释。"""
+
     name = "net"
 
     def __init__(self, media_url: str = CHANNEL) -> None:
         self.media_url = media_url
+        self.sent: list[tuple[str, dict[str, Any]]] = []
+        _NETS.append(self)
 
     def apply(self, ctx: Any) -> None:
         ctx.provide("net", self)
 
+    def emit(self, topic: str, payload: dict[str, Any], *, coalesce: bool = False) -> None:
+        self.sent.append((topic, payload))
+
 
 def _kernel(tmp_path: Path, *, captures: bool = True) -> Kernel:
+    _NETS.clear()
     kernel = Kernel()
     kernel.install(StorePlugin(path=str(tmp_path / "omora.db")))
     kernel.install(MediaPlugin(root=str(tmp_path / "media")))
@@ -43,6 +54,38 @@ def _kernel(tmp_path: Path, *, captures: bool = True) -> Kernel:
         kernel.install(_Net())
     kernel.install(IdeasPlugin())
     return kernel
+
+
+def _push() -> dict[str, Any]:
+    """最近一次推出去的 ui.snapshot。"""
+    assert _NETS, "用例没有装 net 替身"
+    assert _NETS[-1].sent, "这次事件没有推 ui.snapshot"
+    topic, payload = _NETS[-1].sent[-1]
+    assert topic == "ui.snapshot", f"推错了 topic: {topic}"
+    return payload
+
+
+def _fire(ui: Any, handler: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    """发一次事件：result 只有确认，视图走 ui.snapshot；再取全量快照给断言用。"""
+    assert ui.event(str(handler), payload or {}) == {}
+    _assert_pushed()
+    snapshot: dict[str, Any] = ui.render()
+    return snapshot
+
+
+def _fire_raw(ui: Any, handler: Any, payload: dict[str, Any] | None = None) -> None:
+    """发事件但不再画：留给"陈旧 handler 只宽限一代"的用例，多画一次就把它作废了。"""
+    assert ui.event(str(handler), payload or {}) == {}
+    _assert_pushed()
+
+
+def _assert_pushed() -> None:
+    pushed = _push()
+    if "content" in pushed:
+        assert pushed["version"] >= 1
+        return
+    assert pushed["version"] > pushed["base"], "补丁的版本必须往上走"
+    assert pushed["ops"], "补丁不许是空的"
 
 
 def _nodes(node: dict[str, Any], node_type: str) -> list[dict[str, Any]]:
@@ -93,20 +136,20 @@ def _pin_clock(monkeypatch: Any) -> None:
 
 
 def _click_tile(ui: Any, title: str) -> Any:
-    return ui.event(str(_tiles(ui.render())[title]["props"]["on_click"]), {})
+    return _fire(ui, _tiles(ui.render())[title]["props"]["on_click"])
 
 
 def _click_rail(ui: Any, title: str) -> Any:
     rail = ui.render()["content"]["children"][0]
     hits = [row for row in _nodes(rail, "item") if row["props"]["title"] == title]
     assert hits, f"索引栏里没有: {title}"
-    return ui.event(str(hits[0]["props"]["on_click"]), {})
+    return _fire(ui, hits[0]["props"]["on_click"])
 
 
 def _click_button(ui: Any, text: str) -> Any:
     hits = [node for node in _nodes(_main(ui.render()), "button") if node["props"]["text"] == text]
     assert hits, f"主区里没有按钮: {text}"
-    return ui.event(str(hits[0]["props"]["on_click"]), {})
+    return _fire(ui, hits[0]["props"]["on_click"])
 
 
 def _recording(ui: Any, tile: str, node_type: str) -> tuple[str, dict[str, Any]]:
@@ -131,7 +174,7 @@ def test_clicking_a_tile_turns_the_capture_region_into_a_workspace_in_place(
     ui = _kernel(tmp_path).resolve("ui")
     _click_tile(ui, "文字")
     field = _nodes(_main(ui.render()), "input")[0]
-    ui.event(str(field["props"]["on_submit"]), {"value": "买牛奶"})
+    _fire(ui, field["props"]["on_submit"], {"value": "买牛奶"})
 
     workspace = _click_tile(ui, "录音")
 
@@ -157,7 +200,7 @@ def test_the_text_workspace_stores_on_enter_and_folds_back_to_the_tiles(tmp_path
     field = _nodes(_main(workspace), "input")[0]
     assert _texts(_capture_region(workspace)) == ["文字"]
 
-    home = ui.event(str(field["props"]["on_submit"]), {"value": "  买牛奶  "})
+    home = _fire(ui, field["props"]["on_submit"], {"value": "  买牛奶  "})
 
     assert list(_tiles(home)) == ["录音", "视频", "文字"]
     assert (_cards(home), home["meta"]) == (["买牛奶"], "1 条")
@@ -168,7 +211,7 @@ def test_a_blank_text_capture_is_not_stored(tmp_path: Path) -> None:
     workspace = _click_tile(ui, "文字")
 
     field = _nodes(_main(workspace), "input")[0]
-    after = ui.event(str(field["props"]["on_submit"]), {"value": "   "})
+    after = _fire(ui, field["props"]["on_submit"], {"value": "   "})
 
     assert _nodes(_main(after), "input")
     assert after["pages"][0]["count"] == 0
@@ -184,7 +227,7 @@ def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(
     handler, recorder = _recording(ui, "录音", "audio_capture")
     assert (recorder["props"]["quality"], recorder["props"]["noise_reduction"]) == ("high", True)
 
-    saved = ui.event(handler, _audio_take(uploaded, 12.4))
+    saved = _fire(ui, handler, _audio_take(uploaded, 12.4))
 
     bar = _capture_region(saved)
     assert [child["type"] for child in bar["children"]] == ["row", "waveform"]
@@ -213,7 +256,7 @@ def test_the_saved_bar_records_again_and_collapses_to_the_tiles(
     ui = kernel.resolve("ui")
     uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
     handler, _ = _recording(ui, "录音", "audio_capture")
-    ui.event(handler, _audio_take(uploaded, 3))
+    _fire(ui, handler, _audio_take(uploaded, 3))
 
     again = _click_button(ui, "再录一条")
 
@@ -237,7 +280,7 @@ def test_a_saved_video_offers_no_inline_player(tmp_path: Path, monkeypatch: Any)
     handler, recorder = _recording(ui, "视频", "video_capture")
     assert (recorder["props"]["quality"], recorder["props"]["upload_url"]) == ("720p", CHANNEL)
 
-    saved = ui.event(handler, _video_take(uploaded))
+    saved = _fire(ui, handler, _video_take(uploaded))
 
     bar = _capture_region(saved)
     assert [child["type"] for child in bar["children"]] == ["row"]
@@ -263,7 +306,7 @@ def test_the_saved_bar_is_gone_after_a_page_change(tmp_path: Path, monkeypatch: 
     ui = kernel.resolve("ui")
     uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
     handler, _ = _recording(ui, "录音", "audio_capture")
-    ui.event(handler, _audio_take(uploaded, 3))
+    _fire(ui, handler, _audio_take(uploaded, 3))
 
     _click_rail(ui, "语音 11-11 03:41")
     home = _click_button(ui, "← 返回")
@@ -285,10 +328,10 @@ def test_collapsing_while_recording_stores_the_take_without_reopening_the_bar(
     handler = str(_nodes(_main(workspace), "audio_capture")[0]["props"]["on_submit"])
     collapse = str(_nodes(_capture_region(workspace), "button")[0]["props"]["on_click"])
 
-    collapsed = ui.event(collapse, {})
-    assert list(_tiles(collapsed)) == ["录音", "视频", "文字"]
-
-    settled = ui.event(handler, _audio_take(uploaded, 3))
+    # 宽限期只容一代：中间不能再画，否则那份旧 id 就作废了。
+    _fire_raw(ui, collapse)
+    _fire_raw(ui, handler, _audio_take(uploaded, 3))
+    settled = ui.render()
 
     assert _cards(settled) == ["语音 11-11 03:41"]
     assert settled["pages"][0]["count"] == 1
@@ -318,7 +361,7 @@ def test_a_capture_the_media_plugins_reject_never_reaches_the_store(tmp_path: Pa
     for tile, node_type, payload in rejects:
         handler, _ = _recording(ui, tile, node_type)
 
-        after = ui.event(handler, payload)
+        after = _fire(ui, handler, payload)
 
         assert _nodes(_main(after), node_type), tile
         assert after["pages"][0]["count"] == 0, tile
@@ -347,10 +390,10 @@ def test_naming_a_saved_take_renames_the_record(tmp_path: Path, monkeypatch: Any
     ui = kernel.resolve("ui")
     uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
     handler, _ = _recording(ui, "录音", "audio_capture")
-    saved = ui.event(handler, _audio_take(uploaded, 3))
+    saved = _fire(ui, handler, _audio_take(uploaded, 3))
     field = _nodes(_capture_region(saved), "input")[0]
 
-    renamed = ui.event(str(field["props"]["on_submit"]), {"value": "  买牛奶  "})
+    renamed = _fire(ui, field["props"]["on_submit"], {"value": "  买牛奶  "})
 
     assert _cards(renamed) == ["买牛奶"]
     assert _rail_titles(renamed) == ["买牛奶"]
@@ -366,16 +409,16 @@ def test_a_blank_rename_never_clears_the_title(tmp_path: Path, monkeypatch: Any)
     ui = kernel.resolve("ui")
     uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
     handler, _ = _recording(ui, "录音", "audio_capture")
-    saved = ui.event(handler, _audio_take(uploaded, 3))
+    saved = _fire(ui, handler, _audio_take(uploaded, 3))
     field = _nodes(_capture_region(saved), "input")[0]
 
-    blank = ui.event(str(field["props"]["on_submit"]), {"value": "   "})
+    blank = _fire(ui, field["props"]["on_submit"], {"value": "   "})
     assert _cards(blank) == ["语音 11-11 03:41"]
 
     field = _nodes(_capture_region(blank), "input")[0]
-    renamed = ui.event(str(field["props"]["on_submit"]), {"value": "买牛奶"})
+    renamed = _fire(ui, field["props"]["on_submit"], {"value": "买牛奶"})
     field = _nodes(_capture_region(renamed), "input")[0]
-    cleared = ui.event(str(field["props"]["on_submit"]), {"value": ""})
+    cleared = _fire(ui, field["props"]["on_submit"], {"value": ""})
 
     assert _cards(cleared) == ["买牛奶"]
     assert _nodes(_capture_region(cleared), "input")[0]["props"]["value"] == "买牛奶"
@@ -398,7 +441,7 @@ def test_a_take_shorter_than_the_minimum_never_reaches_the_store(
     for tile, node_type, media_id, payload in takes:
         handler, _ = _recording(ui, tile, node_type)
 
-        after = ui.event(handler, payload)
+        after = _fire(ui, handler, payload)
 
         assert _nodes(_main(after), node_type), tile
         assert _nodes(_main(after), "input") == [], tile
@@ -417,7 +460,7 @@ def test_a_take_over_the_minimum_is_stored(tmp_path: Path, monkeypatch: Any) -> 
     uploaded = str(kernel.resolve("media").save(b"half", "audio/webm"))
     handler, _ = _recording(ui, "录音", "audio_capture")
 
-    saved = ui.event(handler, _audio_take(uploaded, 0.5))
+    saved = _fire(ui, handler, _audio_take(uploaded, 0.5))
 
     assert _cards(saved) == ["语音 11-11 03:41"]
     assert _texts(_capture_region(saved)) == ["已保存 · 0:00"]
