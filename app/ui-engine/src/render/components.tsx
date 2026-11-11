@@ -1,6 +1,20 @@
 import type { ComponentType, ReactNode } from "react";
 import { AudioCapture } from "../capture/audio/audio-capture";
 import { Card } from "./cards";
+import {
+  Accordion,
+  ButtonGroup,
+  Checkbox,
+  Field,
+  NumberInput,
+  Progress,
+  Radio,
+  Select,
+  Slider,
+  Switch,
+  Tabs,
+  Textarea,
+} from "./controls";
 import { Audio, Recorder } from "../media/capture";
 import { Hotkey } from "./hotkey";
 import { Icon } from "../shell/icons";
@@ -213,4 +227,16 @@ export const components: Record<string, ComponentType<NodeComponentProps>> = {
   tile: Tile,
   chip: Chip,
   card: Card,
+  switch: Switch,
+  checkbox: Checkbox,
+  radio: Radio,
+  select: Select,
+  textarea: Textarea,
+  number_input: NumberInput,
+  slider: Slider,
+  field: Field,
+  button_group: ButtonGroup,
+  tabs: Tabs,
+  accordion: Accordion,
+  progress: Progress,
 };
