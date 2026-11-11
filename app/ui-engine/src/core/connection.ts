@@ -3,7 +3,7 @@ import { FrameError, makeCall, parseInboundFrame, type JsonObject } from "./prot
 /** net 插件的默认端点。改这里就换地址。 */
 export const DEFAULT_URL = "ws://127.0.0.1:8765";
 
-/** call 的默认超时：30s。长调用显式传 timeout: 0 关掉。 */
+/** call 默认 30s 超时；timeout: 0 关掉。 */
 export const DEFAULT_CALL_TIMEOUT_MS = 30_000;
 
 /** 断线重连：500ms 起指数退避，封顶 10s，再在指数延迟上加 0–20% 抖动。 */
@@ -25,15 +25,7 @@ export interface WebSocketLike {
 
 export type WebSocketFactory = (url: string) => WebSocketLike;
 
-/** 定时器：生产走全局 setTimeout，测试注入假钟。 */
-export interface Timers {
-  setTimeout(callback: () => void, ms: number): unknown;
-  clearTimeout(handle: unknown): void;
-}
-
 export interface ConnectionOptions {
-  /** 定时器，默认全局 setTimeout；测试用来控制重连与超时。 */
-  timers?: Timers;
   /** 随机源，默认 Math.random；测试用来固定重连抖动。 */
   random?: () => number;
 }
@@ -43,7 +35,7 @@ export interface CallOptions {
   timeout?: number;
 }
 
-/** net.subscribe / unsubscribe 的 result：操作完之后这条连接上的 topic 列表。 */
+/** subscribe / unsubscribe 的 result：操作完之后这条连接上的 topic 列表。 */
 export interface SubscriptionResult {
   topics: string[];
 }
@@ -51,13 +43,6 @@ export interface SubscriptionResult {
 export type EventListener = (payload: JsonObject) => void;
 
 const defaultFactory: WebSocketFactory = (url) => new WebSocket(url);
-
-const defaultTimers: Timers = {
-  setTimeout: (callback, ms) => globalThis.setTimeout(callback, ms),
-  clearTimeout: (handle) => {
-    globalThis.clearTimeout(handle as ReturnType<typeof globalThis.setTimeout>);
-  },
-};
 
 /** 调用失败：code 来自错误帧，或连接层自己造的 not_connected / connection_closed / timeout。 */
 export class CallError extends Error {
@@ -73,20 +58,16 @@ export class CallError extends Error {
 interface PendingCall {
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
-  /** 超时定时器；null 表示这条调用不超时。 */
-  timer: unknown;
+  timer: ReturnType<typeof setTimeout> | null;
 }
 
 /**
- * WebSocket 客户端：请求按 id 配对成 Promise，event 按 topic 派发给监听者。
- *
- * 断线后自动重连（500ms 起指数退避到 10s）；close() 之后不再重连。
- * 重连成功后的重放（能力、订阅、当前页）不归这里，由调用方按 open 状态做。
+ * 请求按 id 配对成 Promise，event 按 topic 派发；断线自动重连，close() 之后不再重连。
+ * 重连后的重放（能力、订阅、当前页）由调用方按 open 状态做。
  */
 export class Connection {
   private readonly url: string;
   private readonly factory: WebSocketFactory;
-  private readonly timers: Timers;
   private readonly random: () => number;
   private socket: WebSocketLike | null = null;
   private readonly pending = new Map<string, PendingCall>();
@@ -94,7 +75,7 @@ export class Connection {
   private readonly eventListeners = new Map<string, Set<EventListener>>();
   private current: ConnectionStatus = "idle";
   private nextId = 0;
-  private retryTimer: unknown = null;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private retryAttempt = 0;
   /** connect() 之后为 true、close() 之后为 false：只有显式 close() 会停止自动重连。 */
   private autoReconnect = false;
@@ -106,7 +87,6 @@ export class Connection {
   ) {
     this.url = url;
     this.factory = factory;
-    this.timers = options.timers ?? defaultTimers;
     this.random = options.random ?? Math.random;
   }
 
@@ -127,10 +107,7 @@ export class Connection {
     };
   }
 
-  /**
-   * 订阅一个 topic 的推送。同一个 topic 可以有多个监听者，按注册顺序派发。
-   * 返回取消监听的函数；event 永远不进 pending。
-   */
+  /** 订阅一个 topic 的推送，可多个监听者；返回取消函数。event 永不进 pending。 */
   onEvent(topic: string, listener: EventListener): () => void {
     let topicListeners = this.eventListeners.get(topic);
     if (topicListeners === undefined) {
@@ -204,9 +181,8 @@ export class Connection {
   }
 
   /**
-   * 发一帧 call。未连接直接拒绝，不发任何东西。
-   * 返回的 Promise 由同 id 的 result / error 帧结算；超过 timeout 则以 CallError("timeout") 拒绝，
-   * 之后迟到的同 id 帧按未知 id 忽略。
+   * 发一帧 call。未连接直接拒绝。result / error 按 id 结算；超过 timeout 以
+   * CallError("timeout") 拒绝，之后迟到的同 id 帧按未知 id 忽略。
    */
   call(
     target: string,
@@ -228,7 +204,7 @@ export class Connection {
       this.pending.set(id, pending);
 
       if (timeout > 0) {
-        pending.timer = this.timers.setTimeout(() => {
+        pending.timer = setTimeout(() => {
           if (this.pending.get(id) !== pending) {
             return;
           }
@@ -246,16 +222,13 @@ export class Connection {
     });
   }
 
-  /**
-   * 订阅 topic。走普通 call，result 是操作完之后这条连接上的 topic 列表。
-   * 订阅挂在连接上，断开即清空；重连后由调用方重新订阅。
-   */
+  /** 订阅 topic；result 是操作完这条连接上的 topic 列表。重连后要重新订阅。 */
   async subscribe(topics: string[]): Promise<SubscriptionResult> {
     const value = await this.call("net", "subscribe", { topics });
     return value as SubscriptionResult;
   }
 
-  /** 取消订阅；result 同样是操作完之后连接上的 topic 列表。 */
+  /** 取消订阅；result 同样是操作完这条连接上的 topic 列表。 */
   async unsubscribe(topics: string[]): Promise<SubscriptionResult> {
     const value = await this.call("net", "unsubscribe", { topics });
     return value as SubscriptionResult;
@@ -378,37 +351,31 @@ export class Connection {
 
     const exponent = Math.min(RECONNECT_BASE_MS * 2 ** this.retryAttempt, RECONNECT_MAX_MS);
     this.retryAttempt += 1;
-    const jittered = Math.min(
-      Math.round(exponent * (1 + RECONNECT_JITTER * this.random())),
-      RECONNECT_MAX_MS,
-    );
-
-    this.retryTimer = this.timers.setTimeout(() => {
+    const scale = 1 + RECONNECT_JITTER * this.random();
+    const delay = Math.min(Math.round(exponent * scale), RECONNECT_MAX_MS);
+    this.retryTimer = setTimeout(() => {
       this.retryTimer = null;
       this.connect();
-    }, jittered);
+    }, delay);
   }
 
   private cancelRetry(): void {
     if (this.retryTimer === null) {
       return;
     }
-    this.timers.clearTimeout(this.retryTimer);
+    clearTimeout(this.retryTimer);
     this.retryTimer = null;
   }
-
   private detach(socket: WebSocketLike): void {
     socket.onopen = null;
     socket.onmessage = null;
     socket.onerror = null;
     socket.onclose = null;
   }
-
-  /** 把一条调用从 pending 里摘掉，并清掉它的超时定时器。 */
   private settle(id: string, pending: PendingCall): void {
     this.pending.delete(id);
     if (pending.timer !== null) {
-      this.timers.clearTimeout(pending.timer);
+      clearTimeout(pending.timer);
       pending.timer = null;
     }
   }
