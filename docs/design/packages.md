@@ -197,6 +197,7 @@ class Ui:
         *,
         order: int = 0,
     ) -> None: ...
+    def topics(self, ctx: Context, *names: str) -> None: ...
     def render(self, page: str | None = None) -> dict[str, object]: ...
     def event(self, handler: str, payload: dict[str, object]) -> dict[str, object]: ...
 ```
@@ -238,8 +239,12 @@ class Ui:
 ### 7.4 页面与节点
 
 - `Page(content, meta)`：content 是节点树，meta 是标题旁那句话（比如“3 条”）。
-- 词表：`Column`、`Row`、`Text`、`Button`、`Input`、`Recorder`、`Audio`、`List`、`Item`、`Empty`、
-  `Search`、`Suggestion`、`Result`、`AudioCapture`、`VideoCapture`、`Video`、`Hotkey`、`Waveform`。
+- 词表：`omora.sdk.ui` 放核心节点（`Column`、`Row`、`Text`、`Button`、`Input`、`List`、`Item`、
+  `Empty`、`Search`、`Suggestion`、`Result`、`Split`、`Rail`、`Panel`、`Icon`、`Tile`、`Chip`、`Card`、
+  `Slot`、`Hotkey`、`Waveform`、`Recorder`、`Audio`、`AudioCapture`、`Video`、`VideoCapture`）；
+  `omora.sdk.controls` 放表单与反馈节点（`Switch`、`Checkbox`、`Radio`、`Select` + `Option`、`Textarea`、
+  `NumberInput`、`Slider`、`Field`、`ButtonGroup`、`Tabs`、`Accordion`、`Progress`）。
+- 事件载荷：`omora.sdk.events` 的 `Submit` / `Change` / `Recorded` / `RecordedWithPeaks`；回调参数标上它就有字段提示。
 
 ## 8. 产出页面的插件
 
