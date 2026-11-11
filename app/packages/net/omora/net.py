@@ -1,8 +1,8 @@
-"""net：WebSocket + 帧分发 + 有界发送队列。
+"""net：WebSocket + 帧分发 + 订阅与指标。
 
 协议的形状是合同（见 docs/design/protocol.md），这里负责把它搬起来：
-收帧、解析、找服务、调用、回帧，以及每连接一条发送任务与有界队列。
-分发是串行的（一把锁）；推送不进锁，走队列。
+收帧、解析、找服务、调用、回帧、订阅、指标。每连接的发送队列在
+_outbox.py：net 负责分发，outbox 负责排队与写出去。
 """
 
 from __future__ import annotations
@@ -11,57 +11,34 @@ import asyncio
 import contextlib
 import json
 import time
-from collections import deque
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from typing import Any
 
 from websockets.asyncio.server import Server, ServerConnection
 from websockets.asyncio.server import serve as ws_serve
-from websockets.exceptions import ConnectionClosed
 
 from omora.sdk import Context
 from omora.sdk.protocol import (
     BAD_FRAME,
     CALL_FAILED,
-    EVENT,
-    OVERLOADED,
     UNKNOWN_METHOD,
     UNKNOWN_TARGET,
     FrameError,
     error_frame,
-    event_frame,
     parse_call,
     result_frame,
 )
 
+from ._outbox import DEFAULT_QUEUE_MAX, Counters, Frame, Outbox, Writer
 from .media_http import MediaHttp
 
 DEFAULT_ORIGINS = ("http://127.0.0.1:5173", "http://localhost:5173")
-DEFAULT_QUEUE_MAX = 256
 SLOW_CALL_MS = 10.0
 MAX_SLOW_CALLS = 50
 
-Frame = dict[str, Any]
-Writer = Callable[[ServerConnection, str], Awaitable[None]]
-
-
-class _Connection:
-    """一条连接自己的订阅表与发送队列。断开即随对象一起消失。"""
-
-    def __init__(self, ws: ServerConnection) -> None:
-        self.ws = ws
-        self.topics: dict[str, None] = {}
-        self.queue: deque[Frame] = deque()
-        self.wakeup = asyncio.Event()
-        self.sending: Frame | None = None
-        self.closed = False
-
-    def topic_list(self) -> list[str]:
-        return list(self.topics)
-
 
 class Net:
-    """帧进来，帧出去。服务方法全是同步的，所以分发天然串行；发送另有一条任务。"""
+    """帧进来，帧出去。服务方法全是同步的，所以分发天然串行；发送走 _outbox。"""
 
     def __init__(  # noqa: PLR0913 —— 声明式的服务装配参数
         self,
@@ -87,15 +64,13 @@ class Net:
         self._clock: Callable[[], float] = time.perf_counter if clock is None else clock
         self._writer: Writer = _send_text if writer is None else writer
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._connections: list[_Connection] = []
+        self._connections: list[Outbox] = []
         self._call_lock = asyncio.Lock()
-        self._current: _Connection | None = None
+        self._counters = Counters()
+        self._current: Outbox | None = None
         self._defer = 0
         self._pending: list[tuple[str, dict[str, Any], bool]] = []
         self._calls = 0
-        self._frames_out = 0
-        self._bytes_out = 0
-        self._dropped = 0
         self._slow_calls: list[dict[str, Any]] = []
 
     @property
@@ -133,30 +108,10 @@ class Net:
 
     def _broadcast(self, topic: str, payload: dict[str, Any], coalesce: bool) -> None:
         for conn in self._connections:
-            if conn.closed or topic not in conn.topics:
+            if conn.closed or not conn.wants(topic):
                 continue
-            self._queue_event(conn, topic, payload, coalesce)
-
-    def _queue_event(
-        self, conn: _Connection, topic: str, payload: dict[str, Any], coalesce: bool
-    ) -> None:
-        frame = event_frame(topic, payload)
-        if coalesce:
-            for index, queued in enumerate(conn.queue):
-                if (
-                    queued.get("type") == EVENT
-                    and queued.get("topic") == topic
-                    and queued is not conn.sending
-                ):
-                    conn.queue[index] = frame
-                    conn.wakeup.set()
-                    return
-        if len(conn.queue) >= self._max_queue:
-            self._dropped += 1
-            self._log.trace("net.dropped", topic=topic)
-            return
-        conn.queue.append(frame)
-        conn.wakeup.set()
+            if conn.push_event(topic, payload, coalesce):
+                self._log.trace("net.dropped", topic=topic)
 
     def _flush_pending(self) -> None:
         if not self._pending:
@@ -173,8 +128,7 @@ class Net:
         conn = self._current
         if conn is None:
             return {"topics": []}
-        for name in names:
-            conn.topics.setdefault(name, None)
+        conn.subscribe(names)
         return {"topics": conn.topic_list()}
 
     def unsubscribe(self, topics: object = None) -> dict[str, list[str]]:
@@ -183,8 +137,7 @@ class Net:
         conn = self._current
         if conn is None:
             return {"topics": []}
-        for name in names:
-            conn.topics.pop(name, None)
+        conn.unsubscribe(names)
         return {"topics": conn.topic_list()}
 
     # ---- 指标 ---------------------------------------------------------
@@ -194,10 +147,10 @@ class Net:
         return {
             "connections": len(self._connections),
             "calls": self._calls,
-            "frames_out": self._frames_out,
-            "bytes_out": self._bytes_out,
+            "frames_out": self._counters.frames_out,
+            "bytes_out": self._counters.bytes_out,
             "queue_depth": sum(len(conn.queue) for conn in self._connections),
-            "dropped": self._dropped,
+            "dropped": self._counters.dropped,
             "slow_calls": list(self._slow_calls),
         }
 
@@ -209,7 +162,7 @@ class Net:
         self._flush_pending()
         return frame
 
-    def _call(self, raw: object, conn: _Connection | None) -> Frame:
+    def _call(self, raw: object, conn: Outbox | None) -> Frame:
         started = self._clock()
         frame, target, method = self._perform(raw, conn)
         if target is None:
@@ -222,9 +175,7 @@ class Net:
             self._log.warning("net.slow_call", target=target, method=method, ms=entry["ms"])
         return frame
 
-    def _perform(
-        self, raw: object, conn: _Connection | None
-    ) -> tuple[Frame, str | None, str | None]:
+    def _perform(self, raw: object, conn: Outbox | None) -> tuple[Frame, str | None, str | None]:
         try:
             call = parse_call(raw)
         except FrameError as exc:
@@ -262,33 +213,13 @@ class Net:
         self._log.trace("net.call", target=call.target, method=call.method)
         return result_frame(call.id, value), call.target, call.method
 
-    async def _dispatch(self, conn: _Connection, raw: object) -> None:
+    async def _dispatch(self, conn: Outbox, raw: object) -> None:
         async with self._call_lock:
             frame = self._call(raw, conn)
-            self._enqueue_reply(conn, frame)
+            conn.enqueue_reply(frame)
             self._flush_pending()
 
-    def _enqueue_reply(self, conn: _Connection, frame: Frame) -> None:
-        # 回帧优先于 event：满了先丢最老的待发 event；丢不出来才说明客户端没在读。
-        if len(conn.queue) >= self._max_queue:
-            self._drop_oldest_event(conn)
-        if len(conn.queue) >= self._max_queue and frame["id"] is not None:
-            frame = error_frame(
-                frame["id"],
-                OVERLOADED,
-                "发送队列已满（客户端没在读）；调用可能已经执行过，重试要幂等",
-            )
-        conn.queue.append(frame)
-        conn.wakeup.set()
-
-    def _drop_oldest_event(self, conn: _Connection) -> None:
-        for index, queued in enumerate(conn.queue):
-            if queued.get("type") == EVENT and queued is not conn.sending:
-                del conn.queue[index]
-                self._dropped += 1
-                return
-
-    # ---- 连接与发送 ---------------------------------------------------
+    # ---- 连接与生命周期 -----------------------------------------------
 
     async def serve(self) -> int:
         """起两件事：帧通道（WS）与 HTTP 媒体通道；返回 WS 端口。"""
@@ -313,17 +244,17 @@ class Net:
             self._server = None
 
     async def _connection(self, ws: ServerConnection) -> None:
-        conn = _Connection(ws)
+        conn = Outbox(ws, max_queue=self._max_queue, counters=self._counters)
         self._connections.append(conn)
         self._log.debug("net.connected")
-        send_task = asyncio.create_task(self._send_loop(conn))
+        send_task = asyncio.create_task(conn.run(self._writer))
         dispatches: set[asyncio.Task[None]] = set()
         try:
             async for message in ws:
                 try:
                     raw = _decode(message)
                 except FrameError as exc:
-                    self._enqueue_reply(conn, error_frame(None, exc.code, str(exc)))
+                    conn.enqueue_reply(error_frame(None, exc.code, str(exc)))
                     continue
                 task = asyncio.create_task(self._dispatch(conn, raw))
                 dispatches.add(task)
@@ -338,27 +269,6 @@ class Net:
             if conn in self._connections:
                 self._connections.remove(conn)
             self._log.debug("net.disconnected")
-
-    async def _send_loop(self, conn: _Connection) -> None:
-        while not conn.closed:
-            await conn.wakeup.wait()
-            conn.wakeup.clear()
-            while conn.queue and not conn.closed:
-                frame = conn.queue[0]
-                conn.sending = frame
-                text = _encode(frame)
-                try:
-                    await self._writer(conn.ws, text)
-                except ConnectionClosed:
-                    conn.closed = True
-                    return
-                finally:
-                    conn.sending = None
-                if conn.queue and conn.queue[0] is frame:
-                    conn.queue.popleft()
-                self._frames_out += 1
-                # 算字节数，不是再发一次。
-                self._bytes_out += len(text.encode("utf-8"))
 
 
 class NetPlugin:
@@ -409,10 +319,6 @@ def _decode(message: str | bytes) -> object:
         return json.loads(message)
     except ValueError as exc:
         raise FrameError(BAD_FRAME, f"不是合法 JSON: {exc}") from exc
-
-
-def _encode(frame: Frame) -> str:
-    return json.dumps(frame, ensure_ascii=False)
 
 
 async def _send_text(ws: ServerConnection, text: str) -> None:
