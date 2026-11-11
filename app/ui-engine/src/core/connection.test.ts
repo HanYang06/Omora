@@ -251,7 +251,7 @@ describe("call 超时", () => {
     );
 
     socket.receive({ id: timedOut.id, type: "result", value: { late: true } });
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining(timedOut.id));
+    expect(warn).toHaveBeenCalledWith("[omora] 收到未知 id 的帧:", timedOut.id);
     await Promise.resolve();
     expect(nextOutcome).toBe("pending");
     expect(connection.status).toBe("open");
@@ -357,7 +357,7 @@ describe("event 推送", () => {
   });
 
   it("一个监听者抛错不影响同一 topic 的其他监听者", () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const { connection, socket } = setup();
     const seen: unknown[] = [];
     connection.onEvent("ui.snapshot", () => {
@@ -369,6 +369,7 @@ describe("event 推送", () => {
       socket.receive({ type: "event", topic: "ui.snapshot", payload: { version: 4 } });
     }).not.toThrow();
     expect(seen).toEqual([{ version: 4 }]);
+    expect(error).toHaveBeenCalledWith("[omora] 处理事件失败:", "ui.snapshot", expect.any(Error));
   });
 });
 
@@ -474,7 +475,6 @@ describe("断线重连", () => {
     vi.advanceTimersByTime(500);
     expect(FakeSocket.instances).toHaveLength(2);
   });
-
   it("close() 之后不再重连，也会取消已排好的重连", () => {
     const first = setup();
     first.connection.close();
