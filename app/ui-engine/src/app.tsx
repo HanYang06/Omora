@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { reportCapabilitiesOnce } from "./core/capability-report";
+import { reportDevicesOnce } from "./core/device-report";
 import { Connection, type ConnectionStatus } from "./core/connection";
 import type { Logger } from "./core/log";
 import { fetchMedia } from "./media/media";
@@ -164,7 +164,7 @@ export function App({ connection, logger }: AppProps): ReactNode {
 
     void (async () => {
       try {
-        await reportCapabilitiesOnce(connection);
+        await reportDevicesOnce(connection);
       } catch (error) {
         logs.conn.warning("capability.report_failed", { err: errorText(error) });
       }

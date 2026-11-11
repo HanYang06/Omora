@@ -121,8 +121,8 @@ class Manager:
         self._phase = dict.fromkeys(self._manifest, PENDING)
         self._reason: dict[str, Reason | None] = dict.fromkeys(self._manifest)
         self._enabled: dict[str, bool] = {}
-        self._capabilities: tuple[str, ...] = ()
-        self._available: frozenset[str] = frozenset()
+        # 客户端上报的设备事实（平台名字：audioinput / videoinput）；manager 不解释它。
+        self._devices: tuple[str, ...] = ()
         self._reported = False
         self._owned: set[str] = set()
         self._ui: Any = None
@@ -151,7 +151,7 @@ class Manager:
         """读清单：装的、开的、阶段、原因。只读快照。"""
         return {
             "platform": self._platform,
-            "capabilities": list(self._capabilities),
+            "devices": list(self._devices),
             "reported": self._reported,
             "plugins": [self._row(name).to_dict() for name in self._manifest],
         }
@@ -169,20 +169,25 @@ class Manager:
         self._sync_page()
         return self.inventory()
 
-    def report_capabilities(self, capabilities: list[str] | tuple[str, ...]) -> dict[str, Any]:
-        """收客户端上报的能力；这是客户端的事实，manager 不探测硬件。"""
-        if not isinstance(capabilities, (list, tuple)) or not all(
-            isinstance(item, str) and item for item in capabilities
+    def report_devices(self, devices: list[str] | tuple[str, ...]) -> dict[str, Any]:
+        """收客户端上报的设备事实；manager 只存，不解释、也不拿它决定装不装。"""
+        if not isinstance(devices, (list, tuple)) or not all(
+            isinstance(item, str) and item for item in devices
         ):
-            raise TypeError("capabilities 必须是字符串列表")
-        self._capabilities = tuple(dict.fromkeys(capabilities))
-        # 多客户端部署里，后一个客户端缺能力不能把所有人的插件关掉；
-        # 所以"见过"的能力对本次进程一直可用。当前上报只用于展示。
-        self._available = self._available | frozenset(self._capabilities)
+            raise TypeError("devices 必须是字符串列表")
+        self._devices = tuple(dict.fromkeys(devices))
         self._reported = True
         self._recompute()
         self._sync_page()
         return self.inventory()
+
+    def devices(self) -> tuple[str, ...]:
+        """最近一次上报的设备种类；插件按它自己判断要不要出捕捉界面。"""
+        return self._devices
+
+    def reported(self) -> bool:
+        """客户端报过设备事实没有；没报过时插件不该急着藏界面。"""
+        return self._reported
 
     # 重算
 
@@ -246,9 +251,6 @@ class Manager:
                 "unsupported-platform",
                 f"{self._platform} 不在 {'/'.join(metadata.platforms) or '空'}",
             )
-        missing = [cap for cap in metadata.capabilities if cap not in self._available]
-        if missing:
-            return Reason("missing-capability", "缺少能力: " + ", ".join(missing))
         lacking = [service for service in metadata.requires if not self._host.has_service(service)]
         if lacking:
             return Reason("missing-service", "缺少服务: " + ", ".join(lacking))
@@ -323,8 +325,8 @@ class Manager:
 
     def _build_page(self) -> Page:
         rows = [self._row(name) for name in self._manifest]
-        reported = "、".join(self._capabilities) if self._reported else "未上报"
-        summary = Text(f"客户端能力: {reported}", kind="muted")
+        reported = "、".join(self._devices) if self._reported else "未上报"
+        summary = Text(f"客户端设备: {reported}", kind="muted")
         if not rows:
             return Page(content=Column(summary, Text("没有插件。")), meta="")
         items = List(*[self._item(row) for row in rows])
@@ -369,7 +371,7 @@ def _conditions_text(row: Row) -> str:
     if row.metadata.platforms:
         parts.append("平台: " + "/".join(row.metadata.platforms))
     if row.metadata.capabilities:
-        parts.append("能力: " + ", ".join(row.metadata.capabilities))
+        parts.append("需要: " + ", ".join(row.metadata.capabilities))
     if row.metadata.requires:
         parts.append("依赖: " + ", ".join(row.metadata.requires))
     if not row.metadata.listed:

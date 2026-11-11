@@ -61,9 +61,15 @@ class Audio:
         return url if isinstance(url, str) and url else None
 
     def node(self, on_submit: Handler) -> AudioCapture | None:
-        """给页面用的捕捉条；没有媒体通道就不出（音频存不下，出了也没用）。"""
+        """给页面用的捕捉条。
+
+        没有媒体通道就不出（音频存不下，出了也没用）；这台机器上没有麦克风也不出。
+        "有没有麦克风"由插件自己判断：客户端只把设备种类报给 manager。
+        """
         url = self.channel()
         if url is None:
+            return None
+        if not self._has_device("audioinput"):
             return None
         return AudioCapture(
             on_submit=on_submit,
@@ -73,6 +79,16 @@ class Audio:
             max_seconds=self.max_seconds,
             pausable=True,
         )
+
+    def _has_device(self, kind: str) -> bool:
+        if not self._ctx.has("manager"):
+            return True
+        manager: Any = self._ctx.resolve("manager")
+        reported = getattr(manager, "reported", None)
+        # 客户端还没报过之前不藏界面：组件自己会在没有设备时禁用并写原因。
+        if not callable(reported) or not reported():
+            return True
+        return kind in tuple(manager.devices())
 
     def add_processor(self, process: Processor) -> None:
         """登记一个后期处理钩子。"""

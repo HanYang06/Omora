@@ -5,14 +5,7 @@
  * 没有对应设备时，对应捕捉默认禁用——按钮留着，把原因写清楚。
  */
 
-export type Capability = "microphone" | "camera";
 export type DeviceKind = "audioinput" | "videoinput";
-
-/** 设备种类 → 能力名。manager 的 report_capabilities 用同一套词。 */
-export const CAPABILITY_OF: Record<DeviceKind, Capability> = {
-  audioinput: "microphone",
-  videoinput: "camera",
-};
 
 export interface DeviceInfo {
   deviceId: string;
@@ -93,14 +86,19 @@ export function captureGate(state: DeviceState, kind: DeviceKind): Gate {
   return { enabled: true, devices };
 }
 
-/** 客户端检测到的能力；交给 manager 上报，没上报 = 没有能力。 */
-export function capabilitiesOf(state: DeviceState): Capability[] {
-  const found: Capability[] = [];
+/**
+ * 客户端这台机器上有哪些设备种类。
+ *
+ * 引擎只报平台事实（audioinput / videoinput），不翻译成产品词：
+ * "有没有麦克风、要不要出捕捉块"是插件自己判断的事。
+ */
+export function deviceKindsOf(state: DeviceState): DeviceKind[] {
+  const found: DeviceKind[] = [];
   if (state.audioinput.length > 0) {
-    found.push(CAPABILITY_OF.audioinput);
+    found.push("audioinput");
   }
   if (state.videoinput.length > 0) {
-    found.push(CAPABILITY_OF.videoinput);
+    found.push("videoinput");
   }
   return found;
 }
@@ -153,14 +151,13 @@ export function openMediaStream(
 }
 
 /**
- * 一次性问本机有什么能力：给 manager 的 report_capabilities 用（上报一次，不在别处再报）。
- * 只枚举、不要权限：用户没点过就不该弹窗。没有 mediaDevices 或没有设备就返回空——
- * 没上报等于没有能力，manager 会据此关掉对应插件。
+ * 一次性问本机有哪些设备：给 manager 的 report_devices 用（上报一次，不在别处再报）。
+ * 只枚举、不要权限：用户没点过就不该弹窗。没有 mediaDevices 或没有设备就返回空。
  */
-export async function detectCapabilities(source?: DeviceSource): Promise<readonly Capability[]> {
+export async function detectDevices(source?: DeviceSource): Promise<readonly DeviceKind[]> {
   const tracker = createDeviceTracker(source ?? defaultDeviceSource());
   try {
-    return capabilitiesOf(await tracker.refresh());
+    return deviceKindsOf(await tracker.refresh());
   } finally {
     tracker.stop();
   }

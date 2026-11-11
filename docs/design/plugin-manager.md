@@ -66,18 +66,16 @@ boot 在 manager 之前装一个最小的 `host` 插件，把下面这份接口�
 ```toml
 [tool.omora]
 platforms = ["win32", "darwin", "linux"]  # sys.platform 词汇；空 = 全平台
-capabilities = ["microphone"]             # 客户端能力；空 = 不需要
+capabilities = ["microphone"]             # 声明需要的设备；只做展示，不决定装不装
 listed = true                             # 默认 GUI 列表是否出现
 requires = ["store", "media"]             # 需要的服务名
 ```
 
 - `platforms`：当前 `sys.platform` 不在里面 → `unsupported-platform`。
-- `capabilities`：客户端上报的能力里没有 → `missing-capability`。没上报过等于没有，
-  所以在引擎连上之前，声明能力的插件默认是关的。
+- `capabilities`：**不参与装载判断**。它只声明这个插件需要什么设备，给设置页看；有没有设备由插件自己判断。
 - `requires`：服务表里没有 → `missing-service`。manifest 顺序要保证依赖先装。
 - `listed` 只影响默认列表是否展示，不影响装载；管理页始终列全部（管理视角要完整）。
-- 判断顺序：平台 → 能力 → 服务 → 用户开关。条件不满足优先于开关：开了也不装，
-  并把原因写进 `reason`。
+- 判断顺序：平台 → 服务 → 用户开关。条件不满足优先于开关：开了也不装，并把原因写进 `reason`。
 
 未知的 `[tool.omora]` 键忽略（以后加字段不至于让旧 manager 起不来）；已知键类型
 不对是 `invalid-metadata`，那一行 `phase = failed`，不影响别的插件。
@@ -92,26 +90,24 @@ requires = ["store", "media"]             # 需要的服务名
 - 装上失败 → `enabled` 仍是 true，`phase = failed`，`reason = install-failed`；
   其余插件继续装。
 
-## 6. 能力通道（TS → Python）
+## 6. 设备通道（TS → Python）
 
-客户端能力（麦克风 / 摄像头）只有引擎知道。引擎在连接 open 之后发一次普通 call：
+设备事实只有引擎能拿到。引擎在连接 open 之后发一次普通 call，报的是**平台名字**：
 
 ```json
 {
   "id": "1",
   "type": "call",
   "target": "manager",
-  "method": "report_capabilities",
-  "args": { "capabilities": ["microphone", "camera"] }
+  "method": "report_devices",
+  "args": { "devices": ["audioinput", "videoinput"] }
 }
 ```
 
 - 不新增帧类型，走现有协议。
-- 引擎侧只负责上报；枚举设备是 capture 的 `devices.ts`，manager 不探测硬件。
-- 多客户端部署：Python 是 server，能力是每个客户端各自的事实。manager 的
-  `capabilities` 只记最后一次上报（给设置页看），是否满足条件按"本次进程里见过"
-  算——后一个没有摄像头的客户端不会把别人的摄像头插件关掉。每客户端的界面门禁
-  归引擎自己。
+- 引擎只枚举、只上报；枚举设备是 capture 的 `devices.ts`，manager 不探测硬件。
+- **不参与装载判断**：事实存成 `manager.devices()`，由插件自己读、自己判断要不要出捕捉界面。
+  没有麦克风时 audio 插件照样装着，只是它的 `node()` 返回 None。
 
 ## 7. boot 顺序
 

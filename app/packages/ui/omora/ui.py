@@ -181,13 +181,17 @@ class Ui:
                 entry_data["count"] = item.count()
             pages.append(entry_data)
 
-        return {
+        body: dict[str, Any] = {
             "pages": pages,
             "page": name,
             "meta": page.meta,
             "content": serialize(page.content, make_register(name)),
-            "contributions": self._contributions(make_register),
         }
+        extras = self._contributions(make_register)
+        if extras:
+            # 没有贡献就不写这个键：快照形状对没用到它的页面保持原样。
+            body["contributions"] = extras
+        return body
 
     def _contributions(
         self, make_register: Callable[[str], Callable[[Handler], str]]

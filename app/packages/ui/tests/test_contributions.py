@@ -44,7 +44,7 @@ def test_contribution_is_wrapped_with_owner_and_target() -> None:
         "props": {"key": KEY},
         "children": [],
     }
-    assert snapshot["contributions"] == [
+    assert snapshot.get("contributions", []) == [
         {
             "owner": "audio",
             "target": KEY,
@@ -64,7 +64,7 @@ def test_contribution_handlers_carry_their_owner() -> None:
         return Button("录音", on_click=clicked.append)
 
     ui.contribute(audio, KEY, build)
-    handler = str(ui.render()["contributions"][0]["tree"]["props"]["on_click"])
+    handler = str(ui.render().get("contributions", [])[0]["tree"]["props"]["on_click"])
 
     assert handler.startswith("audio:")
     assert ui.event(handler, {"value": 1}) == {}
@@ -74,10 +74,10 @@ def test_contribution_handlers_carry_their_owner() -> None:
 def test_dispose_removes_the_contribution() -> None:
     ui, _, audio = _ui()
     ui.contribute(audio, KEY, _text_button)
-    assert len(ui.render()["contributions"]) == 1
+    assert len(ui.render().get("contributions", [])) == 1
 
     audio.dispose()
-    assert ui.render()["contributions"] == []
+    assert ui.render().get("contributions", []) == []
 
 
 def test_broken_contribution_is_skipped() -> None:
@@ -89,7 +89,7 @@ def test_broken_contribution_is_skipped() -> None:
     ui.contribute(audio, KEY, boom)
     snapshot = ui.render()
 
-    assert snapshot["contributions"] == []
+    assert snapshot.get("contributions", []) == []
     assert snapshot["content"]["children"][0]["props"]["key"] == KEY
 
 
@@ -98,5 +98,5 @@ def test_order_and_seq_follow_registration() -> None:
     ui.contribute(audio, KEY, lambda: Button("先"), order=30)
     ui.contribute(audio, KEY, lambda: Button("后"))
 
-    items = ui.render()["contributions"]
+    items = ui.render().get("contributions", [])
     assert [(item["order"], item["seq"]) for item in items] == [(30, 1), (0, 2)]

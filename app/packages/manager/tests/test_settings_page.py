@@ -157,13 +157,12 @@ def test_the_settings_page_lists_plugins_and_its_toggle_changes_one() -> None:
     snapshot = ui.render("plugins")
     titles = [row["props"]["title"] for row in _items(snapshot["content"])]
     assert titles == ["store", "manager", "ui", "audio", "notes"]
-    assert snapshot["meta"] == "4/5 运行中"
+    assert snapshot["meta"] == "5/5 运行中"
     audio = _find_item(snapshot["content"], "audio")
     assert audio is not None
     text = _all_text(audio)
-    assert "能力: microphone" in text
-    assert "缺少能力: microphone" in text
-    assert _find_action(audio, "启用") is not None
+    assert "需要: microphone" in text
+    assert _find_action(audio, "禁用") is not None
 
     notes = _find_item(snapshot["content"], "notes")
     assert notes is not None

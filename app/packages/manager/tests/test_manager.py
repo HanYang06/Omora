@@ -256,7 +256,7 @@ def test_unsupported_platform_disables_with_a_reason() -> None:
     assert windows.running("win-only")
 
 
-def test_a_missing_capability_keeps_the_plugin_off_until_a_client_reports_it() -> None:
+def test_a_client_capability_no_longer_decides_whether_a_plugin_installs() -> None:
     records = {
         "store": _record("store"),
         "manager": _record("manager"),
@@ -264,37 +264,23 @@ def test_a_missing_capability_keeps_the_plugin_off_until_a_client_reports_it() -
     }
     kernel, manager = _scene(records)
 
-    before = _rows(manager.inventory())["audio"]
-    assert before["phase"] == DISABLED
-    assert before["reason"] == {
-        "code": "missing-capability",
-        "message": "缺少能力: microphone",
-    }
-    assert kernel.running("audio") is False
-
-    reported = manager.report_capabilities(["microphone"])
-    assert reported["reported"] is True
-    assert reported["capabilities"] == ["microphone"]
-    assert _rows(reported)["audio"]["phase"] == ACTIVE
+    row = _rows(manager.inventory())["audio"]
+    assert row["phase"] == ACTIVE
+    assert row["reason"] is None
     assert kernel.running("audio")
 
 
-def test_a_later_client_without_the_capability_does_not_disable_the_plugin() -> None:
-    records = {
-        "store": _record("store"),
-        "manager": _record("manager"),
-        "camera": _record("camera", capabilities=("camera",)),
-    }
-    kernel, manager = _scene(records)
-    manager.report_capabilities(["camera"])
+def test_device_facts_are_stored_for_plugins_to_read() -> None:
+    records = {"store": _record("store"), "manager": _record("manager")}
+    _kernel, manager = _scene(records)
 
-    after = manager.report_capabilities([])
+    reported = manager.report_devices(["audioinput", "videoinput"])
+    assert reported["reported"] is True
+    assert reported["devices"] == ["audioinput", "videoinput"]
 
-    assert after["capabilities"] == []
-    assert after["reported"] is True
-    assert _rows(after)["camera"]["phase"] == ACTIVE
-    assert _rows(after)["camera"]["reason"] is None
-    assert kernel.running("camera")
+    after = manager.report_devices([])
+    assert after["devices"] == []
+    assert manager.devices() == ()
 
 
 def test_a_plugin_with_an_unmet_service_requirement_stays_disabled() -> None:
@@ -415,11 +401,11 @@ def test_bootstrap_plugins_cannot_be_toggled_and_unknown_names_are_rejected() ->
         manager.set_enabled("ideas", "yes")
 
 
-def test_a_capability_report_must_be_a_list_of_strings() -> None:
+def test_a_device_report_must_be_a_list_of_strings() -> None:
     records = {name: _record(name) for name in ("store", "manager")}
     _kernel, manager = _scene(records)
 
-    with pytest.raises(TypeError, match="capabilities 必须是字符串列表"):
-        manager.report_capabilities([1])
-    with pytest.raises(TypeError, match="capabilities 必须是字符串列表"):
-        manager.report_capabilities("microphone")
+    with pytest.raises(TypeError, match="devices 必须是字符串列表"):
+        manager.report_devices([1])
+    with pytest.raises(TypeError, match="devices 必须是字符串列表"):
+        manager.report_devices("audioinput")

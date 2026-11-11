@@ -57,7 +57,7 @@
 ```
 
 - `pages` / `page`：导航与当前页（沿用 v1，含义不变）。
-- `content` 是页面主人自己那棵树的简写（等价于 owner=页面名、target=页面根的一份 `replace`）。
+- `content` 是页面主人自己那棵树的简写；引擎组合前会给它的根打上 `om.window.page`，所以整页也能被挂接或替换。
   等贡献层稳定，它会并进 `contributions`；现在两种都在线上，引擎先摆 `content` 再挂 `contributions`。
 - `version`：当前页的组合结果版本，单调递增。
 - `contributions`：**这一页**的贡献集合。换页 = 换整组贡献，不是打补丁。
@@ -246,7 +246,8 @@ Panel(content=self.feed()),
 已合入集成分支 `feat/ui-plugin-system`：P0-1（补丁跨语言 fixture）、P0-2（节点级错误边界）、
 P2-1（组合器）、P2-3（memo / 错误边界 / 未知组件兜底）、
 P2-6 第一批（12 个基础控件 + 拆分到 `render/controls/`）、
-P1-3 前半（`Slot` 节点、`ui.contribute`、贡献上线、归属进 handler id）。
+P1-3 前半（`Slot` 节点、`ui.contribute`、贡献上线、归属进 handler id）、
+P4-1（引擎只报设备事实、manager 不再拿硬件决定装不装、audio / video 自己判断）。
 剩余任务未开始；验收标准与依赖见上面那张表。
 
 ## 14. 未定

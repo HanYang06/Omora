@@ -16,7 +16,7 @@ src/
   app.tsx         容器：快照 + 连接状态；连上 render，点导航 render，回车 / 动作 event，播放取媒体
   shell.tsx       默认母页面：左侧导航 + 右侧一页纸
   connection.ts   WebSocket：请求 / 响应按 id 配对；未连接不发请求
-  capability-report.ts  连上后把客户端能力报给 manager（检测在 capture 的 devices.ts）
+  device-report.ts       连上后把客户端设备事实报给 manager（检测在 capture 的 devices.ts）
   protocol.ts     帧的类型与校验（读同一份 fixture）
   renderer.tsx    节点树 → React；未知 type 画占位框
   components.tsx  基础词表（column / row / text / button / input / list / item / empty）+ 注册表
@@ -47,7 +47,7 @@ src/
 
 ## 4. 数据流
 
-1. 连上 → `manager.report_capabilities({capabilities})` 上报本客户端能力，然后
+1. 连上 → `manager.report_devices({devices})` 上报本客户端设备事实，然后
    `ui.render({})` → `result` 是页面快照 → `setState`。
 2. 渲染：`Shell` 用 `pages` 画导航、`page` 高亮、`label` + `meta` 画标题，`content` 画页面。
 3. 点导航 → 引擎直接发 `ui.render({page})`，不走事件。
@@ -127,8 +127,8 @@ src/
 ## 9. 状态
 
 - 只持有三样：当前快照、连接状态、本机的设备状态（设备清单 / 枚举到没有）。
-- 设备能力上报一次：连接 open 后把 `detectCapabilities()` 的结果交给 manager 的
-  `report_capabilities`（谁上报、怎么报是 manager 那边的事；引擎只给检测结果，不重复报）。
+- 设备事实上报一次：连接 open 后把 `detectDevices()` 的结果交给 manager 的
+  `report_devices`（引擎只给原始设备种类，不翻译成产品词，也不决定装不装）。
   设备状态是本机事实，不上报成真相：它只决定这一台机器上的按钮能不能按。
 - 不缓存真相：数据在 Python 侧，这里只有当前这一份快照。
 - 媒体按需取、按需播；不把字节塞进快照。
@@ -143,7 +143,7 @@ src/
 - 不认识 Python 服务之外的领域。
 - 不做业务判断：点按钮就发事件，不自己改数据。
 - 不 import Python 侧任何东西。
-- 客户端能力由引擎检测并上报；检测只归 capture（`devices.ts`），不重复枚举。
+- 客户端设备由引擎枚举并上报原始种类；检测只归 capture（`devices.ts`），不重复枚举，也不翻译成产品词。
 - 只认 `{type, props, children}`、页面快照与 handler id。
 - 只跟 net 插件说话；net 是系统插件，不属于内核。
 

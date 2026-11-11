@@ -62,9 +62,14 @@ class Video:
         return url if isinstance(url, str) and url else None
 
     def node(self, on_submit: Handler) -> VideoCapture | None:
-        """给页面用的捕捉条；没有媒体通道就不出（视频存不下，出了也没用）。"""
+        """给页面用的捕捉条。
+
+        没有媒体通道就不出（视频存不下，出了也没用）；这台机器上没有摄像头也不出。
+        """
         url = self.channel()
         if url is None:
+            return None
+        if not self._has_device("videoinput"):
             return None
         return VideoCapture(
             on_submit=on_submit,
@@ -78,6 +83,16 @@ class Video:
         """一条视频的播放地址；没有媒体通道就是 None。"""
         url = self.channel()
         return None if url is None else f"{url}/{media_id}"
+
+    def _has_device(self, kind: str) -> bool:
+        if not self._ctx.has("manager"):
+            return True
+        manager: Any = self._ctx.resolve("manager")
+        reported = getattr(manager, "reported", None)
+        # 客户端还没报过之前不藏界面：组件自己会在没有设备时禁用并写原因。
+        if not callable(reported) or not reported():
+            return True
+        return kind in tuple(manager.devices())
 
     def add_processor(self, process: Processor) -> None:
         self._processors.append(process)

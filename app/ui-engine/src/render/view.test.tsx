@@ -30,6 +30,36 @@ const button: Contribution = {
 };
 
 describe("withContributions", () => {
+  it("页面根带着 om.window.page，贡献可以整页替换", () => {
+    const base: Snapshot = {
+      ...snapshot(),
+      content: {
+        type: "column",
+        props: { key: "om.window.page" },
+        children: [],
+      },
+      contributions: [
+        {
+          owner: "audio",
+          target: "om.window.page",
+          op: "replace",
+          tree: { type: "text", props: { text: "接管" }, children: [] },
+        },
+      ],
+    };
+
+    const view = withContributions(base);
+    expect(view).not.toBeNull();
+    if (view === null) {
+      return;
+    }
+    expect(view.content).toEqual({
+      type: "text",
+      props: { text: "接管", key: "om.window.page" },
+      children: [],
+    });
+  });
+
   it("没有贡献时原样返回同一份快照", () => {
     const base = snapshot();
     expect(withContributions(base)).toBe(base);
