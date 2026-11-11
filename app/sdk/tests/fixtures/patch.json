@@ -1,0 +1,772 @@
+{
+  "cases": [
+    {
+      "name": "改一个字段",
+      "previous": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "旧"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "不变"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      },
+      "current": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "新"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "不变"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      },
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "content",
+            "children",
+            0,
+            "props",
+            "text"
+          ],
+          "value": "新"
+        }
+      ],
+      "merged": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "新"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "不变"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      }
+    },
+    {
+      "name": "列表头部插入",
+      "previous": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "A"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "B"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      },
+      "current": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "X"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "A"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "B"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      },
+      "ops": [
+        {
+          "op": "insert",
+          "path": [
+            "content",
+            "children"
+          ],
+          "index": 0,
+          "value": {
+            "type": "text",
+            "props": {
+              "text": "X"
+            },
+            "children": []
+          }
+        }
+      ],
+      "merged": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "X"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "A"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "B"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      }
+    },
+    {
+      "name": "删除中间一项",
+      "previous": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "A"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "B"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "C"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      },
+      "current": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "A"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "C"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      },
+      "ops": [
+        {
+          "op": "remove",
+          "path": [
+            "content",
+            "children"
+          ],
+          "index": 1
+        }
+      ],
+      "merged": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "A"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "C"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      }
+    },
+    {
+      "name": "新增属性",
+      "previous": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "a"
+          },
+          "children": []
+        },
+        "version": 12
+      },
+      "current": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "a",
+            "kind": "title"
+          },
+          "children": []
+        },
+        "version": 12
+      },
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "content",
+            "props",
+            "kind"
+          ],
+          "value": "title"
+        }
+      ],
+      "merged": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "a",
+            "kind": "title"
+          },
+          "children": []
+        },
+        "version": 12
+      }
+    },
+    {
+      "name": "删除属性整节点替换",
+      "previous": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "a",
+            "kind": "title"
+          },
+          "children": []
+        },
+        "version": 12
+      },
+      "current": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "a"
+          },
+          "children": []
+        },
+        "version": 12
+      },
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "content"
+          ],
+          "value": {
+            "type": "text",
+            "props": {
+              "text": "a"
+            },
+            "children": []
+          }
+        }
+      ],
+      "merged": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "a"
+          },
+          "children": []
+        },
+        "version": 12
+      }
+    },
+    {
+      "name": "换节点类型",
+      "previous": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "a"
+          },
+          "children": []
+        },
+        "version": 12
+      },
+      "current": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "button",
+          "props": {
+            "text": "a"
+          },
+          "children": []
+        },
+        "version": 12
+      },
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "content"
+          ],
+          "value": {
+            "type": "button",
+            "props": {
+              "text": "a"
+            },
+            "children": []
+          }
+        }
+      ],
+      "merged": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "button",
+          "props": {
+            "text": "a"
+          },
+          "children": []
+        },
+        "version": 12
+      }
+    },
+    {
+      "name": "顶层字段变化",
+      "previous": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "2 条",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "a"
+          },
+          "children": []
+        },
+        "version": 12
+      },
+      "current": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "3 条",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "a"
+          },
+          "children": []
+        },
+        "version": 12
+      },
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "meta"
+          ],
+          "value": "3 条"
+        }
+      ],
+      "merged": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "3 条",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "a"
+          },
+          "children": []
+        },
+        "version": 12
+      }
+    },
+    {
+      "name": "没有变化",
+      "previous": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "A"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "B"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      },
+      "current": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "A"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "B"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      },
+      "ops": [],
+      "merged": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "column",
+          "props": {},
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "A"
+              },
+              "children": []
+            },
+            {
+              "type": "text",
+              "props": {
+                "text": "B"
+              },
+              "children": []
+            }
+          ]
+        },
+        "version": 12
+      }
+    }
+  ],
+  "page_changes": [
+    {
+      "name": "换页无法 diff",
+      "previous": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "main",
+        "meta": "",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "a"
+          },
+          "children": []
+        },
+        "version": 12
+      },
+      "current": {
+        "pages": [
+          {
+            "name": "main",
+            "label": "首页"
+          }
+        ],
+        "page": "detail",
+        "meta": "",
+        "content": {
+          "type": "text",
+          "props": {
+            "text": "b"
+          },
+          "children": []
+        },
+        "version": 12
+      }
+    }
+  ]
+}
