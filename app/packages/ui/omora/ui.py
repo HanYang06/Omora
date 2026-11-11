@@ -16,12 +16,27 @@ from typing import Any
 from omora.core.log import Log, NullLog
 from omora.sdk import Context
 from omora.sdk.realtime import emit
-from omora.sdk.ui import Handler, Page, serialize
+from omora.sdk.ui import Handler, Node, Page, serialize
 
 from ._diff import diff_snapshot
 
 Builder = Callable[[], Page]
 Counter = Callable[[], int]
+ExtraBuilder = Callable[[], Node]
+
+
+class _Extra:
+    """一份贡献：往某个键挂一棵树。归属就是登记它的插件。"""
+
+    __slots__ = ("build", "order", "owner", "seq", "target")
+
+    def __init__(self, owner: str, target: str, order: int, seq: int, build: ExtraBuilder) -> None:
+        self.owner = owner
+        self.target = target
+        self.order = order
+        self.seq = seq
+        self.build = build
+
 
 SNAPSHOT_TOPIC = "ui.snapshot"
 
@@ -49,6 +64,9 @@ class Ui:
         self._ctx = ctx
         # 客户端手里那一份：换页时无法 diff，只能推全量。
         self._current: dict[str, Any] | None = None
+        # 别的插件交来的贡献：往某个键挂一棵树。
+        self._extras: list[_Extra] = []
+        self._seq = 0
 
     def page(  # noqa: PLR0913, PLR0917 —— 页面登记的声明式参数
         self,
@@ -66,6 +84,25 @@ class Ui:
 
         def remove() -> None:
             self._pages.pop(name, None)
+
+        ctx.effect(remove)
+
+    def contribute(self, ctx: Context, target: str, build: ExtraBuilder, *, order: int = 0) -> None:
+        """登记一份贡献：往 target 这个键挂一棵树。
+
+        归属取 ctx 的名字（插件名），所以 handler id 里带的是它；插件卸载时贡献一起撤。
+        落点存不存在由引擎判断：键不在，引擎丢弃并记日志，这里不算错。
+        """
+        key = target.strip()
+        if not key:
+            raise ValueError("贡献的落点不能是空键")
+        self._seq += 1
+        extra = _Extra(ctx.name, key, order, self._seq, build)
+        self._extras.append(extra)
+
+        def remove() -> None:
+            if extra in self._extras:
+                self._extras.remove(extra)
 
         ctx.effect(remove)
 
@@ -118,18 +155,21 @@ class Ui:
         return entry
 
     def _draw(self, name: str, entry: _Page) -> dict[str, Any]:
-        next_id = 0
+        counters: dict[str, int] = {}
         entry.serial += 1
         held = entry.serial
         entry.previous = entry.handlers
         entry.handlers = {}
 
-        def register(callback: Handler) -> str:
-            nonlocal next_id
-            handler = f"{name}:{held}:{next_id}"
-            next_id += 1
-            entry.handlers[handler] = callback
-            return handler
+        def make_register(owner: str) -> Callable[[Handler], str]:
+            def register(callback: Handler) -> str:
+                index = counters.get(owner, 0)
+                counters[owner] = index + 1
+                handler = f"{owner}:{held}:{index}"
+                entry.handlers[handler] = callback
+                return handler
+
+            return register
 
         page = entry.build()
         pages: list[dict[str, Any]] = []
@@ -145,8 +185,36 @@ class Ui:
             "pages": pages,
             "page": name,
             "meta": page.meta,
-            "content": serialize(page.content, register),
+            "content": serialize(page.content, make_register(name)),
+            "contributions": self._contributions(make_register),
         }
+
+    def _contributions(
+        self, make_register: Callable[[str], Callable[[Handler], str]]
+    ) -> list[dict[str, Any]]:
+        """把别的插件交来的树摊成贡献；一份坏掉的只跳过它自己，不连累页面。"""
+        items: list[dict[str, Any]] = []
+        for extra in self._extras:
+            try:
+                tree = serialize(extra.build(), make_register(extra.owner))
+            except Exception as exc:  # 一份贡献坏了不能影响别人的页面
+                self._log.warning(
+                    "ui.contribution.failed",
+                    owner=extra.owner,
+                    err=type(exc).__name__,
+                )
+                continue
+            items.append(
+                {
+                    "owner": extra.owner,
+                    "target": extra.target,
+                    "op": "append",
+                    "order": extra.order,
+                    "seq": extra.seq,
+                    "tree": tree,
+                }
+            )
+        return items
 
     def _deliver(self, entry: _Page, body: dict[str, Any]) -> dict[str, Any]:
         """交给客户端一份新的全量快照：升版本，记成下一次补丁的基准。"""

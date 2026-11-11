@@ -5,6 +5,7 @@ import type { Logger } from "./core/log";
 import { fetchMedia } from "./media/media";
 import type { JsonObject } from "./core/protocol";
 import { applySnapshotUpdate } from "./render/patch";
+import { withContributions } from "./render/view";
 import { Shell } from "./shell/shell";
 import type { Node, Snapshot } from "./core/types";
 
@@ -255,9 +256,12 @@ export function App({ connection, logger }: AppProps): ReactNode {
     [connection, logs],
   );
 
+  // 组合是纯函数：快照一变就重算，未触碰的子树保持引用（memo 靠它）。
+  const view = useMemo(() => withContributions(snapshot), [snapshot]);
+
   return (
     <Shell
-      snapshot={snapshot}
+      snapshot={view}
       status={status}
       endpoint={connection.endpoint}
       onNavigate={navigate}

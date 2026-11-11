@@ -322,6 +322,14 @@ class Waveform(Node):
     src: str = ""
 
 
+@dataclass(frozen=True)
+class Slot(Node):
+    """一个可被别的插件挂东西的位置：key 是全限定键，别人按它挂。"""
+
+    type: ClassVar[str] = "slot"
+    key: str = ""
+
+
 @dataclass(frozen=True, init=False)
 class Panel(Node):
     """内嵌面板：一块 inset 面，装工具条和行。子节点通常是一行工具条 + 内容。"""
@@ -380,6 +388,7 @@ __all__ = [
     "Result",
     "Row",
     "Search",
+    "Slot",
     "Split",
     "Suggestion",
     "Text",

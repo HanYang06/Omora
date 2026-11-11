@@ -189,6 +189,15 @@ export function Item({ node, onEvent, children }: NodeComponentProps): ReactNode
   );
 }
 
+/** slot：一个挂接位置。内容由组合器塞进 children；没人挂就是空。 */
+export function Slot({ children }: NodeComponentProps): ReactNode {
+  return (
+    <div className="omora-slot" data-type="slot">
+      {children}
+    </div>
+  );
+}
+
 /** empty：空状态。没有 hint 就不画第二行。 */
 export function Empty({ node }: NodeComponentProps): ReactNode {
   const hint = prop(node, "hint");
@@ -215,6 +224,7 @@ export const components: Record<string, ComponentType<NodeComponentProps>> = {
   hotkey: Hotkey,
   waveform: Waveform,
   list: List,
+  slot: Slot,
   item: Item,
   empty: Empty,
   search: Search,

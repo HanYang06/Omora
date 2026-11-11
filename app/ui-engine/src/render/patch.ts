@@ -50,6 +50,9 @@ function applyFull(snapshot: Snapshot, payload: JsonObject): SnapshotUpdate {
   if (!isNode(payload.content)) {
     return fail("malformed");
   }
+  if (payload.contributions !== undefined && !Array.isArray(payload.contributions)) {
+    return fail("malformed");
+  }
   return {
     ok: true,
     snapshot: {
@@ -58,6 +61,7 @@ function applyFull(snapshot: Snapshot, payload: JsonObject): SnapshotUpdate {
       meta: payload.meta,
       content: payload.content,
       version: payload.version,
+      ...(payload.contributions === undefined ? {} : { contributions: payload.contributions }),
     },
   };
 }
@@ -275,8 +279,13 @@ function isPageEntries(value: unknown): value is PageEntry[] {
 }
 
 function isSnapshot(value: unknown): value is Snapshot {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.contributions !== undefined && !Array.isArray(value.contributions)) {
+    return false;
+  }
   return (
-    isRecord(value) &&
     isPageEntries(value.pages) &&
     isNonEmptyString(value.page) &&
     typeof value.meta === "string" &&
