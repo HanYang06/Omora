@@ -90,3 +90,11 @@ def test_set_outside_an_event_pushes_to_the_open_page() -> None:
 
     assert len(net.sent) == before + 1
     assert "第二条" in json.dumps(net.sent[-1], ensure_ascii=False)
+
+
+def test_a_page_can_carry_its_own_nav_glyph() -> None:
+    ui, ctx, _ = _ui()
+    handle = ui.page(ctx, "chart", "图表", glyph="M2 2h16v16H2z")
+    handle.set(Page(Column(Text("图上"))))
+
+    assert ui.render("chart")["pages"][-1]["glyph"] == "M2 2h16v16H2z"

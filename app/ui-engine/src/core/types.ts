@@ -39,6 +39,8 @@ export interface PageEntry {
   label: string;
   /** 图标栏用的词表名字；页面没给就用 dot。 */
   icon?: string;
+  /** 页面自带的 SVG 路径数据；给了就画它，不用改引擎的词表。 */
+  glyph?: string;
   count?: number;
 }
 

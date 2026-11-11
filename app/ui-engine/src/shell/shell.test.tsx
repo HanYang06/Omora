@@ -156,3 +156,17 @@ describe("Shell", () => {
     expect(element.props["aria-current"]).toBeUndefined();
   });
 });
+describe("RailButton", () => {
+  it("页面自带图标时画自己的路径，不改词表", () => {
+    const html = renderToString(
+      <RailButton
+        entry={{ name: "chart", label: "图表", icon: "dot", glyph: "M3 3h14v14H3z" }}
+        active={false}
+        onNavigate={noop}
+      />,
+    );
+
+    expect(html).toContain('d="M3 3h14v14H3z"');
+    expect(html).toContain('data-icon="custom"');
+  });
+});

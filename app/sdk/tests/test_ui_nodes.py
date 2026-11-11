@@ -1,6 +1,6 @@
 from typing import Any
 
-from omora.sdk.ui import Handler, Result, Search, Suggestion, serialize
+from omora.sdk.ui import Handler, Icon, Result, Search, Suggestion, Tile, serialize
 
 
 def _noop(payload: dict[str, Any]) -> None:
@@ -67,3 +67,15 @@ def test_serializing_a_result_drops_the_fields_that_are_not_set() -> None:
         },
         "children": [],
     }
+
+
+def test_an_icon_can_carry_its_own_path() -> None:
+    node = serialize(Icon(name="chart", path="M1 1h8v8H1z"), _ids())
+
+    assert node["props"] == {"name": "chart", "path": "M1 1h8v8H1z"}
+
+
+def test_a_tile_can_carry_its_own_path() -> None:
+    node = serialize(Tile(icon="chart", title="图表", path="M1 1h8"), _ids())
+
+    assert node["props"] == {"icon": "chart", "title": "图表", "path": "M1 1h8"}

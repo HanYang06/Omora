@@ -281,6 +281,7 @@ function isPageEntries(value: unknown): value is PageEntry[] {
     }
     return (
       (entry.icon === undefined || typeof entry.icon === "string") &&
+      (entry.glyph === undefined || typeof entry.glyph === "string") &&
       (entry.count === undefined || typeof entry.count === "number")
     );
   });

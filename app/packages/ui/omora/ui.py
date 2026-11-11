@@ -43,9 +43,15 @@ SNAPSHOT_TOPIC = "ui.snapshot"
 
 class _Page:
     def __init__(
-        self, label: str, build: Builder | None, count: Counter | None, icon: str | None
+        self,
+        label: str,
+        build: Builder | None,
+        count: Counter | None,
+        icon: str | None,
+        glyph: str | None = None,
     ) -> None:
         self.label = label
+        self.glyph = glyph
         # 三种：build 回调（拉取式，旧写法）、插件 set 上来的树（推送式）、
         # rebuild 钩子（只在客户端明确要一页时重建，用来吸收插件装卸这类外部变化）。
         self.build = build
@@ -106,6 +112,7 @@ class Ui:
         build: Builder | None = None,
         count: Counter | None = None,
         icon: str | None = None,
+        glyph: str | None = None,
     ) -> PageHandle:
         """登记一页；插件卸载时页面跟着消失。icon 是母页面图标栏用的名字。
 
@@ -113,7 +120,7 @@ class Ui:
         """
         if name in self._pages:
             raise ValueError(f"页面重复登记: {name}")
-        self._pages[name] = _Page(label, build, count, icon)
+        self._pages[name] = _Page(label, build, count, icon, glyph)
 
         def remove() -> None:
             self._pages.pop(name, None)
@@ -252,6 +259,8 @@ class Ui:
             entry_data: dict[str, Any] = {"name": key, "label": item.label}
             if item.icon is not None:
                 entry_data["icon"] = item.icon
+            if item.glyph is not None:
+                entry_data["glyph"] = item.glyph
             if item.count is not None:
                 entry_data["count"] = item.count()
             pages.append(entry_data)

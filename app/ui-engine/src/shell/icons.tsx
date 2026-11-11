@@ -78,13 +78,17 @@ function EmptySlot(): ReactNode {
 
 export interface IconGlyphProps {
   name: string;
+  /** 节点自带的 SVG 路径；给了就不查词表。 */
+  path?: string;
   size?: number;
   className?: string;
 }
 
 /** 一个内联 SVG：20px、currentColor、描边风格。 */
-export function IconGlyph({ name, size = 20, className }: IconGlyphProps): ReactNode {
-  const glyph = GLYPHS[name];
+export function IconGlyph({ name, path, size = 20, className }: IconGlyphProps): ReactNode {
+  // 插件自带路径优先：词表只是引擎自带的几个，插件不该为了一个图标去改引擎。
+  const custom = path !== undefined && path.length > 0;
+  const glyph = custom ? <path d={path} /> : GLYPHS[name];
 
   return (
     <svg
@@ -99,7 +103,7 @@ export function IconGlyph({ name, size = 20, className }: IconGlyphProps): React
       strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
-      data-icon={name}
+      data-icon={custom ? "custom" : name}
       data-known={glyph === undefined ? "false" : "true"}
     >
       {glyph ?? <EmptySlot />}
@@ -111,7 +115,7 @@ export function IconGlyph({ name, size = 20, className }: IconGlyphProps): React
 export function Icon({ node }: NodeComponentProps): ReactNode {
   return (
     <span className="omora-icon" data-type="icon">
-      <IconGlyph name={prop(node, "name") ?? ""} />
+      <IconGlyph name={prop(node, "name") ?? ""} path={prop(node, "path")} />
     </span>
   );
 }
