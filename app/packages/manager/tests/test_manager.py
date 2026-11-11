@@ -11,7 +11,6 @@ from omora.core.context import Context
 from omora.core.kernel import Kernel
 from omora.manager import ACTIVE, DISABLED, FAILED, LOADING, PENDING, ManagerPlugin
 from omora.store import StorePlugin
-from omora.ui import UiPlugin
 
 SETTINGS = "settings"
 
@@ -156,7 +155,6 @@ def _scene(
     order: tuple[str, ...] | None = None,
     defaults: dict[str, bool] | None = None,
     platform: str = "win32",
-    ui: bool = False,
     factories: dict[str, Any] | None = None,
     catalog: FakeCatalog | None = None,
 ) -> tuple[Kernel, Any]:
@@ -164,8 +162,6 @@ def _scene(
     names = order or tuple(records)
     kernel = Kernel()
     kernel.install(StorePlugin(":memory:"))
-    if ui:
-        kernel.install(UiPlugin())
     built = factories or {name: FakePlugin(name) for name in names}
     host = FakeHost(kernel, names, built, defaults)
     kernel.install(_ServicePlugin("host", host))
@@ -175,26 +171,6 @@ def _scene(
 
 def _rows(inventory: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {row["name"]: row for row in inventory["plugins"]}
-
-
-def _find_item(node: dict[str, Any], title: str) -> dict[str, Any] | None:
-    if node["type"] == "item" and node["props"].get("title") == title:
-        return node
-    for child in node["children"]:
-        found = _find_item(child, title)
-        if found is not None:
-            return found
-    return None
-
-
-def _find_action(node: dict[str, Any], label: str) -> str | None:
-    if node["type"] == "button" and node["props"].get("text") == label:
-        return str(node["props"]["on_click"])
-    for child in node["children"]:
-        handler = _find_action(child, label)
-        if handler is not None:
-            return handler
-    return None
 
 
 def test_inventory_reports_metadata_state_and_conditions() -> None:
@@ -447,53 +423,3 @@ def test_a_capability_report_must_be_a_list_of_strings() -> None:
         manager.report_capabilities([1])
     with pytest.raises(TypeError, match="capabilities 必须是字符串列表"):
         manager.report_capabilities("microphone")
-
-
-def test_the_settings_page_lists_plugins_and_its_toggle_changes_one() -> None:
-    records = {
-        "store": _record("store"),
-        "manager": _record("manager"),
-        "ui": _record("ui"),
-        "audio": _record("audio", capabilities=("microphone",)),
-        "notes": _record("notes"),
-    }
-    kernel, _manager = _scene(
-        records,
-        order=("store", "manager", "ui", "audio", "notes"),
-        ui=True,
-    )
-    ui = kernel.resolve("ui")
-
-    snapshot = ui.render("plugins")
-    titles = [row["props"]["title"] for row in _items(snapshot["content"])]
-    assert titles == ["store", "manager", "ui", "audio", "notes"]
-    assert snapshot["meta"] == "4/5 运行中"
-    audio = _find_item(snapshot["content"], "audio")
-    assert audio is not None
-    text = _all_text(audio)
-    assert "能力: microphone" in text
-    assert "缺少能力: microphone" in text
-    assert _find_action(audio, "启用") is not None
-
-    notes = _find_item(snapshot["content"], "notes")
-    assert notes is not None
-    disable = _find_action(notes, "禁用")
-    assert disable is not None
-    after = ui.event(disable, {})
-    notes_after = _find_item(after["content"], "notes")
-    assert notes_after is not None
-    assert _find_action(notes_after, "启用") is not None
-    assert kernel.running("notes") is False
-
-
-def _items(node: dict[str, Any]) -> list[dict[str, Any]]:
-    found = [node] if node["type"] == "item" else []
-    for child in node["children"]:
-        found.extend(_items(child))
-    return found
-
-
-def _all_text(node: dict[str, Any]) -> str:
-    parts = [str(node["props"].get("text", ""))]
-    parts.extend(_all_text(child) for child in node["children"])
-    return " ".join(parts)

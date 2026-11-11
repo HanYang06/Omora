@@ -11,6 +11,7 @@ const snapshot: Snapshot = {
   ],
   page: "ideas",
   meta: "2 条",
+  version: 7,
   content: {
     type: "column",
     props: {},
