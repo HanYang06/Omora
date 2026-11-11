@@ -32,7 +32,7 @@ def _ids(*names: str) -> Any:
     return register
 
 
-def _noop(_payload: dict[str, Any]) -> None:
+def _noop(_payload: Any) -> None:
     pass
 
 
