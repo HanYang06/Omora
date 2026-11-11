@@ -29,23 +29,23 @@
 
 ## 2. 结构：窗口、页面、贡献
 
-| 概念 | 是什么 | 谁声明 |
-| --- | --- | --- |
-| **窗口** | 母 UI 的根，声明有哪些区域 | 引擎（默认母页面） |
-| **页面** | 一个可导航的根，挂在窗口的某个区域上 | 页面 owner 插件 |
-| **贡献** | 一份树 + 一个落点键 + 一个顺序 | 任意插件 |
+| 概念     | 是什么                               | 谁声明             |
+| -------- | ------------------------------------ | ------------------ |
+| **窗口** | 母 UI 的根，声明有哪些区域           | 引擎（默认母页面） |
+| **页面** | 一个可导航的根，挂在窗口的某个区域上 | 页面 owner 插件    |
+| **贡献** | 一份树 + 一个落点键 + 一个顺序       | 任意插件           |
 
 线上形状（\`ui.render\` / \`ui.snapshot\` 的视图部分）：
 
 \`\`\`json
 {
-  "pages": [{ "name": "ideas", "label": "灵感", "icon": "ideas" }],
-  "page": "ideas",
-  "version": 12,
-  "contributions": [
-    { "owner": "ideas", "target": "om.window.page", "op": "replace", "order": 0, "tree": { "type": "split", "props": {}, "children": [] } },
-    { "owner": "projects", "target": "ideas.home.after_capture", "op": "after", "order": 20, "tree": { "type": "row", "props": {}, "children": [] } }
-  ]
+"pages": [{ "name": "ideas", "label": "灵感", "icon": "ideas" }],
+"page": "ideas",
+"version": 12,
+"contributions": [
+{ "owner": "ideas", "target": "om.window.page", "op": "replace", "order": 0, "tree": { "type": "split", "props": {}, "children": [] } },
+{ "owner": "projects", "target": "ideas.home.after_capture", "op": "after", "order": 20, "tree": { "type": "row", "props": {}, "children": [] } }
+]
 }
 \`\`\`
 
@@ -58,12 +58,12 @@
 
 只有四个，语义对齐 DOM：
 
-| op | 落点 | 意思 |
-| --- | --- | --- |
-| \`replace\` | 键所在的节点 | 整个换掉 |
-| \`after\` | 键所在的节点 | 挂在它后面，同级 |
-| \`before\` | 键所在的节点 | 挂在它前面，同级 |
-| \`append\` | 键所在的节点 | 放进它的子节点末尾 |
+| op          | 落点         | 意思               |
+| ----------- | ------------ | ------------------ |
+| \`replace\` | 键所在的节点 | 整个换掉           |
+| \`after\`   | 键所在的节点 | 挂在它后面，同级   |
+| \`before\`  | 键所在的节点 | 挂在它前面，同级   |
+| \`append\`  | 键所在的节点 | 放进它的子节点末尾 |
 
 **顺序是全序：\`(order, owner, 声明序号)\`。**
 
@@ -90,19 +90,19 @@
 
 \`\`\`python
 class Ideas:
-    def apply(self, ctx):
-        self.collection = ctx.resolve("store").collection("ideas", ...)
-        self.page = ctx.resolve("ui").page(self.ctx, "ideas", label="灵感", icon="ideas")
-        self.page.set(
-            Split(
-                Rail("全部灵感", *self.rail_items()),
-                Column(
-                    Search(placeholder="搜索灵感…", on_submit=self.search),
-                    Slot(key="ideas.home.after_capture"),
-                    Panel(content=self.feed()),
-                ),
-            )
-        )
+def apply(self, ctx):
+self.collection = ctx.resolve("store").collection("ideas", ...)
+self.page = ctx.resolve("ui").page(self.ctx, "ideas", label="灵感", icon="ideas")
+self.page.set(
+Split(
+Rail("全部灵感", *self.rail_items()),
+Column(
+Search(placeholder="搜索灵感…", on_submit=self.search),
+Slot(key="ideas.home.after_capture"),
+Panel(content=self.feed()),
+),
+)
+)
 
     def rail_items(self) -> list[Node]: ...
     def feed(self) -> list[Node]: ...
@@ -110,6 +110,7 @@ class Ideas:
     def archive(self, event: ArchiveEvent) -> None:
         self.collection.update(event.id, archived=True)
         self.page.refresh(self.feed)
+
 \`\`\`
 
 规矩：
@@ -137,14 +138,14 @@ class Ideas:
 
 **故障与对应规矩：**
 
-| 故障 | 规矩 |
-| --- | --- |
-| 键不存在 | 丢弃 + 日志，不抛 |
-| 挂成环（贡献目标在自己子树里） | 拒绝该贡献，记日志 |
-| 提供键的节点卸载 | 级联撤掉挂在它上面的贡献 |
-| 同一份贡献重复到达 | 幂等：按 \`(owner, key, op)\` 替换，不追加 |
-| 顺序相同 | 全序兜底，绝不靠到达顺序 |
-| 一份贡献坏了 | 只有它那一格降级成占位，壳和其他贡献照常 |
+| 故障                           | 规矩                                       |
+| ------------------------------ | ------------------------------------------ |
+| 键不存在                       | 丢弃 + 日志，不抛                          |
+| 挂成环（贡献目标在自己子树里） | 拒绝该贡献，记日志                         |
+| 提供键的节点卸载               | 级联撤掉挂在它上面的贡献                   |
+| 同一份贡献重复到达             | 幂等：按 \`(owner, key, op)\` 替换，不追加 |
+| 顺序相同                       | 全序兜底，绝不靠到达顺序                   |
+| 一份贡献坏了                   | 只有它那一格降级成占位，壳和其他贡献照常   |
 
 **增量**：只重组合脏的那份贡献，产出的新树与旧树 diff → 补丁；全量永远兜底。
 
@@ -158,10 +159,10 @@ class Ideas:
 
 ## 8. 边界：引擎只做执行，不做判断
 
-| 该归引擎 | 该归插件 |
-| --- | --- |
-| 枚举设备、报原始事实（设备种类、权限状态） | "有没有麦克风、要不要出捕捉块" |
-| 渲染、组合、事件原样回传 | 事件怎么处理、数据怎么来 |
+| 该归引擎                                   | 该归插件                         |
+| ------------------------------------------ | -------------------------------- |
+| 枚举设备、报原始事实（设备种类、权限状态） | "有没有麦克风、要不要出捕捉块"   |
+| 渲染、组合、事件原样回传                   | 事件怎么处理、数据怎么来         |
 | 平台原语（设备清单、媒体源显示、图形数据） | 这个图标长什么样、这段文案用什么 |
 
 具体：
@@ -202,31 +203,31 @@ class Ideas:
 
 ## 13. 任务分解
 
-| 编号 | 任务 | 依赖 | 验收 |
-| --- | --- | --- | --- |
-| P0-1 | 补丁语义跨语言钉住 | — | 同一份 fixture，Python 的 merged 与 TS 的应用结果相同 |
-| P0-2 | 节点级错误边界 | — | 组件抛异常只降级成占位，壳不倒 |
-| P1-1 | 本文档定稿 | — | 文档合入 |
-| P1-2 | SDK 对象化改版 | P1-1 | 构造统一、事件类型、page 对象、update 标脏、去掉 ctx 手递 |
-| P1-3 | 贡献格式与 handler 归属 | P1-1 | \`owner:serial:n\`、多 handler 表、卸载撤销 |
-| P1-4 | 键生成器 + 索引 | P1-3 | Python 命名空间对象、TS 常量、索引 JSON |
-| P1-5 | CI 键检查 | P1-4 | 唯一性 + AST 字符串检查 |
-| P2-1 | 组合器纯函数 | P1-3 | compose + 校验 + 全序 + 级联 + 幂等 + 不可变 + index |
-| P2-2 | 增量与补丁 | P2-1 | 脏贡献重组；增量 == 全量 |
-| P2-3 | 渲染强化 | P2-1 | memo、错误边界、未知降级 |
-| P2-4 | 订阅声明化 | P2-1 | 快照声明 topics，引擎不写死 |
-| P2-5 | 引擎卸载账本 | P2-1 | 登记物逆序撤销 |
-| P2-6 | 组件库与组合能力 | — | 约 30 个组件 + 四样组合能力 |
-| P3-1 | 静态骨架编译脚本 | P2-1 | 两段跑通，产物冻结模块 + 哈希 |
-| P3-2 | 骨架稳定性检查 | P3-1 | 两套 fixture 同骨架 |
-| P3-3 | 启动装载与回退 | P3-1 | 哈希不符退回动态 |
-| P4-1 | 硬件事实化 | — | 引擎只报事实；manager 不做生死；插件自判 |
-| P4-2 | 图标数据化 | — | 引擎无名字表 |
-| P4-3 | 样式令牌化 | — | 插件不传 CSS |
-| P5-1 | 清单语言无关 | P1-1 | \`plugin.json\`；UI-only 合法 |
-| P5-2 | TS 半边加载 | P2/P3 | ESM over http、React 单例、卸载 |
-| P6-1 | 索引消费（CLI/CI） | P1-4 | 命令能列出键与使用者 |
-| P6-2 | VS Code 扩展 | P6-1 | 跳声明处 / 悬浮 / 谁在用 |
+| 编号 | 任务                    | 依赖  | 验收                                                      |
+| ---- | ----------------------- | ----- | --------------------------------------------------------- |
+| P0-1 | 补丁语义跨语言钉住      | —     | 同一份 fixture，Python 的 merged 与 TS 的应用结果相同     |
+| P0-2 | 节点级错误边界          | —     | 组件抛异常只降级成占位，壳不倒                            |
+| P1-1 | 本文档定稿              | —     | 文档合入                                                  |
+| P1-2 | SDK 对象化改版          | P1-1  | 构造统一、事件类型、page 对象、update 标脏、去掉 ctx 手递 |
+| P1-3 | 贡献格式与 handler 归属 | P1-1  | \`owner:serial:n\`、多 handler 表、卸载撤销               |
+| P1-4 | 键生成器 + 索引         | P1-3  | Python 命名空间对象、TS 常量、索引 JSON                   |
+| P1-5 | CI 键检查               | P1-4  | 唯一性 + AST 字符串检查                                   |
+| P2-1 | 组合器纯函数            | P1-3  | compose + 校验 + 全序 + 级联 + 幂等 + 不可变 + index      |
+| P2-2 | 增量与补丁              | P2-1  | 脏贡献重组；增量 == 全量                                  |
+| P2-3 | 渲染强化                | P2-1  | memo、错误边界、未知降级                                  |
+| P2-4 | 订阅声明化              | P2-1  | 快照声明 topics，引擎不写死                               |
+| P2-5 | 引擎卸载账本            | P2-1  | 登记物逆序撤销                                            |
+| P2-6 | 组件库与组合能力        | —     | 约 30 个组件 + 四样组合能力                               |
+| P3-1 | 静态骨架编译脚本        | P2-1  | 两段跑通，产物冻结模块 + 哈希                             |
+| P3-2 | 骨架稳定性检查          | P3-1  | 两套 fixture 同骨架                                       |
+| P3-3 | 启动装载与回退          | P3-1  | 哈希不符退回动态                                          |
+| P4-1 | 硬件事实化              | —     | 引擎只报事实；manager 不做生死；插件自判                  |
+| P4-2 | 图标数据化              | —     | 引擎无名字表                                              |
+| P4-3 | 样式令牌化              | —     | 插件不传 CSS                                              |
+| P5-1 | 清单语言无关            | P1-1  | \`plugin.json\`；UI-only 合法                             |
+| P5-2 | TS 半边加载             | P2/P3 | ESM over http、React 单例、卸载                           |
+| P6-1 | 索引消费（CLI/CI）      | P1-4  | 命令能列出键与使用者                                      |
+| P6-2 | VS Code 扩展            | P6-1  | 跳声明处 / 悬浮 / 谁在用                                  |
 
 ## 14. 未定
 
