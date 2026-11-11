@@ -63,6 +63,11 @@ class FakeTimers implements Timers {
     }
   }
 
+  /** 还排着的定时器数量：用来钉住结算 / 断线时没有僵尸定时器。 */
+  get pendingCount(): number {
+    return this.queue.length;
+  }
+
   /** 按到期顺序执行到 now + ms；回调里新排的定时器也按这个窗口处理。 */
   advance(ms: number): void {
     const target = this.now + ms;
@@ -297,7 +302,7 @@ describe("call 超时", () => {
     await expect(call).rejects.toMatchObject({ code: "timeout" });
   });
 
-  it("超时后迟到的同 id result 按未知 id 忽略，不结算新调用", async () => {
+  it("超时后迟到的同 id result 按未知 id 忽略，不结算任何人", async () => {
     const { connection, socket, timers } = setup();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -306,16 +311,79 @@ describe("call 超时", () => {
     timers.advance(30_000);
     await expect(call).rejects.toMatchObject({ code: "timeout" });
 
-    socket.receive({ id: frame.id, type: "result", value: { late: true } });
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining(frame.id));
-
     const next = connection.call("ui", "render", {});
     const nextFrame = sentFrames(socket)[1];
-    socket.receive({ id: nextFrame?.id, type: "result", value: { page: "main" } });
-    await expect(next).resolves.toEqual({ page: "main" });
+    let nextOutcome: "pending" | "resolved" | "rejected" = "pending";
+    void next.then(
+      () => {
+        nextOutcome = "resolved";
+      },
+      () => {
+        nextOutcome = "rejected";
+      },
+    );
+
+    socket.receive({ id: frame.id, type: "result", value: { late: true } });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining(frame.id));
+    await Promise.resolve();
+    expect(nextOutcome).toBe("pending");
     expect(connection.status).toBe("open");
 
+    socket.receive({ id: nextFrame?.id, type: "result", value: { page: "main" } });
+    await expect(next).resolves.toEqual({ page: "main" });
+    expect(nextOutcome).toBe("resolved");
+
     warn.mockRestore();
+  });
+});
+
+describe("超时定时器", () => {
+  it("result 到岸后清掉自己的超时定时器", async () => {
+    const { connection, socket, timers } = setup();
+    const call = connection.call("ui", "render", {});
+    const frame = firstSent(socket);
+
+    socket.receive({ id: frame.id, type: "result", value: { ok: true } });
+    await expect(call).resolves.toEqual({ ok: true });
+
+    expect(timers.pendingCount).toBe(0);
+  });
+
+  it("超时自己触发后不留下定时器", async () => {
+    const { connection, timers } = setup();
+    const call = connection.call("ui", "render", {});
+
+    timers.advance(30_000);
+    await expect(call).rejects.toMatchObject({ code: "timeout" });
+
+    expect(timers.pendingCount).toBe(0);
+  });
+
+  it("close() 清掉所有在途调用的定时器", async () => {
+    const { connection, timers } = setup();
+    const first = connection.call("ui", "render", {});
+    const second = connection.call("ui", "render", {});
+
+    connection.close();
+
+    await expect(first).rejects.toMatchObject({ code: "connection_closed" });
+    await expect(second).rejects.toMatchObject({ code: "connection_closed" });
+    expect(timers.pendingCount).toBe(0);
+  });
+
+  it("断线时清掉在途调用的定时器，只留一条重连", async () => {
+    const { connection, socket, timers } = setup();
+    const first = connection.call("ui", "render", {});
+    const second = connection.call("ui", "render", {});
+
+    socket.drop();
+
+    await expect(first).rejects.toMatchObject({ code: "connection_closed" });
+    await expect(second).rejects.toMatchObject({ code: "connection_closed" });
+    expect(timers.pendingCount).toBe(1);
+
+    connection.close();
+    expect(timers.pendingCount).toBe(0);
   });
 });
 
