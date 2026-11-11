@@ -55,36 +55,41 @@
 
 ### 4.2 贡献界面
 
-返回一页（内容 + 标题旁那句话），填进壳定义好的固定槽位。不产出界面的插件只登记服务。
+插件产出一页的树（内容 + 标题旁那句话），用**页面对象**自己交上去；不产出界面的插件只登记服务。
 
-- 只填自己的：不改别人的树、不发明槽位、不需要知道还有谁在。
-- 拉取式：渲染器要哪一页才构造；没有渲染器就没人调 `build()`。
-- 槽位先来先得，不预先设计一套体系。
+- **推送式**：`ui.page(...)` 返回页面对象；`handle.set(tree)` 交树，状态变了再交一次。
+- **重建钩子**：`handle.rebuild(build)` 登记重建回调——客户端明确要一页（导航 / 首次 render）时由 ui 调一次，
+  用来吸收"插件后来才装上"这类外部变化。
+- **只填自己的**：不改别人的树；想让别人挂东西，就在自己树里放一个有键的节点（`Slot(key=...)`）。
+- **可介入**：别人按全限定键往那个位置挂（替换 / 前 / 后 / 进子节点），顺序是 `(order, owner, 声明序号)`。
+- 键、贡献、组合的完整契约见 [UI 插件体系](design/ui-plugins.md)。
 
 写法（界面库是 Python 包，内核不 import 它）：
 
 ```python
-from omora.sdk.ui import Button, Column, Input, Item, Page
+from omora.sdk.ui import Button, Column, Item, Page, Slot
 
 
 class Ideas:
     def apply(self, ctx):
-        ctx.resolve("ui").page(ctx, "ideas", "灵感", self.build)
+        self.page = ctx.resolve("ui").page(ctx, "ideas", "灵感")
+        self.page.set(self.build())
+        self.page.rebuild(self.build)
 
     def build(self) -> Page:
         return Page(
             meta=f"{len(self.store.items())} 条",
             content=Column(
-                Input(placeholder="记一条", on_submit=self.capture),
+                Slot(key="ideas.home.after_capture"),
                 *[
-                    Item(i.when, i.title, Button("归档", on_click=self.archive(i)))
+                    Item(i.title, Button("归档", on_click=self.archive(i)), meta=i.when)
                     for i in self.store.items()
                 ],
             ),
         )
 ```
 
-序列化是通用的：节点是 `{type, props, children}`，按 dataclass 字段转，不给每个组件写 schema。回调登记成 id；渲染器把事件连 id 一起回传，插件跑函数、改状态、回一棵新树。
+序列化是通用的：节点是 `{type, props, children}`，按 dataclass 字段转，不给每个组件写 schema。回调登记成 id；渲染器把事件连 id 一起回传，插件跑函数、改状态、重新交树。
 
 ### 4.3 边界
 
@@ -178,6 +183,7 @@ class Ideas:
 - 事件回传：handler id + 载荷。
 - 订阅：客户端声明关心哪些 topic，net 只把订阅过的 `event` 发给它；断线即清空，重连由客户端重放。
 - 增量：快照带版本号，变化走 `ui.snapshot` 补丁；对不上版本就重新要全量。
+- 快照字段：`pages` / `page` / `meta` / `content` / `contributions`（可选）/ `topics`（可选）/ `version`。
 
 规矩：
 

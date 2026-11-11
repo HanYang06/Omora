@@ -13,27 +13,18 @@ TypeScript + React + Vite。
 ```
 src/
   main.tsx        挂载
-  app.tsx         容器：快照 + 连接状态；连上 render，点导航 render，回车 / 动作 event，播放取媒体
-  shell.tsx       默认母页面：左侧导航 + 右侧一页纸
-  connection.ts   WebSocket：请求 / 响应按 id 配对；未连接不发请求
-  device-report.ts       连上后把客户端设备事实报给 manager（检测在 capture 的 devices.ts）
-  protocol.ts     帧的类型与校验（读同一份 fixture）
-  renderer.tsx    节点树 → React；未知 type 画占位框
-  components.tsx  基础词表（column / row / text / button / input / list / item / empty）+ 注册表
-  capture.tsx     老录音条 / 音频播放（v0 形状，保留）
-  audio-capture.tsx  音频捕捉：设备门禁、多设备、录音
-  video-capture.tsx  视频捕捉：设备门禁、预览、重录、上传；加视频播放器
-  devices.ts      设备检测：枚举、门禁、热插拔、能力上报（纯函数，可直接测）
-  use-devices.ts  设备状态的 React 胶水
-  device-select.tsx  多设备时的选择器
-  media.ts        取媒体（media.load）+ 上传（HTTP 媒体通道）
-  shared.ts       组件共用的 props 与工具
-  search.tsx      搜索框、建议、结果
-  searchText.ts   命中切分与键盘决策（纯函数）
-  types.ts        节点、页面快照、媒体、handler 类型
-  styles.css      壳与基础词表
-  media.css       录音 / 播放
-  *.test.ts(x)    vitest：协议、连接、渲染、母页面
+  app.tsx         容器：快照 + 连接状态；启动先画静态骨架，连上后 render / 订阅 / 事件
+  core/           连接、协议、类型、日志、设备上报、topic 差集（topics.ts）
+  render/         节点树 → React（renderer）、组合器（compose）、视图合成（view）、
+                  启动骨架（boot）、补丁（patch）、基础词表（components / cards / tiles /
+                  hotkey / waveform）、控件（controls/）
+  shell/          默认窗口：三栏壳（shell）、布局原语（layout）、图标（icons）
+  capture/        设备枚举与门禁（devices）、音频 / 视频捕捉组件、上传
+  media/          媒体播放（按需取字节）与上传
+  search/         搜索框、建议、结果；命中切分（纯函数）
+  generated/      生成物：keys.ts、static-tree.ts（别手改，脚本产出）
+  styles/         壳与词表样式（styles.css / media.css）
+  *.test.ts(x)    vitest：协议、连接、渲染、组合、启动骨架、母页面
 ```
 
 测试：`pnpm --dir app/ui-engine test --run`。协议测试读 `app/sdk/tests/fixtures/protocol.json`——Python 与 TS 用同一份帧样例。
@@ -153,6 +144,7 @@ src/
 - TS 插件宿主（接管整个界面的那一层）。
 - 深色主题。
 - 本地转写 / AI 解读。
-- 关联 / 网图、局部更新 / diff。
-- 重连、请求超时、多客户端、窄屏适配。
+- 关联 / 网图。
+- 多客户端、窄屏适配。
 - 视频通道的 Range（拖进度）与鉴权；设备权限被拒后的引导。
+- 页面级"只重建脏贡献"：现在一次事件重建整页，线上只推补丁。
