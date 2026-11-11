@@ -204,7 +204,7 @@ class Net:
     # ---- 分发 ---------------------------------------------------------
 
     def handle(self, raw: object) -> Frame:
-        """一帧进，一帧出。任何情况下都不往外抛异常。"""
+        """一帧进，一帧出，同步旧路径（只有测试直接调）。正式入口是 _dispatch。"""
         frame = self._call(raw, None)
         self._flush_pending()
         return frame
@@ -265,14 +265,19 @@ class Net:
     async def _dispatch(self, conn: _Connection, raw: object) -> None:
         async with self._call_lock:
             frame = self._call(raw, conn)
-            if frame["id"] is not None and len(conn.queue) >= self._max_queue:
-                frame = error_frame(frame["id"], OVERLOADED, "发送队列已满，退避后重试")
             self._enqueue_reply(conn, frame)
             self._flush_pending()
 
     def _enqueue_reply(self, conn: _Connection, frame: Frame) -> None:
+        # 回帧优先于 event：满了先丢最老的待发 event；丢不出来才说明客户端没在读。
         if len(conn.queue) >= self._max_queue:
             self._drop_oldest_event(conn)
+        if len(conn.queue) >= self._max_queue and frame["id"] is not None:
+            frame = error_frame(
+                frame["id"],
+                OVERLOADED,
+                "发送队列已满（客户端没在读）；调用可能已经执行过，重试要幂等",
+            )
         conn.queue.append(frame)
         conn.wakeup.set()
 
@@ -352,6 +357,7 @@ class Net:
                 if conn.queue and conn.queue[0] is frame:
                     conn.queue.popleft()
                 self._frames_out += 1
+                # 算字节数，不是再发一次。
                 self._bytes_out += len(text.encode("utf-8"))
 
 

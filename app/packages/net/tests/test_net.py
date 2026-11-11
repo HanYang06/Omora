@@ -77,6 +77,13 @@ async def _recv(ws: Any) -> dict[str, Any]:
     return frame
 
 
+async def _call_and_wait(ws: Any, service: _Echo, frame_id: str) -> None:
+    """发一次 ping，并等它真的分发到服务（入队紧跟在这一步之后）。"""
+    service.called = asyncio.Event()
+    await _send_call(ws, frame_id, "svc", "ping")
+    await service.called.wait()
+
+
 # ---- 基本分发（不经过 socket）------------------------------------------
 
 
@@ -339,7 +346,35 @@ def test_events_without_coalesce_are_all_kept() -> None:
     assert second["payload"] == {"n": 2}
 
 
-def test_a_full_queue_answers_overloaded_and_drops_events() -> None:
+def test_an_event_that_does_not_fit_the_queue_is_dropped_and_counted() -> None:
+    async def scenario() -> tuple[dict[str, Any], dict[str, Any]]:
+        gate = _Gate()
+        ctx = Context()
+        net = Net(ctx, port=0, max_queue=1, writer=gate)
+        ctx.provide("net", net)
+        port = await net.serve()
+        try:
+            async with connect(_url(port)) as ws:
+                await _send_call(ws, "1", "net", "subscribe", topics=["t"])
+                await _recv(ws)
+                gate.open = False
+                net.emit("t", {"n": 1})
+                await gate.entered.wait()  # 第一条已经占住唯一的队列位置
+                net.emit("t", {"n": 2})  # 放不下：丢弃并计数
+                gate.release.set()
+                pushed = await _recv(ws)
+                return pushed, net.stats()
+        finally:
+            await net.stop()
+
+    pushed, stats = asyncio.run(scenario())
+
+    assert pushed == {"type": "event", "topic": "t", "payload": {"n": 1}}
+    assert stats["dropped"] == 1
+    assert stats["frames_out"] == 2  # 订阅 result + 留下的那条 event
+
+
+def test_a_full_queue_drops_an_event_but_still_delivers_the_result() -> None:
     async def scenario() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         gate = _Gate()
         ctx = Context()
@@ -354,11 +389,9 @@ def test_a_full_queue_answers_overloaded_and_drops_events() -> None:
                 await _recv(ws)
                 gate.open = False
                 net.emit("t", {"n": 1})
-                net.emit("t", {"n": 2})
-                net.emit("t", {"n": 3})  # 队列满：丢掉并计数
-                await gate.entered.wait()  # 发送任务卡在第一条上，队列仍是满的
-                await _send_call(ws, "2", "svc", "ping")
-                await service.called.wait()  # 分发已经跑完、result 已经换成 overloaded
+                net.emit("t", {"n": 2})  # 队列被 event 压满
+                await gate.entered.wait()  # 发送任务卡在第一条上
+                await _call_and_wait(ws, service, "2")
                 gate.release.set()
                 replies = [await _recv(ws), await _recv(ws)]
                 return replies, net.stats()
@@ -368,10 +401,39 @@ def test_a_full_queue_answers_overloaded_and_drops_events() -> None:
     replies, stats = asyncio.run(scenario())
 
     assert replies[0] == {"type": "event", "topic": "t", "payload": {"n": 1}}
-    assert (replies[1]["id"], replies[1]["code"]) == ("2", "overloaded")
-    assert stats["dropped"] == 2  # 一条 emit 时丢掉，一条给 overloaded 腾位置
-    assert stats["calls"] == 2
-    assert stats["frames_out"] == 3  # 订阅 result + 一条 event + overloaded
+    # 回帧优先于 event：丢一条待发 event 腾位置，正常调用不会拿到 overloaded。
+    assert replies[1] == {"id": "2", "type": "result", "value": "pong"}
+    assert stats["dropped"] == 1
+    assert stats["frames_out"] == 3  # 订阅 result + 一条 event + 调用 result
+
+
+def test_overloaded_only_happens_when_no_event_can_be_dropped() -> None:
+    async def scenario() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        gate = _Gate()
+        ctx = Context()
+        service = _Echo(ctx)
+        net = Net(ctx, port=0, max_queue=1, writer=gate)
+        ctx.provide("net", net)
+        ctx.provide("svc", service)
+        port = await net.serve()
+        try:
+            async with connect(_url(port)) as ws:
+                await _send_call(ws, "1", "net", "subscribe", topics=["t"])
+                await _recv(ws)
+                gate.open = False
+                await _call_and_wait(ws, service, "2")  # 回帧卡在队列里，发不出去
+                await _call_and_wait(ws, service, "3")  # 没有 event 可丢 → overloaded
+                gate.release.set()
+                replies = [await _recv(ws), await _recv(ws)]
+                return replies, net.stats()
+        finally:
+            await net.stop()
+
+    replies, stats = asyncio.run(scenario())
+
+    assert replies[0] == {"id": "2", "type": "result", "value": "pong"}
+    assert (replies[1]["id"], replies[1]["code"]) == ("3", "overloaded")
+    assert stats["dropped"] == 0  # 没有任何 event 被丢
 
 
 def test_stats_reports_calls_frames_and_bytes() -> None:
