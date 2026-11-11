@@ -3,27 +3,55 @@
 两个 runtime 之间只有这一条协议。**形状是合同**：写在这里，Python 与 TS 各实现一份，用同一份 fixture 钉住。
 实现它的是 net 插件（见 `app/packages/net/`）；内核不认识帧。
 
+## 0. 先说场景：这是本机 IPC，不是网络
+
+这条协议只跑在 `127.0.0.1`，两个进程在同一台机器上。它要回答的是"两个 runtime 怎么把状态对齐"，
+不是"怎么在坏网络里活下来"。下面每个设计都从实测出发（2026-11-12，本机 loopback 实测）：
+
+| 指标                                                    | 实测                                                             |
+| ------------------------------------------------------- | ---------------------------------------------------------------- |
+| 一次 call → result 往返（含 JSON 编解码，一条 WS 连接） | mean 0.148ms，median 0.142ms，p99 0.254ms                        |
+| 200 条灵感页全量快照                                    | 51 KiB，405 节点；序列化 0.56ms + dumps 0.38ms；JS 解析 0.24ms   |
+| 500 条灵感页全量快照                                    | 124 KiB，1005 节点；序列化 1.49ms + dumps 0.92ms；JS 解析 0.53ms |
+| 同上，新增一条的增量                                    | 127 字节                                                         |
+| 同上改用 msgpack                                        | 少 26% 字节；pack 快 2.3x，unpack 快 1.4x                        |
+
+三个结论决定了 v1 升什么、不升什么：
+
+1. **传输不是瓶颈。** 一次往返 0.15ms；换 UDS / HTTP3 / WebTransport 能省的只是这个数的一部分，
+   而且渲染引擎跑在 Chromium 里，只说 WS / fetch / WebRTC / WebTransport。
+2. **快照是瓶颈。** 每次事件回整棵树，成本随节点数线性长；500 条就是 3ms 级 CPU，外加一次全树重渲染。
+3. **缺的是推送。** 下行只能搭 result 的车，后端有事说不出口，双向只剩一半。
+
+所以 v1 升的是**语义**：帧类型、订阅、增量快照、多路复用、背压、可测量。传输仍然是 WebSocket。
+
 ## 1. 传输
 
-- WebSocket，文本帧，一条消息一帧 JSON。
+- WebSocket，文本帧，一条消息一帧 JSON，一条连接。
 - 默认 `ws://127.0.0.1:8765`，地址由 `config.ini` 的 `[net]` 决定。
-- 只收文本帧；收到二进制帧回 `bad_frame`。
+- 只收文本帧；二进制帧 v1 不实现（§9 写了为什么不急），收到回 `bad_frame`。
+- 不做版本协商：两个进程一起发布、共用一个版本号，帧里不带版本。
 - 媒体字节还有一条旁路：音频与视频都走 HTTP 媒体通道（§7），帧里只传 media id。
 
-## 2. 三种帧
+## 2. 四种帧
 
 ```
 call   {"id": "1", "type": "call",   "target": "ui", "method": "render", "args": {"page": "ideas"}}
 result {"id": "1", "type": "result", "value": {...}}
 error  {"id": "1", "type": "error",  "code": "unknown_target", "message": "服务未提供: x"}
+event  {"type": "event", "topic": "ui.snapshot", "payload": {...}}
 ```
 
 规矩：
 
-- `id` 必须是非空字符串，结果帧原样回填；`bad_frame` 时允许为 `null`（帧都没解析出来）。
+- `id` 必须是非空字符串，由**发起方**分配，只在本侧发起空间内唯一；对端在 result / error 里原样回填。
+- **方向由 `type` 决定，不由 id 决定**：收到 `call` 就是对端在调我，收到 `result` / `error` 就是有人在回我的调用。
+  因此两侧的 id 可以重名，不需要前缀，也不需要 `origin` 字段。
+- `event` 没有 id、不带回复，只由 net 发；TS 要告诉 Python 事情就用 `call`。
+  收到不认识的 `topic` 必须静默忽略（不是错误，也不能把它当断线）。
 - `args` 必须是对象；缺省按 `{}`。
-- 一次调用一帧结果，没有流式、没有推送。
-- 页面快照放在 `result.value` 里（形状见 §5），不单独发明帧类型。
+- 一次调用一帧结果。没有流式：要进度就 emit，见 §5。
+- `bad_frame` 时 id 允许为 `null`（帧都没解析出来）。
 
 ## 3. 错误码
 
@@ -33,15 +61,33 @@ error  {"id": "1", "type": "error",  "code": "unknown_target", "message": "服�
 | `unknown_target` | 这个名字没有服务                                                                          |
 | `unknown_method` | 服务没有这个方法，或它不是可调用的                                                        |
 | `call_failed`    | 方法抛了异常；`message` 是 `str(exc)`，不带 traceback                                     |
+| `overloaded`     | 这一帧没进了发送队列（连接队列满）；客户端可以退避重试                                    |
 
-## 4. 方向与并发
+客户端在连接层自己造的错误（`not_connected` / `connection_closed` / `connection_failed` / `timeout`）
+不是帧，不走这张表。
 
-- v0 只有上行：TS 调 Python。下行只通过 `result` 回来。
-- 服务方法全是同步的，在事件循环里内联调用；net 对每个连接**一帧处理完再处理下一帧**。
-  因此服务不会被并发调用，插件不需要加锁。
-- 什么时候回帧、能不能主动推，都是 net 的职责；v0 不推送。
+## 4. 方向、并发与顺序
 
-### 4.1 插件管理调用
+- 上行：`call` 调服务（订阅也走它，见 §5）。
+- 下行：`result` / `error` 回调用；`event` 主动推。
+- 服务方法全是同步的，net 内联调用；**服务不会被并发调用**，插件不需要加锁。这条到 v1 不变。
+- 每连接的收帧分发是串行的；**发送独立于分发**：net 有一个发送任务 + 有界队列。
+  一个慢调用不会挡住已经入队的 event，推送不等服务锁。
+- 顺序：同一连接上发出的帧按入队顺序。**一次 call 处理期间 emit 的 event 排在这个 call 的 result 之后**
+  （net 在分发时先缓冲，回完 result 再 flush），客户端不会先收到一个自己还没有版本的补丁。
+- 内联是快路径，也是风险：一次同步调用会占住事件循环（媒体 HTTP 在同一个循环里）。
+  约定是**服务方法要快（目标 < 10ms），慢活必须挪后台线程，做完用 emit 通知**。
+  单帧处理超过 10ms 记一条 `net.slow_call` 警告（带 target / method / ms），让这件事可见，不靠自觉。
+- 什么时候回帧、能不能主动推，都是 net 的职责，写在这里的是形状。
+
+### 4.1 超时与重连（客户端职责）
+
+- `call` 默认 30s 超时，超时 reject `CallError{code:"timeout"}`；长调用显式传 `timeout: 0` 关掉。
+- 断线后指数退避重连（0.5s → 10s，带抖动）。连接状态仍是 `idle` / `connecting` / `open` / `closed` / `failed`。
+- 重连成功后**客户端重放**：上报能力（`manager.report_capabilities`）、重画当前页（`ui.render`）、
+  重建订阅（`net.subscribe`）。订阅挂在连接上，服务端不需要会话恢复，也不需要记住谁是谁。
+
+### 4.2 插件管理调用
 
 manager 是普通服务，不新增帧类型：
 
@@ -53,59 +99,54 @@ manager 是普通服务，不新增帧类型：
 
 能力是客户端的事实：引擎在连接 open 后上报一次，Python 侧不探测硬件。
 
-## 5. 页面快照与节点
+## 5. 订阅与推送
 
-`ui.render` / `ui.event` 的 `result.value` 是一份页面快照：
+- `call {"target": "net", "method": "subscribe", "args": {"topics": ["ui.snapshot", "media.progress"]}}`
+  → `result {"topics": ["ui.snapshot"], "unknown": ["nope"]}`；`unsubscribe` 同形状。
+- topic 是普通字符串，不通配。订阅挂在连接上，断开即清空。
+- 没订阅的连接收不到该 topic 的 event：net 过滤，不靠客户端忽略。
+- Python 侧发推送：`ctx.resolve("net").emit(topic, payload)`，同步、非阻塞、立即入队；没有连接就丢弃。
+  SDK 给一层薄封装 `omora.sdk.realtime.emit(ctx, topic, payload)` —— 内核不新增概念，插件仍只靠服务名。
+- `emit(..., coalesce=True)`：队列里同 topic 的旧消息被这条替换。给"只关心最新值"的流用（进度、光标）。
+
+## 6. 快照、版本与增量
+
+全量快照仍然是 `result.value`，只多一个 `version`：
 
 ```json
 {
   "pages": [{ "name": "ideas", "label": "灵感", "count": 3 }],
   "page": "ideas",
   "meta": "3 条",
-  "content": { "type": "column", "props": {}, "children": [] }
+  "content": { "type": "column", "props": {}, "children": [] },
+  "version": 12
 }
 ```
 
-- `pages` 是导航：名字、标签、可选数量，按登记顺序。
-- `page` 是当前页；`meta` 是标题旁那句话；`content` 是节点树。
+- `version` 是页面自己的单调计数，由 ui 插件给；net 不解释它，只负责运。
+- 增量走 event：`{"topic": "ui.snapshot", "payload": {"page": "ideas", "version": 13, "base": 12, "ops": [...]}}`。
+- 客户端只在 `base` 等于自己当前版本时应用；不匹配、或遇到不认识的 op，就发一次 `ui.render` 求全量。
+  **永远有全量兜底**，补丁是加速不是唯一路径。
+- op 最小集，路径从快照根算：
 
-节点：
+| op       | 形状                                                                                 | 做什么                |
+| -------- | ------------------------------------------------------------------------------------ | --------------------- |
+| `set`    | `{"op": "set", "path": ["content", "children", 0, "props", "text"], "value": "..."}` | 改一个字段            |
+| `insert` | `{"op": "insert", "path": ["content", "children", 1], "index": 0, "value": {节点}}`  | children 里插一个节点 |
+| `remove` | `{"op": "remove", "path": ["content", "children", 1], "index": 0}`                   | children 里删一个节点 |
 
-```json
-{
-  "type": "column",
-  "props": {},
-  "children": [{ "type": "text", "props": { "text": "灵感", "kind": "title" }, "children": [] }]
-}
-```
+- 值得做的理由在 §0：500 条页面全量 124 KiB / 3ms，增量 127 字节。
+- **补丁只省解析，不自动省渲染**：渲染端必须按节点 memo（同一份节点数据引用相等就跳过重画），
+  否则解析省了、重画没省。两件事一起做，少一件都不算做完。
 
-- `children` 永远是数组，没有子节点就是 `[]`。
-- 可调用字段（如 `on_click`、`on_submit`）序列化成 handler id 字符串，对渲染引擎不透明。
-- 组件词表：`column` / `row` / `text` / `button` / `input` / `recorder` / `audio` /
-  `audio_capture` / `video_capture` / `video` / `hotkey` / `waveform` / `list` / `item` /
-  `empty` / `search` / `suggestion` / `result`。
-- `recorder` 与 `audio` 是 v0 的形状，保留：老快照照样能画。新捕捉用
-  `audio_capture`（audio 插件给）和 `video_capture`（video 插件给）。
-- 事件载荷：`{"handler": "...", "payload": {...}}`；`input` 提交带 `{"value": "..."}`，
-  `audio_capture` / `video_capture` 带 `{"media": "media id", "mime": "...", "seconds": 0.0}`，
-  `button` 带 `{}`。波形不进载荷：`waveform` 节点只给媒体地址，渲染引擎自己去取。
-  `hotkey` 按下 / 松开都带 `{}`。
-- 搜索：`search` 的 children 是 `suggestion`；打字事件与提交事件都带 `{"value": "..."}`，
-  点一条建议带回那条建议自己的 `value`，点 `result` 带 `{}`。`suggestion` 与 `result` 的
-  `highlight` 是"要把哪几个字标出来"，渲染引擎不认识它是不是真的命中。
-- 媒体字节不走帧：音频与视频都走 §7 的 HTTP 媒体通道，帧里只有 media id。
-  例外是播放：`media.load` 仍然把字节按 base64 返回（v0 的形状，保留）。只收文本帧的规矩不变。
-- 未知 `type` → 渲染引擎画占位框，不崩。
+### 6.1 视图只有一个出口
 
-## 6. 跨语言钉
-
-`app/sdk/tests/fixtures/protocol.json` 是唯一的跨语言样例，Python 与 TS 的测试都读它：
-
-- `calls`：call 帧，合法与非法都要有；
-- `snapshots`：页面快照，钉字段（`pages` / `page` / `meta` / `content`）与节点形状。
-
-Python 用 SDK 的 `serialize` 输出和 `snapshots` 里的 `content` 逐字段比对；TS 检查同一份
-快照的节点形状。两边都不自己造样例。
+- `ui.render` 的 result 是**全量快照**（首屏 / 客户端主动要）。这是唯一一处"快照搭 result 的车"。
+- 除此之外，视图变化一律走 `ui.snapshot` event：能 diff 就带补丁，不能 diff（换页、版本对不上）
+  就带全量。用户事件（`ui.event`）的 result 只有确认（`{}`），不带视图。
+- 客户端因此只有一条更新路径：收到 `payload.content` 就整棵替换，收到 `payload.ops` 就按补丁改。
+  不存在"result 里也可能是视图"的分支。
+- 顺序由 §4 保证：同一次调用触发的 event 排在它的 result 之后，客户端不会在确认之前处理视图。
 
 ## 7. HTTP 媒体通道（音频与视频）
 
@@ -123,10 +164,49 @@ Python 用 SDK 的 `serialize` 输出和 `snapshots` 里的 `content` 逐字段�
 - 错误：`400`（请求体坏了 / 空媒体）、`404`（没有这个媒体或路由）、`411`（缺 `Content-Length`）、
   `413`（超过 `[media] max_mb`）、`415`（不是音频或视频）、`503`（media 服务没装）。
 
-v0 的边界：没有鉴权；绑定地址跟 `[net] host` 一致（默认只听 127.0.0.1）；没有分块传输、
+v1 的边界：没有鉴权；绑定地址跟 `[net] host` 一致（默认只听 127.0.0.1）；没有分块传输、
 没有 keep-alive、没有 Range（视频不能拖进度）、没有并发上限、没有压缩或转码。
 放到局域网 / 公网之前必须补鉴权。
 
-## 8. 不做
+## 8. 指标
 
-推送、二进制帧、超时、重连、多客户端、增量更新；媒体通道的鉴权、Range 与分块传输。
+`call {"target": "net", "method": "stats"}` 回：
+
+```json
+{
+  "connections": 1,
+  "calls": 1234,
+  "frames_out": 5678,
+  "bytes_out": 901234,
+  "queue_depth": 0,
+  "dropped": 0,
+  "slow_calls": [{ "target": "ui", "method": "render", "ms": 12.3 }]
+}
+```
+
+没有这个，任何"性能提升"都无法验收。开发面板与日志读它，不靠感觉。
+
+## 9. 不做（以及为什么）
+
+- **换传输**：UDS / named pipe（渲染引擎在 Chromium 里，拿不到）；HTTP/3 / WebTransport（要 TLS 与
+  QUIC 栈，本机收益为 0）；WebRTC（信令与 SDP 的成本，换一个本机不存在的丢包问题）；
+  SSE（单向，还要多一条连接、多一套错误处理）。
+- **二进制帧 / msgpack 全量化**：省 26% 字节、编解码快约 2x，但快照只占环节里的一部分，
+  换来不可 grep 的线上格式，不划算。等真有高频数值流（波形、进度、计时），再单开"高频小帧走二进制"一格。
+- **protobuf / codegen**：一份 `.proto` 加两套生成器，换掉的是一份已经能被跨语言 fixture 钉住的 JSON。
+  等协议大到手写会错时再说。
+- **反向 RPC 的 Python API**：帧已经允许 call 双向，但 Python 服务方法同步，里面不能 await 一次跨进程往返。
+  要做，门槛是"服务方法可以是 async"或"TS 宿主有服务表"，等第一个真需求。
+- **版本协商、多客户端路由、topic 通配、鉴权、大帧分片**。
+
+## 10. 跨语言钉
+
+`app/sdk/tests/fixtures/protocol.json` 是唯一的跨语言样例，Python 与 TS 的测试都读它：
+
+- `calls`：call 帧，合法与非法都要有（含 `net.subscribe`）；
+- `events`：event 帧，合法与非法都要有（含未知 topic 的合法帧）；
+- `snapshots`：页面快照，钉字段（`pages` / `page` / `meta` / `content` / `version`）与节点形状；
+- `patches`：三种 op 各一例，含非法 op。
+
+Python 用 SDK 的 `serialize` 输出和 `snapshots` 里的 `content` 逐字段比对；TS 检查同一份快照与补丁的形状。
+两边都不自己造样例。
