@@ -42,19 +42,14 @@
   "pages": [{ "name": "ideas", "label": "灵感", "icon": "ideas" }],
   "page": "ideas",
   "version": 12,
+  "content": { "type": "split", "props": {}, "children": [] },
   "contributions": [
-    {
-      "owner": "ideas",
-      "target": "om.window.page",
-      "op": "replace",
-      "order": 0,
-      "tree": { "type": "split", "props": {}, "children": [] }
-    },
     {
       "owner": "projects",
       "target": "ideas.home.after_capture",
-      "op": "after",
+      "op": "append",
       "order": 20,
+      "seq": 1,
       "tree": { "type": "row", "props": {}, "children": [] }
     }
   ]
@@ -62,6 +57,8 @@
 ```
 
 - `pages` / `page`：导航与当前页（沿用 v1，含义不变）。
+- `content` 是页面主人自己那棵树的简写（等价于 owner=页面名、target=页面根的一份 `replace`）。
+  等贡献层稳定，它会并进 `contributions`；现在两种都在线上，引擎先摆 `content` 再挂 `contributions`。
 - `version`：当前页的组合结果版本，单调递增。
 - `contributions`：**这一页**的贡献集合。换页 = 换整组贡献，不是打补丁。
 - 窗口区域先定两个：`om.window.nav`（图标栏）与 `om.window.page`（主区）。再加区域要改引擎，这是有意的——区域是平台结构。
@@ -247,8 +244,9 @@ Panel(content=self.feed()),
 ## 13.1 进度
 
 已合入集成分支 `feat/ui-plugin-system`：P0-1（补丁跨语言 fixture）、P0-2（节点级错误边界）、
-P2-1（组合器）、P2-6 第一批（12 个基础控件 + 拆分到 `render/controls/`）。
-其余任务未开始；验收标准与依赖见上面那张表。
+P2-1（组合器）、P2-6 第一批（12 个基础控件 + 拆分到 `render/controls/`）、
+P1-3 前半（`Slot` 节点、`ui.contribute`、贡献上线、归属进 handler id）。
+剩余任务未开始；验收标准与依赖见上面那张表。
 
 ## 14. 未定
 
