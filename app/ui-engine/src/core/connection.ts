@@ -276,7 +276,7 @@ export class Connection {
       frame = parseInboundFrame(raw);
     } catch (error) {
       if (error instanceof FrameError) {
-        console.error(`[omora] 非法帧（${error.code}）: ${error.message}`);
+        console.error("[omora] 非法帧:", error.code, error.message);
       } else {
         console.error("[omora] 解析帧失败:", error);
       }
@@ -289,7 +289,7 @@ export class Connection {
     }
 
     if (frame.type === "error" && frame.id === null) {
-      console.error(`[omora] 错误帧没有 id，无法配对: ${frame.code} ${frame.message}`);
+      console.error("[omora] 错误帧没有 id，无法配对:", frame.code, frame.message);
       return;
     }
     if (frame.id === null) {
@@ -299,7 +299,7 @@ export class Connection {
 
     const pending = this.pending.get(frameId);
     if (pending === undefined) {
-      console.warn(`[omora] 收到未知 id 的帧: ${frameId}`);
+      console.warn("[omora] 收到未知 id 的帧:", frameId);
       return;
     }
     this.settle(frameId, pending);
@@ -322,7 +322,7 @@ export class Connection {
       try {
         listener(body);
       } catch (error) {
-        console.error(`[omora] 处理 ${topic} 事件失败:`, error);
+        console.error("[omora] 处理事件失败:", topic, error);
       }
     }
   }
