@@ -55,13 +55,13 @@ event  {"type": "event", "topic": "ui.snapshot", "payload": {...}}
 
 ## 3. 错误码
 
-| code             | 什么时候                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------- |
-| `bad_frame`      | JSON 不合法、不是对象、缺 `id` / `target` / `method`、`type` 不是 `call`、`args` 不是对象 |
-| `unknown_target` | 这个名字没有服务                                                                          |
-| `unknown_method` | 服务没有这个方法，或它不是可调用的                                                        |
-| `call_failed`    | 方法抛了异常；`message` 是 `str(exc)`，不带 traceback                                     |
-| `overloaded`     | 这一帧没进了发送队列（连接队列满）；客户端可以退避重试                                    |
+| code             | 什么时候                                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------- |
+| `bad_frame`      | JSON 不合法、不是对象、缺 `id` / `target` / `method`、`type` 不是 `call`、`args` 不是对象                |
+| `unknown_target` | 这个名字没有服务                                                                                         |
+| `unknown_method` | 服务没有这个方法，或它不是可调用的                                                                       |
+| `call_failed`    | 方法抛了异常；`message` 是 `str(exc)`，不带 traceback                                                    |
+| `overloaded`     | 回帧放不进发送队列（队列里已经全是没送出去的回帧，说明客户端没在读）；调用**可能已经执行过**，重试要幂等 |
 
 客户端在连接层自己造的错误（`not_connected` / `connection_closed` / `connection_failed` / `timeout`）
 不是帧，不走这张表。
@@ -75,6 +75,8 @@ event  {"type": "event", "topic": "ui.snapshot", "payload": {...}}
   一个慢调用不会挡住已经入队的 event，推送不等服务锁。
 - 顺序：同一连接上发出的帧按入队顺序。**一次 call 处理期间 emit 的 event 排在这个 call 的 result 之后**
   （net 在分发时先缓冲，回完 result 再 flush），客户端不会先收到一个自己还没有版本的补丁。
+- 优先级：**回帧永远优先于 event**。队列满时先丢最老的待发 event（计入 dropped），
+  event 也会被 coalesce 换掉；只有连一条 event 都丢不出来（队列里全是回帧）才回 `overloaded`。
 - 内联是快路径，也是风险：一次同步调用会占住事件循环（媒体 HTTP 在同一个循环里）。
   约定是**服务方法要快（目标 < 10ms），慢活必须挪后台线程，做完用 emit 通知**。
   单帧处理超过 10ms 记一条 `net.slow_call` 警告（带 target / method / ms），让这件事可见，不靠自觉。
