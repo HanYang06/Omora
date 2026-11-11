@@ -211,8 +211,9 @@ Panel(content=self.feed()),
 
 ## 12. 工具链
 
-- 构建期生成：键的命名空间对象（Python）、常量（TS）、**索引 JSON**（键、声明者、file:line、说明、使用者）。
-- CI：键唯一性；AST 扫源码字符串字面量 vs 索引。
+- `scripts/keys.py` 扫源码里的字面量（`Slot(key=...)` 声明、`contribute(..., target)` 使用），不跑插件。
+- 产物三份（都是生成的，别手改）：`app/sdk/omora/sdk/keys.py`、`app/ui-engine/src/generated/keys.ts`、`keys.json`。
+- CI：`uv run python scripts/keys.py --check` 校验产物最新；重复声明、格式不对、常量撞名都会失败。
 - 编辑器：先要 VS Code 扩展（跳声明处、悬浮说明、谁在用），LSP 等要支持第二个编辑器时再说。
 
 ## 13. 任务分解
@@ -251,6 +252,7 @@ P2-6 第一批（12 个基础控件 + 拆分到 `render/controls/`）、
 P1-3 前半（`Slot` 节点、`ui.contribute`、贡献上线、归属进 handler id）、
 P4-1（引擎只报设备事实、manager 不再拿硬件决定装不装、audio / video 自己判断）、
 P1-2 前半（页面对象 `set` / `refresh`，projects / requirements 已迁；`Item` 构造收口）。
+P1-4 / P1-5（键索引脚本、Python / TS 常量、keys.json、CI 校验）。
 剩余任务未开始；验收标准与依赖见上面那张表。
 
 ## 14. 未定

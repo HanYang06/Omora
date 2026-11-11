@@ -1,8 +1,9 @@
 import type { Node, Snapshot } from "../core/types";
+import { OM_WINDOW_PAGE } from "../generated/keys";
 import { compose } from "./compose";
 
 /** 页面主树在窗口里的键：引擎组合前打在页面根上，整页因此可被 replace / before / after。 */
-export const WINDOW_PAGE = "om.window.page";
+export const WINDOW_PAGE = OM_WINDOW_PAGE;
 
 /**
  * 把页面自己的树和别的插件的贡献合成一棵树。

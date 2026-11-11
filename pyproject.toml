@@ -68,7 +68,7 @@ skip_covered = true
 [tool.ruff]
 line-length = 100
 target-version = "py314"
-exclude = [".agents", ".venv"]
+exclude = [".agents", ".venv", "app/sdk/omora/sdk/keys.py"]
 
 [tool.ruff.lint]
 select = [
