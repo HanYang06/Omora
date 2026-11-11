@@ -67,13 +67,7 @@
       "ops": [
         {
           "op": "set",
-          "path": [
-            "content",
-            "children",
-            0,
-            "props",
-            "text"
-          ],
+          "path": ["content", "children", 0, "props", "text"],
           "value": "新"
         }
       ],
@@ -183,10 +177,7 @@
       "ops": [
         {
           "op": "insert",
-          "path": [
-            "content",
-            "children"
-          ],
+          "path": ["content", "children"],
           "index": 0,
           "value": {
             "type": "text",
@@ -310,10 +301,7 @@
       "ops": [
         {
           "op": "remove",
-          "path": [
-            "content",
-            "children"
-          ],
+          "path": ["content", "children"],
           "index": 1
         }
       ],
@@ -391,11 +379,7 @@
       "ops": [
         {
           "op": "set",
-          "path": [
-            "content",
-            "props",
-            "kind"
-          ],
+          "path": ["content", "props", "kind"],
           "value": "title"
         }
       ],
@@ -461,9 +445,7 @@
       "ops": [
         {
           "op": "set",
-          "path": [
-            "content"
-          ],
+          "path": ["content"],
           "value": {
             "type": "text",
             "props": {
@@ -533,9 +515,7 @@
       "ops": [
         {
           "op": "set",
-          "path": [
-            "content"
-          ],
+          "path": ["content"],
           "value": {
             "type": "button",
             "props": {
@@ -605,9 +585,7 @@
       "ops": [
         {
           "op": "set",
-          "path": [
-            "meta"
-          ],
+          "path": ["meta"],
           "value": "3 条"
         }
       ],
