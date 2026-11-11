@@ -67,6 +67,7 @@ def test_render_returns_the_page_snapshot() -> None:
     assert snapshot["pages"] == [{"name": "main", "label": "灵感"}]
     assert snapshot["page"] == "main"
     assert snapshot["meta"] == "1 条"
+    assert snapshot["version"] == 1
     node = snapshot["content"]
     assert node["type"] == "column"
     text, input_node, list_node = node["children"]
@@ -114,7 +115,9 @@ def test_event_redraws_the_page_it_belongs_to() -> None:
 
     before = ui.render()
     handler = before["content"]["children"][0]["props"]["on_click"]
-    after = ui.event(handler, {})
+
+    assert ui.event(handler, {}) == {}
+    after = ui.render()
 
     assert before["content"]["children"][0]["props"]["text"] == "0"
     assert after["content"]["children"][0]["props"]["text"] == "1"
@@ -257,3 +260,23 @@ def test_a_stale_event_is_logged(caplog: pytest.LogCaptureFixture) -> None:
     stale = [record for record in caplog.records if record.getMessage() == "ui.event.stale"]
     assert len(stale) == 1
     assert vars(stale[0])["data"] == {"handler": old, "page": "main"}
+
+
+def test_each_render_bumps_the_page_version() -> None:
+    """version 是页面自己的单调计数：客户端只认 base === 自己那份的 version。"""
+    ui: Ui = _simple_kernel().resolve("ui")
+
+    assert ui.render()["version"] == 1
+    assert ui.render()["version"] == 2
+
+
+def test_versions_are_counted_per_page() -> None:
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(_simple, page="a", label="甲", name="pa"))
+    kernel.install(_PagePlugin(_simple, page="b", label="乙", name="pb"))
+    ui: Ui = kernel.resolve("ui")
+
+    assert ui.render("a")["version"] == 1
+    assert ui.render("a")["version"] == 2
+    assert ui.render("b")["version"] == 1
