@@ -63,7 +63,7 @@ class _Page:
         self.sent: dict[str, Any] | None = None
 
 
-class _PageHandle:
+class PageHandle:
     """页面对象：插件自己交树（推送式），不再把 build 回调交给 ui。"""
 
     def __init__(self, ui: Ui, name: str) -> None:
@@ -106,7 +106,7 @@ class Ui:
         build: Builder | None = None,
         count: Counter | None = None,
         icon: str | None = None,
-    ) -> _PageHandle:
+    ) -> PageHandle:
         """登记一页；插件卸载时页面跟着消失。icon 是母页面图标栏用的名字。
 
         返回页面对象：想自己交树就用 `handle.set(Page(...))`；给了 build 回调的就还是拉取式。
@@ -119,7 +119,7 @@ class Ui:
             self._pages.pop(name, None)
 
         ctx.effect(remove)
-        return _PageHandle(self, name)
+        return PageHandle(self, name)
 
     def contribute(self, ctx: Context, target: str, build: ExtraBuilder, *, order: int = 0) -> None:
         """登记一份贡献：往 target 这个键挂一棵树。
@@ -352,4 +352,4 @@ class UiPlugin:
         ctx.provide("ui", Ui(ctx.log, ctx))
 
 
-__all__ = ["SNAPSHOT_TOPIC", "Ui", "UiPlugin"]
+__all__ = ["SNAPSHOT_TOPIC", "PageHandle", "Ui", "UiPlugin"]

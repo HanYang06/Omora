@@ -186,9 +186,10 @@ class Ui:
         ctx: Context,
         name: str,
         label: str,
-        build: Callable[[], Page],
+        build: Callable[[], Page] | None = None,
         count: Callable[[], int] | None = None,
-    ) -> None: ...
+        icon: str | None = None,
+    ) -> PageHandle: ...
     def contribute(
         self,
         ctx: Context,
