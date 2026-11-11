@@ -28,7 +28,7 @@ from ._format import snippet, when
 
 def rail_item(record: Any, on_click: Handler) -> Item:
     """索引栏的一行：时间 + 标题，整行可点；置顶 / 归档只在详情里做。"""
-    return Item(when(record.created_at), record.title, on_click=on_click)
+    return Item(record.title, meta=when(record.created_at), on_click=on_click)
 
 
 def back_bar(handler: Handler) -> Node:

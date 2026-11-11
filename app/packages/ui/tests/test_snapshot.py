@@ -68,7 +68,7 @@ def test_adding_an_item_pushes_an_insert_with_the_new_version_and_base() -> None
         return Page(
             content=Column(
                 Button("加一条", on_click=add),
-                List(*[Item("昨天", title) for title in state["items"]]),
+                List(*[Item(title, meta="昨天") for title in state["items"]]),
             ),
             meta=f"{len(state['items'])} 条",
         )
@@ -108,7 +108,7 @@ def test_removing_an_item_pushes_a_remove_op() -> None:
         return Page(
             content=Column(
                 Button("删一条", on_click=drop),
-                List(*[Item("昨天", title) for title in state["items"]]),
+                List(*[Item(title, meta="昨天") for title in state["items"]]),
             ),
             meta=f"{len(state['items'])} 条",
         )

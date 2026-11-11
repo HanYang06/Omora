@@ -54,7 +54,7 @@ class List(Node):
 
 @dataclass(frozen=True, init=False)
 class Item(Node):
-    """清单里的一行：左栏 meta，右边标题，子节点是这一行的动作。
+    """清单里的一行：标题在前，左栏的 meta 可选，子节点是这一行的动作。
 
     on_click 让整行可点（索引栏用）；不给就是一个静态行。
     """
@@ -66,7 +66,7 @@ class Item(Node):
     children: tuple[Node, ...]
 
     def __init__(
-        self, meta: str, title: str, *actions: Node, on_click: Handler | None = None
+        self, title: str, *actions: Node, meta: str = "", on_click: Handler | None = None
     ) -> None:
         object.__setattr__(self, "meta", meta)
         object.__setattr__(self, "title", title)

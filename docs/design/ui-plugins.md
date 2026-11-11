@@ -133,6 +133,7 @@ Panel(content=self.feed()),
    `ui.page(...)` 返回页面对象：`set()` 交树、`refresh()` 重交一次；`projects` / `requirements` 已按这个写法迁完。
 4. **`update()` 只标脏。** 节点改了就标脏，序列化与补丁由 runtime 做。
 5. **构造统一**：第一个位置参数是内容（文字 / 标题），children 用 `*children` 放最后，其余全关键字。
+   `Item` 已经改成 `Item(title, *actions, meta="")`；其余节点照这一条继续收。
 6. **事件载荷是类型**，不是 `dict[str, Any]`；字段写错类型检查就红。
 7. **只允许条目模板抽函数**（`item(record)`），因为它出现的地方本来就是列表；不许把整块页面抽走。
 8. **不用 `with` 语法**：拿不到引用，`update()` / `refresh()` 就没了。

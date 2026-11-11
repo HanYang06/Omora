@@ -356,7 +356,7 @@ class Manager:
             )
         body = " · ".join(part for part in details if part)
         return Item(
-            _PHASE_TEXT.get(row.phase, row.phase), row.name, Text(body, kind="muted"), *actions
+            row.name, Text(body, kind="muted"), *actions, meta=_PHASE_TEXT.get(row.phase, row.phase)
         )
 
     def _toggler(self, name: str) -> Callable[[dict[str, Any]], None]:
