@@ -120,7 +120,8 @@ describe("renderTree", () => {
 
     expect(html).toContain('data-unknown-type="chart"');
     expect(html).toContain("未知组件: chart");
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("chart"));
+    // 格式串必须是常量，服务端来的 type 只能当参数（CodeQL: 外控格式串）
+    expect(warn).toHaveBeenCalledWith("[omora] 未知组件类型:", "chart");
   });
 
   it("button 把 handler id 交给 onEvent", () => {

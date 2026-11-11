@@ -28,10 +28,16 @@ export interface PageEntry {
   count?: number;
 }
 
-/** ui.render / ui.event 的返回值：壳需要的一切。 */
+/**
+ * 全量快照：壳需要的一切。协议 §6。
+ *
+ * version 是页面自己的单调计数（由 ui 插件给）：补丁带 base，只有 base 等于
+ * 自己这份的 version 才应用；对不上就重新要全量。
+ */
 export interface Snapshot {
   pages: PageEntry[];
   page: string;
   meta: string;
   content: Node;
+  version: number;
 }

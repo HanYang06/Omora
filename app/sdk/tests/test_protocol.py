@@ -4,13 +4,21 @@ from typing import Any
 
 import pytest
 
-from omora.sdk.protocol import FrameError, error_frame, parse_call, result_frame
+from omora.sdk.protocol import (
+    FrameError,
+    error_frame,
+    event_frame,
+    parse_call,
+    parse_event,
+    result_frame,
+)
 from omora.sdk.ui import Column, Handler, List, Result, Search, Suggestion, serialize
 
 FIXTURES = Path(__file__).parent / "fixtures" / "protocol.json"
 
 DATA: dict[str, Any] = json.loads(FIXTURES.read_text(encoding="utf-8"))
 CASES: list[dict[str, Any]] = DATA["calls"]
+EVENTS: list[dict[str, Any]] = DATA["events"]
 SNAPSHOT: dict[str, Any] = DATA["snapshots"][0]["snapshot"]
 
 
@@ -41,6 +49,37 @@ def test_call_frames_match_the_shared_contract(case: dict[str, Any]) -> None:
     assert info.value.code == case["code"]
 
 
+@pytest.mark.parametrize("case", EVENTS, ids=[case["name"] for case in EVENTS])
+def test_event_frames_match_the_shared_contract(case: dict[str, Any]) -> None:
+    if case["ok"]:
+        event = parse_event(case["frame"])
+        assert event.topic == case["frame"]["topic"]
+        assert event.payload == case["frame"].get("payload", {})
+        return
+
+    with pytest.raises(FrameError) as info:
+        parse_event(case["frame"])
+
+    assert info.value.code == case["code"]
+
+
+def test_subscribe_is_an_ordinary_call() -> None:
+    subscribe = next(case for case in CASES if case["name"] == "subscribe")
+
+    call = parse_call(subscribe["frame"])
+
+    assert (call.target, call.method) == ("net", "subscribe")
+    assert call.args == {"topics": ["ui.snapshot", "media.progress"]}
+
+
+def test_event_frame_carries_the_topic_and_payload() -> None:
+    assert event_frame("ui.snapshot", {"version": 8}) == {
+        "type": "event",
+        "topic": "ui.snapshot",
+        "payload": {"version": 8},
+    }
+
+
 def _nodes(node: dict[str, Any]) -> list[dict[str, Any]]:
     found = [node]
     for child in node["children"]:
@@ -54,7 +93,8 @@ def test_the_snapshot_fixture_keeps_the_shared_shape() -> None:
 
     for case in snapshots:
         snapshot = case["snapshot"]
-        assert set(snapshot) == {"pages", "page", "meta", "content"}, case["name"]
+        assert set(snapshot) == {"pages", "page", "meta", "content", "version"}, case["name"]
+        assert isinstance(snapshot["version"], int), case["name"]
         assert isinstance(snapshot["pages"], list), case["name"]
         assert snapshot["pages"], case["name"]
         assert isinstance(snapshot["page"], str), case["name"]
