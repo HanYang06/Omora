@@ -249,7 +249,8 @@ Panel(content=self.feed()),
 P2-1（组合器）、P2-3（memo / 错误边界 / 未知组件兜底）、
 P2-6 第一批（12 个基础控件 + 拆分到 `render/controls/`）、
 P1-3 前半（`Slot` 节点、`ui.contribute`、贡献上线、归属进 handler id）、
-P4-1（引擎只报设备事实、manager 不再拿硬件决定装不装、audio / video 自己判断）。
+P4-1（引擎只报设备事实、manager 不再拿硬件决定装不装、audio / video 自己判断）、
+P1-2 前半（页面对象 `set` / `refresh`，projects / requirements 已迁；`Item` 构造收口）。
 剩余任务未开始；验收标准与依赖见上面那张表。
 
 ## 14. 未定
