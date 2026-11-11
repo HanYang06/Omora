@@ -28,7 +28,14 @@ export interface ErrorFrame {
   message: string;
 }
 
-export type InboundFrame = ResultFrame | ErrorFrame;
+/** net 主动推的一帧：没有 id，不需要回复。 */
+export interface EventFrame {
+  type: "event";
+  topic: string;
+  payload: unknown;
+}
+
+export type InboundFrame = ResultFrame | ErrorFrame | EventFrame;
 
 export const BAD_FRAME = "bad_frame";
 
@@ -136,5 +143,15 @@ export function parseInboundFrame(raw: unknown): InboundFrame {
     return { id: frameId, type: "error", code: raw.code, message: raw.message };
   }
 
-  throw new FrameError(BAD_FRAME, "type 必须是 result 或 error", frameId);
+  if (raw.type === "event") {
+    if (!isNonEmptyString(raw.topic)) {
+      throw new FrameError(BAD_FRAME, "event.topic 必须是非空字符串", frameId);
+    }
+    if (raw.payload !== undefined && !isRecord(raw.payload)) {
+      throw new FrameError(BAD_FRAME, "event.payload 必须是对象", frameId);
+    }
+    return { type: "event", topic: raw.topic, payload: raw.payload ?? {} };
+  }
+
+  throw new FrameError(BAD_FRAME, "type 必须是 result、error 或 event", frameId);
 }

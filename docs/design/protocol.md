@@ -206,7 +206,7 @@ v1 的边界：没有鉴权；绑定地址跟 `[net] host` 一致（默认只听
 - `calls`：call 帧，合法与非法都要有（含 `net.subscribe`）；
 - `events`：event 帧，合法与非法都要有（含未知 topic 的合法帧）；
 - `snapshots`：页面快照，钉字段（`pages` / `page` / `meta` / `content` / `version`）与节点形状；
-- `patches`：三种 op 各一例，含非法 op。
+- 补丁不是封套：op 的形状由 `render/patch.ts` 与 ui 插件的测试钉住，不进协议 fixture。
 
 Python 用 SDK 的 `serialize` 输出和 `snapshots` 里的 `content` 逐字段比对；TS 检查同一份快照与补丁的形状。
 两边都不自己造样例。

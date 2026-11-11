@@ -34,6 +34,17 @@
       }
     },
     {
+      "name": "subscribe",
+      "ok": true,
+      "frame": {
+        "id": "6",
+        "type": "call",
+        "target": "net",
+        "method": "subscribe",
+        "args": { "topics": ["ui.snapshot", "media.progress"] }
+      }
+    },
+    {
       "name": "no-args-key",
       "ok": true,
       "frame": { "id": "4", "type": "call", "target": "store", "method": "items" }
@@ -63,6 +74,63 @@
       "frame": { "id": "5", "type": "call", "target": "ui", "method": "render", "args": [] }
     }
   ],
+  "events": [
+    {
+      "name": "snapshot-patch",
+      "ok": true,
+      "frame": {
+        "type": "event",
+        "topic": "ui.snapshot",
+        "payload": {
+          "page": "ideas",
+          "version": 8,
+          "base": 7,
+          "ops": [
+            {
+              "op": "insert",
+              "path": ["content", "children", 1],
+              "index": 0,
+              "value": { "type": "item", "props": { "title": "新的一条" }, "children": [] }
+            },
+            {
+              "op": "set",
+              "path": ["content", "children", 1, "children", 0, "props", "text"],
+              "value": "3 条"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "payload-missing",
+      "ok": true,
+      "frame": { "type": "event", "topic": "media.progress" }
+    },
+    {
+      "name": "topic-not-a-string",
+      "ok": false,
+      "code": "bad_frame",
+      "frame": { "type": "event", "topic": 1 }
+    },
+    {
+      "name": "empty-topic",
+      "ok": false,
+      "code": "bad_frame",
+      "frame": { "type": "event", "topic": "" }
+    },
+    {
+      "name": "payload-not-an-object",
+      "ok": false,
+      "code": "bad_frame",
+      "frame": { "type": "event", "topic": "x", "payload": [] }
+    },
+    {
+      "name": "not-an-object",
+      "ok": false,
+      "code": "bad_frame",
+      "frame": "event"
+    }
+  ],
   "snapshots": [
     {
       "name": "ideas-with-results",
@@ -70,6 +138,7 @@
         "pages": [{ "name": "ideas", "label": "灵感", "count": 3 }],
         "page": "ideas",
         "meta": "1 条结果",
+        "version": 7,
         "content": {
           "type": "column",
           "props": {},

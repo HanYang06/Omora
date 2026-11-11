@@ -12,6 +12,8 @@ BAD_FRAME = "bad_frame"
 UNKNOWN_TARGET = "unknown_target"
 UNKNOWN_METHOD = "unknown_method"
 CALL_FAILED = "call_failed"
+OVERLOADED = "overloaded"
+EVENT = "event"
 
 
 class FrameError(Exception):
@@ -21,6 +23,14 @@ class FrameError(Exception):
         super().__init__(message)
         self.code = code
         self.frame_id = frame_id
+
+
+@dataclass(frozen=True)
+class Event:
+    """net 主动推的一帧：只有 topic 与载荷，没有 id，也不需要回复。"""
+
+    topic: str
+    payload: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -63,3 +73,22 @@ def result_frame(frame_id: str, value: Any) -> dict[str, Any]:
 
 def error_frame(frame_id: str | None, code: str, message: str) -> dict[str, Any]:
     return {"id": frame_id, "type": "error", "code": code, "message": message}
+
+
+def parse_event(raw: object) -> Event:
+    """把一帧解析成推送。不合法就抛 FrameError（code = bad_frame）。"""
+    if not isinstance(raw, dict):
+        raise FrameError(BAD_FRAME, "帧必须是对象")
+    if raw.get("type") != EVENT:
+        raise FrameError(BAD_FRAME, "type 必须是 event")
+    topic = raw.get("topic")
+    if not isinstance(topic, str) or not topic:
+        raise FrameError(BAD_FRAME, "topic 必须是非空字符串")
+    payload: object = raw.get("payload", {})
+    if not isinstance(payload, dict):
+        raise FrameError(BAD_FRAME, "payload 必须是对象")
+    return Event(topic, payload)
+
+
+def event_frame(topic: str, payload: dict[str, Any]) -> dict[str, Any]:
+    return {"type": EVENT, "topic": topic, "payload": payload}

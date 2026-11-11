@@ -36,12 +36,21 @@ interface SnapshotCase {
     pages: { name: string; label: string; count?: number }[];
     page: string;
     meta: string;
+    version: number;
     content: RawNode;
   };
 }
 
+interface EventCase {
+  name: string;
+  ok: boolean;
+  code?: string;
+  frame: unknown;
+}
+
 interface Fixture {
   calls: FixtureCase[];
+  events: EventCase[];
   snapshots: SnapshotCase[];
 }
 
@@ -51,6 +60,8 @@ const cases = fixture.calls;
 
 const validCalls = cases.filter((item): item is ValidCallCase => item.ok);
 const invalidFrames = cases.filter((item): item is InvalidCase => !item.ok);
+const validEvents = fixture.events.filter((item) => item.ok);
+const invalidEvents = fixture.events.filter((item) => !item.ok);
 
 function walk(node: RawNode): RawNode[] {
   return [node, ...node.children.flatMap(walk)];
@@ -93,6 +104,7 @@ describe("协议：页面快照的 fixture", () => {
     expect(snapshot.pages.length).toBeGreaterThan(0);
     expect(typeof snapshot.page).toBe("string");
     expect(typeof snapshot.meta).toBe("string");
+    expect(typeof snapshot.version).toBe("number");
     expectShape(snapshot.content, "content");
     expect(walk(snapshot.content).length).toBeGreaterThan(1);
   });
@@ -125,6 +137,22 @@ describe("协议：页面快照的 fixture", () => {
     expect(result?.props.highlight).toBe("牛奶");
     expect(typeof result?.props.on_click).toBe("string");
     expect(byType.size).toBe(5);
+  });
+});
+
+describe("event 帧：与 Python 共用同一份 fixture", () => {
+  it.each(validEvents)("解合法 event 帧: $name", (item) => {
+    const frame = parseInboundFrame(item.frame);
+    if (frame.type !== "event") {
+      throw new Error("预期是 event 帧");
+    }
+    const raw = item.frame as { topic: string; payload?: unknown };
+    expect(frame.topic).toBe(raw.topic);
+    expect(frame.payload).toEqual(raw.payload ?? {});
+  });
+
+  it.each(invalidEvents)("拒绝非法 event 帧: $name", (item) => {
+    expect(errorFrom(() => parseInboundFrame(item.frame)).code).toBe(item.code);
   });
 });
 
@@ -199,6 +227,9 @@ describe("parseInboundFrame", () => {
     { name: "result 的 id 为空串", frame: { id: "", type: "result", value: 1 } },
     { name: "未知 type", frame: { id: "1", type: "push", value: 1 } },
     { name: "error 缺 code", frame: { id: "1", type: "error", message: "x" } },
+    { name: "event 缺 topic", frame: { type: "event", payload: {} } },
+    { name: "event 的 topic 为空串", frame: { type: "event", topic: "" } },
+    { name: "event 的 payload 不是对象", frame: { type: "event", topic: "x", payload: [] } },
   ])("拒绝非法入站帧: $name", ({ frame }) => {
     expect(errorFrom(() => parseInboundFrame(frame)).code).toBe(BAD_FRAME);
   });
