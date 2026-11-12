@@ -90,6 +90,10 @@ renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, nod
 - 媒体、监听、定时器统一走 `ctx.cleanup`；节点卸载/换页/连接关闭时逆序执行。
 - 正在进行中的录制/上传：卸载时按现有 v1 行为“停止并提交”，由 capture kind 自己实现。
 
+### 隐藏 vs 卸载（v0 限制）
+
+多槽 kind（tabs / accordion / search 下拉）v0 用 `hidden` 隐藏子节点，不卸载：更新快，但隐藏子树里的媒体、录制、定时器仍然活着。需要“收起即销毁”时，在 Kind 契约里加 mounted/active 策略，由 renderer 决定挂载，而不是让 kind 自己删子节点。这一条在接媒体/捕捉页面之前必须复核。
+
 ## 6. 测试
 
 - 用 `jsdom`（已有 devDependency）；测试文件头写 `// @vitest-environment jsdom`。
