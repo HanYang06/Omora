@@ -12,6 +12,7 @@ const ZERO_SNAPSHOT: RuntimeMetricsSnapshot = {
   opsCount: 0,
   dataUpdates: 0,
   fullUpdates: 0,
+  localTreeUpdates: 0,
   rejections: 0,
   diagnostics: 0,
   lastDiagnostics: [],
@@ -35,6 +36,7 @@ describe("RuntimeMetrics：计数与快照", () => {
       opsCount: 8,
       dataUpdates: 0,
       fullUpdates: 0,
+      localTreeUpdates: 0,
       rejections: 0,
       diagnostics: 0,
       lastDiagnostics: [],
@@ -91,6 +93,15 @@ describe("RuntimeMetrics：计数与快照", () => {
     expect(next.opsBatches).toBe(1);
   });
 
+  it("localTreeUpdates 经 count 累加，与 fullUpdates 互不影响", () => {
+    const metrics = new RuntimeMetrics();
+
+    metrics.count({ localTreeUpdates: 1 });
+    metrics.count({ localTreeUpdates: 2, fullUpdates: 1 });
+
+    expect(metrics.snapshot(1)).toMatchObject({ localTreeUpdates: 3, fullUpdates: 1 });
+  });
+
   it("renders 经 count 累加，是独立计数", () => {
     const metrics = new RuntimeMetrics();
 
@@ -136,6 +147,7 @@ describe("RuntimeMetrics：计数与快照", () => {
       opsCount: 2,
       dataUpdates: 3,
       fullUpdates: 4,
+      localTreeUpdates: 7,
       rejections: 5,
       notifications: 6,
       renders: 2,

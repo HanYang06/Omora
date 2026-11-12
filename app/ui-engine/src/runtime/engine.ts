@@ -2,13 +2,21 @@
  * Dendrolink 引擎运行时（S4）：会话 + 生命周期账本 + 指标 + 变更通知。
  *
  * 这是 S3 纯函数运行时对宿主 / 渲染层的唯一入口：宿主把线上 payload（ops 批量、
- * 数据更新、全量文档）交给 applyOps / applyData / applyFull，引擎校验并原子应用；
- * 成功后换掉内部会话快照、记指标、通知监听者，失败只回诊断、会话不动。
- * session / data / hydrate / ops 的语义不在这里重写，本模块只做编排。
+ * 数据更新、全量文档、全量局部树）交给 applyOps / applyData / applyFull /
+ * applyLocalTrees，引擎校验并原子应用；成功后换掉内部会话快照、记指标、通知监听者，
+ * 失败只回诊断、会话不动。session / data / hydrate / ops / link 的语义不在这里重写，
+ * 本模块只做编排。
  *
  * 建引擎：createEngine 先 createSession（文档形状 / 版本）再 hydrateSession（把数据
  * 投影物化成集合实例）；任何一步不合法返回诊断、不建引擎。水合阶段（数据已到但有
  * 坏条目）的条目级诊断不阻断建引擎，但记进指标，开发面板能看见「数据到了但条目坏了」。
+ *
+ * 全量局部树（applyLocalTrees）：整组局部树经链接器重链到窗口骨架（S2 的 link，不改
+ * 其语义），成功就整棵树换成新的权威根树、文档版本 +1，再用**当前** data 重新水合
+ * 集合实例；链接 / 水合失败都走同一套 reject，会话不变。payload 里没有页面侧表，
+ * 所以 pages / active 原样保留（页面侧表的上线形状后续再补）；data 也不动，只当水合输入。
+ * 链接期权限复用引擎的 requester：带了 requester 就 requesterFor 每棵树都返回它（越权
+ * 在链接期 E-PERMISSION），不带就是链接器的系统来源默认（全放行）。
  *
  * 通知语义：每次成功 apply 派发一次通知（包括幂等重放这种 changed 为空的成功）；
  * 监听者拿到当前会话与这次 apply 的 changed。监听者集合在派发开始时快照，派发期间的
@@ -29,7 +37,9 @@
  * E-PAYLOAD 失败：不改会话、不通知、不记指标 / 审计（引擎已收口，不再观测）。
  */
 
-import type { Diagnostic } from "../link/types";
+import { link } from "../link/link";
+import { WINDOW_SCAFFOLD } from "../link/scaffold";
+import type { Diagnostic, LinkOptions } from "../link/types";
 import { AuditLog } from "./audit";
 import { applyData as applyDataUpdate, type DataState } from "./data";
 import { makeDiagnostic } from "./diagnostics";
@@ -221,6 +231,41 @@ export class EngineRuntime {
   }
 
   /**
+   * 全量 local-trees 重组：链接器按 payload 重链窗口骨架 → 换根树（版本 +1）→ 用当前
+   * data 重新水合集合实例。pages / active / data 原样保留（payload 不带页面侧表）。
+   *
+   * changed 固定是新根 id（整棵树被替换，渲染层按根重画）；链接 / 水合失败只回诊断，
+   * 会话不变。链接期权限见文件头。
+   */
+  applyLocalTrees(payload: unknown): EngineApplyResult {
+    if (this.isDisposed) {
+      return this.disposedFailure();
+    }
+    const start = this.clock();
+    const linked = link(WINDOW_SCAFFOLD, payload, this.linkOptions());
+    if (!linked.ok) {
+      return this.reject(linked.diagnostics, this.elapsed(start));
+    }
+    const candidate: SessionState = {
+      document: { root: linked.tree, version: this.current.document.version + 1 },
+      pages: this.current.pages,
+      active: this.current.active,
+      data: this.current.data,
+    };
+    const hydrated = hydrateSession(candidate);
+    if (!hydrated.ok) {
+      return this.reject(hydrated.diagnostics, this.elapsed(start));
+    }
+    return this.publish(
+      hydrated.session,
+      [hydrated.session.document.root.id],
+      { localTreeUpdates: 1 },
+      hydrated.diagnostics,
+      this.elapsed(start),
+    );
+  }
+
+  /**
    * 卸载：清空监听 + 逆序撤销全部清理；幂等（第二次返回空结算）。
    * 单个清理抛错由账本隔离并按执行顺序汇总进 errors。
    */
@@ -236,6 +281,15 @@ export class EngineRuntime {
   /** 权限选项：不传 requester 时交给纯函数层用 SYSTEM_REQUESTER。 */
   private requesterOptions(): { requester?: Requester } {
     return this.requester === undefined ? {} : { requester: this.requester };
+  }
+
+  /** 链接选项：引擎带 requester 时作为每棵局部树的请求主体；缺省走链接器系统来源。 */
+  private linkOptions(): LinkOptions {
+    const requester = this.requester;
+    if (requester === undefined) {
+      return {};
+    }
+    return { requesterFor: () => requester };
   }
 
   /** 成功提交：换会话 → 记诊断 / 耗时 / 计数 → 记审计 → 按快照派发通知。 */
