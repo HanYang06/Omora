@@ -1,24 +1,22 @@
 /**
- * `?engine=v2` 预览入口（S3-e）：内置 v2 文档 → session → 水合 → v2 桥 → DOM。
+ * `?engine=v2` 预览入口（S3-e / S4 dogfood）：内置 v2 文档 → EngineRuntime → DocumentView → DOM。
  *
- * 目的：给 S3-d 的渲染路径一个不依赖 Python 的可见入口，供人工 / 截图验证：
+ * 目的：给 v2 渲染路径一个不依赖 Python 的可见入口，并让 S4 的宿主入口
+ * `mountDocumentView`（createEngine + hydrate + 渲染 + 变更通知）在真实入口上跑一遍：
  * - 初始渲染灵感页（window / 两个 page-link / toolbar / 2 张卡片）；
- * - 点导航 page-link 切页：`applyFull` 换整份文档（active 改变、version +1），
- *   再水合、重渲染；
- * - 点「加一张」：`applyData` 往 `ideas.feed` 追加一条（revision +1、全量 items），
- *   再水合、重渲染——同 id 卡片由 renderer 按 id 复用元素；
+ * - 点导航 page-link 切页：`engine.applyFull` 换整份文档（active 改变、version +1），
+ *   视图收到引擎通知自动重画；
+ * - 点「加一张」：`engine.applyData` 往 `ideas.feed` 追加一条（revision +1、全量 items），
+ *   视图自动重画——同 id 卡片由 renderer 按 id 复用元素；
  * - 其它 handler 一律忽略：预览只演示这两条路径。
  *
- * 不建 Connection、不发消息；`"loadMedia"` 直接 reject（预览不碰媒体）；
- * 重复 mount 同一个容器会先 dispose 上一个实例，不叠 DOM。
+ * 预览自己不再持有会话 / 渲染器：状态都在引擎里，视图只把引擎的当前会话画到容器上。
+ * 不建 Connection、不发消息；`loadMedia` 直接 reject（预览不碰媒体）；
+ * 重复 mount 同一个容器会先 dispose 上一个实例，不叠 DOM；建视图失败直接抛错
+ * （预览不要静默空白）。
  */
 
 import type { CollectionItem } from "../../runtime/collection";
-import { applyData, type DataState } from "../../runtime/data";
-import { hydrateSession } from "../../runtime/hydrate";
-import { applyFull, createSession, type SessionState } from "../../runtime/session";
-import { slotToNode } from "./bridge";
-import { createSlotRenderer } from "./registry";
 import {
   FEED_SOURCE,
   HANDLER_ADD_CARD,
@@ -31,8 +29,9 @@ import {
   previewDocument,
   type PreviewFeed,
 } from "./preview_document";
+import { mountDocumentView, type DocumentView } from "./view";
 
-/** 预览实例句柄：dispose 卸载整棵渲染树。 */
+/** 预览实例句柄：dispose 卸载整棵渲染树（引擎账本一并收口）。 */
 export interface PreviewHandle {
   dispose(): void;
 }
@@ -47,59 +46,43 @@ function cloneFeed(): PreviewFeed {
   };
 }
 
-/** 水合；失败只可能是内置文档/数据违反运行时不变量，直接抛（预览不要静默空白）。 */
-function mustHydrate(session: SessionState): SessionState {
-  const hydrated = hydrateSession(session);
-  if (!hydrated.ok) {
-    throw new Error("v2 预览水合失败：" + JSON.stringify(hydrated.diagnostics));
+/** 建引擎 + 视图；内置文档 / 数据违反运行时不变量时直接抛（预览不要静默空白）。 */
+function mountView(
+  container: HTMLElement,
+  feed: PreviewFeed,
+  onEvent: (handler: string) => void,
+): DocumentView {
+  const mounted = mountDocumentView(container, previewDocument(PAGE_IDEAS, feed, 1), {
+    onEvent: (handler) => onEvent(handler),
+    loadMedia: () => Promise.reject(new Error("v2 预览不加载媒体")),
+  });
+  if (!mounted.ok) {
+    throw new Error("v2 预览建视图失败：" + JSON.stringify(mounted.diagnostics));
   }
-  return hydrated.session;
-}
-
-function startSession(page: string, feed: PreviewFeed, version: number): SessionState {
-  const created = createSession(previewDocument(page, feed, version));
-  if (!created.ok) {
-    throw new Error("v2 预览文档不合法：" + JSON.stringify(created.diagnostics));
-  }
-  return mustHydrate(created.session);
+  return mounted.view;
 }
 
 /**
- * 在 `container` 上挂一个 v2 预览：建会话 → 水合 → 用 v2 桥渲染。
+ * 在 `container` 上挂一个 v2 预览：建引擎 + 视图 → 交互经 DOM 事件 → handler id → 闭包。
  *
- * 返回句柄只负责卸载；预览内部状态（当前活动页、feed 数据、文档版本）留在闭包里，
- * 所有交互都通过 DOM 事件 → handler id → 闭包函数完成，不依赖 Python。
+ * 返回句柄只负责卸载；预览维护的 feed 快照留在闭包里，文档 / 会话 / 渲染全部交给引擎
+ * 与视图：切页只提交一次 applyFull，加卡只提交一次全量 items 的 applyData。
  */
 export function mountPreview(container: HTMLElement): PreviewHandle {
   activeMounts.get(container)?.dispose();
 
-  let page = PAGE_IDEAS;
   let feed = cloneFeed();
-  let session = startSession(page, feed, 1);
 
-  const renderer = createSlotRenderer({
-    event: (handler) => dispatch(handler),
-    loadMedia: () => Promise.reject(new Error("v2 预览不加载媒体")),
-    cleanup: () => undefined,
-  });
-
-  function render(): void {
-    renderer.render(slotToNode(session.document.root), container);
-  }
-
-  /** 切页 = 全量替换：目标页子树 + active + version+1，然后水合重渲染。 */
+  /** 切页 = 全量替换：目标页子树 + active + version+1；视图由引擎通知重画。 */
   function switchPage(target: string): void {
-    if (target === page) {
+    if (target === view.engine.session.active) {
       return;
     }
-    const next = applyFull(session, previewDocument(target, feed, session.document.version + 1));
-    if (!next.ok) {
-      console.error("[omora] v2 预览切页失败:", next.diagnostics);
-      return;
+    const version = view.engine.session.document.version + 1;
+    const applied = view.engine.applyFull(previewDocument(target, feed, version));
+    if (!applied.ok) {
+      console.error("[omora] v2 预览切页失败:", applied.diagnostics);
     }
-    page = target;
-    session = mustHydrate(next.session);
-    render();
   }
 
   /** 加一张 = 数据全量追加：revision +1，旧条目 id 不变，渲染层按 id 复用元素。 */
@@ -110,8 +93,7 @@ export function mountPreview(container: HTMLElement): PreviewHandle {
       { id, template: "item", title: "新灵感 " + id, meta: "刚刚" },
     ];
     const nextFeed: PreviewFeed = { revision: feed.revision + 1, items };
-    const currentData: DataState = { [FEED_SOURCE]: feed };
-    const applied = applyData(session.document, currentData, {
+    const applied = view.engine.applyData({
       kind: "data",
       owner: "ideas",
       source: FEED_SOURCE,
@@ -123,12 +105,6 @@ export function mountPreview(container: HTMLElement): PreviewHandle {
       return;
     }
     feed = nextFeed;
-    session = mustHydrate({
-      ...session,
-      document: applied.document,
-      data: applied.data,
-    });
-    render();
   }
 
   function dispatch(handler: string): void {
@@ -141,15 +117,17 @@ export function mountPreview(container: HTMLElement): PreviewHandle {
     }
   }
 
+  // 事件回调先写好、视图后建：挂载渲染期间不派发事件，所以回调里读 view 是安全的。
+  const view = mountView(container, feed, dispatch);
+
   const handle: PreviewHandle = {
     dispose() {
       if (activeMounts.get(container) === handle) {
         activeMounts.delete(container);
       }
-      renderer.dispose();
+      view.dispose();
     },
   };
   activeMounts.set(container, handle);
-  render();
   return handle;
 }
