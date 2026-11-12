@@ -1,6 +1,6 @@
 # 运行时：分层、生命周期与失败
 
-> 状态：**已定未实现**；分层名称是【建议】。S3-a 已落文档状态/三张索引、局部树 ops 与集合绑定原语；S3-b 已落 data router；S3-c 已落标量绑定、Session（pages/active/data + route + 全量替换）；S3-d 已落 v2 Slot 的渲染桥/水合与换页分类（spike）；S3-e 已落跨父 move 复用、`?engine=v2` 预览与生命周期账本原语（S4 预落）。v2 路径还没替换主会话。
+> 状态：**已定未实现**；分层名称是【建议】。S3-a–e 已落文档状态/三张索引、ops、data router、绑定/session、v2 渲染桥/水合/换页分类、跨父 move 与预览；S4 已落 EngineRuntime（session + ledger + metrics）、DocumentView、权限薄层（ops/data 运行期检查）。Producer Host、多客户端、审计仍待。
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md) · [updates.md](updates.md)
 > 相关：[components.md](components.md) · [wire.md](wire.md) · [testing.md](testing.md)
 
@@ -46,7 +46,7 @@
 - 某个来源占用的局部树与 slot；
 - 渲染层注册的组件/监听。
 
-卸载顺序：页面切换或来源卸载时逆序撤销；异步操作在卸载后返回不得再写状态。今天 TS 侧没有这本账，是 S4 的硬要求。
+卸载顺序：页面切换或来源卸载时逆序撤销；异步操作在卸载后返回不得再写状态。S4 已落原语与接线：`LifecycleLedger`（逆序、错误隔离、幂等）+ `EngineRuntime.dispose`（清监听 → 账本收口）+ `DocumentView.dispose`（监听/渲染器/引擎一起收口）。媒体、订阅等具体登记点随各 kind/宿主接线继续补。
 
 ## 4. 失败隔离
 
@@ -71,19 +71,31 @@
 
 至少要能量出：组合/链接耗时、补丁字节与 op 数、丢弃的贡献数、未知 kind 数、迟到事件数、一次更新触发的重渲染节点数。指标进日志与开发面板，不上用户界面。
 
+S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fullUpdates / rejections / diagnostics / lastDiagnostics / notifications + version）挂在 `EngineRuntime` 上，成功/失败都记账；具体耗时与重渲染节点数待补。
+
 ## 7. v1 映射
 
-| 现在的位置                                 | 目标层                             |
-| ------------------------------------------ | ---------------------------------- |
-| `app/ui-engine/src/app.tsx`                | Session + 容器                     |
-| `render/compose.ts`                        | Compiler/Linker（v1 贡献模型）     |
-| `render/patch.ts` + `packages/ui/_diff.py` | Document + 更新管线（v1，待替换）  |
-| `app/ui-engine/src/runtime/`               | Document / 索引 / ops / 集合原语   |
-| `render/renderer.tsx` + `components.tsx`   | Renderer + 组件注册表              |
-| `packages/ui/ui.py`                        | 页面/文档注册（v1）                |
-| —                                          | Producer Host、Diagnostics（待建） |
+| 现在的位置                                 | 目标层                                 |
+| ------------------------------------------ | -------------------------------------- |
+| `app/ui-engine/src/app.tsx`                | Session + 容器                         |
+| `render/compose.ts`                        | Compiler/Linker（v1 贡献模型）         |
+| `render/patch.ts` + `packages/ui/_diff.py` | Document + 更新管线（v1，待替换）      |
+| `app/ui-engine/src/runtime/`               | Document / 索引 / ops / 集合 / session |
+| `runtime/engine.ts` + `metrics.ts`         | EngineRuntime（会话 + 账本 + 指标）    |
+| `dom/v2/view.ts`                           | DocumentView（引擎 ↔ DOM）             |
+| `render/renderer.tsx` + `components.tsx`   | Renderer + 组件注册表                  |
+| `packages/ui/ui.py`                        | 页面/文档注册（v1）                    |
+| —                                          | Producer Host、Diagnostics（待建）     |
 
-## 8. 未定
+## 8. S4 实现（已落）
+
+- **EngineRuntime**（`runtime/engine.ts`）：`createEngine` = createSession + hydrate；`applyOps` / `applyData` / `applyFull` 成功后换会话、记指标、通知监听者，失败原子、记 rejections；`onChange` / `registerCleanup` / `dispose`（清监听 + 逆序账本，幂等）。
+- **指标**（`runtime/metrics.ts`）：计数器 + 最近诊断快照，挂在 EngineRuntime 上。
+- **权限薄层**（`runtime/permissions.ts`）：ops/data 按能力 × 主体检查，越权 E-PERMISSION；默认系统来源全放行（见 [permissions.md](permissions.md) §8）。
+- **DocumentView**（`dom/v2/view.ts`）：createEngine → 桥接根树 → DomRenderer；引擎通知后按 id 重画；`dispose` 取消监听/渲染器/账本三件套。
+- **未接**：Producer Host / 来源生命周期、订阅与媒体登记点、跨连接会话、权限审计与拦截、指标耗时/重渲染节点数、v2 替换主会话。
+
+## 9. 未定
 
 - TS 宿主与运行后来源的信任模型；
 - 多客户端会话与版本隔离；

@@ -1,6 +1,6 @@
 # 权限：能力 × 主体
 
-> 状态：**概念已定**；形态是【建议】，具体角色/等级模型推迟。
+> 状态：**概念已定**；S4 已落薄层：检查器 + 运行期 ops/data 检查（E-PERMISSION）；链接期检查、`observe`/`intercept`、审计未做。形态是【建议】，具体角色/等级模型推迟。
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md)
 > 相关：[addressing.md](addressing.md) · [rules.md](rules.md)
 
@@ -26,17 +26,17 @@
 
 `grant` 声明在 Slot 上；主体可以是 `owner` / `any` / `role:<name>` / `owner:<id>` / `tier:<system|signed|user>`。
 
+线上形状是**扁平能力表**（能力名直接作为键）；解析后引擎内部归一成 `{capabilities: {...}}`，Python 的 `Grant.to_json` 与 TS `parseDocument` 都以扁平形状为准：
+
 ```jsonc
 "grant": {
-  "capabilities": {
-    "read":      ["tier:system", "role:viewer"],
-    "mount":     ["owner", "omora.manager"],
-    "update":    ["owner", "omora.manager"],
-    "replace":   ["owner", "omora.manager"],
-    "remove":    ["owner"],
-    "observe":   ["tier:system"],
-    "intercept": []
-  }
+  "read":      ["tier:system", "role:viewer"],
+  "mount":     ["owner", "omora.manager"],
+  "update":    ["owner", "omora.manager"],
+  "replace":   ["owner", "omora.manager"],
+  "remove":    ["owner"],
+  "observe":   ["tier:system"],
+  "intercept": []
 }
 ```
 
@@ -69,3 +69,10 @@
 - `intercept` 的实现与防环；
 - 权限声明的继承与覆盖规则；
 - 权限检查的观测与审计日志。
+
+## 8. S4 实现（已落）
+
+- **检查器**（`app/ui-engine/src/runtime/permissions.ts`）：`Capability` / `Requester {owner, tiers?, roles?}` / `SYSTEM_REQUESTER`；`can` 依 §3 默认分层与 §2 token 求值；`checkPermission` 产出带现场（owner/slot）的 `E-PERMISSION`。
+- **运行期接线**：`applyOps(state, batch, {requester})` 按 op 语义检查（update→update；mount→mount；replace→replace；unmount→父 remove；move→旧父 remove + 目标 mount），拒绝整批原子失败；`applyData(..., {requester})` 对集合消费者/标量绑定消费者检查 update，拒绝时文档与 data 都不变。缺省 requester = 系统来源（全放行），现有行为不变。
+- **会话/引擎**：`applySessionOps` 接受 requester 并透传给树 op；`EngineRuntime` 的 `EngineOptions.requester` 统一传给 ops/data。
+- **未接**：链接/组合期检查、`observe`/`intercept`、数据 source 级发布/订阅权限、`applyFull` 的权限检查、审计日志；本层不是安全边界（§6）。

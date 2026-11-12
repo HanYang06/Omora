@@ -24,6 +24,8 @@
 
 > S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/core/document.ts` 的 v2 Slot/Document 契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
 
+> S4 进度（2026-11-13）：权限薄层（`runtime/permissions.ts`，ops/data 运行期检查）、EngineRuntime（session + 生命周期账本 + 指标 + 变更通知，`runtime/engine.ts`/`metrics.ts`）、DocumentView（`dom/v2/view.ts`）已落。链接期权限、Producer Host/来源生命周期、订阅/媒体登记点、审计与耗时指标待续。
+
 > S3-e 进度（2026-11-13）：DOM renderer 支持跨父 move 复用元素（`renderer.ts`，换页保留实例）；v2 预览入口 `?engine=v2`（独立 chunk）；生命周期账本原语（S4 预落）。v2 会话替换主入口、layout 样式、S4 权限/观测待续。
 
 > S3-d 进度（2026-11-13）：v2 Slot → DOM 薄桥（`src/dom/v2/`，dendro:<v1 type> 别名 + v2 原生结构 kind）、会话水合（`runtime/hydrate.ts`）、换页分类（`runtime/page_switch.ts`）与 fixture→DOM 集成 spike 已落。渲染结果：数据更新/全量替换不重挂；跨父 move 的 DOM 复用、v2 路径进主入口、layout 样式待续。
