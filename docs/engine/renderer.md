@@ -67,6 +67,18 @@ export interface Kind {
 
 更新按 **引用** 短路：`node` 引用没变就整棵跳过（v1 patch 保留了未变子树的引用）。
 
+### 跨父移动（S3-e）
+
+renderer 维护跨渲染的 key → 元素索引（有 id 用 id；没有时用父路径 + 位置）。同一 key + 同 type 的节点**换父/换位置时复用同一个元素**：
+
+- 复用前先 `el.remove()` 从旧父摘下；同一轮里每个旧条目最多认领一次（重复 id 防御）。
+- 先按 key 构建/复用整棵新树，再统一按 `childrenHosts` 分槽安排 DOM 顺序；
+- 新树里没有的旧条目才跑 `kind.destroy` + 逆序 cleanup；移动/保留的条目不跑；
+- 引用不变的子树跳过 `kind.update`，但元素仍要挂到新 host；
+- 无 id 节点仍按父路径 + 位置复用，换父即重建。
+
+这条让"换页 = 按 id 协调"第一次真正保留实例：`renderer_move.test.ts` 用共享 v2 文档 `applyFull` 换页后断言卡片 DOM 元素引用不变。
+
 ### children
 
 renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, node)[i]`；没声明就全挂到 `el`。
@@ -162,5 +174,6 @@ v2 文档/运行时产出的是 `SlotNode`，现有 DOM renderer 只认 v1 `Node
 - [x] 启动骨架由 Vite 在构建期编译进 `index.html`，产物门禁 `scripts/skeleton_html.py` 通过；
 - [x] `tsc` / eslint / prettier / vitest / vite build 全绿；
 - [ ] 首帧 hydration（复用预渲染 DOM，不重建）；
-- [x] v2 SlotNode 经薄桥 + 命名空间别名直接渲染（spike；跨父 move 复用未接）；
+- [x] v2 SlotNode 经薄桥 + 命名空间别名直接渲染；跨父 move 复用元素已接（`renderer_move.test.ts`）；
+- [x] `?engine=v2` 预览入口（独立 chunk，v1 默认路径不变）；
 - [ ] 灵感页三栏、搜索、捕捉、设置页的人工/端到端走查（下一阶段随 e2e 一起补）。
