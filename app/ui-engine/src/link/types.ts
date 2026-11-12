@@ -17,7 +17,8 @@ export type DiagnosticCode =
   | "E-SLOT-AMBIGUOUS"
   | "E-SLOT-CAPACITY"
   | "E-TARGET-MISSING"
-  | "E-CYCLE";
+  | "E-CYCLE"
+  | "E-PERMISSION";
 
 /** 一条编译诊断；现场字段能带就带（owner / slot / path）。 */
 export interface Diagnostic {

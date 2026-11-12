@@ -25,6 +25,11 @@
  *   （session.ts 的 applySessionOps）；DocumentState 层的 applyOps 遇到 route 一律返回
  *   E-PAYLOAD 并提示调用方走会话层，保证同一份批量不会在两层各执行一半。
  *
+ * 权限（S4）：`applyOps` 接受 `options.requester`，缺省 = 系统来源（全放行，行为与
+ * 接入权限层之前完全一致）。每条树 op 在应用前按 `permissions.ts` 的 op 语义检查
+ * 目标 Slot 的能力；任一拒绝 → 整批不生效、只回一条 E-PERMISSION，原 state 不变。
+ * 目标不存在的结构错误仍由 ops_apply 按既有语义先报，权限检查不抢诊断码。
+ *
  * 模板与结构操作：collection.templates 里的节点可寻址、可 update 内容，但位置由
  * templates 命名表决定，不是 children 顺序；对模板节点做 mount/move/unmount/replace
  * 返回 E-PAYLOAD（沿用既有诊断码，不为这条规则新增码）。
@@ -43,6 +48,7 @@ import type { Diagnostic, DiagnosticCode } from "../link/types";
 import { DocumentIndex, documentErrorDiagnostic, type DocumentState } from "./document";
 import { makeDiagnostic } from "./diagnostics";
 import { applyOp, buildLiveLocations, type LiveLocations, type Working } from "./ops_apply";
+import { SYSTEM_REQUESTER, checkOpPermission, type RequesterOptions } from "./permissions";
 
 /** 改一个节点的 props（浅合并）。 */
 export interface UpdateOp {
@@ -315,7 +321,11 @@ function versionFailure(message: string, path: string): ApplyOpsResult {
  * 先在根树深拷上顺序应用，任何一步失败都丢掉整棵副本、返回诊断；成功只给新状态
  * 与 changed。入参（state 与 batch）都不会被改写。
  */
-export function applyOps(state: DocumentState, batch: OpsBatch): ApplyOpsResult {
+export function applyOps(
+  state: DocumentState,
+  batch: OpsBatch,
+  options: RequesterOptions = {},
+): ApplyOpsResult {
   if (batch.base !== state.version) {
     return versionFailure(
       "base " + String(batch.base) + " 与当前文档版本 " + String(state.version) + " 不一致",
@@ -331,6 +341,7 @@ export function applyOps(state: DocumentState, batch: OpsBatch): ApplyOpsResult 
       "$.document",
     );
   }
+  const requester = options.requester ?? SYSTEM_REQUESTER;
   const working: Working = { root: structuredClone(state.root) };
   const changed: string[] = [];
   const touchedIds = new Set<string>();
@@ -348,6 +359,10 @@ export function applyOps(state: DocumentState, batch: OpsBatch): ApplyOpsResult 
           ),
         ],
       };
+    }
+    const denied = checkOpPermission(index, op, requester);
+    if (denied !== undefined) {
+      return { ok: false, diagnostics: [denied] };
     }
     const outcome = applyOp({ working, index, live }, op, "$.ops[" + String(position) + "]");
     if (!outcome.ok) {
