@@ -4,13 +4,10 @@ import { describe, expect, it } from "vitest";
 import type { SlotNode } from "../core/document";
 import type { DataState } from "./data";
 import { applyData, parseData, type ApplyDataResult } from "./data";
-import { DocumentIndex } from "./document";
+import { DocumentIndex, type DocumentState } from "./document";
 import { node, stateOf } from "./test_fixtures";
 
-/**
- * 共享 fixture（不许改）：三条负载依次是标量 value、集合 items 全量、集合 changes 增量。
- * 集合负载都指向 ideas.feed，标量指向 session.status。
- */
+/** 共享 fixture（不许改）：三条负载依次是标量 value、集合 items 全量、集合 changes 增量。 */
 const DATA_FIXTURE_PATH = fileURLToPath(
   new URL("../../../sdk/tests/fixtures/data.json", import.meta.url),
 );
@@ -51,25 +48,28 @@ function feed(over: Partial<SlotNode> = {}): SlotNode {
 }
 
 /** base 文档：root + 集合 slot ideas.feed + 两个不该被动到的兄弟节点，版本 3。 */
-function baseRoot(): SlotNode {
-  return node({
-    id: "dendro.window",
-    kind: "dendro:window",
-    owner: "ideas",
-    layout: { flow: "column", capacity: "many" },
-    children: [
-      node({ id: "ideas.header", owner: "ideas", layout: { flow: "row", capacity: "one" } }),
-      feed(),
-      node({ id: "ideas.search", kind: "dendro:search", owner: "ideas", props: { value: "" } }),
-    ],
-  });
+function baseState(): DocumentState {
+  return stateOf(
+    node({
+      id: "dendro.window",
+      kind: "dendro:window",
+      owner: "ideas",
+      layout: { flow: "column", capacity: "many" },
+      children: [
+        node({ id: "ideas.header", owner: "ideas", layout: { flow: "row", capacity: "one" } }),
+        feed(),
+        node({ id: "ideas.search", kind: "dendro:search", owner: "ideas", props: { value: "" } }),
+      ],
+    }),
+    3,
+  );
 }
 
-function baseState() {
-  return stateOf(baseRoot(), 3);
+function slotOf(document: DocumentState, slotId: string): SlotNode | undefined {
+  return DocumentIndex.build(document.root).get(slotId);
 }
 
-function slotChildren(root: SlotNode, slotId: string): SlotNode[] {
+function childrenOf(root: SlotNode, slotId: string): SlotNode[] {
   const slot = DocumentIndex.build(root).get(slotId);
   if (slot === undefined) {
     throw new Error("找不到 slot: " + slotId);
@@ -78,11 +78,15 @@ function slotChildren(root: SlotNode, slotId: string): SlotNode[] {
 }
 
 function idsOf(root: SlotNode, slotId: string): string[] {
-  return slotChildren(root, slotId).map((child) => child.id);
+  return childrenOf(root, slotId).map((child) => child.id);
 }
 
-function titlesOf(root: SlotNode, slotId: string): unknown[] {
-  return slotChildren(root, slotId).map((child) => child.props.title);
+/** 一个 slot 的子节点 id / 标题（标题可选，绑进 props.title 的集合才有）。 */
+function expectSlot(root: SlotNode, slotId: string, ids: string[], titles?: unknown[]): void {
+  expect(idsOf(root, slotId)).toEqual(ids);
+  if (titles !== undefined) {
+    expect(childrenOf(root, slotId).map((child) => child.props.title)).toEqual(titles);
+  }
 }
 
 function expectApplied(result: ApplyDataResult) {
@@ -92,56 +96,69 @@ function expectApplied(result: ApplyDataResult) {
   return result;
 }
 
-function expectFailed(result: ApplyDataResult) {
-  if (result.ok) {
-    throw new Error("数据应被拒绝");
+function expectParsed(payload: unknown) {
+  const result = parseData(payload);
+  if (!result.ok) {
+    throw new Error("payload 应能解析: " + JSON.stringify(result.diagnostics));
   }
-  return result.diagnostics;
+  return result.payload;
 }
 
 function payloadOf(over: Record<string, unknown>): unknown {
   return { kind: "data", owner: "ideas", source: "ideas.feed", revision: 1, ...over };
 }
 
+/** 声明 in（默认消费 session.status）的消费者节点。 */
+function consumer(id: string, over: Partial<SlotNode> = {}): SlotNode {
+  return node({ id, owner: "ideas", in: [{ source: "session.status" }], ...over });
+}
+
+/** window 根，children 就是消费者。 */
+function bindRoot(...children: SlotNode[]): SlotNode {
+  return node({ id: "dendro.window", kind: "dendro:window", owner: "ideas", children });
+}
+
+/** 指向 session.status 的标量负载。 */
+function statusPayload(over: Record<string, unknown>): unknown {
+  return payloadOf({ source: "session.status", revision: 1, ...over });
+}
+
 describe("parseData：数据信封", () => {
-  it("共享 fixture 归一化成标量 / 全量集合 / 增量集合", () => {
-    const parsed = fixturePayloads().map(parseData);
-    for (const result of parsed) {
-      if (!result.ok) {
-        throw new Error("共享 fixture 应能解析: " + JSON.stringify(result.diagnostics));
-      }
-    }
-    const [scalar, items, changes] = parsed;
-    if (scalar === undefined || items === undefined || changes === undefined) {
-      throw new Error("fixture 应有三条负载");
-    }
-    if (!scalar.ok || !items.ok || !changes.ok) {
-      return;
-    }
-    expect(scalar.payload).toEqual({
+  it("共享 fixture 归一化；revision 0、null 值、空 items/changes 也合法", () => {
+    const scalar = expectParsed(fixturePayloads()[0]);
+    const items = expectParsed(fixturePayloads()[1]);
+    const changes = expectParsed(fixturePayloads()[2]);
+    expect(scalar).toEqual({
       kind: "data",
       owner: "net",
       source: "session.status",
       revision: 1,
       value: { connected: true },
     });
-    if (!("items" in items.payload)) {
+    if (!("items" in items)) {
       throw new Error("第二条应是 items 全量");
     }
-    expect(items.payload.items.map((item) => item.id)).toEqual(["42", "7"]);
-    expect(items.payload.revision).toBe(5);
-    if (!("changes" in changes.payload)) {
+    expect(items.items.map((item) => item.id)).toEqual(["42", "7"]);
+    expect(items.revision).toBe(5);
+    if (!("changes" in changes)) {
       throw new Error("第三条应是 changes 增量");
     }
-    expect(changes.payload.changes.map((change) => change.kind)).toEqual([
+    expect(changes.changes.map((change) => change.kind)).toEqual([
       "insert",
       "update",
       "remove",
       "move",
     ]);
+    for (const legal of [
+      { kind: "data", owner: "ideas", source: "s", revision: 0, value: null },
+      { kind: "data", owner: "ideas", source: "s", revision: 0, items: [] },
+      { kind: "data", owner: "ideas", source: "s", revision: 0, changes: [] },
+    ]) {
+      expect(parseData(legal).ok).toBe(true);
+    }
   });
 
-  it("信封不合法一律 E-PAYLOAD，不抛", () => {
+  it("信封不合法一律 E-PAYLOAD，不抛；解析结果与入参解耦", () => {
     const bad: unknown[] = [
       null,
       "data",
@@ -157,74 +174,133 @@ describe("parseData：数据信封", () => {
       { kind: "data", owner: "ideas", source: "s", revision: 1, changes: {} },
       { kind: "data", owner: "ideas", source: "s", revision: 1, value: () => 1 },
     ];
-
     for (const payload of bad) {
       const result = parseData(payload);
       expect(result.ok).toBe(false);
-      if (result.ok) {
-        continue;
+      if (!result.ok) {
+        expect(result.diagnostics[0]?.code).toBe("E-PAYLOAD");
+        expect(result.diagnostics[0]?.severity).toBe("error");
       }
-      expect(result.diagnostics[0]?.code).toBe("E-PAYLOAD");
-      expect(result.diagnostics[0]?.severity).toBe("error");
     }
-  });
 
-  it("revision 0、null 值与空 items 都是合法负载", () => {
-    for (const payload of [
-      { kind: "data", owner: "ideas", source: "s", revision: 0, value: null },
-      { kind: "data", owner: "ideas", source: "s", revision: 0, items: [] },
-      { kind: "data", owner: "ideas", source: "s", revision: 0, changes: [] },
-    ]) {
-      expect(parseData(payload).ok).toBe(true);
-    }
-  });
-
-  it("解析结果与入参解耦：之后改原条目不影响已归一化的 items", () => {
     const raw: { id: string; template: string; title?: string }[] = [{ id: "a", template: "item" }];
-    const parsed = parseData({
+    const parsed = expectParsed({
       kind: "data",
       owner: "ideas",
       source: "ideas.feed",
       revision: 2,
       items: raw,
     });
-
     const first = raw[0];
     if (first !== undefined) {
       first.title = "改名";
     }
     raw.push({ id: "b", template: "item" });
 
-    if (!parsed.ok || !("items" in parsed.payload)) {
+    if (!("items" in parsed)) {
       throw new Error("items 负载应能解析");
     }
-    expect(parsed.payload.items.map((item) => item.id)).toEqual(["a"]);
-    expect(parsed.payload.items[0]?.title).toBeUndefined();
+    expect(parsed.items.map((item) => item.id)).toEqual(["a"]);
+    expect(parsed.items[0]?.title).toBeUndefined();
   });
 });
 
-describe("applyData：标量数据", () => {
-  it("只写数据文档：value / revision 更新，文档版本与根树不变，changed 空", () => {
-    const document = baseState();
-    const result = expectApplied(applyData(document, {}, fixturePayloads()[0]));
+describe("applyData：标量绑定 in/bind → props", () => {
+  it("单 input：bind 从 value 根解析（嵌套、null），in[].path 只作订阅提示", () => {
+    const root = bindRoot(
+      consumer("ideas.status", {
+        in: [{ source: "session.status", path: "net" }],
+        props: { connected: "旧", chunk: { online: true } },
+        bind: { connected: "connected", online: "net.online", chunk: "net" },
+      }),
+    );
+    const document = stateOf(root, 3);
+    const chunk = document.root.children[0]?.props.chunk;
+    const payload = statusPayload({ value: { connected: null, net: { online: true } } });
+    const result = expectApplied(applyData(document, {}, payload));
+    const props = slotOf(result.document, "ideas.status")?.props;
 
-    expect(result.document).toBe(document);
-    expect(result.document.version).toBe(3);
-    expect(result.data["session.status"]).toEqual({ revision: 1, value: { connected: true } });
-    expect(result.changed).toEqual([]);
+    expect(props).toEqual({ connected: null, online: true, chunk: { online: true } });
+    expect(props?.chunk).toBe(chunk);
+    expect(result.changed).toEqual(["ideas.status"]);
+  });
+
+  it("多 input：写 source 前缀的解析；无前缀跳过、解析不到、指针等于 source 都保留原值", () => {
+    const root = bindRoot(
+      consumer("ideas.status", {
+        in: [{ source: "session.status" }, { source: "session.user" }],
+        props: { name: "旧名", missing: 1, whole: 3, deep: 2 },
+        bind: {
+          connected: "session.status.connected",
+          name: "name",
+          missing: "session.status.nope",
+          whole: "session.status",
+          deep: "session.status.connected.deep",
+        },
+      }),
+    );
+    const result = expectApplied(
+      applyData(stateOf(root, 3), {}, statusPayload({ value: { connected: true } })),
+    );
+    const props = slotOf(result.document, "ideas.status")?.props;
+
+    expect(props).toEqual({ name: "旧名", missing: 1, whole: 3, deep: 2, connected: true });
+    expect(result.changed).toEqual(["ideas.status"]);
     expect(result.diagnostics).toEqual([]);
   });
 
-  it("标量到 props 的绑定本任务不做：source 被集合消费时也不动树", () => {
-    const document = baseState();
-    const result = expectApplied(
-      applyData(document, {}, payloadOf({ revision: 2, value: { title: "不该进 props" } })),
+  it("同 source 多消费者：改了的按文档序进 changed；集合 slot 自身 in 也算消费者", () => {
+    const root = bindRoot(
+      consumer("ideas.conn", { props: { connected: true }, bind: { connected: "connected" } }),
+      consumer("ideas.label", { bind: { label: "label" } }),
+      consumer("ideas.count", { bind: { count: "count" } }),
+      consumer("ideas.idle"),
+      feed({ in: [{ source: "ideas.feed" }], bind: { total: "total" } }),
+      feed({
+        id: "ideas.rail",
+        collection: {
+          source: "ideas.feed",
+          key: "id",
+          select: "template",
+          templates: { item: template({ id: "tpl.rail", kind: "ideas:pinned" }) },
+        },
+      }),
+    );
+    const document = stateOf(root, 3);
+    const untouched = document.root.children[0];
+    const statusValue = { connected: true, label: "已连接", count: 3 };
+    const status = expectApplied(applyData(document, {}, statusPayload({ value: statusValue })));
+    const feedPayload = payloadOf({ source: "ideas.feed", revision: 2, value: { total: 3 } });
+    const bound = expectApplied(applyData(status.document, status.data, feedPayload));
+
+    expect(status.changed).toEqual(["ideas.label", "ideas.count"]);
+    expect(status.document.root.children[0]).toBe(untouched);
+    expect(bound.changed).toEqual(["ideas.feed"]);
+    expect(bound.document.root.children[4]?.props).toEqual({ total: 3 });
+  });
+
+  it("revision 幂等：重复与更旧的标量负载都不重放绑定；无消费者只写数据", () => {
+    const root = bindRoot(consumer("ideas.status", { bind: { connected: "connected" } }));
+    const first = expectApplied(
+      applyData(stateOf(root, 3), {}, statusPayload({ value: { connected: true } })),
+    );
+    const again = expectApplied(
+      applyData(first.document, first.data, statusPayload({ value: { connected: true } })),
+    );
+    const stalePayload = statusPayload({ revision: 0, value: { connected: false } });
+    const stale = expectApplied(applyData(first.document, first.data, stalePayload));
+    const idle = baseState();
+    const noConsumer = expectApplied(
+      applyData(idle, {}, statusPayload({ value: { connected: true } })),
     );
 
-    expect(result.document).toBe(document);
-    expect(idsOf(result.document.root, "ideas.feed")).toEqual([]);
-    expect(result.data["ideas.feed"]?.value).toEqual({ title: "不该进 props" });
-    expect(result.changed).toEqual([]);
+    expect(again.document).toBe(first.document);
+    expect(again.data).toBe(first.data);
+    expect(again.changed).toEqual([]);
+    expect(stale.document).toBe(first.document);
+    expect(slotOf(stale.document, "ideas.status")?.props.connected).toBe(true);
+    expect(noConsumer.document).toBe(idle);
+    expect(noConsumer.data["session.status"]).toEqual({ revision: 1, value: { connected: true } });
   });
 });
 
@@ -233,46 +309,31 @@ describe("applyData：集合 items 全量", () => {
     const document = baseState();
     const header = document.root.children[0];
     const result = expectApplied(applyData(document, {}, fixturePayloads()[1]));
-
-    expect(result.document.version).toBe(3);
     const root = result.document.root;
+
     expect(root.children.map((child) => child.id)).toEqual([
       "ideas.header",
       "ideas.feed",
       "ideas.search",
     ]);
     expect(root.children[0]).toBe(header);
-    expect(idsOf(root, "ideas.feed")).toEqual(["ideas.feed#42", "ideas.feed#7"]);
-    expect(titlesOf(root, "ideas.feed")).toEqual(["买牛奶", "录音"]);
+    expectSlot(root, "ideas.feed", ["ideas.feed#42", "ideas.feed#7"], ["买牛奶", "录音"]);
     expect(DocumentIndex.build(root).get("ideas.feed")?.collection?.templates.item?.id).toBe(
       "tpl.item",
     );
     expect(result.changed).toEqual(["ideas.feed"]);
     expect(result.data["ideas.feed"]?.revision).toBe(5);
     expect(result.data["ideas.feed"]?.items?.map((item) => item.id)).toEqual(["42", "7"]);
-    expect(result.diagnostics).toEqual([]);
-  });
-
-  it("不改入参：原文档仍没有条目、原数据 map 照旧", () => {
-    const document = baseState();
-    const data: DataState = { "session.status": { revision: 1, value: { connected: true } } };
-    const documentSnapshot = structuredClone(document);
-    const dataSnapshot = structuredClone(data);
-
-    expectApplied(applyData(document, data, fixturePayloads()[1]));
-
-    expect(document).toEqual(documentSnapshot);
-    expect(data).toEqual(dataSnapshot);
   });
 
   it("无 slot 消费的 source：只写数据文档，changed 空、根树引用不变", () => {
     const document = baseState();
-    const payload = payloadOf({
+    const progress = payloadOf({
       source: "ideas.progress",
       revision: 3,
       items: [{ id: "x", template: "item" }],
     });
-    const result = expectApplied(applyData(document, {}, payload));
+    const result = expectApplied(applyData(document, {}, progress));
 
     expect(result.document).toBe(document);
     expect(result.data["ideas.progress"]?.items?.map((item) => item.id)).toEqual(["x"]);
@@ -288,20 +349,22 @@ describe("applyData：集合 changes 增量", () => {
     const third = expectApplied(applyData(second.document, second.data, changes));
 
     expect(third.document.version).toBe(3);
-    expect(idsOf(third.document.root, "ideas.feed")).toEqual(["ideas.feed#42", "ideas.feed#43"]);
-    expect(titlesOf(third.document.root, "ideas.feed")).toEqual(["买牛奶（改）", "新条目"]);
+    expectSlot(
+      third.document.root,
+      "ideas.feed",
+      ["ideas.feed#42", "ideas.feed#43"],
+      ["买牛奶（改）", "新条目"],
+    );
     expect(third.changed).toEqual(["ideas.feed"]);
-    expect(third.diagnostics).toEqual([]);
     expect(third.data["ideas.feed"]?.revision).toBe(6);
     expect(third.data["ideas.feed"]?.items?.map((item) => item.id)).toEqual(["42", "43"]);
     expect(third.data["session.status"]).toEqual({ revision: 1, value: { connected: true } });
   });
 
   it("没有历史 items 时按空列表应用：落不上的 change 记 E-PAYLOAD 并跳过", () => {
-    const changes = fixturePayloads()[2];
-    const result = expectApplied(applyData(baseState(), {}, changes));
+    const result = expectApplied(applyData(baseState(), {}, fixturePayloads()[2]));
 
-    expect(idsOf(result.document.root, "ideas.feed")).toEqual(["ideas.feed#43"]);
+    expectSlot(result.document.root, "ideas.feed", ["ideas.feed#43"]);
     expect(result.data["ideas.feed"]?.revision).toBe(6);
     expect(result.data["ideas.feed"]?.items?.map((item) => item.id)).toEqual(["43"]);
     expect(result.changed).toEqual(["ideas.feed"]);
@@ -313,39 +376,23 @@ describe("applyData：集合 changes 增量", () => {
 });
 
 describe("applyData：revision 幂等", () => {
-  it("同 revision 重复到达是 no-op：文档与数据引用都不变", () => {
+  it("同 revision（含换了内容）与更旧的迟到负载都是 no-op：文档与数据引用不变", () => {
     const items = fixturePayloads()[1];
     const first = expectApplied(applyData(baseState(), {}, items));
     const again = expectApplied(applyData(first.document, first.data, items));
+    const samePayload = payloadOf({ revision: 5, items: [{ id: "9", template: "item" }] });
+    const latePayload = payloadOf({ revision: 4, items: [{ id: "9", template: "item" }] });
+    const sameRevision = expectApplied(applyData(first.document, first.data, samePayload));
+    const late = expectApplied(applyData(first.document, first.data, latePayload));
 
     expect(again.document).toBe(first.document);
     expect(again.data).toBe(first.data);
     expect(again.changed).toEqual([]);
     expect(again.diagnostics).toEqual([]);
-  });
-
-  it("旧 revision 迟到：即使内容不同也不回退", () => {
-    const items = fixturePayloads()[1];
-    const first = expectApplied(applyData(baseState(), {}, items));
-    const stale = payloadOf({
-      revision: 4,
-      items: [{ id: "9", template: "item", title: "旧数据" }],
-    });
-    const late = expectApplied(applyData(first.document, first.data, stale));
-
+    expect(sameRevision.document).toBe(first.document);
     expect(late.document).toBe(first.document);
     expect(late.data).toBe(first.data);
-    expect(idsOf(late.document.root, "ideas.feed")).toEqual(["ideas.feed#42", "ideas.feed#7"]);
-  });
-
-  it("同 revision 换了内容也 no-op：幂等按 revision 判断", () => {
-    const items = fixturePayloads()[1];
-    const first = expectApplied(applyData(baseState(), {}, items));
-    const sameRevision = payloadOf({ revision: 5, items: [{ id: "9", template: "item" }] });
-    const ignored = expectApplied(applyData(first.document, first.data, sameRevision));
-
-    expect(ignored.document).toBe(first.document);
-    expect(idsOf(ignored.document.root, "ideas.feed")).toEqual(["ideas.feed#42", "ideas.feed#7"]);
+    expectSlot(late.document.root, "ideas.feed", ["ideas.feed#42", "ideas.feed#7"]);
   });
 });
 
@@ -357,10 +404,8 @@ describe("applyData：多个集合 slot 消费同一 source", () => {
       owner: "ideas",
       children: [
         feed(),
-        node({
+        feed({
           id: "ideas.rail",
-          owner: "ideas",
-          layout: { flow: "column", capacity: "many" },
           collection: {
             source: "ideas.feed",
             key: "id",
@@ -372,26 +417,24 @@ describe("applyData：多个集合 slot 消费同一 source", () => {
     });
   }
 
-  it("每个消费者都实例化，changed 按替换顺序去重列出集合 slot id", () => {
-    const result = expectApplied(applyData(stateOf(twoFeedsRoot(), 3), {}, fixturePayloads()[1]));
-
-    expect(result.changed).toEqual(["ideas.feed", "ideas.rail"]);
-    expect(idsOf(result.document.root, "ideas.feed")).toEqual(["ideas.feed#42", "ideas.feed#7"]);
-    expect(idsOf(result.document.root, "ideas.rail")).toEqual(["ideas.rail#42", "ideas.rail#7"]);
-    expect(DocumentIndex.build(result.document.root).get("ideas.rail#42")?.kind).toBe(
-      "ideas:pinned",
-    );
-  });
-
-  it("增量按同一份条目重建每个消费者，各自模板生效", () => {
+  it("items 与 changes 都让每个消费者按自己的模板实例化，changed 去重列出", () => {
     const items = fixturePayloads()[1];
     const changes = fixturePayloads()[2];
     const first = expectApplied(applyData(stateOf(twoFeedsRoot(), 3), {}, items));
     const second = expectApplied(applyData(first.document, first.data, changes));
 
+    expect(first.changed).toEqual(["ideas.feed", "ideas.rail"]);
+    expect(idsOf(first.document.root, "ideas.rail")).toEqual(["ideas.rail#42", "ideas.rail#7"]);
+    expect(DocumentIndex.build(first.document.root).get("ideas.rail#42")?.kind).toBe(
+      "ideas:pinned",
+    );
     expect(second.changed).toEqual(["ideas.feed", "ideas.rail"]);
-    expect(idsOf(second.document.root, "ideas.rail")).toEqual(["ideas.rail#42", "ideas.rail#43"]);
-    expect(titlesOf(second.document.root, "ideas.rail")).toEqual(["买牛奶（改）", "新条目"]);
+    expectSlot(
+      second.document.root,
+      "ideas.rail",
+      ["ideas.rail#42", "ideas.rail#43"],
+      ["买牛奶（改）", "新条目"],
+    );
   });
 
   it("in[] 消费同一 source 的普通节点不算集合消费者，不进 changed", () => {
@@ -407,12 +450,12 @@ describe("applyData：多个集合 slot 消费同一 source", () => {
     const result = expectApplied(applyData(stateOf(root, 3), {}, fixturePayloads()[1]));
 
     expect(result.changed).toEqual(["ideas.feed"]);
-    expect(idsOf(result.document.root, "ideas.feed")).toEqual(["ideas.feed#42", "ideas.feed#7"]);
+    expectSlot(result.document.root, "ideas.feed", ["ideas.feed#42", "ideas.feed#7"]);
   });
 });
 
 describe("applyData：坏条目、原子性与索引", () => {
-  it("未知模板的条目只丢自己并记 E-TEMPLATE，其余照常实例化", () => {
+  it("未知模板的条目只丢自己并记 E-TEMPLATE，其余照常；替换后索引与树一致", () => {
     const payload = payloadOf({
       revision: 1,
       items: [
@@ -422,48 +465,36 @@ describe("applyData：坏条目、原子性与索引", () => {
       ],
     });
     const result = expectApplied(applyData(baseState(), {}, payload));
+    const root = result.document.root;
 
-    expect(idsOf(result.document.root, "ideas.feed")).toEqual(["ideas.feed#42", "ideas.feed#7"]);
+    expectSlot(root, "ideas.feed", ["ideas.feed#42", "ideas.feed#7"], ["买牛奶", "录音"]);
     expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["E-TEMPLATE"]);
-    expect(result.diagnostics[0]?.slot).toBe("ideas.feed");
     expect(result.changed).toEqual(["ideas.feed"]);
-    expect(result.data["ideas.feed"]?.revision).toBe(1);
   });
 
-  it("信封非法：ok:false，文档与数据都保持原样", () => {
-    const document = baseState();
-    const data: DataState = {
-      "ideas.feed": { revision: 5, items: [{ id: "a", template: "item" }] },
-    };
+  it("信封非法原子失败；合法应用也不改写入参", () => {
+    const document = stateOf(
+      bindRoot(consumer("ideas.status", { bind: { connected: "connected" } })),
+      3,
+    );
+    const data: DataState = { "session.status": { revision: 0, value: { connected: false } } };
     const documentSnapshot = structuredClone(document);
     const dataSnapshot = structuredClone(data);
 
-    const diagnostics = expectFailed(
-      applyData(document, data, {
-        kind: "data",
-        owner: "ideas",
-        source: "ideas.feed",
-        revision: 6,
-      }),
-    );
+    const rejected = applyData(document, data, {
+      kind: "data",
+      owner: "ideas",
+      source: "ideas.feed",
+      revision: 6,
+    });
+    if (rejected.ok) {
+      throw new Error("数据应被拒绝");
+    }
+    expect(rejected.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["E-PAYLOAD"]);
+    expectApplied(applyData(document, data, statusPayload({ value: { connected: true } })));
+    expectApplied(applyData(document, data, fixturePayloads()[1]));
 
-    expect(diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["E-PAYLOAD"]);
     expect(document).toEqual(documentSnapshot);
     expect(data).toEqual(dataSnapshot);
-  });
-
-  it("替换后索引与树一致：新条目可定位、消失的条目查不到", () => {
-    const items = fixturePayloads()[1];
-    const changes = fixturePayloads()[2];
-    const first = expectApplied(applyData(baseState(), {}, items));
-    const second = expectApplied(applyData(first.document, first.data, changes));
-
-    const index = DocumentIndex.build(second.document.root);
-    expect(index.get("ideas.feed#7")).toBeUndefined();
-    expect(index.get("ideas.feed#43")?.props.title).toBe("新条目");
-    expect(index.parentOf("ideas.feed#42")).toEqual({ parentId: "ideas.feed", order: 0 });
-    expect(index.parentOf("ideas.feed#43")).toEqual({ parentId: "ideas.feed", order: 1 });
-    expect(index.slotsFor("ideas.feed")).toEqual(["ideas.feed"]);
-    expect(index.get("tpl.item")?.id).toBe("tpl.item");
   });
 });

@@ -16,6 +16,7 @@ from omora.sdk.update import (
     MoveOp,
     Op,
     ReplaceOp,
+    RouteOp,
     UnmountOp,
     UpdateOp,
     serialize_ops,
@@ -23,6 +24,8 @@ from omora.sdk.update import (
 
 _FIXTURE = Path(__file__).resolve().parent / "fixtures" / "ops.json"
 _DATA: dict[str, Any] = json.loads(_FIXTURE.read_text(encoding="utf-8"))
+_ROUTE_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "route.json"
+_ROUTE_DATA: dict[str, Any] = json.loads(_ROUTE_FIXTURE.read_text(encoding="utf-8"))
 
 
 def _noop(_payload: dict[str, Any]) -> None:
@@ -69,6 +72,67 @@ def _fixture_ops() -> list[Op]:
 
 def test_serialized_ops_match_the_shared_fixture() -> None:
     assert _payload(_fixture_ops()) == _DATA
+
+
+def test_serialized_route_ops_match_the_shared_fixture() -> None:
+    payload = _payload([RouteOp("page.ideas", {"id": "42"})], document=4, base=3, seq=1)
+
+    assert payload == _ROUTE_DATA
+
+
+def test_route_without_params_omits_the_params_key() -> None:
+    node = _payload([RouteOp("page.ideas")])["ops"][0]
+
+    assert node == {"op": "route", "page": "page.ideas"}
+    assert "params" not in node
+
+
+def test_route_with_empty_params_keeps_an_empty_object() -> None:
+    node = _payload([RouteOp("page.ideas", {})])["ops"][0]
+
+    assert node["params"] == {}
+    assert "params" in node
+
+
+def test_route_params_are_deep_copied() -> None:
+    params: dict[str, Any] = {"filter": {"tag": "灵感"}, "ids": ["42"]}
+    op = RouteOp("page.ideas", params)
+    expected: dict[str, Any] = {"filter": {"tag": "灵感"}, "ids": ["42"]}
+
+    params["filter"]["tag"] = "录音"
+    params["ids"].append("7")
+
+    assert _payload([op])["ops"][0]["params"] == expected
+    # 返回的 payload 与 op 之间也不共享嵌套对象。
+    payload = _payload([op])
+    payload["ops"][0]["params"]["filter"]["tag"] = "项目"
+    payload["ops"][0]["params"]["ids"].append("9")
+    assert _payload([op])["ops"][0]["params"] == expected
+
+
+def test_route_keeps_its_position_in_a_mixed_batch() -> None:
+    payload = _payload(
+        [
+            UpdateOp("ideas.search", {"value": "录音"}),
+            RouteOp("page.detail", {"id": "42"}),
+            MountOp("ideas.feed", _card("ideas.feed#43")),
+            MoveOp("ideas.feed#7", "ideas.feed", 0),
+            UnmountOp("ideas.feed#43"),
+        ]
+    )
+
+    assert [node["op"] for node in payload["ops"]] == [
+        "update",
+        "route",
+        "mount",
+        "move",
+        "unmount",
+    ]
+    assert payload["ops"][1] == {
+        "op": "route",
+        "page": "page.detail",
+        "params": {"id": "42"},
+    }
 
 
 def test_empty_ops_serialize_to_an_empty_payload() -> None:
@@ -165,6 +229,17 @@ def test_node_events_are_serialized_through_the_register() -> None:
             lambda: ReplaceOp("ideas.search", cast(Slot, object())),
             "replace.node",
             id="replace-node-not-slot",
+        ),
+        pytest.param(lambda: RouteOp(" ", {"id": "42"}), "route.page", id="route-blank-page"),
+        pytest.param(
+            lambda: RouteOp("page.ideas", cast(Any, [])),
+            "route.params",
+            id="route-params-list",
+        ),
+        pytest.param(
+            lambda: RouteOp("page.ideas", cast(Any, "id=42")),
+            "route.params",
+            id="route-params-string",
         ),
     ],
 )

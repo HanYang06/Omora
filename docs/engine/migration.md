@@ -24,6 +24,8 @@
 
 > S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/core/document.ts` 的 v2 Slot/Document 契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
 
+> S3-c 进度（2026-11-13）：标量 `in`/`bind` 绑定（`src/runtime/data_bind.ts`）、会话层 Session（pages/active/data）、route op 执行与全量文档替换（`src/runtime/session.ts`）已落；Python `update.RouteOp` + 共享 `route.json`。渲染层按 id 换页协调、页面参数、灵感页 spike 待 S3-d。
+
 > S3-b 进度（2026-11-13）：data router 已落（`src/runtime/data.ts`：parseData / applyData、revision 幂等、集合全量/增量接入、changed），Python `sdk/data.py` + 共享 `data.json` 提供纯数据线上形状。标量绑定、`route`、全量文档会话、渲染接入待续。
 
 > S3-a 进度（2026-11-13）：文档运行时核心已落 —— `app/ui-engine/src/runtime/document.ts`（`DocumentState` + 三张索引）、`ops.ts` + `ops_apply.ts`（局部树 ops 原子应用、版本/base、changed）、`collection.ts`（模板实例化 + keyed reconcile 原语）；`sdk/update.py` + 共享 `ops.json` 提供 ops 线上形状。纯数据更新/数据路由、`route`、渲染接入、全量更新会话接线待 S3-b。

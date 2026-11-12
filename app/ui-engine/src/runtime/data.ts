@@ -1,11 +1,11 @@
 /**
- * Dendrolink v2 纯数据更新路由（S3-b）。
+ * Dendrolink v2 纯数据更新路由（S3-b / S3-c）。
  *
  * 输入是一条 `{kind:"data", owner, source, revision, value | items | changes}` 负载；
- * 路由按 `source` 找到消费它的集合 slot，并把结果替换回根树：
- * - 标量 `value`：只写进数据文档 `data[source].value`。**标量到 props 的绑定
- *   （按 `in` / `bind` 解析成节点内容）不在本任务范围**，因此即使有 slot 声明消费
- *   这条 source，文档也不动、`changed` 恒为空。
+ * 路由按 `source` 找到消费它的 slot，并把结果替换回根树：
+ * - 标量 `value`：写进数据文档 `data[source].value`，再按 `in` / `bind` 把值解析进
+ *   消费者节点的 props（选 input、解析、保留原值等语义见 `./data_bind.ts` 文件头）；
+ *   props 没变的节点不替换，`changed` 只列真正被改 props 的消费者 id。
  * - 集合 `items`（全量）：`instantiateCollection` 整槽重建后原位替换（只换 slot，
  *   不换 id/位置/模板表）。
  * - 集合 `changes`（增量）：`applyCollectionChanges` 在已有条目上维护 keyed 列表，
@@ -13,10 +13,10 @@
  *
  * `owner` 只做信封校验，不参与路由（归属 / 权限由来源宿主层负责）；路由只看 `source`。
  *
- * 多消费者：同一条 source 可被多个集合 slot 消费（`collection.source` 相同）。
- * 增量只按索引顺序用**第一个**消费者的集合配置（key/select）落到条目列表上，
- * 其余消费者从同一份条目重新实例化；`changed` 按替换顺序去重列出被重建的
- * 集合 slot id（不是条目实例 id）。
+ * 多消费者：同一条 source 可被多个集合 slot 消费（`collection.source` 相同），也可被
+ * 多个声明 `in` 的节点消费（标量绑定）。增量只按索引顺序用**第一个**消费者的集合配置
+ * （key/select）落到条目列表上，其余消费者从同一份条目重新实例化；`changed` 按更新
+ * 顺序去重列出被重建的集合 slot id 与被改 props 的消费者 id（不是条目实例 id）。
  *
  * 纯函数与原子性：
  * - 信封不合法时 `ok:false`，文档与数据都不变；
@@ -38,6 +38,7 @@ import {
   type CollectionChange,
   type CollectionItem,
 } from "./collection";
+import { applyScalarBinding, replaceSlotById } from "./data_bind";
 import { DocumentIndex, type DocumentState } from "./document";
 import { makeDiagnostic } from "./diagnostics";
 
@@ -245,37 +246,6 @@ function instantiateSlot(
   return result.ok ? result.slot : undefined;
 }
 
-/**
- * 按 id 原位替换一棵子树（纯递归，结构共享：没碰到的分支返回原引用）。
- * 集合 slot 也可能在别的 slot 的 `collection.templates` 里，因此 templates 也要查。
- */
-function replaceSlotById(node: SlotNode, targetId: string, replacement: SlotNode): SlotNode {
-  if (node.id === targetId) {
-    return replacement;
-  }
-  const children = node.children.map((child) => replaceSlotById(child, targetId, replacement));
-  const childChanged = children.some((child, index) => child !== node.children[index]);
-  let collection = node.collection;
-  if (collection !== undefined) {
-    let templatesChanged = false;
-    const templates: Record<string, SlotNode> = {};
-    for (const [name, template] of Object.entries(collection.templates)) {
-      const next = replaceSlotById(template, targetId, replacement);
-      templates[name] = next;
-      if (next !== template) {
-        templatesChanged = true;
-      }
-    }
-    if (templatesChanged) {
-      collection = { ...collection, templates };
-    }
-  }
-  if (!childChanged && collection === node.collection) {
-    return node;
-  }
-  return collection === node.collection ? { ...node, children } : { ...node, children, collection };
-}
-
 /** 更新后的数据源状态：最近一条负载决定它投影成 value 还是 items。 */
 function nextSourceState(
   update: DataPayload,
@@ -300,7 +270,8 @@ function nextSourceState(
  * `payload` 接线上原始值（内部先走 `parseData`），所以非法信封在这里被拒绝。
  * 信封不合法 → `ok:false`，文档与数据都保持原样；条目级坏数据 → `ok:true` + 诊断。
  * 文档版本不变（数据更新不涨文档版本），只返回新的根树（未改动时返回同一引用）与
- * 新的数据文档；`changed` 是被重建的集合 slot id，按替换顺序去重。
+ * 新的数据文档；`changed` 是被重建的集合 slot id、或被标量绑定改了 props 的消费者 id，
+ * 都按替换顺序去重。
  */
 export function applyData(
   document: DocumentState,
@@ -321,6 +292,7 @@ export function applyData(
   const changed: string[] = [];
   const diagnostics: Diagnostic[] = [];
   let nextItems: CollectionItem[] | undefined = "items" in update ? update.items : undefined;
+  let nextData: DataState;
   let root = document.root;
   if ("items" in update || "changes" in update) {
     let index = DocumentIndex.build(root);
@@ -354,11 +326,18 @@ export function applyData(
       // 替换后立刻从新根树重建索引，后面的消费者只在当前树上定位。
       index = DocumentIndex.build(root);
     }
+    nextData = { ...data, [source]: nextSourceState(update, current, nextItems) };
+  } else {
+    // 标量：先写数据文档，再按 in/bind 把新值绑进消费者 props。
+    nextData = { ...data, [source]: nextSourceState(update, current, undefined) };
+    const bound = applyScalarBinding(root, nextData, source);
+    root = bound.root;
+    changed.push(...bound.changed);
   }
   return {
     ok: true,
     document: root === document.root ? document : { root, version: document.version },
-    data: { ...data, [source]: nextSourceState(update, current, nextItems) },
+    data: nextData,
     changed,
     diagnostics,
   };

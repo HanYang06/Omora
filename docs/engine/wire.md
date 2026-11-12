@@ -1,6 +1,6 @@
 # 线上形状：文档、更新与数据
 
-> 状态：**提案**；S1.1 契约类型、S2 `local-trees`、S3-a `ops` payload 与 Python/TS 序列化已落（共享 fixture `local-trees.json` / `ops.json`），运行时渲染接入未做。
+> 状态：**提案**；S1.1 契约类型、S2 `local-trees`、S3-a `ops`、S3-b `data`、S3-c `route` 的 Python/TS 线上形状已落（共享 fixture `local-trees.json` / `ops.json` / `data.json` / `route.json`），运行时渲染接入未做。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[docs/design/protocol.md](../design/protocol.md)（帧、传输、订阅）
 
@@ -110,6 +110,8 @@ S2 已落的最小形状：`kind` 必填；`seq` 是非负整数；`trees[]` 每
 S3-a 已落 `update` / `mount` / `move` / `unmount` / `replace` 的 Python 序列化（`omora.sdk.update.serialize_ops`）与 TS 解析/原子应用（`src/runtime/ops.ts`），base/document 版本语义为 `base == 当前版本` 且 `document == base + 1`；`route` 与 `data` op 还没接。共享 fixture：`app/sdk/tests/fixtures/ops.json`。
 
 S3-b 已落 §4 的三种 data 负载：Python `omora.sdk.data.serialize_data_updates`、TS `src/runtime/data.ts`（parse + revision 幂等 + 集合全量/增量），共享 fixture `app/sdk/tests/fixtures/data.json`。
+
+S3-c 已落 route op：Python `omora.sdk.update.RouteOp`、TS `src/runtime/session.ts` 的 `applySessionOps`（先校验目标页，再应用树 ops，再改 active；`params` 只做形状校验），共享 fixture `app/sdk/tests/fixtures/route.json`。全量文档用 `document.json` 作为共享形状，`createSession` / `applyFull` 已经接上。
 
 ## 6. 诊断与错误
 

@@ -1,6 +1,6 @@
 # 运行时：分层、生命周期与失败
 
-> 状态：**已定未实现**；分层名称是【建议】。S3-a 已落文档状态/三张索引、局部树 ops 与集合绑定原语；S3-b 已落 data router（纯数据更新 → 集合/数据文档）。标量绑定、渲染接入与会话仍未接。
+> 状态：**已定未实现**；分层名称是【建议】。S3-a 已落文档状态/三张索引、局部树 ops 与集合绑定原语；S3-b 已落 data router；S3-c 已落标量绑定、Session（pages/active/data + route + 全量替换）。渲染接入仍未接。
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md) · [updates.md](updates.md)
 > 相关：[components.md](components.md) · [wire.md](wire.md) · [testing.md](testing.md)
 
