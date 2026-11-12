@@ -29,6 +29,7 @@ import { makeDiagnostic } from "./diagnostics";
 import { hydrateSession } from "./hydrate";
 import { LifecycleLedger, type DisposeReport } from "./lifecycle";
 import { RuntimeMetrics, type MetricsCounts, type RuntimeMetricsSnapshot } from "./metrics";
+import type { Requester } from "./permissions";
 import { parseOps } from "./ops";
 import {
   applyFull as applyFullDocument,
@@ -41,6 +42,8 @@ import {
 export interface EngineOptions {
   metrics?: RuntimeMetrics;
   ledger?: LifecycleLedger;
+  /** 运行期变更主体；缺省 = 系统来源（全放行）。 */
+  requester?: Requester;
 }
 
 /** 变更监听者：拿到 apply 之后的会话与这次 apply 的 changed（被触碰的子树根 id）。 */
@@ -73,12 +76,14 @@ export class EngineRuntime {
   private readonly counter: RuntimeMetrics;
   private readonly ledger: LifecycleLedger;
   private readonly listeners = new Set<EngineChangeListener>();
+  private readonly requester: Requester | undefined;
   private isDisposed = false;
 
   constructor(session: SessionState, options: EngineOptions = {}) {
     this.current = session;
     this.counter = options.metrics ?? new RuntimeMetrics();
     this.ledger = options.ledger ?? new LifecycleLedger();
+    this.requester = options.requester;
   }
 
   /** 当前会话快照；只读，调用方不得改写（引擎每次 apply 换新快照，不做原地修改）。 */
@@ -118,7 +123,7 @@ export class EngineRuntime {
     if (!parsed.ok) {
       return this.reject(parsed.diagnostics);
     }
-    const applied = applySessionOps(this.current, parsed.batch);
+    const applied = applySessionOps(this.current, parsed.batch, this.requesterOptions());
     if (!applied.ok) {
       return this.reject(applied.diagnostics);
     }
@@ -136,7 +141,12 @@ export class EngineRuntime {
       return this.disposedFailure();
     }
     // session.data 由文档校验 + 深拷而来，形状就是数据文档投影；纯函数层只读它。
-    const applied = applyDataUpdate(this.current.document, this.current.data as DataState, payload);
+    const applied = applyDataUpdate(
+      this.current.document,
+      this.current.data as DataState,
+      payload,
+      this.requesterOptions(),
+    );
     if (!applied.ok) {
       return this.reject(applied.diagnostics);
     }
@@ -182,6 +192,11 @@ export class EngineRuntime {
     this.isDisposed = true;
     this.listeners.clear();
     return this.ledger.disposeAll();
+  }
+
+  /** 权限选项：不传 requester 时交给纯函数层用 SYSTEM_REQUESTER。 */
+  private requesterOptions(): { requester?: Requester } {
+    return this.requester === undefined ? {} : { requester: this.requester };
   }
 
   /** 成功提交：换会话 → 记诊断 → 记计数（含通知数）→ 按快照派发通知。 */
