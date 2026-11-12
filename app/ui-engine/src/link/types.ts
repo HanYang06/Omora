@@ -11,6 +11,8 @@ export type DiagnosticSeverity = "error" | "warning";
 
 export type DiagnosticCode =
   | "E-PAYLOAD"
+  | "E-VERSION"
+  | "E-TEMPLATE"
   | "E-ID-DUPLICATE"
   | "E-SLOT-AMBIGUOUS"
   | "E-SLOT-CAPACITY"

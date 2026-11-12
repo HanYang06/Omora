@@ -1,6 +1,6 @@
 # 测试：不变量与验收
 
-> 状态：**建议**；S2 已补编译诊断测试（每个已落 E- 码一条失败路径）、乱序/幂等/原子性质测试与跨语言 `local-trees` fixture 契约测试。
+> 状态：**建议**；S2 已补编译诊断测试（每个已落 E- 码一条失败路径）、乱序/幂等/原子性质测试与跨语言 `local-trees` fixture 契约测试；S3-a 已补索引/ops/集合原语测试与 `ops` fixture 契约测试。
 > 依赖：[README](README.md) · [composition.md](composition.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[omora-testing skill](../../.agents/skills/omora-testing/SKILL.md)
 
@@ -45,6 +45,8 @@
 每个诊断码至少：**能触发、消息含现场、不产出半成品文档**。
 
 S2 已落：`app/ui-engine/src/link/*.test.ts` 覆盖 `E-PAYLOAD` / `E-ID-DUPLICATE` / `E-SLOT-AMBIGUOUS` / `E-SLOT-CAPACITY` / `E-TARGET-MISSING` / `E-CYCLE`；`vite build` 的 `buildStart` 门禁拿共享 fixture 复现冲突（冲突时构建失败）。`static_ui.py --check` 仍只查骨架数据是否最新，还没升级成编译门禁。
+
+S3-a 已落：`src/runtime/*.test.ts` 覆盖三张索引（id / parent+order / source）、共享 `ops.json` 的原子应用与版本（`E-VERSION`）、每个 op 诊断失败路径、入参不变与终态收敛；`collection.test.ts` 覆盖实例化、增量与全量等价、同 key 身份稳定、坏条目隔离。纯数据更新、`route`、渲染接入尚未实现，因此没有对应行为测试。
 
 ## 5. 集合与身份测试
 

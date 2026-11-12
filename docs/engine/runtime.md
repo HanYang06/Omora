@@ -1,6 +1,6 @@
 # 运行时：分层、生命周期与失败
 
-> 状态：**已定未实现**；分层名称是【建议】。
+> 状态：**已定未实现**；分层名称是【建议】。S3-a 已落文档状态/三张索引、局部树 ops 与集合绑定原语；渲染接入、数据路由与会话仍未接。
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md) · [updates.md](updates.md)
 > 相关：[components.md](components.md) · [wire.md](wire.md) · [testing.md](testing.md)
 
@@ -77,7 +77,8 @@
 | ------------------------------------------ | ---------------------------------- |
 | `app/ui-engine/src/app.tsx`                | Session + 容器                     |
 | `render/compose.ts`                        | Compiler/Linker（v1 贡献模型）     |
-| `render/patch.ts` + `packages/ui/_diff.py` | Document + 更新管线                |
+| `render/patch.ts` + `packages/ui/_diff.py` | Document + 更新管线（v1，待替换）  |
+| `app/ui-engine/src/runtime/`               | Document / 索引 / ops / 集合原语   |
 | `render/renderer.tsx` + `components.tsx`   | Renderer + 组件注册表              |
 | `packages/ui/ui.py`                        | 页面/文档注册（v1）                |
 | —                                          | Producer Host、Diagnostics（待建） |
