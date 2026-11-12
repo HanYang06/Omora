@@ -57,7 +57,7 @@ jobs:
       - name: mypy modules
         run: uv run mypy -m omora.store -m omora.manager -m omora.media -m omora.ui -m omora.audio -m omora.video -m omora.ideas -m omora.projects -m omora.requirements -m omora.net
       - name: mypy entrypoints and tests
-        run: uv run mypy app/boot.py app/main.py app/boot/tests app/core/tests app/sdk/tests app/packages/audio/tests app/packages/ideas/tests app/packages/manager/tests app/packages/media/tests app/packages/net/tests app/packages/store/tests app/packages/ui/tests app/packages/video/tests
+        run: uv run mypy app/boot/__init__.py app/main.py app/boot/tests app/core/tests app/sdk/tests packages/audio/tests packages/ideas/tests packages/manager/tests packages/media/tests packages/net/tests packages/store/tests packages/ui/tests packages/video/tests
 
   python-tests:
     name: python-tests
@@ -80,7 +80,7 @@ jobs:
       - name: Install Python dependencies
         run: uv sync --frozen --all-groups
       - name: pytest
-        run: uv run pytest --cov=app --cov-report=term-missing --cov-report=xml
+        run: uv run pytest --cov=app --cov=packages --cov-report=term-missing --cov-report=xml
       - name: Fetch base branch
         if: github.event_name == 'pull_request'
         env:
@@ -129,7 +129,7 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
       - name: eslint
-        run: pnpm exec eslint app/ui-engine/src app/shell/main.cjs
+        run: pnpm exec eslint app/ui-engine/src app/ui-engine/shell/main.cjs
       - name: prettier
         run: pnpm exec prettier --check .
 

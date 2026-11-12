@@ -7,7 +7,7 @@ import pytest
 from main import SYSTEM_PLUGINS
 from omora._metadata import InstalledCatalog, Metadata, MetadataError, parse_metadata
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_a_missing_table_means_every_default() -> None:

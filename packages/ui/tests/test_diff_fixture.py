@@ -14,7 +14,7 @@ import pytest
 
 from omora._diff import diff_snapshot
 
-_FIXTURE = Path(__file__).resolve().parents[4] / "app" / "sdk" / "tests" / "fixtures" / "patch.json"
+_FIXTURE = Path(__file__).resolve().parents[3] / "app" / "sdk" / "tests" / "fixtures" / "patch.json"
 _DATA: dict[str, Any] = json.loads(_FIXTURE.read_text(encoding="utf-8"))
 
 

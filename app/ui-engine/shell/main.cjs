@@ -23,7 +23,7 @@ const SHOT = process.env.OMORA_SHOT ?? "";
 const SHOT_DELAY = Number(process.env.OMORA_SHOT_DELAY ?? 2500);
 
 function distIndex() {
-  return path.join(__dirname, "..", "ui-engine", "dist", "index.html");
+  return path.join(__dirname, "..", "dist", "index.html");
 }
 
 function fail(message) {

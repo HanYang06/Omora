@@ -350,16 +350,16 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "omora-cli", editable = "app/cli" },
-    { name = "omora-plugin-audio", editable = "app/packages/audio" },
-    { name = "omora-plugin-ideas", editable = "app/packages/ideas" },
-    { name = "omora-plugin-manager", editable = "app/packages/manager" },
-    { name = "omora-plugin-media", editable = "app/packages/media" },
-    { name = "omora-plugin-net", editable = "app/packages/net" },
-    { name = "omora-plugin-projects", editable = "app/packages/projects" },
-    { name = "omora-plugin-requirements", editable = "app/packages/requirements" },
-    { name = "omora-plugin-store", editable = "app/packages/store" },
-    { name = "omora-plugin-ui", editable = "app/packages/ui" },
-    { name = "omora-plugin-video", editable = "app/packages/video" },
+    { name = "omora-plugin-audio", editable = "packages/audio" },
+    { name = "omora-plugin-ideas", editable = "packages/ideas" },
+    { name = "omora-plugin-manager", editable = "packages/manager" },
+    { name = "omora-plugin-media", editable = "packages/media" },
+    { name = "omora-plugin-net", editable = "packages/net" },
+    { name = "omora-plugin-projects", editable = "packages/projects" },
+    { name = "omora-plugin-requirements", editable = "packages/requirements" },
+    { name = "omora-plugin-store", editable = "packages/store" },
+    { name = "omora-plugin-ui", editable = "packages/ui" },
+    { name = "omora-plugin-video", editable = "packages/video" },
     { name = "pyyaml", specifier = ">=6.0.3" },
 ]
 
@@ -385,7 +385,7 @@ source = { editable = "app/core" }
 [[package]]
 name = "omora-plugin-audio"
 version = "0.1.0"
-source = { editable = "app/packages/audio" }
+source = { editable = "packages/audio" }
 dependencies = [
     { name = "omora-sdk" },
 ]
@@ -396,7 +396,7 @@ requires-dist = [{ name = "omora-sdk", editable = "app/sdk" }]
 [[package]]
 name = "omora-plugin-ideas"
 version = "0.1.0"
-source = { editable = "app/packages/ideas" }
+source = { editable = "packages/ideas" }
 dependencies = [
     { name = "omora-sdk" },
 ]
@@ -407,7 +407,7 @@ requires-dist = [{ name = "omora-sdk", editable = "app/sdk" }]
 [[package]]
 name = "omora-plugin-manager"
 version = "0.1.0"
-source = { editable = "app/packages/manager" }
+source = { editable = "packages/manager" }
 dependencies = [
     { name = "omora-sdk" },
 ]
@@ -418,7 +418,7 @@ requires-dist = [{ name = "omora-sdk", editable = "app/sdk" }]
 [[package]]
 name = "omora-plugin-media"
 version = "0.1.0"
-source = { editable = "app/packages/media" }
+source = { editable = "packages/media" }
 dependencies = [
     { name = "omora-sdk" },
 ]
@@ -429,7 +429,7 @@ requires-dist = [{ name = "omora-sdk", editable = "app/sdk" }]
 [[package]]
 name = "omora-plugin-net"
 version = "0.1.0"
-source = { editable = "app/packages/net" }
+source = { editable = "packages/net" }
 dependencies = [
     { name = "omora-sdk" },
     { name = "websockets" },
@@ -444,7 +444,7 @@ requires-dist = [
 [[package]]
 name = "omora-plugin-projects"
 version = "0.1.0"
-source = { editable = "app/packages/projects" }
+source = { editable = "packages/projects" }
 dependencies = [
     { name = "omora-sdk" },
 ]
@@ -455,7 +455,7 @@ requires-dist = [{ name = "omora-sdk", editable = "app/sdk" }]
 [[package]]
 name = "omora-plugin-requirements"
 version = "0.1.0"
-source = { editable = "app/packages/requirements" }
+source = { editable = "packages/requirements" }
 dependencies = [
     { name = "omora-sdk" },
 ]
@@ -466,7 +466,7 @@ requires-dist = [{ name = "omora-sdk", editable = "app/sdk" }]
 [[package]]
 name = "omora-plugin-store"
 version = "0.1.0"
-source = { editable = "app/packages/store" }
+source = { editable = "packages/store" }
 dependencies = [
     { name = "omora-sdk" },
 ]
@@ -477,7 +477,7 @@ requires-dist = [{ name = "omora-sdk", editable = "app/sdk" }]
 [[package]]
 name = "omora-plugin-ui"
 version = "0.1.0"
-source = { editable = "app/packages/ui" }
+source = { editable = "packages/ui" }
 dependencies = [
     { name = "omora-sdk" },
 ]
@@ -488,7 +488,7 @@ requires-dist = [{ name = "omora-sdk", editable = "app/sdk" }]
 [[package]]
 name = "omora-plugin-video"
 version = "0.1.0"
-source = { editable = "app/packages/video" }
+source = { editable = "packages/video" }
 dependencies = [
     { name = "imageio-ffmpeg" },
     { name = "omora-sdk" },

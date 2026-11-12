@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-PACKAGES = ROOT / "app" / "packages"
+PACKAGES = ROOT / "packages"
 
 PYPROJECTS = [
     ROOT / "pyproject.toml",

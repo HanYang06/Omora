@@ -15,7 +15,7 @@ def _tree(tmp_path: Path, files: dict[str, str]) -> Path:
         path = tmp_path / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(source, encoding="utf-8")
-    (tmp_path / "app" / "packages").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "packages").mkdir(parents=True, exist_ok=True)
     return tmp_path
 
 
@@ -23,7 +23,7 @@ def test_declarations_and_uses_are_collected(tmp_path: Path) -> None:
     root = _tree(
         tmp_path,
         {
-            "app/packages/demo/omora/demo.py": (
+            "packages/demo/omora/demo.py": (
                 'slot = Slot(key="demo.slot")\nui.contribute(ctx, "demo.slot", self.build)\n'
             )
         },
@@ -33,7 +33,7 @@ def test_declarations_and_uses_are_collected(tmp_path: Path) -> None:
 
     entry = entries["demo.slot"]
     assert entry.declared_by == "demo"
-    assert entry.declarations[0].path == "app/packages/demo/omora/demo.py"
+    assert entry.declarations[0].path == "packages/demo/omora/demo.py"
     assert entry.declarations[0].line == 1
     assert entry.uses[0].line == 2
     assert entry.uses[0].owner == "demo"
@@ -53,8 +53,8 @@ def test_duplicate_declarations_are_rejected(tmp_path: Path) -> None:
     root = _tree(
         tmp_path,
         {
-            "app/packages/demo/omora/a.py": source,
-            "app/packages/other/omora/b.py": source,
+            "packages/demo/omora/a.py": source,
+            "packages/other/omora/b.py": source,
         },
     )
 
@@ -63,7 +63,7 @@ def test_duplicate_declarations_are_rejected(tmp_path: Path) -> None:
 
 
 def test_a_bad_key_is_rejected(tmp_path: Path) -> None:
-    root = _tree(tmp_path, {"app/packages/demo/omora/a.py": 'x = Slot(key="Demo")\n'})
+    root = _tree(tmp_path, {"packages/demo/omora/a.py": 'x = Slot(key="Demo")\n'})
 
     with pytest.raises(keys.KeysError, match="不合格"):
         keys.scan(root)
@@ -72,7 +72,7 @@ def test_a_bad_key_is_rejected(tmp_path: Path) -> None:
 def test_tests_are_not_scanned(tmp_path: Path) -> None:
     root = _tree(
         tmp_path,
-        {"app/packages/demo/tests/test_demo.py": 'x = Slot(key="demo.slot")\n'},
+        {"packages/demo/tests/test_demo.py": 'x = Slot(key="demo.slot")\n'},
     )
 
     assert "demo.slot" not in keys.scan(root)
@@ -81,11 +81,7 @@ def test_tests_are_not_scanned(tmp_path: Path) -> None:
 def test_rendered_artifacts_are_sorted(tmp_path: Path) -> None:
     root = _tree(
         tmp_path,
-        {
-            "app/packages/demo/omora/a.py": (
-                'a = Slot(key="demo.beta")\nb = Slot(key="demo.alpha")\n'
-            )
-        },
+        {"packages/demo/omora/a.py": ('a = Slot(key="demo.beta")\nb = Slot(key="demo.alpha")\n')},
     )
 
     rendered = keys.render(keys.scan(root))
@@ -103,7 +99,7 @@ def test_format_list_names_the_owner_and_use_count(tmp_path: Path) -> None:
     root = _tree(
         tmp_path,
         {
-            "app/packages/demo/omora/a.py": (
+            "packages/demo/omora/a.py": (
                 'a = Slot(key="demo.slot")\nui.contribute(ctx, "demo.slot", build)\n'
             )
         },
@@ -119,7 +115,7 @@ def test_format_key_shows_both_sides(tmp_path: Path) -> None:
     root = _tree(
         tmp_path,
         {
-            "app/packages/demo/omora/a.py": (
+            "packages/demo/omora/a.py": (
                 'a = Slot(key="demo.slot")\nui.contribute(ctx, "demo.slot", build)\n'
             )
         },
@@ -128,8 +124,8 @@ def test_format_key_shows_both_sides(tmp_path: Path) -> None:
     text = keys.format_key(keys.scan(root)["demo.slot"])
 
     assert "声明者: demo" in text
-    assert "声明: app/packages/demo/omora/a.py:1" in text
-    assert "使用: app/packages/demo/omora/a.py:2（demo）" in text
+    assert "声明: packages/demo/omora/a.py:1" in text
+    assert "使用: packages/demo/omora/a.py:2（demo）" in text
 
 
 def test_a_builtin_key_has_no_declaration_site(tmp_path: Path) -> None:
