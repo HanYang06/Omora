@@ -29,6 +29,7 @@ import type { Diagnostic, DiagnosticCode } from "../link/types";
 import type { DocumentState } from "./document";
 import { makeDiagnostic } from "./diagnostics";
 import { applyOps, parseOps, type OpsBatch, type WireOp } from "./ops";
+import type { RequesterOptions } from "./permissions";
 
 /** 会话状态：文档运行时 + 页面侧表 + 活动页 + 数据文档。 */
 export interface SessionState {
@@ -154,7 +155,11 @@ function remapDiagnostics(diagnostics: Diagnostic[], treePositions: number[]): D
  * - 树 op 复用 `applyOps`，它失败时诊断原样回传（path 的批次下标映射回原始批量）；
  * - route 只把 active 切到目标页（多条按声明顺序，最后一条生效），不进 changed。
  */
-export function applySessionOps(session: SessionState, batch: unknown): SessionOpsResult {
+export function applySessionOps(
+  session: SessionState,
+  batch: unknown,
+  options: RequesterOptions = {},
+): SessionOpsResult {
   const parsed = parseOps(batch);
   if (!parsed.ok) {
     return parsed;
@@ -207,7 +212,7 @@ export function applySessionOps(session: SessionState, batch: unknown): SessionO
     seq: ops.seq,
     ops: treeOps,
   };
-  const applied = applyOps(session.document, treeBatch);
+  const applied = applyOps(session.document, treeBatch, options);
   if (!applied.ok) {
     return { ok: false, diagnostics: remapDiagnostics(applied.diagnostics, treePositions) };
   }

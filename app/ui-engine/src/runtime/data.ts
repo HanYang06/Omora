@@ -13,6 +13,12 @@
  *
  * `owner` 只做信封校验，不参与路由（归属 / 权限由来源宿主层负责）；路由只看 `source`。
  *
+ * 权限（S4）：`applyData` 接受 `options.requester`，缺省 = 系统来源（全放行，行为与
+ * 接入权限层之前完全一致）。真正会被写到的 slot 要 update 能力：集合全量 / 增量对应
+ * 消费该 source 的 collection slot；标量对应 `in` 含该 source 且 props 真的会变的
+ * 消费者（没有变化的消费者不算被写）。任一拒绝 → ok:false、只回一条 E-PERMISSION，
+ * 文档与数据都不变；信封不合法 / 坏条目等既有诊断语义不变。
+ *
  * 多消费者：同一条 source 可被多个集合 slot 消费（`collection.source` 相同），也可被
  * 多个声明 `in` 的节点消费（标量绑定）。增量只按索引顺序用**第一个**消费者的集合配置
  * （key/select）落到条目列表上，其余消费者从同一份条目重新实例化；`changed` 按更新
@@ -41,6 +47,7 @@ import {
 import { applyScalarBinding, replaceSlotById } from "./data_bind";
 import { DocumentIndex, type DocumentState } from "./document";
 import { makeDiagnostic } from "./diagnostics";
+import { SYSTEM_REQUESTER, checkPermission, type RequesterOptions } from "./permissions";
 
 const PAYLOAD_CODE: DiagnosticCode = "E-PAYLOAD";
 
@@ -277,6 +284,7 @@ export function applyData(
   document: DocumentState,
   data: DataState,
   payload: unknown,
+  options: RequesterOptions = {},
 ): ApplyDataResult {
   const parsed = parseData(payload);
   if (!parsed.ok) {
@@ -288,6 +296,7 @@ export function applyData(
   if (current !== undefined && update.revision <= current.revision) {
     return { ok: true, document, data, changed: [], diagnostics: [] };
   }
+  const requester = options.requester ?? SYSTEM_REQUESTER;
   const priorItems: CollectionItem[] = current?.items ?? [];
   const changed: string[] = [];
   const diagnostics: Diagnostic[] = [];
@@ -301,6 +310,10 @@ export function applyData(
       const slot = index.get(id);
       if (slot?.collection === undefined || slot.collection.source !== source) {
         continue;
+      }
+      const allowed = checkPermission(slot, "update", requester);
+      if (!allowed.ok) {
+        return { ok: false, diagnostics: [allowed.diagnostic] };
       }
       let replacement: SlotNode | undefined;
       if ("items" in update) {
@@ -331,6 +344,17 @@ export function applyData(
     // 标量：先写数据文档，再按 in/bind 把新值绑进消费者 props。
     nextData = { ...data, [source]: nextSourceState(update, current, undefined) };
     const bound = applyScalarBinding(root, nextData, source);
+    const index = DocumentIndex.build(root);
+    for (const id of bound.changed) {
+      const consumer = index.get(id);
+      if (consumer === undefined) {
+        continue;
+      }
+      const allowed = checkPermission(consumer, "update", requester);
+      if (!allowed.ok) {
+        return { ok: false, diagnostics: [allowed.diagnostic] };
+      }
+    }
     root = bound.root;
     changed.push(...bound.changed);
   }
