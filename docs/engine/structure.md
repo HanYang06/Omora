@@ -1,6 +1,6 @@
 # 结构：窗口、页面、层、布局
 
-> 状态：**已定未实现**；layout 字段表是【建议】。
+> 状态：**已定未实现**；layout 字段表是【建议】。S3-c 已落会话层的 pages/active 与 route 意图（active 切换）；渲染层按 id 的保留/移动/替换/取消协调仍未接。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md)
 > 相关：[rules.md](rules.md) · [updates.md](updates.md) · `runtime.md`（待写）
 
@@ -63,7 +63,8 @@
 - 简单路由（进/退/切换）由 runtime 按声明执行，目标树优先用本地骨架；
 - 复杂条件（涉及领域判断、权限、数据是否存在）由宿主/Python 决定并下发新树；
 - 两边最后都收敛到“拿到目标树 → 按 id 协调”，执行路径只有一条。
-- 路由声明与历史的细节在 updates.md / runtime.md（待写）展开。
+- 路由声明与历史的细节在 updates.md / runtime.md 展开。
+- S3-c 已落：`SessionState` 持有 `pages` / `active`，route op 校验目标页存在后改 active；渲染层按 id 协调（保留/移动/替换/取消）和页面历史仍未接。
 
 ## 7. 示例
 

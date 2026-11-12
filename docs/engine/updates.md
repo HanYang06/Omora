@@ -1,6 +1,6 @@
 # 更新：三种输入粒度
 
-> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed）；S3-b 已落纯数据更新（data router：revision 幂等 + 集合全量/增量 + changed）。标量→props 绑定、全量文档会话接线与渲染接入仍未做。
+> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed）；S3-b 已落纯数据更新（data router：revision 幂等 + 集合全量/增量 + changed）；S3-c 已落标量绑定（in/bind → props）、会话层 route 执行与全量文档替换。渲染接入、页面协商与灵感页 spike 仍未做。
 > 依赖：[addressing.md](addressing.md) · [composition.md](composition.md)
 > 相关：[collection.md](collection.md) · `runtime.md`（待写） · `testing.md`（待写）
 
@@ -92,6 +92,14 @@
 - **data router**（`app/ui-engine/src/runtime/data.ts`）：`parseData` 校验 `{kind:"data", owner, source, revision, value|items|changes}`；`applyData(document, data, payload)` 纯函数、原子（信封非法 `ok:false`，文档与 data 都不变；坏条目按集合契约 `ok:true` + 诊断）。
 - **幂等**：每个 source 记住 `revision`；`payload.revision <= 当前 revision` 直接 no-op（changed/诊断为空）。文档版本不动（数据 revision 独立）。
 - **集合**：按 `DocumentIndex.slotsFor(source)` 找 `collection.source === source` 的 slot；`items` 全量走 `instantiateCollection`，`changes` 走 `applyCollectionChanges`；替换 slot 保持原位/原 id，替换后重建索引；多个消费者共同更新，`changed` 是集合 slot id。
-- **标量**：只写 `data[source].value`；标量到 props 的绑定（`in`/`bind` 解析）还没做，changed 为空。
+- **标量**：写 `data[source].value`，并按 `in`/`bind` 更新消费者 props（S3-c，见 [rules.md](rules.md) §4）；解析不到的值保留原 props。
 - **跨语言**：Python `omora.sdk.data.serialize_data_updates` 产出同一形状，两侧共用 `app/sdk/tests/fixtures/data.json`。
-- **未接**：标量绑定、权限/归属校验、全量文档与运行时会话、渲染层、灵感页 spike。
+- **未接**：权限/归属校验、渲染层、页面切换的按 id 协调、灵感页 spike。
+
+## 10. S3-c 实现（已落）
+
+- **绑定**（`src/runtime/data_bind.ts`）：标量数据按 `in` 找消费者，按 `bind` pointer 从 `data[source].value` 解析并写 props；解析不到保留原值；有变化才替换节点并进 `changed`（结构相同值不换节点）。多 input 歧义时跳过、不报错。
+- **会话**（`src/runtime/session.ts`）：`SessionState {document, pages, active, data}`；`createSession` 用 v2 文档校验器接管全量文档；`applyFull` 全量替换（旧版本拒绝 E-VERSION，同/新版本接受，全换不合并）。
+- **route**（`src/runtime/session.ts` + `ops.ts`）：ops 批量可含 `{op:"route", page, params?}`；`applySessionOps` 先校验目标页存在（不存在 E-TARGET-MISSING，整批不生效），再复用树 op 的原子应用，最后设置 active；版本只涨一次，route 不进 `changed`；`params` 只做形状校验，页面参数消费留给渲染/路由层。
+- **跨语言**：Python `omora.sdk.update.RouteOp` 与共享 `app/sdk/tests/fixtures/route.json`。
+- **未接**：渲染层（换页按 id 协调）、页面参数、灵感页 spike；`applyOps`（DocumentState 层）本身仍拒绝 route，route 必须走 session。
