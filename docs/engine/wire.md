@@ -1,6 +1,6 @@
 # 线上形状：文档、更新与数据
 
-> 状态：**提案**；S1.1 契约类型、S2 `local-trees` payload 与 Python/TS 序列化已落（共享 fixture `app/sdk/tests/fixtures/local-trees.json`），运行时未接入。
+> 状态：**提案**；S1.1 契约类型、S2 `local-trees`、S3-a `ops` payload 与 Python/TS 序列化已落（共享 fixture `local-trees.json` / `ops.json`），运行时渲染接入未做。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[docs/design/protocol.md](../design/protocol.md)（帧、传输、订阅）
 
@@ -105,7 +105,9 @@ S2 已落的最小形状：`kind` 必填；`seq` 是非负整数；`trees[]` 每
 | `unmount` | id      | 删除子树并跑清理                        |
 | `replace` | id      | 整棵替换                                |
 | `route`   | page    | 路由意图；由引擎展开成 page slot 的协调 |
-| `data`    | source  | 数据更新（见 `4）                       |
+| `data`    | source  | 数据更新（见 §4）                       |
+
+S3-a 已落 `update` / `mount` / `move` / `unmount` / `replace` 的 Python 序列化（`omora.sdk.update.serialize_ops`）与 TS 解析/原子应用（`src/runtime/ops.ts`），base/document 版本语义为 `base == 当前版本` 且 `document == base + 1`；`route` 与 `data` op 还没接。共享 fixture：`app/sdk/tests/fixtures/ops.json`。
 
 ## 6. 诊断与错误
 

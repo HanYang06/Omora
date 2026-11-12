@@ -1,6 +1,6 @@
 # 更新：三种输入粒度
 
-> 状态：**已定**。
+> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed），纯数据更新与运行时接入待 S3-b。
 > 依赖：[addressing.md](addressing.md) · [composition.md](composition.md)
 > 相关：[collection.md](collection.md) · `runtime.md`（待写） · `testing.md`（待写）
 
@@ -78,3 +78,11 @@
 3. 批量更新原子，只涨一个版本。
 4. 未涉及的兄弟节点不重挂、不丢局部状态。
 5. 数据更新不产生未声明的结构。
+
+## 8. S3-a 实现（已落）
+
+- **文档状态**（`app/ui-engine/src/runtime/document.ts`）：`DocumentState = {root, version}`；`createState` 用 v2 校验器接管根树；`DocumentIndex` 从根树重建三张索引（见 [addressing.md](addressing.md)）。
+- **局部树 ops**（`src/runtime/ops.ts` + `ops_apply.ts`）：`parseOps` 校验 `{kind:"ops", document, base, seq, ops}`；`applyOps` 要求 `base == 当前版本` 且 `document == base + 1`（否则 `E-VERSION`），按序在深拷上应用，任一失败整批不生效；成功返回新状态 + `changed`（本次触碰的子树根 id）。
+- **op 语义**：`update`（props 浅合并）、`mount`（at 缺省尾部，越界夹取；容量/重复 id 校验）、`move`（先删后插、成环 `E-CYCLE`）、`unmount`（根不可卸）、`replace`（原位、新 id 可换）。模板节点可 update 内容，结构操作返回 `E-PAYLOAD`（位置由 templates 命名表决定）。
+- **跨语言**：Python `omora.sdk.update.serialize_ops` 产出同一形状，两侧共用 `app/sdk/tests/fixtures/ops.json`。
+- **未接**：纯数据更新（data router / 集合）、`route`、渲染层（v1 仍走 `render/patch.ts`）、全量更新与运行时会话接线。
