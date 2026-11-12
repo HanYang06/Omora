@@ -45,6 +45,9 @@ export class DomApp {
   }
 
   mount(container: HTMLElement): void {
+    // Vite 构建期把启动骨架编译进了 #root，只负责 JS 起来前的首帧；
+    // 运行时挂载时先清掉，避免两份壳叠在一起（同一份快照随后会重建一次）。
+    container.replaceChildren();
     const options: ShellOptions = {
       onNavigate: (page) => {
         this.page = page;
