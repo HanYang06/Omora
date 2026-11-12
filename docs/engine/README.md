@@ -47,28 +47,28 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 ## 4. 文档地图
 
-本文档集按“一个概念一个家”拆；未写的标**待写**，写成后再补链接。
+本文档集按“一个概念一个家”拆；状态见下表。
 
-| 文档                             | 负责什么                                                 | 状态 |
-| -------------------------------- | -------------------------------------------------------- | ---- |
-| `README.md`                      | 索引、定位、命名、术语、实现状态                         | 已写 |
-| `decisions/0001-name.md`         | 命名决定与影响                                           | 已写 |
-| [contract.md](contract.md)       | Slot 原语、字段、schema、版本、kind 注册                 | 已写 |
-| [addressing.md](addressing.md)   | id 规则、三张索引、更新集合、全寻址 vs 可介入            | 已写 |
-| [structure.md](structure.md)     | window/page/layer/layout、页面切换的按 id 协调           | 已写 |
-| [rules.md](rules.md)             | 触发 × 效果闭集、数据输入、规则索引                      | 已写 |
-| [collection.md](collection.md)   | 集合绑定、模板、keyed reconcile、条目实例 id             | 已写 |
-| [composition.md](composition.md) | 局部树、编译/链接、顺序模型、诊断、root tree 归属        | 已写 |
-| [updates.md](updates.md)         | 三种更新、事务、版本、兜底、重同步                       | 已写 |
-| [permissions.md](permissions.md) | 能力 × 主体、默认分层、检查点、非安全边界                | 已写 |
-| `runtime.md`                     | 引擎分层、生命周期账本、失败隔离、诊断面板               | 待写 |
-| `components.md`                  | 组件词表、schema 单一来源、authoring API 与 wire 形态    | 待写 |
-| `wire.md`                        | 引擎 payload 形状；帧/传输仍归 `docs/design/protocol.md` | 待写 |
-| `testing.md`                     | 九条不变量、fixture、编译诊断测试、集合等价测试          | 待写 |
-| `migration.md`                   | v1→v2、兼容层、S0–S5、旧文档去向                         | 待写 |
-| `archive/`                       | 已退役的提案与旧设计                                     | 待建 |
+| 文档                             | 负责什么                                                 | 状态   |
+| -------------------------------- | -------------------------------------------------------- | ------ |
+| `README.md`                      | 索引、定位、命名、术语、实现状态                         | 已写   |
+| `decisions/0001-name.md`         | 命名决定与影响                                           | 已写   |
+| [contract.md](contract.md)       | Slot 原语、字段、schema、版本、kind 注册                 | 已写   |
+| [addressing.md](addressing.md)   | id 规则、三张索引、更新集合、全寻址 vs 可介入            | 已写   |
+| [structure.md](structure.md)     | window/page/layer/layout、页面切换的按 id 协调           | 已写   |
+| [rules.md](rules.md)             | 触发 × 效果闭集、数据输入、规则索引                      | 已写   |
+| [collection.md](collection.md)   | 集合绑定、模板、keyed reconcile、条目实例 id             | 已写   |
+| [composition.md](composition.md) | 局部树、编译/链接、顺序模型、诊断、root tree 归属        | 已写   |
+| [updates.md](updates.md)         | 三种更新、事务、版本、兜底、重同步                       | 已写   |
+| [permissions.md](permissions.md) | 能力 × 主体、默认分层、检查点、非安全边界                | 已写   |
+| [runtime.md](runtime.md)         | 引擎分层、生命周期账本、失败隔离、诊断面板               | 已写   |
+| [components.md](components.md)   | 组件词表、schema 单一来源、authoring API 与 wire 形态    | 已写   |
+| [wire.md](wire.md)               | 引擎 payload 形状；帧/传输仍归 `docs/design/protocol.md` | 已写   |
+| [testing.md](testing.md)         | 九条不变量、fixture、编译诊断测试、集合等价测试          | 已写   |
+| [migration.md](migration.md)     | v1→v2、兼容层、S0–S5、旧文档去向                         | 已写   |
+| [archive/](archive/)             | 已退役的提案与旧设计                                     | 已退役 |
 
-本轮草案（`docs/design/ui-tree.md`）已拆入上述文档；旧文件不再保留。
+旧草案（`docs/design/ui-tree.md`）已拆入本系列并删除。
 
 ## 5. 阅读顺序
 
@@ -116,7 +116,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 - 设计讨论：2026-11-12 ~ 2026-11-13。
 - 基线：`main@f090ea1`；工作区另有未提交的仓库结构迁移（`refactor/repo-layout`）。
-- 收敛前的材料：`docs/design/ui-tree.md`（本轮草案，已拆入本目录）、`docs/design/ui-engine-subsystem.md`（旧提案，待归档）、[ui-plugins.md](../design/ui-plugins.md)（旧组合模型）。它们会在后续文档重组中退役。
+- 收敛前的材料：旧提案归档在 [archive/ui-engine-subsystem.md](archive/ui-engine-subsystem.md)；旧 v1 文档（`ui-engine.md` / `ui-plugins.md`）已删除，内容并入本系列。
 - 产品页面设计（[ui-rules.md](../design/ui-rules.md)、[ui-home.md](../design/ui-home.md)、[ui-capture.md](../design/ui-capture.md)）不属于引擎契约，留在 `docs/design/`，引擎文档只链接。
 
 ## 9. 落地阶段

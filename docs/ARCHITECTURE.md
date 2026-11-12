@@ -62,7 +62,7 @@
   用来吸收"插件后来才装上"这类外部变化。
 - **只填自己的**：不改别人的树；想让别人挂东西，就在自己树里放一个有键的节点（`Slot(key=...)`）。
 - **可介入**：别人按全限定键往那个位置挂（替换 / 前 / 后 / 进子节点），顺序是 `(order, owner, 声明序号)`。
-- 键、贡献、组合的完整契约见 [UI 插件体系](design/ui-plugins.md)。
+- v1 的键/贡献模型以本节为准；目标契约见 [寻址](engine/addressing.md) 与 [组合](engine/composition.md)。
 
 写法（界面库是 Python 包，内核不 import 它）：
 
@@ -145,16 +145,25 @@ class Ideas:
 - **TS 写能力也是正路。** npm 生态摆在那，没有理由拦。但别在 TS 里存真相——server 形态没有 TS 进程。
 - **混合插件没有额外规则。** 它就是把上面两条各走一遍；两边靠同一个名字对齐。
 
-## 6. 渲染引擎与 TS 插件
+## 6. 渲染引擎（Dendrolink）与 TS 插件
 
-渲染引擎在 `app/ui-engine/`：
+渲染引擎在 `app/ui-engine/`。当前是 v1：组件注册表、键 + 贡献组合、事件回传、静态骨架。
+它正在升级为独立命名的 UI 文档运行时 **Dendrolink**（树链引擎），目标契约见
+[docs/engine/README.md](engine/README.md)；目标条目标"已定未实现"，实现前以代码为准。
+
+- 唯一原语 Slot：窗口 / 页面 / 层 / 布局 / 组件都是 kind 不同的 Slot。
+- 局部树在链接期组合成权威根树，冲突是编译错误。
+- 支持全量 / 纯数据 / 局部树三种更新；稳定 id 寻址。
+- 结构与规则两张平级：事件/数据 → 反应；集合绑定用模板实例化。
+
+迁移期下面这些仍是当前 v1 的事实：
 
 - 组件注册表：节点类型 ↔ 组件。
-- **组合器**：把若干份贡献挂在若干把键上，合成一棵 root tree（纯函数，见 [UI 插件体系](design/ui-plugins.md)）。
+- **组合器**：把若干份贡献挂在若干把键上，合成一棵 root tree（纯函数；v1 规则见本节，目标契约见 [组合](engine/composition.md)）。
 - 事件带 handler id 回传；id 里带归属，一页因此可以有多个 owner。
 - 自带一个 TS 插件宿主（未做）：管 TS 插件，也管母页面。
 
-### 窗口、页面与键
+### 窗口、页面与键（v1）
 
 - **窗口**是引擎默认那层壳：它声明有哪些区域（现在两个：`om.window.nav` 图标栏、`om.window.page` 主区）。
 - **页面**是一个可导航的根，挂在窗口的某个区域上；页面自己决定哪些节点有键。
@@ -163,7 +172,7 @@ class Ideas:
 - 键全限定、全局唯一，第一段是声明者；构建期生成，作者不手写字符串。
 - 顺序是全序 `(order, owner, 声明序号)`；同一个键上的 `replace` 走"后来者优先"。
 
-组件词表是默认窗口的、核心的、有限的。够用靠组合；不够就加组件（不是换母页面）。
+目标模型见 [寻址](engine/addressing.md) 与 [结构](engine/structure.md)；迁移完成后本节改写。
 
 默认母页面是**三栏**：56px 图标栏（页面导航，每页一个图标）+ 主区。索引栏与主区由页面
 自己用 `Split` 排，页面内容铺满主区，不再走 720px 居中的一页纸。区域、模式与词表见
@@ -218,7 +227,7 @@ class Ideas:
 内核加载 Python 那半，引擎加载 UI 那半，两边用同一个插件 id 对齐。
 
 纯 UI 插件也合法（只有 UI 半边）：它的界面可以存在，数据只能向 Python 服务要，server 形态没有它。
-清单格式与加载实现见 [UI 插件体系](design/ui-plugins.md) §11。
+清单格式与加载实现仍待定，见 [迁移](engine/migration.md) 的 S5。
 
 ## 10. 代码在哪
 
@@ -227,7 +236,7 @@ class Ideas:
 | `app/core/`      | 内核：插件宿主（四个词）；package `omora-core`                  | Python  |
 | `app/sdk/`       | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk` | Python  |
 | `packages/`      | 系统插件：`omora-plugin-*`，uv workspace 的 member              | Python  |
-| `app/ui-engine/` | 渲染引擎 + 桌面壳：组件注册表、贡献组合、事件                   | TS / JS |
+| `app/ui-engine/` | 渲染引擎 + 桌面壳；Dendrolink 契约见 `docs/engine/README.md`    | TS / JS |
 | 运行后插件目录   | 单独装、可卸的插件                                              | 待定    |
 | `docs/`          | 事实来源，架构文档在这里                                        | —       |
 
