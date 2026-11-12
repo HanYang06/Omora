@@ -14,7 +14,7 @@
 
 ## 结构
 
-`app/shell/` 只有一个文件 `main.cjs`，做三件事：
+桌面壳是 `app/ui-engine/shell/main.cjs`，和渲染引擎在同一个 pnpm workspace、共享同一套依赖与 lock；它只做三件事：
 
 1. 开窗口（1360×880，最小 960×640，底色调成桌面色，避免白闪）；
 2. 装页面：开发时 `OMORA_DEV_URL` → vite dev server；发布时 → `app/ui-engine/dist/index.html`；
@@ -28,7 +28,7 @@
 ```bash
 uv run omora dev --shell            # 内核 + 引擎 + 壳
 uv run omora dev --shell --devtools # 顺带开 DevTools
-pnpm install                                    # 第一次（根目录 workspace，装齐引擎与壳）
+pnpm install                        # 第一次（根目录 workspace，一次装齐引擎与壳）
 ```
 
 壳的输出并进同一条日志时间线（`[shell]` 前缀）；页面自己的日志照旧走 `log.write_many`。

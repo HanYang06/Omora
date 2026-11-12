@@ -12,15 +12,14 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 ## 结构
 
-| 位置             | 是什么                                                          | 语言   |
-| ---------------- | --------------------------------------------------------------- | ------ |
-| `app/core/`      | 内核：插件宿主；package `omora-core`                            | Python |
-| `app/sdk/`       | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk` | Python |
-| `app/packages/`  | 系统插件：`omora-plugin-*`，uv workspace 的 member              | Python |
-| `app/ui-engine/` | 渲染引擎：组件注册表、贡献组合、事件、静态骨架                  | TS     |
-| `app/shell/`     | 桌面壳：Electron 主进程（开发时由 `omora dev --shell` 拉起）    | JS     |
-| 运行后插件目录   | 生态插件，单独装；现在为空                                      | 待定   |
-| `docs/`          | 架构与事实来源                                                  | —      |
+| 位置             | 是什么                                                                              | 语言    |
+| ---------------- | ----------------------------------------------------------------------------------- | ------- |
+| `app/core/`      | 内核：插件宿主；package `omora-core`                                                | Python  |
+| `app/sdk/`       | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk`                     | Python  |
+| `packages/`      | 系统插件：`omora-plugin-*`，uv workspace 的 member                                  | Python  |
+| `app/ui-engine/` | 渲染引擎 + 桌面壳：组件注册表、贡献组合、事件、静态骨架；Electron 主进程在 `shell/` | TS / JS |
+| 运行后插件目录   | 生态插件，单独装；现在为空                                                          | 待定    |
+| `docs/`          | 架构与事实来源                                                                      | —       |
 
 两个进程、两个 runtime：Python（内核 + 插件）与 TS（渲染引擎）。中间只有一条消息协议，由 net 插件（系统插件）持有。
 
@@ -48,7 +47,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 ## 环境
 
 - 系统 `python` 是 Windows 商店占位，不可用；Python 命令一律走 `uv run`。
-- 前端依赖走 `pnpm`；根目录一个 workspace，一次 `pnpm install` 装齐 `app/ui-engine` 与 `app/shell`。
+- 前端依赖走 `pnpm`；根目录一个 workspace，一次 `pnpm install` 装齐渲染端与桌面壳；shell 不再单独成 workspace。
 - Python 侧是 uv workspace：`uv sync` 一个 lock / 一个 venv；每个包自己的 pyproject / 依赖 / `omora` 命名空间 / tests。
 - 开发：`uv run omora dev`（内核 + 渲染引擎；`--shell` 连桌面壳；`-v` 看 debug 日志）。
 - 仓库统一 LF；不提交 `.venv/`、`node_modules/`、`dist/`、本地数据。

@@ -1,7 +1,7 @@
 # 协议设计
 
 两个 runtime 之间只有这一条协议。**形状是合同**：写在这里，Python 与 TS 各实现一份，用同一份 fixture 钉住。
-实现它的是 net 插件（见 `app/packages/net/`）；内核不认识帧。
+实现它的是 net 插件（见 `packages/net/`）；内核不认识帧。
 
 ## 0. 先说场景：这是本机 IPC，不是网络
 
