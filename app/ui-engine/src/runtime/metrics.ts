@@ -15,6 +15,8 @@
  *   `totalApplyMs` 累加、`maxApplyMs` 取最大。耗时不在这里量：引擎用注入的 clock 量好
  *   再传进来，所以指标模块不读时钟、测试可以确定性地喂数字。`recordTiming` 不动其余计数。
  * - `renders` 由渲染侧每次重画时调 `count({ renders: 1 })`（引擎的 `noteRender`）累计。
+ * - `localTreeUpdates` 由 `applyLocalTrees` 成功后 `count({ localTreeUpdates: 1 })` 累计；
+ *   整组局部树重新链接算一次，不按树数算。
  * - `snapshot` 是纯数据快照：`version` 由引擎用当前会话版本填（指标模块不认识会话），
  *   `lastDiagnostics` 是副本；调用方改快照不影响计数器。
  * - `reset` 清零全部计数与最近诊断；引擎不主动 reset（宿主 / 开发面板按需调用）。
@@ -31,6 +33,7 @@ export type MetricCounter =
   | "opsCount"
   | "dataUpdates"
   | "fullUpdates"
+  | "localTreeUpdates"
   | "rejections"
   | "notifications"
   | "renders";
@@ -50,6 +53,8 @@ export interface RuntimeMetricsSnapshot {
   dataUpdates: number;
   /** 成功应用的全量替换次数。 */
   fullUpdates: number;
+  /** 成功应用的全量 local-trees 重组次数（整组局部树重新链接成一个根树）。 */
+  localTreeUpdates: number;
   /** 被拒绝的 apply 次数（失败的批量只算一次，不按诊断条数算）。 */
   rejections: number;
   /** 累计诊断条数（每批输入产生的诊断数量相加）。 */
@@ -73,6 +78,7 @@ const COUNTERS: readonly MetricCounter[] = [
   "opsCount",
   "dataUpdates",
   "fullUpdates",
+  "localTreeUpdates",
   "rejections",
   "notifications",
   "renders",
@@ -84,6 +90,7 @@ function zeroCounters(): Record<MetricCounter, number> {
     opsCount: 0,
     dataUpdates: 0,
     fullUpdates: 0,
+    localTreeUpdates: 0,
     rejections: 0,
     notifications: 0,
     renders: 0,
@@ -136,6 +143,7 @@ export class RuntimeMetrics {
       opsCount: this.counters.opsCount,
       dataUpdates: this.counters.dataUpdates,
       fullUpdates: this.counters.fullUpdates,
+      localTreeUpdates: this.counters.localTreeUpdates,
       rejections: this.counters.rejections,
       diagnostics: this.diagnosticCount,
       lastDiagnostics: copyDiagnostics(this.recentDiagnostics),
@@ -153,6 +161,7 @@ export class RuntimeMetrics {
     this.counters.opsCount = 0;
     this.counters.dataUpdates = 0;
     this.counters.fullUpdates = 0;
+    this.counters.localTreeUpdates = 0;
     this.counters.rejections = 0;
     this.counters.notifications = 0;
     this.counters.renders = 0;
