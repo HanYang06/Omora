@@ -1201,3 +1201,47 @@ mark {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* v2 原生容器：把 Slot 的 layout 描述符落成样式。
+   只命中带 data-dendro-layout 的 v2 容器，不改上面任何 v1 规则；
+   flow=none / 没有 layout 的节点不加 flex，保持 div 的自然块流。
+   gap / align / scroll / size 缺省时不写变量，样式回落到 class 自身默认。 */
+
+[data-dendro-layout] {
+  min-width: 0;
+}
+
+[data-dendro-layout][data-flow="row"],
+[data-dendro-layout][data-flow="column"],
+[data-dendro-layout][data-flow="stack"] {
+  display: flex;
+}
+
+[data-dendro-layout][data-flow="row"] {
+  flex-direction: row;
+}
+
+[data-dendro-layout][data-flow="column"],
+[data-dendro-layout][data-flow="stack"] {
+  flex-direction: column;
+}
+
+[data-dendro-layout][data-gap] {
+  gap: var(--dendro-gap, 0);
+}
+
+[data-dendro-layout][data-align] {
+  align-items: var(--dendro-align, stretch);
+}
+
+[data-dendro-layout][data-scroll] {
+  overflow: var(--dendro-overflow, visible);
+}
+
+[data-dendro-layout][data-size-width] {
+  width: var(--dendro-width, auto);
+}
+
+[data-dendro-layout][data-size-height] {
+  height: var(--dendro-height, auto);
+}
