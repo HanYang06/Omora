@@ -1,3 +1,5 @@
+import type { Layout } from "./document";
+
 /**
  * 界面节点与页面快照。形状是合同：Python 的 sdk/ui.py 产出的就是它。
  *
@@ -11,6 +13,11 @@ export interface Node {
   id?: string;
   /** v1.5 加字段：事件名 → handler id；kind 优先读它，再回退 props.on_*。 */
   events?: Record<string, string>;
+  /**
+   * v2 桥加字段：Slot 的 layout 描述符（S3-d）。v1 kind 不读它，
+   * v2 原生 kind 按 layout.flow 决定容器 class；渲染器只当数据搬运。
+   */
+  layout?: Layout;
 }
 
 export type EventHandler = (handler: string, payload?: Record<string, unknown>) => void;
