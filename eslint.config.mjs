@@ -54,7 +54,7 @@ export default tseslint.config(
   },
   {
     name: "omora/shell",
-    files: ["app/shell/**/*.cjs"],
+    files: ["app/ui-engine/shell/**/*.cjs"],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
       sourceType: "commonjs",

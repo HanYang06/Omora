@@ -31,8 +31,8 @@ description: Omora 仓库的开发规范与操作手册。任务落在 Omora 仓
 |---|---|---|
 | 内核：插件加载、服务、消息转发 | `app/core/`（omora-core） | Python |
 | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议 | `app/sdk/`（omora-sdk） | Python |
-| 系统插件：服务或页面（store / media / ui / ideas ...） | `app/packages/<name>/`（omora-plugin-*） | Python |
-| 渲染引擎：组件注册表、槽位、事件 | `app/ui-engine/` | TS |
+| 系统插件：服务或页面（store / media / ui / ideas ...） | `packages/<name>/`（omora-plugin-*） | Python |
+| 渲染引擎 + 桌面壳：组件注册表、槽位、事件；Electron 主进程在 `shell/` | `app/ui-engine/` | TS / JS |
 | 运行后插件（生态） | 待定 | 待定 |
 | 架构与事实来源 | `docs/` | — |
 
@@ -42,7 +42,7 @@ description: Omora 仓库的开发规范与操作手册。任务落在 Omora 仓
 
 ### 加一个系统插件
 
-1. 在 `app/packages/<name>/` 建目录：`pyproject.toml`（name / version / description / dependencies / entry point）、`omora/<name>.py`、`tests/`。
+1. 在 `packages/<name>/` 建目录：`pyproject.toml`（name / version / description / dependencies / entry point）、`omora/<name>.py`、`tests/`。
 2. 入口点写在 pyproject：`[project.entry-points."omora.plugins"] <name> = "omora.<name>:<Class>"`；依赖 `omora-sdk`；版本由 `scripts/sync_version.py` 同步。
 3. 只依赖插件 API（`omora.sdk`）；用 `provide` 登记服务，需要页面就 `ui.page`。
 4. 把名字加进 `app/main.py` 的 `SYSTEM_PLUGINS` 和 `config.ini` 的段。

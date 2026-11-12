@@ -20,8 +20,8 @@
 | ---------------- | ---------------------------------------------- |
 | `app/core/`      | 内核：`omora-core`（workspace member）         |
 | `app/sdk/`       | 插件 API：`omora-sdk`（workspace member）      |
-| `app/packages/`  | 系统插件：`omora-plugin-*`（workspace member） |
-| `app/ui-engine/` | 渲染引擎（TS）                                 |
+| `packages/`      | 系统插件：`omora-plugin-*`（workspace member） |
+| `app/ui-engine/` | 渲染引擎（TS）+ Electron 桌面壳（`shell/`）    |
 | `docs/`          | 事实来源                                       |
 
 Python 侧是一个 uv workspace：一个 lock、一个 venv；每个包有自己的 pyproject / 依赖 / 代码 / tests，import 命名空间是 `omora.*`。
@@ -57,10 +57,10 @@ pnpm install
 
 uv run ruff check .
 uv run ruff format --check .
-uv run pytest --cov=app --cov-report=term-missing
+uv run pytest --cov=app --cov=packages --cov-report=term-missing
 uv run mypy -p omora.cli -p omora.core -p omora.sdk
 
-pnpm exec eslint app/ui-engine/src app/shell/main.cjs
+pnpm exec eslint app/ui-engine/src app/ui-engine/shell/main.cjs
 pnpm exec prettier --check .
 pnpm --dir app/ui-engine exec tsc --noEmit
 pnpm --dir app/ui-engine exec vitest run --coverage

@@ -6,10 +6,10 @@ from typing import Any
 
 from main import SYSTEM_PLUGINS
 
-APP = Path(__file__).resolve().parents[2]
-PACKAGES = APP / "packages"
-CONFIG = APP.parent / "config.ini"
-VERSION = (APP.parent / "VERSION").read_text(encoding="utf-8").strip()
+ROOT = Path(__file__).resolve().parents[3]
+PACKAGES = ROOT / "packages"
+CONFIG = ROOT / "config.ini"
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
 
 def _packages() -> dict[str, dict[str, Any]]:

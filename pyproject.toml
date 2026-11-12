@@ -48,16 +48,16 @@ omora-plugin-requirements = { workspace = true }
 omora-plugin-net = { workspace = true }
 
 [tool.uv.workspace]
-members = ["app/cli", "app/core", "app/sdk", "app/packages/*"]
+members = ["app/cli", "app/core", "app/sdk", "packages/*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["app", "scripts"]
-testpaths = ["app", "scripts"]
+testpaths = ["app", "packages", "scripts"]
 addopts = ["--strict-markers", "--strict-config"]
 filterwarnings = ["error"]
 
 [tool.coverage.run]
-source = ["app"]
+source = ["app", "packages"]
 omit = ["*/tests/*"]
 
 [tool.coverage.report]

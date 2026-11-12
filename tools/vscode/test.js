@@ -22,8 +22,8 @@ const index = JSON.stringify({
     {
       key: "ideas.home.after_capture",
       declared_by: "ideas",
-      declarations: [{ owner: "ideas", path: "app/packages/ideas/omora/ideas.py", line: 42 }],
-      uses: [{ owner: "audio", path: "app/packages/audio/omora/audio.py", line: 7 }],
+      declarations: [{ owner: "ideas", path: "packages/ideas/omora/ideas.py", line: 42 }],
+      uses: [{ owner: "audio", path: "packages/audio/omora/audio.py", line: 7 }],
     },
     {
       key: "om.window.page",
@@ -89,7 +89,7 @@ check("hoverFor 内置键说清楚", () => {
 check("definitionOf 取第一条声明，内置键给 null", () => {
   const keys = lib.parseIndex(index);
   assert.deepEqual(lib.definitionOf(keys[0]), {
-    path: "app/packages/ideas/omora/ideas.py",
+    path: "packages/ideas/omora/ideas.py",
     line: 42,
   });
   assert.equal(lib.definitionOf(keys[1]), null);

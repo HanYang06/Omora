@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PACKAGES = ROOT / "app" / "packages"
+PACKAGES = ROOT / "packages"
 PYTHON_OUT = ROOT / "app" / "sdk" / "omora" / "sdk" / "keys.py"
 TS_OUT = ROOT / "app" / "ui-engine" / "src" / "generated" / "keys.ts"
 INDEX_OUT = ROOT / "keys.json"
@@ -68,10 +68,10 @@ def _relative(path: Path, root: Path) -> str:
 
 
 def owner_of(path: Path, root: Path) -> str:
-    """app/packages/<owner>/... → <owner>；别的地方给 -。"""
+    """packages/<owner>/... → <owner>；别的地方给 -。"""
     parts = _relative(path, root).split("/")
-    if len(parts) >= 3 and parts[0] == "app" and parts[1] == "packages":
-        return parts[2]
+    if len(parts) >= 3 and parts[0] == "packages":
+        return parts[1]
     return "-"
 
 
@@ -110,10 +110,10 @@ def _keyword(call: ast.Call, name: str) -> str | None:
 
 
 def scan(root: Path = ROOT) -> dict[str, Entry]:
-    """扫 app/packages 下的插件源码，返回按键排好的清单。"""
+    """扫 packages 下的插件源码，返回按键排好的清单。"""
     declarations: dict[str, list[Hit]] = {}
     uses: dict[str, list[Hit]] = {}
-    for path in sorted((root / "app" / "packages").rglob("*.py")):
+    for path in sorted((root / "packages").rglob("*.py")):
         if "tests" in path.parts:
             continue
         source = path.read_text(encoding="utf-8")

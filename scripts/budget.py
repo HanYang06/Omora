@@ -31,7 +31,7 @@ SKIP_DIRS = {
 }
 DOC_FILES = ("README.md", "AGENTS.md")
 DOC_ROOT = Path("docs")
-CODE_ROOTS = ("app", "scripts")
+CODE_ROOTS = ("app", "packages", "scripts")
 CODE_SUFFIXES = {".py", ".ts", ".tsx"}
 
 

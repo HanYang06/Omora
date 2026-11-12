@@ -5,7 +5,7 @@
 ## 1. 插件是什么
 
 - 一个对象：`name: str` + `apply(ctx)`。
-- 一个 package：`app/packages/<name>/`，自己的 pyproject、依赖、src、tests。
+- 一个 package：`packages/<name>/`，自己的 pyproject、依赖、src、tests。
 - 按语言分三种形态：Python、TS、混合。各自能碰多深的界面见 `ARCHITECTURE.md` §5.2。
 - `apply` 里只做登记：`ctx.provide(...)`、`ctx.effect(...)`、`ui.page(ctx, ...)`。
 - 插件之间不 import；要说话就按服务名。
@@ -13,7 +13,7 @@
 每个系统插件就是一个 package：
 
 ```
-app/packages/<name>/
+packages/<name>/
   pyproject.toml      # name / version / description / dependencies / entry point / [tool.omora]
   omora/<name>.py     # 插件对象（单文件）
   tests/              # 行为测试
@@ -26,7 +26,7 @@ app/packages/<name>/
 - 版本字段必须有，但由 `scripts/sync_version.py` 从根 `VERSION` 同步，不手写、不单独定版本。
 - 依赖：插件依赖 `omora-sdk`，SDK 依赖 `omora-core`；第三方依赖写在自己的 pyproject。
 - 一个 uv workspace、一个 lock、一个 venv：系统插件一起发，环境不分裂；隔离的是项目边界、依赖声明和测试。单独开发：`uv run --package omora-plugin-ideas pytest`。
-- `app/core/` = `omora-core`，`app/sdk/` = `omora-sdk`，`app/packages/*` = 系统插件；三者都是 workspace member。
+- `app/core/` = `omora-core`，`app/sdk/` = `omora-sdk`，`packages/*` = 系统插件；三者都是 workspace member。
 - 门禁：`app/boot/tests/test_packages.py` 查 package / 入口点 / manifest / config 对齐；`test_version.py` 查版本。
 
 ## 2. 两类插件
@@ -35,7 +35,7 @@ app/packages/<name>/
 
 |            | 系统插件                                                                    | 运行后插件          |
 | ---------- | --------------------------------------------------------------------------- | ------------------- |
-| 位置       | `app/packages/`                                                             | 待定                |
+| 位置       | `packages/`                                                                 | 待定                |
 | 来源       | 随包                                                                        | 单独装              |
 | 开关       | 启动期的配置决定                                                            | 用户装              |
 | 例子       | store、manager、media、ui、audio、video、ideas、projects、requirements、net | —（现在一个都没有） |
@@ -135,7 +135,7 @@ class Media:
 
 |            | audio                            | video                                  |
 | ---------- | -------------------------------- | -------------------------------------- |
-| package    | `app/packages/audio/`            | `app/packages/video/`                  |
+| package    | `packages/audio/`                | `packages/video/`                      |
 | 服务       | `audio`                          | `video`                                |
 | 元数据     | `capabilities = ["microphone"]`  | `capabilities = ["camera"]`            |
 | 配置段     | `[audio]`                        | `[video]`                              |

@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 VERSION_FILE = ROOT / "VERSION"
-PACKAGES = ROOT / "app" / "packages"
+PACKAGES = ROOT / "packages"
 
 VERSION_LINE = re.compile(r'^version = "[^"]*"$', re.MULTILINE)
 

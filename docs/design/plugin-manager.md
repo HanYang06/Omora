@@ -4,7 +4,7 @@
 都走 boot 提供的 `host` 服务；开关存在 store 的 `settings` collection 里，
 `config.ini` 只提供默认值、仍然只读。
 
-位置：`app/packages/manager/`，入口点 `manager = "omora.manager:ManagerPlugin"`。
+位置：`packages/manager/`，入口点 `manager = "omora.manager:ManagerPlugin"`。
 
 ## 1. 边界
 
@@ -132,7 +132,7 @@ manager 通过 ui 插件登记 `plugins` 页（导航标签「插件」）：每
 
 ## 9. 测试
 
-- `app/packages/manager/tests/`：清单、阶段、平台/能力/服务条件、开关持久化、
+- `packages/manager/tests/`：清单、阶段、平台/能力/服务条件、开关持久化、
   卸载清理、设置页、元数据校验。
 - `app/boot/tests/test_boot_manager.py`：boot 顺序、配置只当默认、manager 关掉的降级路径。
 - `app/boot/tests/test_loop.py`：真 WebSocket 上 inventory / 上报 / 开关。

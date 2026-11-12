@@ -188,12 +188,6 @@ importers:
         specifier: ^8.72.2
         version: 8.72.2(eslint@10.14.0)(typescript@6.0.3)
 
-  app/shell:
-    devDependencies:
-      electron:
-        specifier: ^45.2.3
-        version: 45.2.3
-
   app/ui-engine:
     dependencies:
       react:
@@ -227,6 +221,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 5.1.0
         version: 5.1.0(vitest@5.1.0)
+      electron:
+        specifier: ^45.2.3
+        version: 45.2.3
       jsdom:
         specifier: ^31.0.0
         version: 31.0.0

@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "shell": "electron shell/main.cjs"
   },
   "dependencies": {
     "react": "^19.3.1",
@@ -16,6 +17,7 @@
     "wavesurfer.js": "^8.0.5"
   },
   "devDependencies": {
+    "electron": "^45.2.3",
     "@stryker-mutator/core": "^10.1.1",
     "@stryker-mutator/vitest-runner": "^10.1.1",
     "@types/node": "^26.6.6",

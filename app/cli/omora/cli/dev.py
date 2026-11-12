@@ -48,7 +48,7 @@ def _pnpm(*args: str) -> list[str]:
 
 def _electron() -> Path | None:
     """桌面壳的可执行文件；没装就返回 None，别把整条启动链拖死。"""
-    base = ROOT / "app" / "shell" / "node_modules" / "electron" / "dist"
+    base = ROOT / "app" / "ui-engine" / "node_modules" / "electron" / "dist"
     exe = base / ("electron.exe" if sys.platform == "win32" else "electron")
     return exe if exe.exists() else None
 
@@ -219,7 +219,9 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0912, PLR0915 ——
         }
         # 某些编辑器 / CI 会设这个：它让 electron.exe 退化成 node，壳直接起不来
         shell_env.pop("ELECTRON_RUN_AS_NODE", None)
-        shell = _spawn([str(shell_exe), str(ROOT / "app" / "shell")], env=shell_env)
+        shell = _spawn(
+            [str(shell_exe), str(ROOT / "app" / "ui-engine" / "shell" / "main.cjs")], env=shell_env
+        )
         processes.append(("壳", shell))
         threads.append(
             threading.Thread(target=_pump, args=(shell, "[shell]", SHELL_COLOR), daemon=True)
