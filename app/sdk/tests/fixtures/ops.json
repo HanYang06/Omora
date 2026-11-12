@@ -1,0 +1,52 @@
+{
+  "kind": "ops",
+  "document": 17,
+  "base": 16,
+  "seq": 42,
+  "ops": [
+    {
+      "op": "update",
+      "id": "ideas.search",
+      "props": {
+        "value": "录音"
+      }
+    },
+    {
+      "op": "mount",
+      "slot": "ideas.feed",
+      "at": 1,
+      "node": {
+        "id": "ideas.feed#43",
+        "kind": "ideas:card",
+        "owner": "ideas",
+        "props": {
+          "title": "新条目"
+        },
+        "children": []
+      }
+    },
+    {
+      "op": "move",
+      "id": "ideas.feed#7",
+      "slot": "ideas.feed",
+      "at": 0
+    },
+    {
+      "op": "unmount",
+      "id": "ideas.feed#43"
+    },
+    {
+      "op": "replace",
+      "id": "ideas.search",
+      "node": {
+        "id": "ideas.search2",
+        "kind": "dendro:search",
+        "owner": "ideas",
+        "props": {
+          "placeholder": "再搜"
+        },
+        "children": []
+      }
+    }
+  ]
+}
