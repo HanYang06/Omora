@@ -110,4 +110,11 @@
 - **水合**（`src/runtime/hydrate.ts`）：全量文档的 data 投影按 source 物化成集合实例子树，session 可直接渲染。
 - **换页分类**（`src/runtime/page_switch.ts`）：`diffPageTrees(previous, next)` 按 id 给出 keep / move / replace / cancel / add（live 子树；templates 不参与）。
 - **集成验证**（`src/dom/v2/spike.test.ts`）：fixture → session → 水合 → 渲染；数据更新/全量替换后同 id 元素复用；换页分类 + 渲染切页。
-- **未接**：跨父 move 的 DOM 复用（renderer 只在同父按 id 协调）、v2 路径进 `dom/app.ts`、layout 的 size/gap/align 进样式、路由参数。
+- **S3-e 已补**：跨父 move 的 DOM 复用（renderer 跨渲染按 key 索引复用元素）、`?engine=v2` 预览入口。仍未接：v2 路径替换 `dom/app.ts` 的 v1 会话、layout 的 size/gap/align 进样式、路由参数。
+
+## 12. S3-e 实现（已落）
+
+- **跨父 move**（`src/dom/renderer.ts`）：跨渲染 key 索引 + 两阶段（构建/复用 → 统一 arrange → 销毁未认领旧条目）；同 id+type 换父复用元素，移动/保留的条目不跑 cleanup；换页保留实例由 `renderer_move.test.ts` 用共享 v2 文档 + `applyFull` 验证。
+- **v2 预览**（`src/dom/v2/preview.ts` + `preview_document.ts`）：`?engine=v2` 时动态 import 独立 chunk，跑内置 v2 文档的 session/水合/渲染/切页/数据更新；v1 仍是默认入口。
+- **生命周期账本原语**（`src/runtime/lifecycle.ts`，S4 预落）：逆序清理、错误隔离、幂等、dispose 后 add fail-safe；尚未接运行时。
+- **未接**：v2 会话替换主入口、layout 样式、S4 的权限/观测、渲染层局部状态与媒体清理接线。
