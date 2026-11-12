@@ -3,9 +3,19 @@
  *
  * 纯函数：不改进参。有 error 诊断就不产树（原子）。多轮解析：落点可能由另一棵
  * 局部树引入；排序与去重只依赖声明内容，与到达顺序无关。
+ *
+ * 链接期权限（S4）：attach 前逐棵检查目标 slot 的 `mount` / `replace` 能力
+ * （`permissions.md` §4「组合/链接期」）；越权 → `E-PERMISSION`，整次链接失败、
+ * 不产树。默认无 options = 系统来源，现有 fixture 与构建门禁行为不变。
+ *
+ * 检查器复用 `runtime/permissions.ts` 的 `can` / `SYSTEM_REQUESTER`，grant token
+ * 求值只有一份实现，不在 link 里复制。runtime 对 link 的依赖只有 `link/types.ts`
+ * 且全是 `import type`（编译期擦除），所以 link 反向 import 运行期模块不构成 ESM
+ * 模块环；`Requester` 形状另定义在 `link/types.ts`，与 runtime 的同名接口结构一致。
  */
 
 import type { Capacity, SlotNode } from "../core/document";
+import { can, SYSTEM_REQUESTER, type Capability } from "../runtime/permissions";
 import { collectIds, makeDiagnostic, parseLocalTrees, sortDiagnostics } from "./parse";
 import {
   assignDepths,
@@ -15,7 +25,14 @@ import {
   unindex,
   validateRoot,
 } from "./tree_index";
-import type { Diagnostic, LinkResult, LocalTree, LocalTreesPayload } from "./types";
+import type {
+  Diagnostic,
+  LinkOptions,
+  LinkResult,
+  LocalTree,
+  LocalTreesPayload,
+  Requester,
+} from "./types";
 
 interface Mount {
   tree: LocalTree;
@@ -41,8 +58,12 @@ function compareMounts(left: Mount, right: Mount): number {
   return compareText(left.tree.root.id, right.tree.root.id);
 }
 
-/** 链接：先校验形状（payload + base），再跨树链接；失败只回诊断。 */
-export function link(base: SlotNode, payload: unknown): LinkResult {
+/**
+ * 链接：先校验形状（payload + base），再跨树链接；失败只回诊断。
+ *
+ * `options.requesterFor` 不给 = 系统来源，行为与 S2 完全一致（全放行）。
+ */
+export function link(base: SlotNode, payload: unknown, options: LinkOptions = {}): LinkResult {
   const baseDiagnostic = validateRoot(base, "$.base");
   if (baseDiagnostic !== undefined) {
     return { ok: false, diagnostics: [baseDiagnostic] };
@@ -51,10 +72,10 @@ export function link(base: SlotNode, payload: unknown): LinkResult {
   if (!parsed.ok) {
     return { ok: false, diagnostics: parsed.diagnostics };
   }
-  return linkParsed(base, parsed.payload);
+  return linkParsed(base, parsed.payload, options);
 }
 
-function linkParsed(base: SlotNode, payload: LocalTreesPayload): LinkResult {
+function linkParsed(base: SlotNode, payload: LocalTreesPayload, options: LinkOptions): LinkResult {
   const diagnostics: Diagnostic[] = [];
   const trees = payload.trees;
   const tree = structuredClone(base);
@@ -261,20 +282,52 @@ function linkParsed(base: SlotNode, payload: LocalTreesPayload): LinkResult {
     }
   });
 
+  /**
+   * 链接期权限检查：replace 挂载要目标 slot 的 replace 能力，普通挂载要 mount。
+   *
+   * 检查器复用 runtime/permissions 的 `can`（grant token 求值只有一份实现），这里
+   * 只挑检查对象、造 E-PERMISSION 诊断：现场 owner 记局部树 owner，slot 记 mountAt。
+   * 返回 true = 本槽有越权挂载，整次链接必须失败。
+   */
+  const checkMountPermissions = (target: SlotNode, mounts: readonly Mount[]): boolean => {
+    let denied = false;
+    for (const mount of mounts) {
+      const capability: Capability = mount.tree.replace ? "replace" : "mount";
+      const requester: Requester = options.requesterFor?.(mount.tree) ?? SYSTEM_REQUESTER;
+      if (can(target, capability, requester)) {
+        continue;
+      }
+      denied = true;
+      diagnostics.push(
+        makeDiagnostic(
+          "E-PERMISSION",
+          `来源 ${mount.tree.owner} 没有 slot ${target.id} 的 ${capability} 能力（requester ${requester.owner}）`,
+          { owner: mount.tree.owner, slot: mount.tree.mountAt },
+        ),
+      );
+    }
+    return denied;
+  };
+
   const attachedSlots = new Set<string>();
-  const attachSlot = (slot: string): void => {
+  /** attach 一个槽；返回 true = 权限拒绝，调用方立即让整次链接失败。 */
+  const attachSlot = (slot: string): boolean => {
     if (attachedSlots.has(slot)) {
-      return;
+      return false;
     }
     attachedSlots.add(slot);
     const mounts = mountsBySlot.get(slot);
     if (mounts === undefined) {
-      return;
+      return false;
     }
     const target = workingIndex.get(slot);
     if (target === undefined) {
       diagnostics.push(makeDiagnostic("E-TARGET-MISSING", `落点不存在: ${slot}`, { slot }));
-      return;
+      return false;
+    }
+    // 权限在结构检查（落点/歧义/replace 独占）之后、改树之前：越权整次链接失败。
+    if (checkMountPermissions(target, mounts)) {
+      return true;
     }
     const replacement = mounts.find((mount) => mount.tree.replace);
     if (replacement !== undefined) {
@@ -286,20 +339,24 @@ function linkParsed(base: SlotNode, payload: LocalTreesPayload): LinkResult {
       if (replacementRoot !== undefined) {
         indexNode(replacementRoot, workingIndex);
       }
-      return;
+      return false;
     }
     for (const mount of mounts) {
       const root = structuredClone(mount.tree.root);
       target.children.push(root);
       indexNode(root, workingIndex);
     }
+    return false;
   };
   const slotOrder = [...mountsBySlot.keys()].sort((left, right) => {
     const byDepth = (depths.get(left) ?? 0) - (depths.get(right) ?? 0);
     return byDepth !== 0 ? byDepth : compareText(left, right);
   });
   for (const slot of slotOrder) {
-    attachSlot(slot);
+    // 越权立即失败：父槽没挂上会派生出依赖它的 E-TARGET-MISSING 噪声。
+    if (attachSlot(slot)) {
+      return failure(diagnostics);
+    }
   }
   if (diagnostics.length > 0) {
     return failure(diagnostics);
