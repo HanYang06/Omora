@@ -60,5 +60,5 @@ node tools/vscode/test.js
 ## 5. 边界与后续
 
 - 没有实际弹出 Electron 窗口做人工验证；壳的路径解析、依赖归位和 lint 已验证。
-- 运行后插件目录、TS 插件宿主、页面写作模型仍按 [UI 引擎子系统升级](../design/ui-engine-subsystem.md) 的 P0 阶段处理。
+- 运行后插件目录、TS 插件宿主、页面写作模型仍按 `docs/design/ui-engine-subsystem.md`（提案）的 P0 阶段处理。
 - 迁移在 `refactor/repo-layout` 分支提交；PR 合并后本文作为历史记录保留。
