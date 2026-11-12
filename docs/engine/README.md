@@ -49,24 +49,26 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 本文档集按“一个概念一个家”拆；状态见下表。
 
-| 文档                             | 负责什么                                                 | 状态   |
-| -------------------------------- | -------------------------------------------------------- | ------ |
-| `README.md`                      | 索引、定位、命名、术语、实现状态                         | 已写   |
-| `decisions/0001-name.md`         | 命名决定与影响                                           | 已写   |
-| [contract.md](contract.md)       | Slot 原语、字段、schema、版本、kind 注册                 | 已写   |
-| [addressing.md](addressing.md)   | id 规则、三张索引、更新集合、全寻址 vs 可介入            | 已写   |
-| [structure.md](structure.md)     | window/page/layer/layout、页面切换的按 id 协调           | 已写   |
-| [rules.md](rules.md)             | 触发 × 效果闭集、数据输入、规则索引                      | 已写   |
-| [collection.md](collection.md)   | 集合绑定、模板、keyed reconcile、条目实例 id             | 已写   |
-| [composition.md](composition.md) | 局部树、编译/链接、顺序模型、诊断、root tree 归属        | 已写   |
-| [updates.md](updates.md)         | 三种更新、事务、版本、兜底、重同步                       | 已写   |
-| [permissions.md](permissions.md) | 能力 × 主体、默认分层、检查点、非安全边界                | 已写   |
-| [runtime.md](runtime.md)         | 引擎分层、生命周期账本、失败隔离、诊断面板               | 已写   |
-| [components.md](components.md)   | 组件词表、schema 单一来源、authoring API 与 wire 形态    | 已写   |
-| [wire.md](wire.md)               | 引擎 payload 形状；帧/传输仍归 `docs/design/protocol.md` | 已写   |
-| [testing.md](testing.md)         | 九条不变量、fixture、编译诊断测试、集合等价测试          | 已写   |
-| [migration.md](migration.md)     | v1→v2、兼容层、S0–S5、旧文档去向                         | 已写   |
-| [archive/](archive/)             | 已退役的提案与旧设计                                     | 已退役 |
+| 文档                                      | 负责什么                                                 | 状态   |
+| ----------------------------------------- | -------------------------------------------------------- | ------ |
+| `README.md`                               | 索引、定位、命名、术语、实现状态                         | 已写   |
+| `decisions/0001-name.md`                  | 命名决定与影响                                           | 已写   |
+| `decisions/0002-no-react-dom-renderer.md` | 移除 React、渲染层直写 DOM 的决定                        | 已接受 |
+| [contract.md](contract.md)                | Slot 原语、字段、schema、版本、kind 注册                 | 已写   |
+| [addressing.md](addressing.md)            | id 规则、三张索引、更新集合、全寻址 vs 可介入            | 已写   |
+| [structure.md](structure.md)              | window/page/layer/layout、页面切换的按 id 协调           | 已写   |
+| [rules.md](rules.md)                      | 触发 × 效果闭集、数据输入、规则索引                      | 已写   |
+| [collection.md](collection.md)            | 集合绑定、模板、keyed reconcile、条目实例 id             | 已写   |
+| [composition.md](composition.md)          | 局部树、编译/链接、顺序模型、诊断、root tree 归属        | 已写   |
+| [updates.md](updates.md)                  | 三种更新、事务、版本、兜底、重同步                       | 已写   |
+| [permissions.md](permissions.md)          | 能力 × 主体、默认分层、检查点、非安全边界                | 已写   |
+| [runtime.md](runtime.md)                  | 引擎分层、生命周期账本、失败隔离、诊断面板               | 已写   |
+| [renderer.md](renderer.md)                | 渲染层：Kind 接口、DOM 协调、测试约定                    | 已写   |
+| [components.md](components.md)            | 组件词表、schema 单一来源、authoring API 与 wire 形态    | 已写   |
+| [wire.md](wire.md)                        | 引擎 payload 形状；帧/传输仍归 `docs/design/protocol.md` | 已写   |
+| [testing.md](testing.md)                  | 九条不变量、fixture、编译诊断测试、集合等价测试          | 已写   |
+| [migration.md](migration.md)              | v1→v2、兼容层、S0–S5、旧文档去向                         | 已写   |
+| [archive/](archive/)                      | 已退役的提案与旧设计                                     | 已退役 |
 
 旧草案（`docs/design/ui-tree.md`）已拆入本系列并删除。
 
@@ -97,6 +99,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 | 权限     | 无                                                              | 能力 × 主体                     | 设计概念，格式先留      |
 | 生命周期 | Python `ctx.effect`；TS 无账本                                  | 引擎级挂载/卸载账本             | 已定未实现              |
 | 组件词表 | 38 个 kind，Python/TS 两处手写                                  | schema 单一来源 + 代码生成      | 已定未实现              |
+| 渲染层   | React 组件                                                      | DOM kind 词表（ADR-0002）       | 迁移中                  |
 
 ## 7. 术语
 
