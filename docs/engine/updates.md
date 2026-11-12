@@ -103,3 +103,11 @@
 - **route**（`src/runtime/session.ts` + `ops.ts`）：ops 批量可含 `{op:"route", page, params?}`；`applySessionOps` 先校验目标页存在（不存在 E-TARGET-MISSING，整批不生效），再复用树 op 的原子应用，最后设置 active；版本只涨一次，route 不进 `changed`；`params` 只做形状校验，页面参数消费留给渲染/路由层。
 - **跨语言**：Python `omora.sdk.update.RouteOp` 与共享 `app/sdk/tests/fixtures/route.json`。
 - **未接**：渲染层（换页按 id 协调）、页面参数、灵感页 spike；`applyOps`（DocumentState 层）本身仍拒绝 route，route 必须走 session。
+
+## 11. S3-d 实现（spike，已落）
+
+- **渲染接入**（`src/dom/v2/`）：v2 SlotNode 经 `slotToNode` 薄桥 + `v2Registry`（`dendro:<v1 type>` 别名 / 宿主别名 / v2 原生结构 kind）交给现有 DOM renderer；不迁移 38 个 kind。
+- **水合**（`src/runtime/hydrate.ts`）：全量文档的 data 投影按 source 物化成集合实例子树，session 可直接渲染。
+- **换页分类**（`src/runtime/page_switch.ts`）：`diffPageTrees(previous, next)` 按 id 给出 keep / move / replace / cancel / add（live 子树；templates 不参与）。
+- **集成验证**（`src/dom/v2/spike.test.ts`）：fixture → session → 水合 → 渲染；数据更新/全量替换后同 id 元素复用；换页分类 + 渲染切页。
+- **未接**：跨父 move 的 DOM 复用（renderer 只在同父按 id 协调）、v2 路径进 `dom/app.ts`、layout 的 size/gap/align 进样式、路由参数。

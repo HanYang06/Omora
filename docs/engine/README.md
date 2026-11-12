@@ -85,7 +85,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 ## 6. 实现状态（与代码的差距）
 
-文档写的是**契约**，不是现状说明书。当前代码是 v1 契约 + DOM 渲染器 + v2 链接器/运行时核心：490 条 Python 测试、577 条 TS 测试全绿，但离本文的模型还有距离。
+文档写的是**契约**，不是现状说明书。当前代码是 v1 契约 + DOM 渲染器 + v2 链接器/运行时核心：490 条 Python 测试、622 条 TS 测试全绿，但离本文的模型还有距离。
 
 | 能力     | 代码现状（v1）                                                  | 目标                            | 状态                       |
 | -------- | --------------------------------------------------------------- | ------------------------------- | -------------------------- |
@@ -138,7 +138,9 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 > S3-b 已落：`src/runtime/data.ts` 的 data router（revision 幂等、集合全量/增量、changed），`sdk/data.py` + 共享 `data.json`。
 
-> S3-c 已落：标量 `in`/`bind` 绑定（`data_bind.ts`）、Session/pages/active、route op 与全量替换（`session.ts`），`sdk/update.py` 的 RouteOp + 共享 `route.json`。渲染接入（换页按 id 协调）、页面参数、灵感页 spike 待 S3-d。
+> S3-c 已落：标量 `in`/`bind` 绑定（`data_bind.ts`）、Session/pages/active、route op 与全量替换（`session.ts`），`sdk/update.py` 的 RouteOp + 共享 `route.json`。
+
+> S3-d 已落：`src/dom/v2/`（Slot→DOM 薄桥 + 命名空间别名 + v2 原生结构 kind）、`runtime/hydrate.ts`、`runtime/page_switch.ts` 与 fixture→DOM 集成 spike。数据更新/全量替换不重挂已验证；跨父 move 复用、v2 接主入口、layout 样式待续。
 
 | S3 | 索引 + 三种更新 + 集合绑定；灵感页 spike | 数据更新不重挂；换页协调正确 |
 | S4 | 权限薄层 + 生命周期账本 + 观测指标 | 越权拒绝；卸载零残留 |

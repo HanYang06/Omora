@@ -142,11 +142,25 @@ src/compiler/vite-plugin.ts     Vite adapter：只决定何时编译、注进哪
 - 两道门禁：`static_ui.py --check` 查骨架数据是否最新；`skeleton_html.py` 查构建产物确实带编译后的 HTML（CI build job）。
 - `vite.config.ts` import 了引擎源码，所以 `dev/build/test/preview` 统一带 `--configLoader runner`（`omora dev` 同步）；bundle loader 会把整张引擎模块图打进配置并报无扩展名 import 警告。
 
-## 10. 验收
+## 10. v2 Slot → DOM（S3-d spike，已落）
+
+v2 文档/运行时产出的是 `SlotNode`，现有 DOM renderer 只认 v1 `Node` 词表。S3-d 先用**薄桥 + 命名空间别名**把 v2 接上，不迁移 38 个 kind 的实现：
+
+- `src/dom/v2/bridge.ts`：`slotToNode` 只做形状搬运——`type = slot.kind`（保留命名空间），复制 id/props/children/events/layout；不展开 `collection.templates`（模板不是挂载节点，实例化归运行时）。
+- `src/dom/v2/registry.ts`：`v2Registry` = 所有 v1 type 的 `dendro:<type>` 别名 + 宿主别名（`ideas:card` → v1 `card`）+ v2 原生 kind；v2 原生 kind 后合并，同名时 v2 语义优先。
+- `src/dom/v2/kinds.ts`：v2 原生结构 kind（`dendro:window/page/slot/layer` 按 `layout.flow` 映射到现有 `.omora-row`/`.omora-column` class）与 `dendro:page-link`（复用壳层导航按钮样式，事件走 `handlerOf` + `ctx.event`）。
+- `Node` 增加可选 `layout` 字段；`kind` 语义由注册表决定，renderer 协调逻辑不变。
+
+**已证明**（`src/dom/v2/spike.test.ts`，共享 `document.json`）：session → 水合 → 桥 → DOM 渲染出母页面/导航/卡片；纯数据更新后同 id 卡片复用同一 DOM 元素、只改标题并新增一条；全量替换同 id 文档不重挂。换页用 `runtime/page_switch.ts` 的 `diffPageTrees` 分类出 keep/move/replace/cancel/add。
+
+**未接**：renderer 目前只在同一个父节点下按 id 协调，跨父的 `move` 会重建元素（换页移动的身份保留待补）；v2 桥还没有接进 `dom/app.ts` / 主入口，v1 页面仍走 v1 路径；`layout` 的 size/gap/align 还没落到样式。
+
+## 11. 验收
 
 - [x] 38 个 kind 全部有 DOM 实现与测试（`registry.test.ts` 钉住覆盖）；
 - [x] React 依赖与 React 文件删除；`index.html` 入口切到 DOM；
 - [x] 启动骨架由 Vite 在构建期编译进 `index.html`，产物门禁 `scripts/skeleton_html.py` 通过；
 - [x] `tsc` / eslint / prettier / vitest / vite build 全绿；
 - [ ] 首帧 hydration（复用预渲染 DOM，不重建）；
+- [x] v2 SlotNode 经薄桥 + 命名空间别名直接渲染（spike；跨父 move 复用未接）；
 - [ ] 灵感页三栏、搜索、捕捉、设置页的人工/端到端走查（下一阶段随 e2e 一起补）。
