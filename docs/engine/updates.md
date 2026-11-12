@@ -1,6 +1,6 @@
 # 更新：三种输入粒度
 
-> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed），纯数据更新与运行时接入待 S3-b。
+> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed）；S3-b 已落纯数据更新（data router：revision 幂等 + 集合全量/增量 + changed）。标量→props 绑定、全量文档会话接线与渲染接入仍未做。
 > 依赖：[addressing.md](addressing.md) · [composition.md](composition.md)
 > 相关：[collection.md](collection.md) · `runtime.md`（待写） · `testing.md`（待写）
 
@@ -86,3 +86,12 @@
 - **op 语义**：`update`（props 浅合并）、`mount`（at 缺省尾部，越界夹取；容量/重复 id 校验）、`move`（先删后插、成环 `E-CYCLE`）、`unmount`（根不可卸）、`replace`（原位、新 id 可换）。模板节点可 update 内容，结构操作返回 `E-PAYLOAD`（位置由 templates 命名表决定）。
 - **跨语言**：Python `omora.sdk.update.serialize_ops` 产出同一形状，两侧共用 `app/sdk/tests/fixtures/ops.json`。
 - **未接**：纯数据更新（data router / 集合）、`route`、渲染层（v1 仍走 `render/patch.ts`）、全量更新与运行时会话接线。
+
+## 9. S3-b 实现（已落）
+
+- **data router**（`app/ui-engine/src/runtime/data.ts`）：`parseData` 校验 `{kind:"data", owner, source, revision, value|items|changes}`；`applyData(document, data, payload)` 纯函数、原子（信封非法 `ok:false`，文档与 data 都不变；坏条目按集合契约 `ok:true` + 诊断）。
+- **幂等**：每个 source 记住 `revision`；`payload.revision <= 当前 revision` 直接 no-op（changed/诊断为空）。文档版本不动（数据 revision 独立）。
+- **集合**：按 `DocumentIndex.slotsFor(source)` 找 `collection.source === source` 的 slot；`items` 全量走 `instantiateCollection`，`changes` 走 `applyCollectionChanges`；替换 slot 保持原位/原 id，替换后重建索引；多个消费者共同更新，`changed` 是集合 slot id。
+- **标量**：只写 `data[source].value`；标量到 props 的绑定（`in`/`bind` 解析）还没做，changed 为空。
+- **跨语言**：Python `omora.sdk.data.serialize_data_updates` 产出同一形状，两侧共用 `app/sdk/tests/fixtures/data.json`。
+- **未接**：标量绑定、权限/归属校验、全量文档与运行时会话、渲染层、灵感页 spike。

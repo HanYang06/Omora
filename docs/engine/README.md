@@ -85,7 +85,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 ## 6. 实现状态（与代码的差距）
 
-文档写的是**契约**，不是现状说明书。当前代码是 v1 契约 + DOM 渲染器 + v2 链接器/运行时核心：432 条 Python 测试、533 条 TS 测试全绿，但离本文的模型还有距离。
+文档写的是**契约**，不是现状说明书。当前代码是 v1 契约 + DOM 渲染器 + v2 链接器/运行时核心：482 条 Python 测试、553 条 TS 测试全绿，但离本文的模型还有距离。
 
 | 能力     | 代码现状（v1）                                                  | 目标                            | 状态                       |
 | -------- | --------------------------------------------------------------- | ------------------------------- | -------------------------- |
@@ -134,7 +134,9 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 > S2 第一版已落：`app/ui-engine/src/link/`（v2 局部树 → 权威根树 + 诊断）、`sdk/local_tree.py`、共享 fixture 与 `vite build` 门禁。`static_ui.py` 升级、运行时接入与按 kind schema 待后续。
 
-> S3-a 已落：`app/ui-engine/src/runtime/` 的文档状态/三张索引、局部树 ops（原子/版本/changed）、集合绑定原语，`sdk/update.py` + 共享 `ops.json`。纯数据更新、`route`、渲染接入、灵感页 spike 待 S3-b。
+> S3-a 已落：`app/ui-engine/src/runtime/` 的文档状态/三张索引、局部树 ops（原子/版本/changed）、集合绑定原语，`sdk/update.py` + 共享 `ops.json`。
+
+> S3-b 已落：`src/runtime/data.ts` 的 data router（revision 幂等、集合全量/增量、changed），`sdk/data.py` + 共享 `data.json`。标量绑定、`route`、全量文档会话、渲染接入、灵感页 spike 待 S3-c。
 
 | S3 | 索引 + 三种更新 + 集合绑定；灵感页 spike | 数据更新不重挂；换页协调正确 |
 | S4 | 权限薄层 + 生命周期账本 + 观测指标 | 越权拒绝；卸载零残留 |
