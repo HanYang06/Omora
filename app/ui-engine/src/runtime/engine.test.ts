@@ -114,6 +114,7 @@ describe("createEngine：接管共享文档并水合", () => {
       opsCount: 0,
       dataUpdates: 0,
       fullUpdates: 0,
+      localTreeUpdates: 0,
       rejections: 0,
       diagnostics: 0,
       lastDiagnostics: [],

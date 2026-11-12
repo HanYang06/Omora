@@ -1,6 +1,6 @@
 # 更新：三种输入粒度
 
-> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed）；S3-b 已落纯数据更新（data router：revision 幂等 + 集合全量/增量 + changed）；S3-c 已落标量绑定（in/bind → props）、会话层 route 执行与全量文档替换。渲染接入、页面协商与灵感页 spike 仍未做。
+> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed）；S3-b 已落纯数据更新（data router：revision 幂等 + 集合全量/增量 + changed）；S3-c 已落标量绑定（in/bind → props）、会话层 route 执行与全量文档替换；S4 已落 EngineRuntime.applyLocalTrees（全部局部树重新链接 → 替换树 → 水合），全量更新在引擎内闭环。渲染接入、页面协商与灵感页 spike 仍未做（v2 为预览）。
 > 依赖：[addressing.md](addressing.md) · [composition.md](composition.md)
 > 相关：[collection.md](collection.md) · `runtime.md`（待写） · `testing.md`（待写）
 
@@ -118,3 +118,10 @@
 - **v2 预览**（`src/dom/v2/preview.ts` + `preview_document.ts`）：`?engine=v2` 时动态 import 独立 chunk，跑内置 v2 文档的 session/水合/渲染/切页/数据更新；v1 仍是默认入口。
 - **生命周期账本原语**（`src/runtime/lifecycle.ts`，S4 预落）：逆序清理、错误隔离、幂等、dispose 后 add fail-safe；尚未接运行时。
 - **未接**：v2 会话替换主入口、layout 样式、S4 的权限/观测、渲染层局部状态与媒体清理接线。
+
+## 13. S4 local-trees 全量更新（已落）
+
+- **引擎入口**：`EngineRuntime.applyLocalTrees(payload)` —— 用 `link(WINDOW_SCAFFOLD, payload, requesterFor)` 重新编译全部局部树；成功后替换会话树、版本 +1、用当前 data 水合集合实例，记 `localTreeUpdates` 指标/审计并通知；链接或水合失败原子拒绝。
+- **页面侧表**：local-trees payload 不含 pages/active，本次保留当前会话的 pages/active/data（文件与文档都写明；页面侧表上线形状待补）。
+- **权限**：引擎带 requester 时通过 `requesterFor` 交给链接期检查；受限来源 `E-PERMISSION` 拒绝。
+- **来源宿主**：`SourceHost` 仍是独立模块（注册/级联），尚未接网络帧/热更新；`applyLocalTrees` 是线上全量负载的直接入口。
