@@ -1,0 +1,145 @@
+{
+  "kind": "local-trees",
+  "seq": 3,
+  "trees": [
+    {
+      "owner": "ideas",
+      "mountAt": "dendro.window.page",
+      "order": 10,
+      "seq": 1,
+      "root": {
+        "id": "page.ideas",
+        "kind": "dendro:page",
+        "owner": "ideas",
+        "props": {
+          "label": "灵感",
+          "icon": "ideas"
+        },
+        "layout": {
+          "flow": "column",
+          "capacity": "many"
+        },
+        "children": [
+          {
+            "id": "ideas.toolbar",
+            "kind": "dendro:slot",
+            "owner": "ideas",
+            "props": {},
+            "layout": {
+              "flow": "row",
+              "capacity": "many",
+              "gap": "sm"
+            },
+            "children": [
+              {
+                "id": "ideas.search",
+                "kind": "dendro:search",
+                "owner": "ideas",
+                "props": {
+                  "placeholder": "搜索"
+                },
+                "events": {
+                  "query": "h0"
+                },
+                "children": []
+              },
+              {
+                "id": "ideas.new",
+                "kind": "dendro:button",
+                "owner": "ideas",
+                "props": {
+                  "text": "新建",
+                  "variant": "primary"
+                },
+                "events": {
+                  "click": "h1"
+                },
+                "reactions": [
+                  {
+                    "on": {
+                      "event": "click"
+                    },
+                    "do": [
+                      {
+                        "effect": "route",
+                        "page": "page.ideas"
+                      }
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "ideas.feed",
+            "kind": "dendro:slot",
+            "owner": "ideas",
+            "props": {},
+            "layout": {
+              "flow": "column",
+              "capacity": "many"
+            },
+            "in": [
+              {
+                "source": "ideas.feed"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "owner": "dendro",
+      "mountAt": "dendro.window.nav",
+      "order": 10,
+      "seq": 1,
+      "root": {
+        "id": "nav.ideas",
+        "kind": "dendro:page-link",
+        "owner": "dendro",
+        "props": {
+          "label": "灵感",
+          "icon": "ideas"
+        },
+        "events": {
+          "click": "h2"
+        },
+        "children": []
+      }
+    },
+    {
+      "owner": "ideas",
+      "mountAt": "ideas.feed",
+      "order": 20,
+      "seq": 2,
+      "root": {
+        "id": "ideas.feed#42",
+        "kind": "ideas:card",
+        "owner": "ideas",
+        "props": {
+          "title": "买牛奶",
+          "meta": "刚刚"
+        },
+        "children": []
+      }
+    },
+    {
+      "owner": "audio",
+      "mountAt": "ideas.feed",
+      "order": 30,
+      "seq": 1,
+      "root": {
+        "id": "ideas.feed#7",
+        "kind": "ideas:card",
+        "owner": "audio",
+        "props": {
+          "title": "录音",
+          "meta": "3 秒"
+        },
+        "children": []
+      }
+    }
+  ]
+}
