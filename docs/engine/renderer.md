@@ -1,6 +1,6 @@
 # 渲染层：DOM renderer
 
-> 状态：**已定未实现**。React 移除与 DOM 直写的决策见 [ADR-0002](decisions/0002-no-react-dom-renderer.md)。
+> 状态：**已落**。React 已移除，38 个 kind 有 DOM 实现与测试；决策见 [ADR-0002](decisions/0002-no-react-dom-renderer.md)。
 > 本文定义 kind 接口、renderer 协调规则、测试约定；实现落在 `app/ui-engine/src/dom/`。
 
 ## 0. 一句话
@@ -114,18 +114,19 @@ renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, nod
 
 `registry.ts` 负责汇总这五个 map；各组只改自己的文件，避免冲突。
 
-## 8. 迁移映射
+## 8. 迁移记录
 
-React 文件只作为“当前行为与 markup 的参考”，不修改：
+React 渲染层已删除；剩下的是框架无关的纯模块与 DOM 实现：
 
-- `render/components.tsx` + `controls/*` + `cards/tiles/icons/waveform` → 对应 kind；
-- `capture/*` hooks → media kind 内部的控制器；
-- `search/search.tsx` → nav kind；
-- `shell/shell.tsx` → `dom/shell.ts`（Lead 负责）；
-- `app.tsx/main.tsx` → `dom/app.ts` + `main.ts`（Lead 负责）。
+- `render/components.tsx` / `controls/*` / `cards/tiles/icons/waveform` → 已迁成 `kinds/*` 后删除；
+- `capture/*` React hooks → 已迁成 media kind 内部控制器后删除；保留 `devices / capture-rules / media-upload / video-quality` 纯规则；
+- `search/search.tsx` → `kinds/search.ts`；保留 `searchText.ts`；
+- `shell/shell.tsx` → `dom/shell.ts`；
+- `app.tsx/main.tsx` → `dom/app.ts` + `dom/main.ts`，`index.html` 入口已切到后者。
 
 ## 9. 验收
 
-- 38 个 kind 全部有 DOM 实现与测试；
-- 灵感页三栏、搜索、捕捉、设置页在 DOM renderer 下行为一致；
-- 删除 React 依赖与 React 文件；`tsc` / eslint / prettier / vitest 全绿。
+- [x] 38 个 kind 全部有 DOM 实现与测试（`registry.test.ts` 钉住覆盖）；
+- [x] React 依赖与 React 文件删除；`index.html` 入口切到 DOM；
+- [x] `tsc` / eslint / prettier / vitest / vite build 全绿；
+- [ ] 灵感页三栏、搜索、捕捉、设置页的人工/端到端走查（下一阶段随 e2e 一起补）。

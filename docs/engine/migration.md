@@ -24,6 +24,8 @@
 
 > S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/core/document.ts` 的 v2 Slot/Document 契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
 
+> 渲染层迁移（ADR-0002）已落：React 已删除；38 个 kind 有 DOM 实现与 jsdom 测试；`index.html` 入口切到 `src/dom/main.ts`；Vite 不再编译 React。下一步是把静态骨架编译接进 Vite。
+
 ## 2. 兼容策略
 
 - **v1.5 加字段**：节点允许新增 `id / events / layout / reactions / collection / grant`，旧 `{type, props, children}` 仍可读；渲染器优先新字段，回退旧路径。

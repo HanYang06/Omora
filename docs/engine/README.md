@@ -99,7 +99,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 | 权限     | 无                                                              | 能力 × 主体                     | 设计概念，格式先留      |
 | 生命周期 | Python `ctx.effect`；TS 无账本                                  | 引擎级挂载/卸载账本             | 已定未实现              |
 | 组件词表 | 38 个 kind，Python/TS 两处手写                                  | schema 单一来源 + 代码生成      | 已定未实现              |
-| 渲染层   | React 组件                                                      | DOM kind 词表（ADR-0002）       | 迁移中                  |
+| 渲染层   | DOM kind 词表 + DomRenderer（React 已删除）                     | 同左，38 个 kind 全覆盖         | 已落                    |
 
 ## 7. 术语
 
