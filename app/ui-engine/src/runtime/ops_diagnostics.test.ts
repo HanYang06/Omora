@@ -95,7 +95,7 @@ describe("parseOps：E-PAYLOAD 形状校验（不抛）", () => {
 
   it.each([
     ["op 非对象", [1]],
-    ["未知 op", [{ op: "route", page: "x" }]],
+    ["未知 op", [{ op: "navigate", page: "x" }]],
     ["update 缺 props", [{ op: "update", id: "x" }]],
     ["update id 为空", [{ op: "update", id: "", props: {} }]],
     ["mount 缺 slot", [{ op: "mount", node: node({ id: "x" }) }]],
@@ -110,6 +110,60 @@ describe("parseOps：E-PAYLOAD 形状校验（不抛）", () => {
     expect(parseErrors(payload({ ops })).map((diagnostic) => diagnostic.code)).toEqual([
       "E-PAYLOAD",
     ]);
+  });
+
+  it("route op 解析：page 必填、params 可选对象（缺省与空对象可区分）", () => {
+    const parsed = parseOps(
+      payload({
+        ops: [
+          { op: "route", page: "page.ideas" },
+          { op: "route", page: "page.detail", params: { id: "42" } },
+          { op: "route", page: "page.detail", params: {} },
+        ],
+      }),
+    );
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) {
+      return;
+    }
+    expect(parsed.batch.ops[0]).toEqual({ op: "route", page: "page.ideas" });
+    expect(parsed.batch.ops[0] !== undefined && "params" in parsed.batch.ops[0]).toBe(false);
+    expect(parsed.batch.ops[1]).toEqual({
+      op: "route",
+      page: "page.detail",
+      params: { id: "42" },
+    });
+    expect(parsed.batch.ops[2]).toEqual({ op: "route", page: "page.detail", params: {} });
+  });
+
+  it.each([
+    ["缺 page", [{ op: "route" }]],
+    ["page 为空", [{ op: "route", page: " " }]],
+    ["params 是数组", [{ op: "route", page: "x", params: [] }]],
+    ["params 是字符串", [{ op: "route", page: "x", params: "id" }]],
+  ])("route %s → E-PAYLOAD", (_name, ops) => {
+    expect(parseErrors(payload({ ops })).map((diagnostic) => diagnostic.code)).toEqual([
+      "E-PAYLOAD",
+    ]);
+  });
+
+  it("route 与树 op 混批时保持声明顺序", () => {
+    const parsed = parseOps(
+      payload({
+        ops: [
+          { op: "update", id: "feed#1", props: { title: "改" } },
+          { op: "route", page: "page.detail", params: { id: "42" } },
+          { op: "unmount", id: "feed#2" },
+        ],
+      }),
+    );
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) {
+      return;
+    }
+    expect(parsed.batch.ops.map((op) => op.op)).toEqual(["update", "route", "unmount"]);
   });
 
   it("op 内节点自身重复 id → E-ID-DUPLICATE", () => {
@@ -330,5 +384,34 @@ describe("applyOps：E-PAYLOAD（结构操作不能碰模板子树 / 根）", ()
     );
 
     expect(DocumentIndex.build(result.state.root).get("tpl")?.props.label).toBe("改");
+  });
+});
+
+describe("applyOps：route 只能走会话层", () => {
+  it("route 出现在 DocumentState 层 → E-PAYLOAD，提示改走 session 层", () => {
+    const diagnostics = expectFailed(apply([{ op: "route", page: "page.ideas" }]));
+
+    expect(diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["E-PAYLOAD"]);
+    expect(diagnostics[0]?.message).toContain("applySessionOps");
+    expect(diagnostics[0]?.path).toBe("$.ops[0].op");
+  });
+
+  it("route 与树 op 混批：整批失败，树 op 不生效、原 state 不变", () => {
+    const state = baseState();
+    const snapshot = structuredClone(state);
+
+    const diagnostics = expectFailed(
+      applyOps(
+        state,
+        batchOf([
+          { op: "update", id: "feed#1", props: { title: "不应生效" } },
+          { op: "route", page: "page.detail", params: { id: "42" } },
+        ]),
+      ),
+    );
+
+    expect(diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["E-PAYLOAD"]);
+    expect(state).toEqual(snapshot);
+    expect(DocumentIndex.build(state.root).get("feed#1")?.props).toEqual({});
   });
 });

@@ -21,6 +21,9 @@
  * - replace：id + node；位置（以及根身份）不变；新子树 id 与「移除旧子树后剩余的文档」
  *   冲突 → E-ID-DUPLICATE（因此可以原 id 原位替换，身份保持）；新子树根自身 capacity
  *   与其 children 不符 → E-SLOT-CAPACITY。
+ * - route：page + params?；只是「切到某一页」的意图，不碰根树。route 的执行在会话层
+ *   （session.ts 的 applySessionOps）；DocumentState 层的 applyOps 遇到 route 一律返回
+ *   E-PAYLOAD 并提示调用方走会话层，保证同一份批量不会在两层各执行一半。
  *
  * 模板与结构操作：collection.templates 里的节点可寻址、可 update 内容，但位置由
  * templates 命名表决定，不是 children 顺序；对模板节点做 mount/move/unmount/replace
@@ -77,7 +80,27 @@ export interface ReplaceOp {
   node: SlotNode;
 }
 
+/**
+ * 树 op 联合：直接改根树内容 / 结构，由 `ops_apply.ts` 应用（它对 `Op` 做穷尽 switch）。
+ * route 不在树修改层，所以这个联合里没有 route；线上批量用 `WireOp`。
+ */
 export type Op = UpdateOp | MountOp | MoveOp | UnmountOp | ReplaceOp;
+
+/**
+ * 路由意图：把会话切到 `page`，`params` 是给页面 / 路由用的附加参数。
+ *
+ * route 只影响会话侧表 `pages` / `active`，不碰根树，因此不在树修改层执行：
+ * 会话层的 `applySessionOps` 负责校验目标页并设置 active；`applyOps` 遇到 route
+ * 返回 E-PAYLOAD。
+ */
+export interface RouteOp {
+  op: "route";
+  page: string;
+  params?: Record<string, unknown>;
+}
+
+/** 线上 op 全集：`ops` 批量里可以混 route。 */
+export type WireOp = Op | RouteOp;
 
 /** 归一化后的 ops 批量。 */
 export interface OpsBatch {
@@ -85,7 +108,7 @@ export interface OpsBatch {
   document: number;
   base: number;
   seq: number;
-  ops: Op[];
+  ops: WireOp[];
 }
 
 export type ParseOpsResult =
@@ -135,6 +158,19 @@ function readProps(
   return { ...value };
 }
 
+/** route 的 params：可选的普通对象；缺省（undefined）与空对象 `{}` 都合法且可区分。 */
+function readParams(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): Record<string, unknown> | undefined {
+  if (!isRecord(value)) {
+    diagnostics.push(makeDiagnostic("E-PAYLOAD", "params 必须是对象", { path }));
+    return undefined;
+  }
+  return { ...value };
+}
+
 function relativeDocumentPath(path: string): string {
   return path.startsWith("$.document") ? path.slice("$.document".length) : path;
 }
@@ -172,7 +208,7 @@ function readNode(value: unknown, path: string, diagnostics: Diagnostic[]): Slot
   }
 }
 
-function parseOp(value: unknown, path: string, diagnostics: Diagnostic[]): Op | undefined {
+function parseOp(value: unknown, path: string, diagnostics: Diagnostic[]): WireOp | undefined {
   if (!isRecord(value)) {
     diagnostics.push(makeDiagnostic("E-PAYLOAD", "op 必须是对象", { path }));
     return undefined;
@@ -216,6 +252,19 @@ function parseOp(value: unknown, path: string, diagnostics: Diagnostic[]): Op | 
       const node = readNode(value.node, path + ".node", diagnostics);
       return id === undefined || node === undefined ? undefined : { op: "replace", id, node };
     }
+    case "route": {
+      const page = readString(value.page, path + ".page", diagnostics);
+      let params: Record<string, unknown> | undefined;
+      let paramsBroken = false;
+      if (value.params !== undefined) {
+        params = readParams(value.params, path + ".params", diagnostics);
+        paramsBroken = params === undefined;
+      }
+      if (page === undefined || paramsBroken) {
+        return undefined;
+      }
+      return params === undefined ? { op: "route", page } : { op: "route", page, params };
+    }
     default:
       diagnostics.push(
         makeDiagnostic("E-PAYLOAD", "不认识的 op: " + value.op, { path: path + ".op" }),
@@ -243,7 +292,7 @@ export function parseOps(value: unknown): ParseOpsResult {
     diagnostics.push(makeDiagnostic("E-PAYLOAD", "ops 必须是数组", { path: "$.ops" }));
     return { ok: false, diagnostics };
   }
-  const ops: Op[] = [];
+  const ops: WireOp[] = [];
   value.ops.forEach((raw, index) => {
     const parsed = parseOp(raw, "$.ops[" + String(index) + "]", diagnostics);
     if (parsed !== undefined) {
@@ -288,6 +337,18 @@ export function applyOps(state: DocumentState, batch: OpsBatch): ApplyOpsResult 
   let index: DocumentIndex = DocumentIndex.build(working.root);
   let live: LiveLocations = buildLiveLocations(working.root);
   for (const [position, op] of batch.ops.entries()) {
+    if (op.op === "route") {
+      return {
+        ok: false,
+        diagnostics: [
+          makeDiagnostic(
+            "E-PAYLOAD",
+            "route op 只能在会话层应用（applySessionOps），DocumentState 层不处理",
+            { path: "$.ops[" + String(position) + "].op" },
+          ),
+        ],
+      };
+    }
     const outcome = applyOp({ working, index, live }, op, "$.ops[" + String(position) + "]");
     if (!outcome.ok) {
       return { ok: false, diagnostics: [outcome.diagnostic] };
