@@ -77,6 +77,7 @@ export class DocumentView {
 
   private renderAll(): void {
     this.renderer.render(slotToNode(this.engineRuntime.session.document.root), this.container);
+    this.engineRuntime.noteRender();
   }
 }
 

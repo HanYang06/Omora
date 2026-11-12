@@ -60,3 +60,26 @@ export type ParseLocalTreesResult =
 export type LinkResult =
   | { ok: true; tree: SlotNode; ids: Map<string, SlotNode> }
   | { ok: false; diagnostics: Diagnostic[] };
+
+/**
+ * 链接期权限主体。
+ *
+ * 形状与 `runtime/permissions.ts` 的 `Requester` 一致（结构类型，两边的对象可互换）；
+ * 定义在 link 里，是为了不让 `link/types.ts`（runtime 的类型依赖）反向 import runtime。
+ */
+export interface Requester {
+  owner: string;
+  tiers?: readonly string[];
+  roles?: readonly string[];
+}
+
+/** `link()` 的可选参数。 */
+export interface LinkOptions {
+  /**
+   * 每棵局部树的请求主体；不传 / 返回 undefined = 系统来源（全放行）。
+   *
+   * 链接期只检查"来源能不能往目标 slot 挂/替换"（permissions.md §4 组合/链接期检查点），
+   * 检查点在 attach 阶段：目标不存在、歧义等结构错误已经先报。
+   */
+  requesterFor?: (tree: LocalTree) => Requester;
+}

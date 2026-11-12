@@ -18,12 +18,19 @@
  * 记成 lastDiagnostics，成功但有条目级诊断时累计条数照加。通知数按实际调用到的监听者
  * 个数累加。
  *
+ * 审计 / 耗时语义：每次 apply 先用注入的 clock（默认 Date.now）起表，成功 / 失败都以
+ * recordTiming 结算。成功记一条 apply 审计（changed = 被触碰的子树根个数），失败记一条
+ * reject 审计（首条诊断的 code / message，changed = 0）；成功但带条目级诊断时逐条记
+ * diagnostic，失败里含 E-PERMISSION 时额外逐条记 deny（带现场 owner / slot）。
+ * `audit` getter 暴露日志本体，`noteRender` 供 DocumentView 每次重画累加渲染计数。
+ *
  * 生命周期：registerCleanup 把清理登记进 LifecycleLedger，dispose 时先清空监听再
  * 逆序撤销全部清理（单个失败隔离、最后汇总）。dispose 幂等，之后再 apply 一律
- * E-PAYLOAD 失败：不改会话、不通知、不记指标（引擎已收口，不再观测）。
+ * E-PAYLOAD 失败：不改会话、不通知、不记指标 / 审计（引擎已收口，不再观测）。
  */
 
 import type { Diagnostic } from "../link/types";
+import { AuditLog } from "./audit";
 import { applyData as applyDataUpdate, type DataState } from "./data";
 import { makeDiagnostic } from "./diagnostics";
 import { hydrateSession } from "./hydrate";
@@ -42,6 +49,10 @@ import {
 export interface EngineOptions {
   metrics?: RuntimeMetrics;
   ledger?: LifecycleLedger;
+  /** 审计日志；缺省引擎自建一份（默认容量）。宿主可注入共享实例集中观测。 */
+  audit?: AuditLog;
+  /** 单调时钟（毫秒）；默认 Date.now。测试注入假钟让耗时确定。 */
+  clock?: () => number;
   /** 运行期变更主体；缺省 = 系统来源（全放行）。 */
   requester?: Requester;
 }
@@ -75,6 +86,8 @@ export class EngineRuntime {
   private current: SessionState;
   private readonly counter: RuntimeMetrics;
   private readonly ledger: LifecycleLedger;
+  private readonly auditLog: AuditLog;
+  private readonly clock: () => number;
   private readonly listeners = new Set<EngineChangeListener>();
   private readonly requester: Requester | undefined;
   private isDisposed = false;
@@ -83,6 +96,8 @@ export class EngineRuntime {
     this.current = session;
     this.counter = options.metrics ?? new RuntimeMetrics();
     this.ledger = options.ledger ?? new LifecycleLedger();
+    this.auditLog = options.audit ?? new AuditLog();
+    this.clock = options.clock ?? Date.now;
     this.requester = options.requester;
   }
 
@@ -94,6 +109,19 @@ export class EngineRuntime {
   /** 当前指标快照；version 用当前会话的文档版本填。 */
   get metrics(): RuntimeMetricsSnapshot {
     return this.counter.snapshot(this.current.document.version);
+  }
+
+  /** 审计日志本体：宿主 / 开发面板读 `entries()`，也可 `clear()`。 */
+  get audit(): AuditLog {
+    return this.auditLog;
+  }
+
+  /** 记一次渲染（DocumentView 每次重画时调）；dispose 后引擎收口，不再计数。 */
+  noteRender(): void {
+    if (this.isDisposed) {
+      return;
+    }
+    this.counter.count({ renders: 1 });
   }
 
   /** 登记一个清理函数，返回撤销登记的函数；账本语义见 lifecycle.ts。 */
@@ -117,21 +145,23 @@ export class EngineRuntime {
     if (this.isDisposed) {
       return this.disposedFailure();
     }
+    const start = this.clock();
     // 先解析一次拿 op 条数（指标按批量总条数计，route 也算）；applySessionOps 会再解析
     // 一遍归一化后的批次，形状校验幂等，这点成本换「指标不依赖内部解析产物」。
     const parsed = parseOps(batch);
     if (!parsed.ok) {
-      return this.reject(parsed.diagnostics);
+      return this.reject(parsed.diagnostics, this.elapsed(start));
     }
     const applied = applySessionOps(this.current, parsed.batch, this.requesterOptions());
     if (!applied.ok) {
-      return this.reject(applied.diagnostics);
+      return this.reject(applied.diagnostics, this.elapsed(start));
     }
     return this.publish(
       applied.session,
       applied.changed,
       { opsBatches: 1, opsCount: parsed.batch.ops.length },
       [],
+      this.elapsed(start),
     );
   }
 
@@ -140,6 +170,7 @@ export class EngineRuntime {
     if (this.isDisposed) {
       return this.disposedFailure();
     }
+    const start = this.clock();
     // session.data 由文档校验 + 深拷而来，形状就是数据文档投影；纯函数层只读它。
     const applied = applyDataUpdate(
       this.current.document,
@@ -148,7 +179,7 @@ export class EngineRuntime {
       this.requesterOptions(),
     );
     if (!applied.ok) {
-      return this.reject(applied.diagnostics);
+      return this.reject(applied.diagnostics, this.elapsed(start));
     }
     const next: SessionState = {
       document: applied.document,
@@ -156,7 +187,13 @@ export class EngineRuntime {
       active: this.current.active,
       data: applied.data,
     };
-    return this.publish(next, applied.changed, { dataUpdates: 1 }, applied.diagnostics);
+    return this.publish(
+      next,
+      applied.changed,
+      { dataUpdates: 1 },
+      applied.diagnostics,
+      this.elapsed(start),
+    );
   }
 
   /** 全量替换整份会话并重新水合集合实例；旧版本全量被 applyFull 拒绝。 */
@@ -164,13 +201,14 @@ export class EngineRuntime {
     if (this.isDisposed) {
       return this.disposedFailure();
     }
+    const start = this.clock();
     const replaced = applyFullDocument(this.current, value);
     if (!replaced.ok) {
-      return this.reject(replaced.diagnostics);
+      return this.reject(replaced.diagnostics, this.elapsed(start));
     }
     const hydrated = hydrateSession(replaced.session);
     if (!hydrated.ok) {
-      return this.reject(hydrated.diagnostics);
+      return this.reject(hydrated.diagnostics, this.elapsed(start));
     }
     // 全量替换后整棵树都是新的；changed 用新根 id 表示「按根重画」，不逐个列实例 id。
     return this.publish(
@@ -178,6 +216,7 @@ export class EngineRuntime {
       [hydrated.session.document.root.id],
       { fullUpdates: 1 },
       hydrated.diagnostics,
+      this.elapsed(start),
     );
   }
 
@@ -199,18 +238,21 @@ export class EngineRuntime {
     return this.requester === undefined ? {} : { requester: this.requester };
   }
 
-  /** 成功提交：换会话 → 记诊断 → 记计数（含通知数）→ 按快照派发通知。 */
+  /** 成功提交：换会话 → 记诊断 / 耗时 / 计数 → 记审计 → 按快照派发通知。 */
   private publish(
     session: SessionState,
     changed: string[],
     counts: MetricsCounts,
     diagnostics: Diagnostic[],
+    elapsedMs: number,
   ): EngineApplyResult {
     this.current = session;
     this.counter.recordDiagnostics(diagnostics);
+    this.counter.recordTiming(elapsedMs);
     // 派发前快照监听者：通知期间的取消从下一次 apply 起生效，通知数按快照长度计。
     const listeners = [...this.listeners];
     this.counter.count({ ...counts, notifications: listeners.length });
+    this.auditApplied(changed, diagnostics);
     for (const listener of listeners) {
       try {
         listener(session, changed);
@@ -221,11 +263,56 @@ export class EngineRuntime {
     return { ok: true, changed, session };
   }
 
-  /** 失败结算：rejections +1，本批诊断记进指标，会话不动。 */
-  private reject(diagnostics: Diagnostic[]): EngineApplyResult {
+  /** 失败结算：rejections +1，本批诊断与耗时记进指标，并记 reject / deny 审计。 */
+  private reject(diagnostics: Diagnostic[], elapsedMs: number): EngineApplyResult {
     this.counter.count({ rejections: 1 });
     this.counter.recordDiagnostics(diagnostics);
+    this.counter.recordTiming(elapsedMs);
+    this.auditRejected(diagnostics);
     return { ok: false, diagnostics };
+  }
+
+  /** 从 apply 起表到结算的毫秒数；只结算一次 clock，测试才能按调用次数喂假钟。 */
+  private elapsed(start: number): number {
+    return this.clock() - start;
+  }
+
+  /** 成功审计：一条 apply 汇总 + 成功但带条目级诊断时逐条 diagnostic。 */
+  private auditApplied(changed: string[], diagnostics: Diagnostic[]): void {
+    this.auditLog.record({ kind: "apply", changed: changed.length });
+    for (const diagnostic of diagnostics) {
+      this.auditLog.record({
+        kind: "diagnostic",
+        code: diagnostic.code,
+        owner: diagnostic.owner,
+        slot: diagnostic.slot,
+        message: diagnostic.message,
+      });
+    }
+  }
+
+  /** 失败审计：一条 reject 汇总（首条诊断）+ 含 E-PERMISSION 时逐条 deny。 */
+  private auditRejected(diagnostics: Diagnostic[]): void {
+    const first = diagnostics[0];
+    this.auditLog.record({
+      kind: "reject",
+      code: first?.code,
+      message: first?.message,
+      changed: 0,
+    });
+    for (const diagnostic of diagnostics) {
+      if (diagnostic.code !== "E-PERMISSION") {
+        continue;
+      }
+      this.auditLog.record({
+        kind: "deny",
+        code: diagnostic.code,
+        owner: diagnostic.owner,
+        slot: diagnostic.slot,
+        message: diagnostic.message,
+        changed: 0,
+      });
+    }
   }
 
   /** dispose 之后的统一拒绝：E-PAYLOAD，不改会话、不通知、不记指标。 */

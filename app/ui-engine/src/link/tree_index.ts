@@ -58,10 +58,18 @@ export function assignDepths(node: SlotNode, depth: number, depths: Map<string, 
   }
 }
 
-/** 校验单棵树（base）；失败给一条诊断。 */
-export function validateRoot(value: unknown, path: string): Diagnostic | undefined {
+export type NormalizedRoot = { ok: true; root: SlotNode } | { ok: false; diagnostic: Diagnostic };
+
+/**
+ * 校验并归一化单棵树（base）：返回 parseDocument 归一后的根树。
+ *
+ * 归一很重要：base 可能在线上是扁平 grant 形状，权限检查器读的是内部
+ * `{capabilities}` 形状；不归一就会把 base 上的 grant 读丢（受限来源被误拒）。
+ * 失败给一条诊断。
+ */
+export function normalizeRoot(value: unknown, path: string): NormalizedRoot {
   try {
-    parseDocument({
+    const document = parseDocument({
       schema: DOCUMENT_SCHEMA,
       document: value,
       pages: [],
@@ -69,17 +77,20 @@ export function validateRoot(value: unknown, path: string): Diagnostic | undefin
       data: {},
       version: 1,
     });
-    return undefined;
+    return { ok: true, root: document.document };
   } catch (error) {
     if (!(error instanceof DocumentError)) {
       throw error;
     }
     const code: DiagnosticCode = error.code === "duplicate_id" ? "E-ID-DUPLICATE" : "E-PAYLOAD";
     return {
-      severity: "error",
-      code,
-      message: "根树形状不合法：" + error.message,
-      path,
+      ok: false,
+      diagnostic: {
+        severity: "error",
+        code,
+        message: "根树形状不合法：" + error.message,
+        path,
+      },
     };
   }
 }

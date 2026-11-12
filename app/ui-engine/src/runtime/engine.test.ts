@@ -118,6 +118,10 @@ describe("createEngine：接管共享文档并水合", () => {
       diagnostics: 0,
       lastDiagnostics: [],
       notifications: 0,
+      renders: 0,
+      lastApplyMs: 0,
+      totalApplyMs: 0,
+      maxApplyMs: 0,
     });
   });
 

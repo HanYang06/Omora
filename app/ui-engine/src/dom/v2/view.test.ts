@@ -43,6 +43,7 @@ describe("DocumentView：引擎 ↔ DOM", () => {
     expect(container.querySelector(".omora-page-link")?.getAttribute("aria-label")).toBe("灵感");
     expect(cards(container)).toHaveLength(1);
     expect(view.engine.metrics.version).toBe(3);
+    expect(view.engine.metrics.renders).toBe(1);
     view.dispose();
   });
 

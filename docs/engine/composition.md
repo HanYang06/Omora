@@ -88,3 +88,9 @@
 - **门禁**：`vite build` / dev server 的 `buildStart` 用共享 fixture 跑一遍 `link`，冲突让构建失败；链接器与门禁不进客户端 bundle。共享 fixture 的序列化由 Python 测试逐字段钉住。
 - **未接**：运行时仍是 v1 贡献模型（`render/compose.ts`）；按 kind 的 props/events schema、权限、`before/after`、`E-TEMPLATE`、孤儿绑定/死规则警告、`static_ui.py` 的编译门禁升级都还没做。
 - **测试**：每个已落诊断码至少一条失败路径；乱序不变、重复到达幂等、失败不产树、入参不变、`ids` 覆盖 `collection.templates`、replace/容量行为；`vite buildStart` 对合法 fixture 通过、对冲突 fixture 抛错。
+
+## 10. S4 来源宿主与链接期权限（已落）
+
+- **链接期权限**（`src/link/link.ts`）：`link(base, payload, {requesterFor})` 在挂载阶段按目标 slot 检查 `mount`（`replace` 挂载检查 `replace`）；越权 → `E-PERMISSION`，整次链接失败不产树。缺省 requester = 系统来源（全放行，现有门禁不变）。base 先经 `parseDocument` 归一，扁平 grant 才能被检查器读到。
+- **来源宿主**（`src/runtime/sources.ts`）：`SourceHost` 维护 owner → 局部树注册表，登记/移除后重新链接；来源被撤时，挂在其 slot 下的其他来源树按 `E-TARGET-MISSING` 级联撤掉并记诊断；非死引用错误（歧义/容量/环）整次回滚、保留上一棵好树（fail closed）；dispose 走生命周期账本。
+- **未接**：来源热更新只重算整组链接（还没做增量重链）、Producer Host 与 EngineRuntime/网络帧的接线、来源的 activate/rollback 账本。
