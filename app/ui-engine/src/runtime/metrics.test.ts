@@ -16,6 +16,10 @@ const ZERO_SNAPSHOT: RuntimeMetricsSnapshot = {
   diagnostics: 0,
   lastDiagnostics: [],
   notifications: 0,
+  renders: 0,
+  lastApplyMs: 0,
+  totalApplyMs: 0,
+  maxApplyMs: 0,
 };
 
 describe("RuntimeMetrics：计数与快照", () => {
@@ -35,6 +39,10 @@ describe("RuntimeMetrics：计数与快照", () => {
       diagnostics: 0,
       lastDiagnostics: [],
       notifications: 1,
+      renders: 0,
+      lastApplyMs: 0,
+      totalApplyMs: 0,
+      maxApplyMs: 0,
     });
   });
 
@@ -83,7 +91,45 @@ describe("RuntimeMetrics：计数与快照", () => {
     expect(next.opsBatches).toBe(1);
   });
 
-  it("reset 清零全部计数与最近诊断，version 仍由下次 snapshot 填", () => {
+  it("renders 经 count 累加，是独立计数", () => {
+    const metrics = new RuntimeMetrics();
+
+    metrics.count({ renders: 1 });
+    metrics.count({ renders: 1, notifications: 1 });
+
+    expect(metrics.snapshot(1)).toMatchObject({ renders: 2, notifications: 1 });
+  });
+
+  it("recordTiming 覆盖 last、累加 total、max 取大，且不动其余计数", () => {
+    const metrics = new RuntimeMetrics();
+    metrics.count({ dataUpdates: 1 });
+
+    metrics.recordTiming(5);
+    expect(metrics.snapshot(1)).toMatchObject({
+      lastApplyMs: 5,
+      totalApplyMs: 5,
+      maxApplyMs: 5,
+      dataUpdates: 1,
+    });
+
+    metrics.recordTiming(12);
+    expect(metrics.snapshot(1)).toMatchObject({
+      lastApplyMs: 12,
+      totalApplyMs: 17,
+      maxApplyMs: 12,
+      dataUpdates: 1,
+    });
+
+    metrics.recordTiming(3);
+    expect(metrics.snapshot(1)).toMatchObject({
+      lastApplyMs: 3,
+      totalApplyMs: 20,
+      maxApplyMs: 12,
+      dataUpdates: 1,
+    });
+  });
+
+  it("reset 清零全部计数、耗时与最近诊断，version 仍由下次 snapshot 填", () => {
     const metrics = new RuntimeMetrics();
     metrics.count({
       opsBatches: 1,
@@ -92,7 +138,9 @@ describe("RuntimeMetrics：计数与快照", () => {
       fullUpdates: 4,
       rejections: 5,
       notifications: 6,
+      renders: 2,
     });
+    metrics.recordTiming(40);
     metrics.recordDiagnostics([diagnostic("失败")]);
 
     metrics.reset();
