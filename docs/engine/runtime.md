@@ -71,7 +71,7 @@
 
 至少要能量出：组合/链接耗时、补丁字节与 op 数、丢弃的贡献数、未知 kind 数、迟到事件数、一次更新触发的重渲染节点数。指标进日志与开发面板，不上用户界面。
 
-S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fullUpdates / rejections / diagnostics / lastDiagnostics / notifications / renders / lastApplyMs / totalApplyMs / maxApplyMs + version）挂在 `EngineRuntime` 上，成功/失败都记账、每次 apply 计时；`AuditLog` 结构化记录 apply/reject/deny/diagnostic；`DocumentView` 每次渲染调 `noteRender()`。重渲染节点数仍待补。
+S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fullUpdates / rejections / diagnostics / lastDiagnostics / notifications / renders / lastApplyMs / totalApplyMs / maxApplyMs + version）挂在 `EngineRuntime` 上，成功/失败都记账、每次 apply 计时；`AuditLog` 结构化记录 apply/reject/deny/diagnostic；`DocumentView` 每次渲染调 `noteRender()`。重渲染节点数仍待补；`?engine=v2` 预览已改用 EngineRuntime + DocumentView（dogfood）。
 
 ## 7. v1 映射
 
@@ -91,7 +91,7 @@ S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fu
 
 ## 8. S4 实现（已落）
 
-- **EngineRuntime**（`runtime/engine.ts`）：`createEngine` = createSession + hydrate；`applyOps` / `applyData` / `applyFull` 成功后换会话、记指标、通知监听者，失败原子、记 rejections；`onChange` / `registerCleanup` / `dispose`（清监听 + 逆序账本，幂等）。
+- **EngineRuntime**（`runtime/engine.ts`）：`createEngine` = createSession + hydrate；`applyOps` / `applyData` / `applyFull` / `applyLocalTrees` 成功后换会话、记指标、通知监听者，失败原子、记 rejections；`onChange` / `registerCleanup` / `dispose`（清监听 + 逆序账本，幂等）。`applyLocalTrees` = 链接全部局部树 → 替换树 → 版本 +1 → 当前 data 水合（全量更新闭环）。
 - **指标**（`runtime/metrics.ts`）：计数器 + 最近诊断快照 + apply 耗时 + 渲染计数，挂在 EngineRuntime 上。
 - **审计**（`runtime/audit.ts`）：有界 `AuditLog`（apply/reject/deny/diagnostic + code/owner/slot/changed）；EngineRuntime 每次 apply 记录，权限拒绝逐条 deny。
 - **权限薄层**（`runtime/permissions.ts` + `link/link.ts`）：链接期挂载检查 + 运行期 ops/data 检查，越权 E-PERMISSION；默认系统来源全放行（见 [permissions.md](permissions.md) §8）。

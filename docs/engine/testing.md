@@ -1,6 +1,6 @@
 # 测试：不变量与验收
 
-> 状态：**建议**；S2 已补编译诊断测试（每个已落 E- 码一条失败路径）、乱序/幂等/原子性质测试与跨语言 `local-trees` fixture 契约测试；S3-a 已补索引/ops/集合原语测试与 `ops` fixture 契约测试；S3-b 已补 data router 与 `data` fixture 契约测试；S3-c 已补标量绑定、session/route/全量替换与 `route` fixture 契约测试；S3-d 已补 v2 渲染桥/换页分类/会话水合与 fixture→DOM 集成 spike；S3-e 已补跨父 move 复用、v2 预览入口与生命周期账本原语测试；S4 已补权限薄层（链接期+运行期）、EngineRuntime/指标/审计、来源宿主与 DocumentView 集成测试。
+> 状态：**建议**；S2 已补编译诊断测试（每个已落 E- 码一条失败路径）、乱序/幂等/原子性质测试与跨语言 `local-trees` fixture 契约测试；S3-a 已补索引/ops/集合原语测试与 `ops` fixture 契约测试；S3-b 已补 data router 与 `data` fixture 契约测试；S3-c 已补标量绑定、session/route/全量替换与 `route` fixture 契约测试；S3-d 已补 v2 渲染桥/换页分类/会话水合与 fixture→DOM 集成 spike；S3-e 已补跨父 move 复用、v2 预览入口与生命周期账本原语测试；S4 已补权限薄层（链接期+运行期）、EngineRuntime/指标/审计、来源宿主、local-trees 全量更新与 DocumentView 集成测试；v2 预览改走 EngineRuntime/DocumentView 后行为测试不变。
 > 依赖：[README](README.md) · [composition.md](composition.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[omora-testing skill](../../.agents/skills/omora-testing/SKILL.md)
 
@@ -49,6 +49,8 @@ S2 已落：`app/ui-engine/src/link/*.test.ts` 覆盖 `E-PAYLOAD` / `E-ID-DUPLIC
 S3-a 已落：`src/runtime/*.test.ts` 覆盖三张索引（id / parent+order / source）、共享 `ops.json` 的原子应用与版本（`E-VERSION`）、每个 op 诊断失败路径、入参不变与终态收敛；`collection.test.ts` 覆盖实例化、增量与全量等价、同 key 身份稳定、坏条目隔离。
 
 S3-b 已落：`src/runtime/data.test.ts` 覆盖共享 `data.json` 的标量 / 集合全量 / 集合增量、revision 幂等、多消费者、坏条目隔离、非法信封原子失败、入参不变；跨语言由 Python `test_data.py` 钉住序列化逐字段一致。
+
+S4 续落（二）：`engine_local.test.ts` 覆盖 applyLocalTrees 重链/版本+1/水合/指标/权限拒绝/非法 payload/dispose；`kinds.test.ts` 覆盖 layout token → CSS 变量/data 属性与 update 清理；`preview.test.ts` 在预览改用 DocumentView 后原 6 条行为断言全过。
 
 S4 续落：`runtime/sources.test.ts` 覆盖来源注册/更新/移除、死引用级联、歧义/容量 fail closed、dispose；`runtime/audit.test.ts` 覆盖审计顺序/容量/副本；`engine.test.ts` 补注入 clock 的 apply 耗时、deny 审计、noteRender；`link/link_permission.test.ts` 与 `link/base_grant.test.ts` 覆盖链接期挂载/replace 权限、扁平 grant 归一化；`dom/v2/view.test.ts` 补渲染计数。
 

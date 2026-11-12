@@ -160,7 +160,7 @@ v2 文档/运行时产出的是 `SlotNode`，现有 DOM renderer 只认 v1 `Node
 
 - `src/dom/v2/bridge.ts`：`slotToNode` 只做形状搬运——`type = slot.kind`（保留命名空间），复制 id/props/children/events/layout；不展开 `collection.templates`（模板不是挂载节点，实例化归运行时）。
 - `src/dom/v2/registry.ts`：`v2Registry` = 所有 v1 type 的 `dendro:<type>` 别名 + 宿主别名（`ideas:card` → v1 `card`）+ v2 原生 kind；v2 原生 kind 后合并，同名时 v2 语义优先。
-- `src/dom/v2/kinds.ts`：v2 原生结构 kind（`dendro:window/page/slot/layer` 按 `layout.flow` 映射到现有 `.omora-row`/`.omora-column` class）与 `dendro:page-link`（复用壳层导航按钮样式，事件走 `handlerOf` + `ctx.event`）。
+- `src/dom/v2/kinds.ts`：v2 原生结构 kind（`dendro:window/page/slot/layer` 按 `layout.flow` 映射到现有 `.omora-row`/`.omora-column` class；S4 起 size/gap/align/scroll 也映射到 `--dendro-*` CSS 变量与 `data-*` 属性，`[data-dendro-layout]` 样式段消费）与 `dendro:page-link`（复用壳层导航按钮样式，事件走 `handlerOf` + `ctx.event`）。
 - `Node` 增加可选 `layout` 字段；`kind` 语义由注册表决定，renderer 协调逻辑不变。
 
 **已证明**（`src/dom/v2/spike.test.ts`，共享 `document.json`）：session → 水合 → 桥 → DOM 渲染出母页面/导航/卡片；纯数据更新后同 id 卡片复用同一 DOM 元素、只改标题并新增一条；全量替换同 id 文档不重挂。换页用 `runtime/page_switch.ts` 的 `diffPageTrees` 分类出 keep/move/replace/cancel/add。
