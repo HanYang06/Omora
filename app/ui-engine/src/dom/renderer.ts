@@ -120,7 +120,8 @@ export class DomRenderer {
     for (const [index, child] of childNodes(node).entries()) {
       const host = this.hostAt(entry, index);
       if (host === null) {
-        console.warn("[omora] kind 不接受 children:", node.type);
+        // childrenHosts 返回 null：kind 自己消费 children 数据（如 select 的选项），
+        // renderer 不挂载，也不告警。
         break;
       }
       const rendered = this.create(child, key + "/" + String(index));
@@ -164,7 +165,7 @@ export class DomRenderer {
       return;
     }
     if (entry.childHosts.length === 0) {
-      console.warn("[omora] kind 不接受 children:", node.type);
+      // kind 自己消费 children 数据；已有的（旧接口/换 kind）子元素要清掉。
       for (const removed of entry.children) {
         this.destroy(removed);
       }

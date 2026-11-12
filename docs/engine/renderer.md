@@ -71,6 +71,7 @@ export interface Kind {
 
 renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, node)[i]`；没声明就全挂到 `el`。
 
+- `childrenHosts` 返回 `null` = kind 自己消费 children 数据（如 select 的选项），renderer 不挂载也不告警；没声明才默认 `[el]`。
 - 多个子挂载点必须是**稳定 wrapper**（同一元素跨 update 一直存在），renderer 会在 update 后重算 hosts 并按 host 分组重排。
 - kind 不要自己 append 子节点；需要多槽结构（split 的 side/main、tabs 的面板）就在 `childrenHosts` 里返回对应 wrapper。
 
