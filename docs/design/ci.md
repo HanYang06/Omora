@@ -21,7 +21,7 @@
 | `ts-types`     | `tsc --noEmit`                                                      | 类型错误                 |
 | `ts-tests`     | `vitest run --coverage`，上传 Cobertura                             | 行为回归或覆盖率低于地板 |
 | `security`     | `uv audit`、`pnpm audit`、`actionlint`、`zizmor`、dependency review | 依赖或 workflow 风险     |
-| `build`        | `vite build`、体量预算、文档断链                                    | 构建或仓库规则失败       |
+| `build`        | `vite build`、编译骨架 HTML、体量预算、文档断链                     | 构建或仓库规则失败       |
 | `windows`      | Windows 上跑 pytest 与 tsc                                          | 平台相关回归             |
 | `gate`         | 汇总以上全部                                                        | 任一上游失败             |
 
@@ -78,11 +78,12 @@ uv run mypy -p omora.cli -p omora.core -p omora.sdk
 pnpm exec eslint app/ui-engine/src app/ui-engine/shell/main.cjs
 pnpm exec prettier --check .
 pnpm --dir app/ui-engine exec tsc --noEmit
-pnpm --dir app/ui-engine exec vitest run --coverage
+pnpm --dir app/ui-engine exec vitest run --coverage --configLoader runner
 
-# 仓库级检查（build job）
+# 仓库级检查（build job，先跑 pnpm --dir app/ui-engine build）
 uv run python scripts/keys.py --check
 uv run python scripts/static_ui.py --check
+uv run python scripts/skeleton_html.py
 uv run python scripts/smoke.py
 uv run python scripts/budget.py
 uv run python scripts/docs_links.py

@@ -183,7 +183,7 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
       - name: vitest
-        run: pnpm --dir app/ui-engine exec vitest run --coverage
+        run: pnpm --dir app/ui-engine exec vitest run --coverage --configLoader runner
       - name: Upload coverage artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -284,6 +284,8 @@ jobs:
         run: uv run python scripts/keys.py --check
       - name: Static skeleton
         run: uv run python scripts/static_ui.py --check
+      - name: Compiled skeleton HTML
+        run: uv run python scripts/skeleton_html.py
       - name: End-to-end smoke
         run: uv run python scripts/smoke.py
       - name: Editor extension logic
