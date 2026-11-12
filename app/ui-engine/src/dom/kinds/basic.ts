@@ -1,8 +1,7 @@
 import type { Node } from "../../core/types";
 import { handlerOf } from "../events";
+import { iconGlyph, paintGlyph } from "../icons";
 import type { KindRegistry, RenderContext } from "../types";
-
-const SVG_NS = "http://www.w3.org/2000/svg";
 
 /** props 里的字符串字段；不是字符串就等于没给。 */
 function stringProp(node: Node, name: string): string | undefined {
@@ -13,12 +12,6 @@ function stringProp(node: Node, name: string): string | undefined {
 /** props 里的布尔开关；只有真正的 true 才算开。 */
 function flagProp(node: Node, name: string): boolean {
   return node.props[name] === true;
-}
-
-function setAttrs(el: Element, attrs: Record<string, string>): void {
-  for (const [name, value] of Object.entries(attrs)) {
-    el.setAttribute(name, value);
-  }
 }
 
 /** 有 handler 就写 data-handler，没有就删掉——和 v1 的 markup 一致。 */
@@ -57,144 +50,18 @@ function syncText(el: HTMLElement, node: Node): void {
 }
 
 /* ------------------------------------------------------------------ */
-/* icon / tile 共用的图标词表                                           */
+/* icon                                                                */
 /* ------------------------------------------------------------------ */
 
-interface GlyphPart {
-  tag: "path" | "rect" | "circle";
-  attrs: Record<string, string>;
-}
-
-const pathPart = (d: string): GlyphPart => ({ tag: "path", attrs: { d } });
-const rectPart = (attrs: Record<string, string>): GlyphPart => ({ tag: "rect", attrs });
-const circlePart = (attrs: Record<string, string>): GlyphPart => ({ tag: "circle", attrs });
-
-/** 引擎自带的图标词表；和 React 版本 shell/icons.tsx 是同一份。 */
-const GLYPHS: Record<string, readonly GlyphPart[]> = {
-  ideas: [
-    pathPart("M10 2.8a5.2 5.2 0 0 0-3.1 9.4v1.5h6.2v-1.5A5.2 5.2 0 0 0 10 2.8Z"),
-    pathPart("M8.3 16.4h3.4"),
-    pathPart("M8.8 18.2h2.4"),
-  ],
-  projects: [
-    pathPart(
-      "M3 6.2a1.4 1.4 0 0 1 1.4-1.4h3l1.7 1.9h6.5A1.4 1.4 0 0 1 17 8.1v6.3a1.4 1.4 0 0 1-1.4 1.4H4.4A1.4 1.4 0 0 1 3 14.4Z",
-    ),
-    pathPart("M3 8.9h14"),
-  ],
-  requirements: [
-    pathPart("M7.4 4.2H5.2v12.6h9.6V4.2h-2.2"),
-    rectPart({ x: "7.4", y: "2.6", width: "5.2", height: "3", rx: "1" }),
-    pathPart("M8 9.4h4M8 12.4h4M8 15.4h2.6"),
-  ],
-  settings: [
-    circlePart({ cx: "10", cy: "10", r: "2.6" }),
-    pathPart("M10 2.6v2M10 15.4v2M2.6 10h2M15.4 10h2M4.8 4.8l1.4 1.4M13.8 13.8l1.4 1.4"),
-    pathPart("M15.2 4.8l-1.4 1.4M6.2 13.8l-1.4 1.4"),
-  ],
-  search: [circlePart({ cx: "8.9", cy: "8.9", r: "4.6" }), pathPart("m12.3 12.3 3.9 3.9")],
-  mic: [
-    rectPart({ x: "8", y: "2.8", width: "4", height: "7.4", rx: "2" }),
-    pathPart("M5.4 9.2a4.6 4.6 0 0 0 9.2 0"),
-    pathPart("M10 13.8v2.4M8 16.2h4"),
-  ],
-  video: [
-    rectPart({ x: "2.8", y: "5.6", width: "10.2", height: "8.8", rx: "2" }),
-    pathPart("m13 9 4.2-2.3v6.6L13 11"),
-  ],
-  text: [pathPart("M3.2 5.4h13.6M3.2 9.1h13.6M3.2 12.8h9.4M3.2 16.5h6")],
-  pin: [
-    pathPart("M7 2.8h6"),
-    pathPart("M8.2 2.8v3.6l-1.9 1.8v1.2h7.4V8.2l-1.9-1.8V2.8"),
-    pathPart("M10 9.4v7.8"),
-  ],
-  archive: [
-    rectPart({ x: "3", y: "4.4", width: "14", height: "3.6", rx: "1" }),
-    pathPart("M4.2 8v6.2a1.4 1.4 0 0 0 1.4 1.4h8.8a1.4 1.4 0 0 0 1.4-1.4V8"),
-    pathPart("M8.2 10.8h3.6"),
-  ],
-  back: [pathPart("M16 10H4M8.4 5.6 4 10l4.4 4.4")],
-  plus: [pathPart("M10 3.6v12.8M3.6 10h12.8")],
-  dot: [circlePart({ cx: "10", cy: "10", r: "3.2", fill: "currentColor", stroke: "none" })],
-};
-
-/** 不认识的图标名：虚线空位，明确表示"这个名字没有图标"，不猜近似。 */
-const MISSING_GLYPH: readonly GlyphPart[] = [
-  rectPart({
-    x: "3.6",
-    y: "3.6",
-    width: "12.8",
-    height: "12.8",
-    rx: "2.4",
-    "stroke-dasharray": "2 2.4",
-  }),
-];
-
-interface GlyphPaint {
-  parts: readonly GlyphPart[];
-  icon: string;
-  known: boolean;
-  /** 同一份画法不重画；节点自带 path 时按 path 内容判等。 */
-  key: string;
-}
-
-function paintOf(name: string, path: string | undefined): GlyphPaint {
-  if (path !== undefined && path.length > 0) {
-    return { parts: [pathPart(path)], icon: "custom", known: true, key: "path:" + path };
-  }
-  const glyph = GLYPHS[name];
-  if (glyph === undefined) {
-    return { parts: MISSING_GLYPH, icon: name, known: false, key: "missing:" + name };
-  }
-  return { parts: glyph, icon: name, known: true, key: "glyph:" + name };
-}
-
-/** 每个 svg 上一次画的是哪一份，用来避免没变也重画。 */
-const painted = new WeakMap<Element, string>();
-
-function createIconSvg(name: string, path: string | undefined): SVGSVGElement {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  setAttrs(svg, {
-    class: "omora-icon-svg",
-    width: "20",
-    height: "20",
-    viewBox: "0 0 20 20",
-    fill: "none",
-    stroke: "currentColor",
-    "stroke-width": "1.5",
-    "stroke-linecap": "round",
-    "stroke-linejoin": "round",
-    "aria-hidden": "true",
-    focusable: "false",
-  });
-  paintSvg(svg, name, path);
-  return svg;
-}
-
-/** 在同一个 svg 上换成新的图标；画法没变就什么都不动。 */
-function paintSvg(svg: SVGSVGElement, name: string, path: string | undefined): void {
-  const paint = paintOf(name, path);
-  if (painted.get(svg) === paint.key) {
-    return;
-  }
-  painted.set(svg, paint.key);
-  svg.setAttribute("data-icon", paint.icon);
-  svg.setAttribute("data-known", paint.known ? "true" : "false");
-  svg.replaceChildren();
-  for (const part of paint.parts) {
-    const child = document.createElementNS(SVG_NS, part.tag);
-    setAttrs(child, part.attrs);
-    svg.appendChild(child);
-  }
-}
-
+/** 元素里的 svg 换成节点当前的图标；画法没变就什么都不动。 */
 function paintIconOf(el: HTMLElement, node: Node): void {
   const svg = el.firstElementChild;
   if (svg instanceof SVGSVGElement) {
-    paintSvg(svg, stringProp(node, "name") ?? "", stringProp(node, "path"));
+    paintGlyph(svg, stringProp(node, "name") ?? "", stringProp(node, "path"));
   }
 }
 
+/* ------------------------------------------------------------------ */
 /* ------------------------------------------------------------------ */
 /* tile                                                                */
 /* ------------------------------------------------------------------ */
@@ -225,9 +92,9 @@ function syncTile(el: HTMLElement, node: Node): void {
   const host = iconHostOf(el);
   const svg = host.querySelector<SVGSVGElement>("svg");
   if (svg === null) {
-    host.appendChild(createIconSvg(icon, path));
+    host.appendChild(iconGlyph(icon, path));
   } else {
-    paintSvg(svg, icon, path);
+    paintGlyph(svg, icon, path);
   }
 }
 
@@ -340,24 +207,24 @@ export const basicKinds: KindRegistry = {
     update(el, node) {
       syncText(el, node);
     },
-    childrenHost: () => null,
+    childrenHosts: () => null,
   },
   icon: {
     create(node) {
       const el = document.createElement("span");
       el.className = "omora-icon";
       el.dataset.type = "icon";
-      el.appendChild(createIconSvg(stringProp(node, "name") ?? "", stringProp(node, "path")));
+      el.appendChild(iconGlyph(stringProp(node, "name") ?? "", stringProp(node, "path")));
       return el;
     },
     update(el, node) {
       if (el.firstElementChild === null) {
-        el.appendChild(createIconSvg(stringProp(node, "name") ?? "", stringProp(node, "path")));
+        el.appendChild(iconGlyph(stringProp(node, "name") ?? "", stringProp(node, "path")));
         return;
       }
       paintIconOf(el, node);
     },
-    childrenHost: () => null,
+    childrenHosts: () => null,
   },
   tile: {
     create(node, ctx) {
@@ -368,7 +235,7 @@ export const basicKinds: KindRegistry = {
       const iconHost = document.createElement("span");
       iconHost.className = "omora-tile-icon";
       iconHost.setAttribute("aria-hidden", "true");
-      iconHost.appendChild(createIconSvg("", undefined));
+      iconHost.appendChild(iconGlyph("", undefined));
       const body = document.createElement("span");
       body.className = "omora-tile-body";
       const title = document.createElement("span");
@@ -390,7 +257,7 @@ export const basicKinds: KindRegistry = {
     update(el, node) {
       syncTile(el, node);
     },
-    childrenHost: () => null,
+    childrenHosts: () => null,
   },
   chip: {
     create(node, ctx) {
@@ -410,7 +277,7 @@ export const basicKinds: KindRegistry = {
     update(el, node) {
       syncChip(el, node);
     },
-    childrenHost: () => null,
+    childrenHosts: () => null,
   },
   hotkey: {
     create(node, ctx) {
@@ -446,6 +313,6 @@ export const basicKinds: KindRegistry = {
       // handler id 每次更新都会换：监听留着，从 state 取最新的一份。
       syncHotkey(state, node, ctx);
     },
-    childrenHost: () => null,
+    childrenHosts: () => null,
   },
 };

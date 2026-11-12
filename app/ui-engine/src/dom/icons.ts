@@ -1,7 +1,15 @@
 type GlyphPart =
   | { tag: "path"; d: string }
   | { tag: "circle"; cx: number; cy: number; r: number; fill?: string; stroke?: string }
-  | { tag: "rect"; x: number; y: number; width: number; height: number; rx?: number };
+  | {
+      tag: "rect";
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      rx?: number;
+      strokeDasharray?: string;
+    };
 
 const GLYPHS: Record<string, GlyphPart[]> = {
   ideas: [
@@ -57,6 +65,39 @@ const GLYPHS: Record<string, GlyphPart[]> = {
   dot: [{ tag: "circle", cx: 10, cy: 10, r: 3.2, fill: "currentColor", stroke: "none" }],
 };
 
+interface GlyphPaint {
+  parts: GlyphPart[];
+  icon: string;
+  known: boolean;
+  key: string;
+}
+
+function paintOf(name: string, path: string | undefined): GlyphPaint {
+  if (path !== undefined && path.length > 0) {
+    return { parts: [{ tag: "path", d: path }], icon: "custom", known: true, key: "path:" + path };
+  }
+  const glyph = GLYPHS[name];
+  if (glyph === undefined) {
+    return {
+      parts: [
+        {
+          tag: "rect",
+          x: 3.6,
+          y: 3.6,
+          width: 12.8,
+          height: 12.8,
+          rx: 2.4,
+          strokeDasharray: "2 2.4",
+        },
+      ],
+      icon: name,
+      known: false,
+      key: "missing:" + name,
+    };
+  }
+  return { parts: glyph, icon: name, known: true, key: "glyph:" + name };
+}
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 function addPart(svg: SVGSVGElement, part: GlyphPart): void {
@@ -81,8 +122,26 @@ function addPart(svg: SVGSVGElement, part: GlyphPart): void {
     if (part.rx !== undefined) {
       el.setAttribute("rx", String(part.rx));
     }
+    if (part.strokeDasharray !== undefined) {
+      el.setAttribute("stroke-dasharray", part.strokeDasharray);
+    }
   }
   svg.appendChild(el);
+}
+
+/** 在已有 svg 上画图标；同一份画法不重画。 */
+export function paintGlyph(svg: SVGSVGElement, name: string, path?: string): void {
+  const paint = paintOf(name, path);
+  if (svg.dataset.paintKey === paint.key) {
+    return;
+  }
+  svg.dataset.paintKey = paint.key;
+  svg.dataset.icon = paint.icon;
+  svg.dataset.known = paint.known ? "true" : "false";
+  svg.replaceChildren();
+  for (const part of paint.parts) {
+    addPart(svg, part);
+  }
 }
 
 /** 内联 SVG：插件自带 path 优先，其次词表，再其次虚线空位。 */
@@ -99,20 +158,6 @@ export function iconGlyph(name: string, path?: string, size = 20): SVGSVGElement
   svg.setAttribute("stroke-linejoin", "round");
   svg.setAttribute("aria-hidden", "true");
   svg.setAttribute("focusable", "false");
-
-  const custom = path !== undefined && path.length > 0;
-  const glyph = custom ? undefined : GLYPHS[name];
-  svg.dataset.icon = custom ? "custom" : name;
-  svg.dataset.known = glyph === undefined && !custom ? "false" : "true";
-
-  if (custom) {
-    addPart(svg, { tag: "path", d: path });
-  } else if (glyph !== undefined) {
-    for (const part of glyph) {
-      addPart(svg, part);
-    }
-  } else {
-    addPart(svg, { tag: "rect", x: 3.6, y: 3.6, width: 12.8, height: 12.8, rx: 2.4 });
-  }
+  paintGlyph(svg, name, path);
   return svg;
 }
