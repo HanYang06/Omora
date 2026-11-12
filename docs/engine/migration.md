@@ -24,6 +24,8 @@
 
 > S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/core/document.ts` 的 v2 Slot/Document 契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
 
+> S3-b 进度（2026-11-13）：data router 已落（`src/runtime/data.ts`：parseData / applyData、revision 幂等、集合全量/增量接入、changed），Python `sdk/data.py` + 共享 `data.json` 提供纯数据线上形状。标量绑定、`route`、全量文档会话、渲染接入待续。
+
 > S3-a 进度（2026-11-13）：文档运行时核心已落 —— `app/ui-engine/src/runtime/document.ts`（`DocumentState` + 三张索引）、`ops.ts` + `ops_apply.ts`（局部树 ops 原子应用、版本/base、changed）、`collection.ts`（模板实例化 + keyed reconcile 原语）；`sdk/update.py` + 共享 `ops.json` 提供 ops 线上形状。纯数据更新/数据路由、`route`、渲染接入、全量更新会话接线待 S3-b。
 
 > S2 第一版进度（2026-11-13）：链接期编译器 `app/ui-engine/src/link/`（形状校验、多轮挂载、order/seq/容量/replace、六个诊断码、确定性/原子性）已落；`sdk/local_tree.py` + 共享 fixture 提供 local-trees 线上形状；`vite build` 用共享 fixture 跑构建期门禁。运行时接入、按 kind schema、权限、`before/after`、`static_ui.py` 编译门禁升级待后续。
