@@ -24,6 +24,8 @@
 
 > S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/core/document.ts` 的 v2 Slot/Document 契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
 
+> S3-d 进度（2026-11-13）：v2 Slot → DOM 薄桥（`src/dom/v2/`，dendro:<v1 type> 别名 + v2 原生结构 kind）、会话水合（`runtime/hydrate.ts`）、换页分类（`runtime/page_switch.ts`）与 fixture→DOM 集成 spike 已落。渲染结果：数据更新/全量替换不重挂；跨父 move 的 DOM 复用、v2 路径进主入口、layout 样式待续。
+
 > S3-c 进度（2026-11-13）：标量 `in`/`bind` 绑定（`src/runtime/data_bind.ts`）、会话层 Session（pages/active/data）、route op 执行与全量文档替换（`src/runtime/session.ts`）已落；Python `update.RouteOp` + 共享 `route.json`。渲染层按 id 换页协调、页面参数、灵感页 spike 待 S3-d。
 
 > S3-b 进度（2026-11-13）：data router 已落（`src/runtime/data.ts`：parseData / applyData、revision 幂等、集合全量/增量接入、changed），Python `sdk/data.py` + 共享 `data.json` 提供纯数据线上形状。标量绑定、`route`、全量文档会话、渲染接入待续。
