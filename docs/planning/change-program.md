@@ -48,7 +48,7 @@ pnpm install
 pnpm exec eslint app/ui-engine/src app/ui-engine/shell/main.cjs
 pnpm exec prettier --check .
 pnpm --dir app/ui-engine exec tsc --noEmit
-pnpm --dir app/ui-engine exec vitest run --coverage
+pnpm --dir app/ui-engine exec vitest run --coverage --configLoader runner
 uv run python scripts/keys.py --check
 uv run python scripts/static_ui.py --check
 uv run python scripts/smoke.py

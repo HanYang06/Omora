@@ -198,6 +198,9 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0912, PLR0915 ——
                 "app/ui-engine",
                 "exec",
                 "vite",
+                # 配置 import 了引擎源码，走 runner loader 现转，不用 bundle loader。
+                "--configLoader",
+                "runner",
                 "--host",
                 "127.0.0.1",
                 "--port",

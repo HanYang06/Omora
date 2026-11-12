@@ -63,7 +63,7 @@ uv run mypy -p omora.cli -p omora.core -p omora.sdk
 pnpm exec eslint app/ui-engine/src app/ui-engine/shell/main.cjs
 pnpm exec prettier --check .
 pnpm --dir app/ui-engine exec tsc --noEmit
-pnpm --dir app/ui-engine exec vitest run --coverage
+pnpm --dir app/ui-engine exec vitest run --coverage --configLoader runner
 ```
 
 为什么这么拆、覆盖率地板怎么定，见 [CI 与门禁](docs/design/ci.md)。
