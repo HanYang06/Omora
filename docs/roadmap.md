@@ -7,7 +7,8 @@
 - 母 UI（浅色，三栏）+ 界面库 v1 + 灵感页（三栏工作台）+ 音频 / 视频捕获已落。
 - 仓库是 uv workspace：`omora-core` / `omora-sdk` / 每个 `omora-plugin-*` 都是 member；import 命名空间 `omora.*`。
 - 存储：SQLite（`.omora/omora.db`）；媒体文件（`.omora/media`）。
-- 测试：Python 268 条、TS 157 条，全绿。
+- 测试：Python 365 条、TS 288 条，全绿。
+- 引擎文档系列已落：Dendrolink（树链引擎）契约见 [docs/engine/README.md](engine/README.md)；代码仍是 v1，迁移按 S0–S5。
 - 门禁：`.github/workflows/ci.yml` 全绿（ruff / mypy / pytest + 覆盖率 / eslint / prettier / tsc / vitest + 覆盖率 / 安全扫描 / 构建 / Windows）。
 - 灵感页有传统（非 AI）搜索：建议下拉、结果视图、详情与返回。
 - 插件管理器已落：清单、`[tool.omora]` 条件（平台 / 能力 / 依赖服务）、开关与设置页；

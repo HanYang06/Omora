@@ -1,7 +1,7 @@
 # 仓库结构迁移记录
 
 > 基线：`main@f090ea1`；分支：`refactor/repo-layout`。
-> UI 引擎后续设计见 `docs/design/ui-engine-subsystem.md`（提案，随后续文档整理入库）。
+> UI 引擎后续设计见 [Dendrolink 文档](../engine/README.md)；旧提案归档在 `docs/engine/archive/`。
 
 ## 0. 结果
 
@@ -60,5 +60,5 @@ node tools/vscode/test.js
 ## 5. 边界与后续
 
 - 没有实际弹出 Electron 窗口做人工验证；壳的路径解析、依赖归位和 lint 已验证。
-- 运行后插件目录、TS 插件宿主、页面写作模型仍按 `docs/design/ui-engine-subsystem.md`（提案）的 P0 阶段处理。
+- 运行后插件目录、TS 插件宿主、页面写作模型仍按 [迁移](../engine/migration.md) 的 S0–S5 处理；旧提案归档在 `docs/engine/archive/`。
 - 迁移在 `refactor/repo-layout` 分支提交；PR 合并后本文作为历史记录保留。
