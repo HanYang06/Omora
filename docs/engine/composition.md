@@ -1,6 +1,6 @@
 # 组合：编译与链接
 
-> 状态：**决定报错**；机制是【建议】。
+> 状态：**决定报错**；机制【建议】。S2 已落第一版链接器（形状校验、多轮挂载、order/容量/replace 与诊断）和构建期门禁；`before/after`、权限、slot 排序策略、按 kind 的 props schema 未实现。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md)
 > 相关：[updates.md](updates.md) · [permissions.md](permissions.md) · `runtime.md`（待写）
 
@@ -34,22 +34,24 @@
 - 每个挂载声明 `order`，或相对约束 `before/after`。
 - 同 slot 上**不同 owner** 的挂载 `order` 相同 → `E-SLOT-AMBIGUOUS`；不按 owner 字典序兜底。
 - 同一 owner 往同 slot 挂多份，按自己的声明序号排，不算歧义。
+- 已落：`order` / `seq` / 容量 / `replace` / 多轮链接 / 确定性排序。未实现：`before/after` 相对约束、slot owner 声明的排序策略。
 - 单槽（`capacity: one`）被多于一个挂载 → `E-SLOT-CAPACITY`。
 - slot owner 可以显式声明排序策略（例如同 order 按 owner 排），但这是**声明出来的契约**，不是引擎偷着帮忙。
 
 ## 4. 诊断
 
-| 码                 | 含义                             |
-| ------------------ | -------------------------------- |
-| `E-SLOT-AMBIGUOUS` | 同 slot 相对顺序未约定           |
-| `E-SLOT-CAPACITY`  | 单槽被多挂                       |
-| `E-ID-DUPLICATE`   | 全局 id 冲突                     |
-| `E-TARGET-MISSING` | 落点不存在                       |
-| `E-PERMISSION`     | 越权挂载/替换/更新               |
-| `E-CYCLE`          | 组合成环                         |
-| `E-TEMPLATE`       | 模板/条目 schema 不匹配          |
-| `W-BINDING-ORPHAN` | 绑定暂时没有生产者（允许，警告） |
-| `W-RULE-DEAD`      | 规则永不触发（警告）             |
+| 码                 | 含义                             | 状态                               |
+| ------------------ | -------------------------------- | ---------------------------------- |
+| `E-PAYLOAD`        | payload / Slot 形状不合法        | S2 已落（文档原表没有，S2 补的码） |
+| `E-SLOT-AMBIGUOUS` | 同 slot 相对顺序未约定           | S2 已落                            |
+| `E-SLOT-CAPACITY`  | 单槽被多挂 / 超出 capacity       | S2 已落                            |
+| `E-ID-DUPLICATE`   | 全局 id 冲突                     | S2 已落                            |
+| `E-TARGET-MISSING` | 落点不存在                       | S2 已落                            |
+| `E-CYCLE`          | 组合成环                         | S2 已落                            |
+| `E-PERMISSION`     | 越权挂载/替换/更新               | 未实现                             |
+| `E-TEMPLATE`       | 模板/条目 schema 不匹配          | 未实现                             |
+| `W-BINDING-ORPHAN` | 绑定暂时没有生产者（允许，警告） | 未实现                             |
+| `W-RULE-DEAD`      | 规则永不触发（警告）             | 未实现                             |
 
 诊断要带现场：注册贡献时记录声明来源（文件/行），诊断里给出 owner、slot、两个冲突声明的位置与 help。
 
@@ -76,3 +78,13 @@
 2. 歧义必错：同 slot 同位置且无显式顺序 → 必定编译失败。
 3. 编译失败不产出半成品根树。
 4. 死引用、越权、重复 id 都有确定诊断码。
+
+## 9. S2 实现（已落）
+
+- **代码**：`app/ui-engine/src/link/` —— `parse.ts` 第一遍（复用 `core/document.ts` 的 v2 Slot 校验）、`link.ts` 第二遍（多轮挂载 + 排序 + 容量 + replace）、`scaffold.ts`（窗口骨架）、`vite-plugin.ts`（构建期门禁）。
+- **输入**：`{kind: "local-trees", seq, trees: [{owner, root, mountAt, order, seq, replace?}]}`；Python 序列化在 `app/sdk/omora/sdk/local_tree.py`，两侧共用 `app/sdk/tests/fixtures/local-trees.json`。
+- **输出**：`{ok: true, tree, ids}` 或 `{ok: false, diagnostics}`。有 error 不产树（原子）；不改入参；诊断按 `(code, owner, slot, path, message)` 排序，与到达顺序无关。
+- **多轮**：落点可以由另一棵局部树引入；骨架只给 `dendro.window.nav` / `dendro.window.page`，其余槽位由来源补齐。
+- **门禁**：`vite build` / dev server 的 `buildStart` 用共享 fixture 跑一遍 `link`，冲突让构建失败；链接器与门禁不进客户端 bundle。共享 fixture 的序列化由 Python 测试逐字段钉住。
+- **未接**：运行时仍是 v1 贡献模型（`render/compose.ts`）；按 kind 的 props/events schema、权限、`before/after`、`E-TEMPLATE`、孤儿绑定/死规则警告、`static_ui.py` 的编译门禁升级都还没做。
+- **测试**：每个已落诊断码至少一条失败路径；乱序不变、重复到达幂等、失败不产树、入参不变、`ids` 覆盖 `collection.templates`、replace/容量行为；`vite buildStart` 对合法 fixture 通过、对冲突 fixture 抛错。

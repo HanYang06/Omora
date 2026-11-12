@@ -1,6 +1,6 @@
 # 测试：不变量与验收
 
-> 状态：**建议**；实现阶段逐条落成测试。
+> 状态：**建议**；S2 已补编译诊断测试（每个已落 E- 码一条失败路径）、乱序/幂等/原子性质测试与跨语言 `local-trees` fixture 契约测试。
 > 依赖：[README](README.md) · [composition.md](composition.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[omora-testing skill](../../.agents/skills/omora-testing/SKILL.md)
 
@@ -42,7 +42,9 @@
 
 ## 4. 编译诊断测试
 
-每个诊断码至少：**能触发、消息含现场、不产出半成品文档**。构建期编译门禁（`static_ui.py --check` 升级版）要能复现冲突。
+每个诊断码至少：**能触发、消息含现场、不产出半成品文档**。
+
+S2 已落：`app/ui-engine/src/link/*.test.ts` 覆盖 `E-PAYLOAD` / `E-ID-DUPLICATE` / `E-SLOT-AMBIGUOUS` / `E-SLOT-CAPACITY` / `E-TARGET-MISSING` / `E-CYCLE`；`vite build` 的 `buildStart` 门禁拿共享 fixture 复现冲突（冲突时构建失败）。`static_ui.py --check` 仍只查骨架数据是否最新，还没升级成编译门禁。
 
 ## 5. 集合与身份测试
 

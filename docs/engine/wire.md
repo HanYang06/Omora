@@ -1,6 +1,6 @@
 # 线上形状：文档、更新与数据
 
-> 状态：**提案**；S1.1 已落 Python/TS 契约类型与跨语言 fixture，运行时未接入。
+> 状态：**提案**；S1.1 契约类型、S2 `local-trees` payload 与 Python/TS 序列化已落（共享 fixture `app/sdk/tests/fixtures/local-trees.json`），运行时未接入。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[docs/design/protocol.md](../design/protocol.md)（帧、传输、订阅）
 
@@ -49,6 +49,8 @@
 ```
 
 引擎编译/链接后产出新文档；失败则保留上一棵合法文档并回诊断。
+
+S2 已落的最小形状：`kind` 必填；`seq` 是非负整数；`trees[]` 每项 `owner` / `root` / `mountAt` / `order` / `seq` 必填，`root.owner` 必须等于 `owner`；`replace` 只在 true 时出现（解析后归一成布尔）。Python 序列化在 `omora.sdk.local_tree.serialize_local_trees`，TS 解析/链接在 `src/link/parse.ts`、`src/link/link.ts`，两侧以同一份 fixture 对齐。
 
 ## 4. 数据更新
 

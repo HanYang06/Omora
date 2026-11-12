@@ -33,6 +33,9 @@ coverage/
 .env
 .env.*
 
+# Agent 工作树（临时，不入库）
+.agents/worktrees/
+
 # 系统与编辑器
 .DS_Store
 Thumbs.db

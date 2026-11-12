@@ -12,18 +12,18 @@
 
 ## 分层
 
-| job            | 内容                                                                | 失败意味着               |
-| -------------- | ------------------------------------------------------------------- | ------------------------ |
-| `python-lint`  | `ruff check`、`ruff format --check`                                 | 规则或格式不合规         |
-| `python-types` | mypy strict，程序包 / 模块 / 测试三组目标                           | 类型错误                 |
-| `python-tests` | pytest + coverage（Cobertura XML），上传 GitHub Code Quality        | 行为回归或覆盖率低于地板 |
-| `ts-lint`      | `eslint`、`prettier --check`                                        | lint / 格式不合规        |
-| `ts-types`     | `tsc --noEmit`                                                      | 类型错误                 |
-| `ts-tests`     | `vitest run --coverage`，上传 Cobertura                             | 行为回归或覆盖率低于地板 |
-| `security`     | `uv audit`、`pnpm audit`、`actionlint`、`zizmor`、dependency review | 依赖或 workflow 风险     |
-| `build`        | `vite build`、编译骨架 HTML、体量预算、文档断链                     | 构建或仓库规则失败       |
-| `windows`      | Windows 上跑 pytest 与 tsc                                          | 平台相关回归             |
-| `gate`         | 汇总以上全部                                                        | 任一上游失败             |
+| job            | 内容                                                                      | 失败意味着               |
+| -------------- | ------------------------------------------------------------------------- | ------------------------ |
+| `python-lint`  | `ruff check`、`ruff format --check`                                       | 规则或格式不合规         |
+| `python-types` | mypy strict，程序包 / 模块 / 测试三组目标                                 | 类型错误                 |
+| `python-tests` | pytest + coverage（Cobertura XML），上传 GitHub Code Quality              | 行为回归或覆盖率低于地板 |
+| `ts-lint`      | `eslint`、`prettier --check`                                              | lint / 格式不合规        |
+| `ts-types`     | `tsc --noEmit`                                                            | 类型错误                 |
+| `ts-tests`     | `vitest run --coverage`，上传 Cobertura                                   | 行为回归或覆盖率低于地板 |
+| `security`     | `uv audit`、`pnpm audit`、`actionlint`、`zizmor`、dependency review       | 依赖或 workflow 风险     |
+| `build`        | `vite build`（含启动骨架与链接期门禁）、编译骨架 HTML、体量预算、文档断链 | 构建或仓库规则失败       |
+| `windows`      | Windows 上跑 pytest 与 tsc                                                | 平台相关回归             |
+| `gate`         | 汇总以上全部                                                              | 任一上游失败             |
 
 ## 覆盖率
 
