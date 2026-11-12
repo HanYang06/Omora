@@ -24,6 +24,8 @@
 
 > S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/core/document.ts` 的 v2 Slot/Document 契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
 
+> S2 第一版进度（2026-11-13）：链接期编译器 `app/ui-engine/src/link/`（形状校验、多轮挂载、order/seq/容量/replace、六个诊断码、确定性/原子性）已落；`sdk/local_tree.py` + 共享 fixture 提供 local-trees 线上形状；`vite build` 用共享 fixture 跑构建期门禁。运行时接入、按 kind schema、权限、`before/after`、`static_ui.py` 编译门禁升级待后续。
+
 > 渲染层迁移（ADR-0002）已落：React 已删除；38 个 kind 有 DOM 实现与 jsdom 测试；`index.html` 入口切到 `src/dom/main.ts`；Vite 不再编译 React。启动骨架也已在构建期编译进 `index.html`（见 [renderer.md](renderer.md) §9）。下一步回到 S1/S2 的链接、三级更新与运行时。
 
 ## 2. 兼容策略
@@ -35,17 +37,18 @@
 
 ## 3. 代码迁移映射
 
-| 现在                                      | 目标                         | 阶段  |
-| ----------------------------------------- | ---------------------------- | ----- |
-| `app/sdk/omora/sdk/ui.py` / `controls.py` | Slot 词表 + schema 源        | S1    |
-| `packages/ui/omora/ui.py`                 | 文档/局部树注册 + 数据路由   | S2–S3 |
-| `packages/ui/omora/_diff.py`              | 文档增量（按 id）或删除      | S3    |
-| `app/ui-engine/src/app.tsx`               | Session + 运行时容器         | S3    |
-| `render/compose.ts`                       | Compiler/Linker              | S2    |
-| `render/patch.ts`                         | Document 更新管线            | S3    |
-| `render/renderer.tsx` / `components.tsx`  | Renderer + schema 生成注册表 | S1–S3 |
-| `scripts/static_ui.py`                    | 构建期编译门禁               | S2    |
-| `scripts/keys.py` / generated             | slot id 生成器               | S1    |
+| 现在                                      | 目标                          | 阶段                                            |
+| ----------------------------------------- | ----------------------------- | ----------------------------------------------- |
+| `app/sdk/omora/sdk/ui.py` / `controls.py` | Slot 词表 + schema 源         | S1                                              |
+| `packages/ui/omora/ui.py`                 | 文档/局部树注册 + 数据路由    | S2–S3                                           |
+| `packages/ui/omora/_diff.py`              | 文档增量（按 id）或删除       | S3                                              |
+| `app/ui-engine/src/app.tsx`               | Session + 运行时容器          | S3                                              |
+| `render/compose.ts`                       | v1 贡献组合（运行时，待替换） | S3                                              |
+| `app/ui-engine/src/link/`                 | Compiler/Linker（v2 局部树）  | S2 已落（运行时未接）                           |
+| `render/patch.ts`                         | Document 更新管线             | S3                                              |
+| `render/renderer.tsx` / `components.tsx`  | Renderer + schema 生成注册表  | S1–S3                                           |
+| `scripts/static_ui.py`                    | 构建期编译门禁                | 未升级（门禁暂由 `src/link` 共享 fixture 承担） |
+| `scripts/keys.py` / generated             | slot id 生成器                | S1                                              |
 
 ## 4. 旧文档去向
 
