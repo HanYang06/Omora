@@ -47,6 +47,32 @@ describe("DocumentView：引擎 ↔ DOM", () => {
     view.dispose();
   });
 
+  it("渲染节点统计上报引擎：首帧全新建，applyData 后既有更新也有复用", () => {
+    const { view } = boot();
+    const first = view.engine.metrics;
+    expect(first.renders).toBe(1);
+    expect(first.nodesCreated).toBeGreaterThan(0);
+    expect(first.lastRender).toEqual({
+      created: first.nodesCreated,
+      updated: 0,
+      reused: 0,
+      removed: 0,
+    });
+
+    const result = view.engine.applyData(UPDATE);
+    expect(result.ok).toBe(true);
+
+    const next = view.engine.metrics;
+    expect(next.renders).toBe(2);
+    // 同 id 卡片与改动路径上的容器调 update；导航等未变子树整棵复用。
+    expect(next.nodesUpdated).toBeGreaterThanOrEqual(1);
+    expect(next.nodesReused).toBeGreaterThanOrEqual(1);
+    expect(next.lastRender.updated).toBeGreaterThanOrEqual(1);
+    expect(next.lastRender.reused).toBeGreaterThanOrEqual(1);
+    expect(next.nodesCreated).toBeGreaterThanOrEqual(first.nodesCreated);
+    view.dispose();
+  });
+
   it("引擎 apply 成功后视图自动重画，同 id 卡片不重挂", () => {
     const { container, view } = boot();
     const before = cards(container)[0];

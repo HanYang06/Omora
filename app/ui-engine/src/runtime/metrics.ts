@@ -15,13 +15,23 @@
  *   `totalApplyMs` 累加、`maxApplyMs` 取最大。耗时不在这里量：引擎用注入的 clock 量好
  *   再传进来，所以指标模块不读时钟、测试可以确定性地喂数字。`recordTiming` 不动其余计数。
  * - `renders` 由渲染侧每次重画时调 `count({ renders: 1 })`（引擎的 `noteRender`）累计。
+ * - `recordRenderStats` 每次重画后由宿主把渲染器的节点统计上报一次：`nodesCreated /
+ *   nodesUpdated / nodesReused / nodesRemoved` 按字段累加，`lastRender` 整批替换为本
+ *   次统计的副本（与 `recordDiagnostics` 的「最近一批」语义一致）。空渲染（0 个节点）也
+ *   照常上报，`lastRender` 会覆盖成全零。节点计数只经这个方法维护，不走 `count`。
+ *   字段关系沿用渲染器的定义：`nodesUpdated` 是 `nodesReused` 的子集（复用的节点里
+ *   真正执行了 kind.update 的那部分），`nodesCreated + nodesReused` 是每轮渲染的存活
+ *   条目数之和；不要把 updated 与 reused 相加当总数。
  * - `localTreeUpdates` 由 `applyLocalTrees` 成功后 `count({ localTreeUpdates: 1 })` 累计；
  *   整组局部树重新链接算一次，不按树数算。
  * - `snapshot` 是纯数据快照：`version` 由引擎用当前会话版本填（指标模块不认识会话），
  *   `lastDiagnostics` 是副本；调用方改快照不影响计数器。
- * - `reset` 清零全部计数与最近诊断；引擎不主动 reset（宿主 / 开发面板按需调用）。
+ * - `reset` 清零全部计数、最近诊断与最近渲染统计；引擎不主动 reset（宿主 / 开发面板按需调用）。
  */
 
+// 只借渲染器的统计类型（`import type` 在运行时擦除）：指标模块不 import 渲染实现，
+// 也不持有 DOM 引用；真正上报的是宿主（DocumentView）。
+import type { RenderStats } from "../dom/renderer";
 import type { Diagnostic } from "../link/types";
 
 /**
@@ -65,6 +75,16 @@ export interface RuntimeMetricsSnapshot {
   notifications: number;
   /** 渲染次数（DocumentView 每次重画记一次）。 */
   renders: number;
+  /** 累计新建节点数（每次重画后由渲染器的 RenderStats 累加）。 */
+  nodesCreated: number;
+  /** 累计被 kind.update 更新的节点数（是 nodesReused 的子集）。 */
+  nodesUpdated: number;
+  /** 累计复用的节点数（含被 update 的，updated ⊆ reused）。 */
+  nodesReused: number;
+  /** 累计销毁的节点数。 */
+  nodesRemoved: number;
+  /** 最近一次渲染的节点统计（副本；还没渲染过时全零）。 */
+  lastRender: RenderStats;
   /** 最近一次 apply 的耗时（毫秒，由引擎用注入 clock 量）。 */
   lastApplyMs: number;
   /** 全部 apply 的耗时总和（毫秒；成功 / 失败都算）。 */
@@ -106,6 +126,8 @@ export class RuntimeMetrics {
   private readonly counters: Record<MetricCounter, number> = zeroCounters();
   private diagnosticCount = 0;
   private recentDiagnostics: Diagnostic[] = [];
+  private readonly nodeCounts: RenderStats = { created: 0, updated: 0, reused: 0, removed: 0 };
+  private lastRenderStats: RenderStats = { created: 0, updated: 0, reused: 0, removed: 0 };
   private lastTiming = 0;
   private totalTiming = 0;
   private maxTiming = 0;
@@ -124,6 +146,18 @@ export class RuntimeMetrics {
   recordDiagnostics(diagnostics: readonly Diagnostic[]): void {
     this.diagnosticCount += diagnostics.length;
     this.recentDiagnostics = copyDiagnostics(diagnostics);
+  }
+
+  /**
+   * 记一次渲染的节点统计：四个计数按字段累加，`lastRender` 整批换成这次统计的副本；
+   * 其余计数 / 诊断 / 耗时不动。
+   */
+  recordRenderStats(stats: RenderStats): void {
+    this.nodeCounts.created += stats.created;
+    this.nodeCounts.updated += stats.updated;
+    this.nodeCounts.reused += stats.reused;
+    this.nodeCounts.removed += stats.removed;
+    this.lastRenderStats = { ...stats };
   }
 
   /** 记一次 apply 耗时：覆盖 last、累加 total、max 取大；其余计数不动。 */
@@ -149,13 +183,18 @@ export class RuntimeMetrics {
       lastDiagnostics: copyDiagnostics(this.recentDiagnostics),
       notifications: this.counters.notifications,
       renders: this.counters.renders,
+      nodesCreated: this.nodeCounts.created,
+      nodesUpdated: this.nodeCounts.updated,
+      nodesReused: this.nodeCounts.reused,
+      nodesRemoved: this.nodeCounts.removed,
+      lastRender: { ...this.lastRenderStats },
       lastApplyMs: this.lastTiming,
       totalApplyMs: this.totalTiming,
       maxApplyMs: this.maxTiming,
     };
   }
 
-  /** 清零全部计数、耗时与最近诊断；快照的 version 下次仍由调用方填。 */
+  /** 清零全部计数、耗时、最近诊断与最近渲染统计；快照的 version 下次仍由调用方填。 */
   reset(): void {
     this.counters.opsBatches = 0;
     this.counters.opsCount = 0;
@@ -167,6 +206,11 @@ export class RuntimeMetrics {
     this.counters.renders = 0;
     this.diagnosticCount = 0;
     this.recentDiagnostics = [];
+    this.nodeCounts.created = 0;
+    this.nodeCounts.updated = 0;
+    this.nodeCounts.reused = 0;
+    this.nodeCounts.removed = 0;
+    this.lastRenderStats = { created: 0, updated: 0, reused: 0, removed: 0 };
     this.lastTiming = 0;
     this.totalTiming = 0;
     this.maxTiming = 0;

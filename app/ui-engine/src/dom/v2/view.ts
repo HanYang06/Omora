@@ -4,6 +4,9 @@
  * 这是宿主使用 v2 运行时的最小胶水：建引擎（createSession + hydrate）→ 桥接根树 →
  * 现有 DomRenderer；引擎每次成功 apply 通过 onChange 通知视图按 id 重画（跨父 move
  * 由 renderer 复用元素）。视图不持有业务状态，也不改会话。
+ *
+ * 观测：每次重画后把渲染器的节点统计上报给引擎（`recordRenderStats`）并记一次渲染
+ * （`noteRender`）；两个计数互不代替，见 runtime/metrics.ts 文件头。
  */
 
 import type { JsonObject } from "../../core/protocol";
@@ -77,6 +80,9 @@ export class DocumentView {
 
   private renderAll(): void {
     this.renderer.render(slotToNode(this.engineRuntime.session.document.root), this.container);
+    // 每次重画后把本次的节点统计（新建 / 更新 / 复用 / 销毁）交给引擎累加；
+    // 统计只属于渲染器，视图负责上报，不自己记账。
+    this.engineRuntime.recordRenderStats(this.renderer.stats);
     this.engineRuntime.noteRender();
   }
 }
