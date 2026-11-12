@@ -1,0 +1,63 @@
+[
+  {
+    "kind": "data",
+    "owner": "net",
+    "source": "session.status",
+    "revision": 1,
+    "value": {
+      "connected": true
+    }
+  },
+  {
+    "kind": "data",
+    "owner": "ideas",
+    "source": "ideas.feed",
+    "revision": 5,
+    "items": [
+      {
+        "id": "42",
+        "template": "item",
+        "title": "买牛奶"
+      },
+      {
+        "id": "7",
+        "template": "item",
+        "title": "录音"
+      }
+    ]
+  },
+  {
+    "kind": "data",
+    "owner": "ideas",
+    "source": "ideas.feed",
+    "revision": 6,
+    "changes": [
+      {
+        "kind": "insert",
+        "key": "43",
+        "at": 0,
+        "item": {
+          "id": "43",
+          "template": "item",
+          "title": "新条目"
+        }
+      },
+      {
+        "kind": "update",
+        "key": "42",
+        "item": {
+          "title": "买牛奶（改）"
+        }
+      },
+      {
+        "kind": "remove",
+        "key": "7"
+      },
+      {
+        "kind": "move",
+        "key": "43",
+        "at": 1
+      }
+    ]
+  }
+]
