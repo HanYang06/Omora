@@ -1,4 +1,5 @@
 import { basicKinds } from "./kinds/basic";
+import { cardKinds } from "./kinds/cards";
 import { formKinds } from "./kinds/form";
 import { layoutKinds } from "./kinds/layout";
 import { mediaKinds } from "./kinds/media";
@@ -8,6 +9,7 @@ import type { KindRegistry } from "./types";
 /** type → Kind；分组文件由不同 owner 维护，这里只汇总。 */
 export const registry: KindRegistry = {
   ...layoutKinds,
+  ...cardKinds,
   ...basicKinds,
   ...formKinds,
   ...navKinds,
