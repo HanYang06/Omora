@@ -40,8 +40,11 @@ export interface Kind {
   update?(el: HTMLElement, node: Node, ctx: RenderContext): void;
   /** 自定义卸载；renderer 仍会跑 ctx.cleanup 账本。 */
   destroy?(el: HTMLElement): void;
-  /** children 的挂载点；缺省用 el 本身。 */
-  childrenHost?(el: HTMLElement, node: Node): HTMLElement | null;
+  /**
+   * 每个 children 的挂载点，按子节点下标映射；缺省 [el]。
+   * 返回 null 表示不接受 children；缺的项回退到最后一个 host。
+   */
+  childrenHosts?(el: HTMLElement, node: Node): (HTMLElement | null)[] | null;
 }
 ```
 
@@ -66,7 +69,10 @@ export interface Kind {
 
 ### children
 
-renderer 递归协调 children，挂到 `childrenHost(el, node) ?? el`。kind 不要自己 append 子节点。
+renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, node)[i]`；没声明就全挂到 `el`。
+
+- 多个子挂载点必须是**稳定 wrapper**（同一元素跨 update 一直存在），renderer 会在 update 后重算 hosts 并按 host 分组重排。
+- kind 不要自己 append 子节点；需要多槽结构（split 的 side/main、tabs 的面板）就在 `childrenHosts` 里返回对应 wrapper。
 
 ### 失败隔离
 

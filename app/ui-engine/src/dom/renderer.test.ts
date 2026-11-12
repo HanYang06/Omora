@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import type { Node } from "../core/types";
+import { registry } from "./registry";
+import { DomRenderer } from "./renderer";
 import { mount } from "./testing";
+import type { Kind } from "./types";
 
 function text(value: string, id?: string): Node {
   return id === undefined
@@ -71,6 +74,47 @@ describe("DomRenderer", () => {
     expect(mounted.root.querySelector('[data-type="text"]')).toBeNull();
     expect(mounted.root.querySelector('[data-unknown-type="nope"]')).not.toBeNull();
     mounted.destroy();
+  });
+
+  it("childrenHosts 可以按子节点下标分配挂载点", () => {
+    const splitKind: Kind = {
+      create() {
+        const el = document.createElement("div");
+        el.className = "test-split";
+        const side = document.createElement("div");
+        side.className = "side";
+        const main = document.createElement("div");
+        main.className = "main";
+        el.append(side, main);
+        return el;
+      },
+      childrenHosts(el) {
+        return [el.querySelector(".side"), el.querySelector(".main")];
+      },
+    };
+    const container = document.createElement("div");
+    document.body.append(container);
+    const renderer = new DomRenderer({
+      registry: { ...registry, splitTest: splitKind },
+      context: {
+        event: () => undefined,
+        loadMedia: () => Promise.resolve({ mime: "", data: "" }),
+        cleanup: () => undefined,
+      },
+    });
+    const node: Node = {
+      type: "splitTest",
+      props: {},
+      children: [text("侧", "a"), text("主", "b")],
+    };
+
+    renderer.render(node, container);
+
+    expect(container.querySelector(".side")?.textContent).toBe("侧");
+    expect(container.querySelector(".main")?.textContent).toBe("主");
+
+    renderer.dispose();
+    container.remove();
   });
 
   it("卸载会移除元素", () => {

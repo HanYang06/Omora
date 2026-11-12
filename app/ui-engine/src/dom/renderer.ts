@@ -7,7 +7,7 @@ interface Rendered {
   node: Node;
   el: HTMLElement;
   kind: Kind;
-  childHost: HTMLElement | null;
+  childHosts: (HTMLElement | null)[];
   children: Rendered[];
   cleanups: (() => void)[];
 }
@@ -69,11 +69,14 @@ export class DomRenderer {
     if (previous.node === node) {
       return;
     }
-    const next = this.reconcile(previous, node, "$root");
-    this.root = next;
-    if (next.el !== previous.el) {
+    if (previous.type !== node.type) {
+      const next = this.create(node, "$root");
       parent.replaceChild(next.el, previous.el);
+      this.root = next;
+      this.destroy(previous);
+      return;
     }
+    this.root = this.reconcile(previous, node, "$root");
   }
 
   dispose(): void {
@@ -109,17 +112,20 @@ export class DomRenderer {
       node,
       el,
       kind,
-      childHost: null,
+      childHosts: [],
       children: [],
       cleanups,
     };
-    entry.childHost = this.hostOf(entry);
-    if (entry.childHost !== null) {
-      for (const [index, child] of childNodes(node).entries()) {
-        const rendered = this.create(child, key + "/" + String(index));
-        entry.children.push(rendered);
-        entry.childHost.appendChild(rendered.el);
+    entry.childHosts = this.hostsOf(entry);
+    for (const [index, child] of childNodes(node).entries()) {
+      const host = this.hostAt(entry, index);
+      if (host === null) {
+        console.warn("[omora] kind 不接受 children:", node.type);
+        break;
       }
+      const rendered = this.create(child, key + "/" + String(index));
+      entry.children.push(rendered);
+      host.appendChild(rendered.el);
     }
     return entry;
   }
@@ -143,14 +149,26 @@ export class DomRenderer {
     }
     previous.node = node;
     previous.key = keyOf(node, fallbackKey);
+    previous.childHosts = this.hostsOf(previous);
     this.reconcileChildren(previous, node);
     return previous;
   }
 
   private reconcileChildren(entry: Rendered, node: Node): void {
-    const host = entry.childHost;
     const newNodes = childNodes(node);
-    if (host === null) {
+    if (newNodes.length === 0) {
+      for (const removed of entry.children) {
+        this.destroy(removed);
+      }
+      entry.children = [];
+      return;
+    }
+    if (entry.childHosts.length === 0) {
+      console.warn("[omora] kind 不接受 children:", node.type);
+      for (const removed of entry.children) {
+        this.destroy(removed);
+      }
+      entry.children = [];
       return;
     }
     const previousByKey = new Map(entry.children.map((child) => [child.key, child]));
@@ -173,24 +191,45 @@ export class DomRenderer {
       this.destroy(removed);
     }
     entry.children = next;
+
+    const groups = new Map<HTMLElement, Rendered[]>();
     for (const [index, child] of next.entries()) {
-      const current = host.children[index] ?? null;
-      if (current !== child.el) {
-        host.insertBefore(child.el, current);
+      const host = this.hostAt(entry, index);
+      if (host === null) {
+        continue;
+      }
+      const group = groups.get(host) ?? [];
+      group.push(child);
+      groups.set(host, group);
+    }
+    for (const [host, children] of groups) {
+      for (const [index, child] of children.entries()) {
+        const current = host.children[index] ?? null;
+        if (current !== child.el) {
+          host.insertBefore(child.el, current);
+        }
       }
     }
   }
 
-  private hostOf(entry: Rendered): HTMLElement | null {
-    if (entry.kind.childrenHost === undefined) {
-      return entry.el;
+  private hostsOf(entry: Rendered): (HTMLElement | null)[] {
+    if (entry.kind.childrenHosts === undefined) {
+      return [entry.el];
     }
     try {
-      return entry.kind.childrenHost(entry.el, entry.node);
+      const hosts = entry.kind.childrenHosts(entry.el, entry.node);
+      return hosts === null ? [] : hosts;
     } catch (error) {
-      console.error("[omora] childrenHost 失败:", entry.type, error);
+      console.error("[omora] childrenHosts 失败:", entry.type, error);
+      return [];
+    }
+  }
+
+  private hostAt(entry: Rendered, index: number): HTMLElement | null {
+    if (entry.childHosts.length === 0) {
       return null;
     }
+    return entry.childHosts[index] ?? entry.childHosts[entry.childHosts.length - 1] ?? null;
   }
 
   private destroy(entry: Rendered): void {

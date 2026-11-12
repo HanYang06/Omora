@@ -13,8 +13,11 @@ export interface Kind {
   create(node: Node, ctx: RenderContext): HTMLElement;
   update?(el: HTMLElement, node: Node, ctx: RenderContext): void;
   destroy?(el: HTMLElement): void;
-  /** children 的挂载点；缺省 el 本身。 */
-  childrenHost?(el: HTMLElement, node: Node): HTMLElement | null;
+  /**
+   * 每个 children 的挂载点，按子节点下标映射；缺省 [el]。
+   * 返回 null 表示这个 kind 不接受 children。缺的项回退到最后一个 host。
+   */
+  childrenHosts?(el: HTMLElement, node: Node): (HTMLElement | null)[] | null;
 }
 
 export type KindRegistry = Readonly<Record<string, Kind>>;
