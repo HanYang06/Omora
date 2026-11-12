@@ -166,6 +166,6 @@ WebSocket 端到端都有行为测试。
 - boot：读两份配置、按序装、报没人认领的段
 - 协议：call / result / error，两侧各一份，同一份 fixture 钉住
 - 插件：store / ui / net / 一条样例页面
-- 渲染引擎：React + Vite + vitest
+- 渲染引擎：TS + Vite + vitest（React 已移除，见 [docs/engine/renderer.md](engine/renderer.md)）
 
 验收：`uv run python scripts/check.py` 全绿；Python 端到端测试真连 WebSocket 走通闭环。

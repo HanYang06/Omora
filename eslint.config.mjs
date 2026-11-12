@@ -10,7 +10,6 @@
  * 因为 reportUnusedDisableDirectives 会把没用上的 disable 当错误。
  */
 import js from "@eslint/js";
-import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -30,13 +29,7 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    plugins: { "react-hooks": reactHooks },
     rules: {
-      // 只开两条经典 hook 规则。react-hooks v7 的 recommended 还带编译器时代的规则
-      // （refs / set-state-in-effect / purity），它们要求改运行时的写法，
-      // 不是"加一道基线"能顺手做完的事，留给 React Compiler 单独做。
-      "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "error",
       // 下划线开头 = 故意不用的参数 / 变量（测试替身的签名要对齐真实接口）
       "@typescript-eslint/no-unused-vars": [
         "error",
