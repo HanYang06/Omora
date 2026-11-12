@@ -7,6 +7,8 @@ interface Rendered {
   node: Node;
   el: HTMLElement;
   kind: Kind;
+  /** 元素当前所在的宿主；null 表示这个节点不落 DOM（kind 自己消费 children）。 */
+  host: HTMLElement | null;
   childHosts: (HTMLElement | null)[];
   children: Rendered[];
   cleanups: (() => void)[];
@@ -15,6 +17,21 @@ interface Rendered {
 export interface DomRendererOptions {
   registry: KindRegistry;
   context: RenderContext;
+}
+
+/**
+ * 一次渲染的构建现场。
+ *
+ * - previous：上一次渲染的 key → 条目索引，只读；
+ * - used：本次已经认领的旧条目，每个旧条目最多用一次（防重复 id 重复认领）；
+ * - blocked：本次不可复用的旧子树（同 key 换 type / update 失败 / 换根），整棵弃用；
+ * - next：本次渲染产出的新索引，渲染结束替换 previous。
+ */
+interface BuildState {
+  previous: Map<string, Rendered>;
+  used: Set<Rendered>;
+  blocked: Set<Rendered>;
+  next: Map<string, Rendered>;
 }
 
 function keyOf(node: Node, fallback: string): string {
@@ -44,15 +61,25 @@ const UNKNOWN_KIND: Kind = {
   },
 };
 
+/** 旧树的先序展开；销毁时倒序走，保证子条目先于父条目。 */
+function collectOrder(entry: Rendered, out: Rendered[]): void {
+  out.push(entry);
+  for (const child of entry.children) {
+    collectOrder(child, out);
+  }
+}
+
 /**
  * node ↔ DOM 协调：有 id 用 id，没有用父路径+位置；未变的节点引用整棵跳过。
  *
- * 没有第二棵虚拟树：元素就是状态，更新直接落到元素上。
+ * 渲染分三步：先按 key 构建/复用（跨父也能认出同一条目），再统一重排 DOM，
+ * 最后销毁没被认领的旧条目。没有第二棵虚拟树：元素就是状态，更新直接落到元素上。
  */
 export class DomRenderer {
   private readonly registry: KindRegistry;
   private readonly context: RenderContext;
   private root: Rendered | null = null;
+  private index = new Map<string, Rendered>();
 
   constructor(options: DomRendererOptions) {
     this.registry = options.registry;
@@ -60,31 +87,47 @@ export class DomRenderer {
   }
 
   render(node: Node, parent: HTMLElement): void {
-    if (this.root === null) {
-      this.root = this.create(node, "$root");
-      parent.appendChild(this.root.el);
-      return;
-    }
     const previous = this.root;
-    if (previous.node === node) {
+    if (previous !== null && previous.node === node) {
       return;
     }
-    if (previous.type !== node.type) {
-      const next = this.create(node, "$root");
-      parent.replaceChild(next.el, previous.el);
-      this.root = next;
-      this.destroy(previous);
-      return;
+    const state: BuildState = {
+      previous: this.index,
+      used: new Set(),
+      blocked: new Set(),
+      next: new Map(),
+    };
+    const order: Rendered[] = [];
+    if (previous !== null) {
+      collectOrder(previous, order);
+      // 根节点整体换掉时，旧树不再提供任何可复用元素（与按父协调时的重建语义一致）。
+      if (!rootCanBeReused(previous, node)) {
+        this.blockSubtree(previous, state);
+      }
     }
-    this.root = this.reconcile(previous, node, "$root");
+    const root = this.build(node, "$root", parent, state);
+    this.attachRoot(root, previous, parent);
+    this.arrange(root);
+    this.destroyUnused(order, state);
+    this.root = root;
+    this.index = state.next;
   }
 
   dispose(): void {
-    if (this.root === null) {
+    const root = this.root;
+    if (root === null) {
       return;
     }
-    this.destroy(this.root);
+    const order: Rendered[] = [];
+    collectOrder(root, order);
+    for (let index = order.length - 1; index >= 0; index -= 1) {
+      const entry = order[index];
+      if (entry !== undefined) {
+        this.destroy(entry);
+      }
+    }
     this.root = null;
+    this.index = new Map();
   }
 
   private nodeContext(cleanups: (() => void)[]): RenderContext {
@@ -95,8 +138,40 @@ export class DomRenderer {
     };
   }
 
-  private create(node: Node, fallbackKey: string): Rendered {
+  /** 按 key 找旧条目；能复用就复用（update / 整棵跳过），否则建新条目。 */
+  private build(
+    node: Node,
+    fallbackKey: string,
+    host: HTMLElement | null,
+    state: BuildState,
+  ): Rendered {
     const key = keyOf(node, fallbackKey);
+    const candidate = state.previous.get(key);
+    const takeable =
+      candidate !== undefined && !state.used.has(candidate) && !state.blocked.has(candidate);
+    if (takeable && candidate.type === node.type) {
+      if (candidate.node === node) {
+        this.place(candidate, host);
+        this.claimSubtree(candidate, state);
+        return candidate;
+      }
+      if (this.updateEntry(candidate, node, host, state)) {
+        return candidate;
+      }
+      this.blockSubtree(candidate, state);
+    } else if (takeable) {
+      // 同 key 换 type：旧元素和它的子树都不复用。
+      this.blockSubtree(candidate, state);
+    }
+    return this.createEntry(node, key, host, state);
+  }
+
+  private createEntry(
+    node: Node,
+    key: string,
+    host: HTMLElement | null,
+    state: BuildState,
+  ): Rendered {
     const cleanups: (() => void)[] = [];
     const kind = this.registry[node.type] ?? UNKNOWN_KIND;
     let el: HTMLElement;
@@ -112,90 +187,111 @@ export class DomRenderer {
       node,
       el,
       kind,
+      host,
       childHosts: [],
       children: [],
       cleanups,
     };
     entry.childHosts = this.hostsOf(entry);
-    for (const [index, child] of childNodes(node).entries()) {
-      const host = this.hostAt(entry, index);
-      if (host === null) {
-        // childrenHosts 返回 null：kind 自己消费 children 数据（如 select 的选项），
-        // renderer 不挂载，也不告警。
-        break;
-      }
-      const rendered = this.create(child, key + "/" + String(index));
-      entry.children.push(rendered);
-      host.appendChild(rendered.el);
-    }
+    this.claim(entry, state);
+    this.buildChildren(entry, node, state);
     return entry;
   }
 
-  private reconcile(previous: Rendered, node: Node, fallbackKey: string): Rendered {
-    if (previous.node === node) {
-      return previous;
-    }
-    if (previous.type !== node.type) {
-      this.destroy(previous);
-      return this.create(node, fallbackKey);
-    }
+  /** 复用旧元素：失败返回 false，旧条目留给销毁阶段。 */
+  private updateEntry(
+    entry: Rendered,
+    node: Node,
+    host: HTMLElement | null,
+    state: BuildState,
+  ): boolean {
     const cleanups: (() => void)[] = [];
     try {
-      previous.kind.update?.(previous.el, node, this.nodeContext(cleanups));
-      previous.cleanups.push(...cleanups);
+      entry.kind.update?.(entry.el, node, this.nodeContext(cleanups));
     } catch (error) {
       console.error("[omora] kind update 失败:", node.type, error);
-      this.destroy(previous);
-      return this.create(node, fallbackKey);
+      // update 里登记过的清理也要记在旧条目上，销毁时一起跑。
+      entry.cleanups.push(...cleanups);
+      return false;
     }
-    previous.node = node;
-    previous.key = keyOf(node, fallbackKey);
-    previous.childHosts = this.hostsOf(previous);
-    this.reconcileChildren(previous, node);
-    return previous;
+    entry.cleanups.push(...cleanups);
+    entry.node = node;
+    this.place(entry, host);
+    entry.childHosts = this.hostsOf(entry);
+    this.claim(entry, state);
+    this.buildChildren(entry, node, state);
+    return true;
   }
 
-  private reconcileChildren(entry: Rendered, node: Node): void {
-    const newNodes = childNodes(node);
-    if (newNodes.length === 0) {
-      for (const removed of entry.children) {
-        this.destroy(removed);
-      }
-      entry.children = [];
-      return;
-    }
+  private buildChildren(entry: Rendered, node: Node, state: BuildState): void {
+    entry.children = [];
     if (entry.childHosts.length === 0) {
-      // kind 自己消费 children 数据；已有的（旧接口/换 kind）子元素要清掉。
-      for (const removed of entry.children) {
-        this.destroy(removed);
-      }
-      entry.children = [];
+      // kind 自己消费 children 数据（如 select 的选项）；旧子条目没人认领，会被销毁。
       return;
     }
-    const previousByKey = new Map(entry.children.map((child) => [child.key, child]));
-    const next: Rendered[] = [];
-    for (const [index, child] of newNodes.entries()) {
-      const fallback = entry.key + "/" + String(index);
-      const key = keyOf(child, fallback);
-      const old = previousByKey.get(key);
-      previousByKey.delete(key);
-      if (old !== undefined && old.type === child.type) {
-        next.push(this.reconcile(old, child, key));
-      } else {
-        if (old !== undefined) {
-          this.destroy(old);
-        }
-        next.push(this.create(child, key));
-      }
-    }
-    for (const removed of previousByKey.values()) {
-      this.destroy(removed);
-    }
-    entry.children = next;
-
-    const groups = new Map<HTMLElement, Rendered[]>();
-    for (const [index, child] of next.entries()) {
+    for (const [index, child] of childNodes(node).entries()) {
       const host = this.hostAt(entry, index);
+      entry.children.push(this.build(child, entry.key + "/" + String(index), host, state));
+    }
+  }
+
+  /** 认领旧条目：标记已用，并写进新索引（重复 key 首个生效）。 */
+  private claim(entry: Rendered, state: BuildState): void {
+    state.used.add(entry);
+    if (!state.next.has(entry.key)) {
+      state.next.set(entry.key, entry);
+    }
+  }
+
+  /** 整棵跳过：元素只可能换宿主，内部结构不动，子孙条目全部视为已用。 */
+  private claimSubtree(entry: Rendered, state: BuildState): void {
+    this.claim(entry, state);
+    for (const child of entry.children) {
+      this.claimSubtree(child, state);
+    }
+  }
+
+  private blockSubtree(entry: Rendered, state: BuildState): void {
+    state.blocked.add(entry);
+    for (const child of entry.children) {
+      this.blockSubtree(child, state);
+    }
+  }
+
+  /** 复用元素前先把它从旧宿主摘下来，避免旧宿主里残留。 */
+  private place(entry: Rendered, host: HTMLElement | null): void {
+    if (entry.host === host) {
+      return;
+    }
+    entry.host = host;
+    entry.el.remove();
+  }
+
+  private attachRoot(root: Rendered, previous: Rendered | null, parent: HTMLElement): void {
+    root.host = parent;
+    if (previous === null) {
+      parent.appendChild(root.el);
+      return;
+    }
+    if (root === previous) {
+      if (previous.el.parentElement !== parent) {
+        parent.appendChild(previous.el);
+      }
+      return;
+    }
+    // 换根：新根先占位，旧根留给销毁阶段移除。
+    if (previous.el.parentElement === parent) {
+      parent.replaceChild(root.el, previous.el);
+    } else {
+      parent.appendChild(root.el);
+    }
+  }
+
+  /** 统一安排 DOM：同一宿主的子元素按下标重排；被移动过的元素已在构建时摘下。 */
+  private arrange(entry: Rendered): void {
+    const groups = new Map<HTMLElement, Rendered[]>();
+    for (const child of entry.children) {
+      const host = child.host;
       if (host === null) {
         continue;
       }
@@ -210,6 +306,19 @@ export class DomRenderer {
           host.insertBefore(child.el, current);
         }
       }
+    }
+    for (const child of entry.children) {
+      this.arrange(child);
+    }
+  }
+
+  private destroyUnused(order: Rendered[], state: BuildState): void {
+    for (let index = order.length - 1; index >= 0; index -= 1) {
+      const entry = order[index];
+      if (entry === undefined || state.used.has(entry)) {
+        continue;
+      }
+      this.destroy(entry);
     }
   }
 
@@ -253,4 +362,9 @@ export class DomRenderer {
     }
     entry.el.remove();
   }
+}
+
+/** 新树根能否接在旧根上：key（有 id 用 id）与 type 都得一致。 */
+function rootCanBeReused(previous: Rendered, node: Node): boolean {
+  return previous.type === node.type && previous.key === keyOf(node, "$root");
 }
