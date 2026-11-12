@@ -11,6 +11,10 @@
  * - `recordDiagnostics` 每批输入调用一次（成功时传空数组也算一批）：累计条数加上本批
  *   长度，`lastDiagnostics` 整批替换为本批的副本。这样 `lastDiagnostics` 永远代表
  *   「最近一次输入产生的诊断」，成功的空批会把上一次失败的诊断清掉。
+ * - `recordTiming` 每次 apply 结算调用一次（成功 / 失败都算）：`lastApplyMs` 覆盖、
+ *   `totalApplyMs` 累加、`maxApplyMs` 取最大。耗时不在这里量：引擎用注入的 clock 量好
+ *   再传进来，所以指标模块不读时钟、测试可以确定性地喂数字。`recordTiming` 不动其余计数。
+ * - `renders` 由渲染侧每次重画时调 `count({ renders: 1 })`（引擎的 `noteRender`）累计。
  * - `snapshot` 是纯数据快照：`version` 由引擎用当前会话版本填（指标模块不认识会话），
  *   `lastDiagnostics` 是副本；调用方改快照不影响计数器。
  * - `reset` 清零全部计数与最近诊断；引擎不主动 reset（宿主 / 开发面板按需调用）。
@@ -18,9 +22,18 @@
 
 import type { Diagnostic } from "../link/types";
 
-/** 可累加的计数字段；诊断条数只经 `recordDiagnostics` 累加（要同步维护最近诊断）。 */
+/**
+ * 可累加的计数字段；诊断条数只经 `recordDiagnostics` 累加（要同步维护最近诊断），
+ * 耗时只经 `recordTiming` 维护。
+ */
 export type MetricCounter =
-  "opsBatches" | "opsCount" | "dataUpdates" | "fullUpdates" | "rejections" | "notifications";
+  | "opsBatches"
+  | "opsCount"
+  | "dataUpdates"
+  | "fullUpdates"
+  | "rejections"
+  | "notifications"
+  | "renders";
 
 /** 一次 `count` 的增量：只写要加的字段。 */
 export type MetricsCounts = Partial<Record<MetricCounter, number>>;
@@ -45,6 +58,14 @@ export interface RuntimeMetricsSnapshot {
   lastDiagnostics: Diagnostic[];
   /** 已派发的变更通知次数（每次通知 = 一个监听者被调用一次）。 */
   notifications: number;
+  /** 渲染次数（DocumentView 每次重画记一次）。 */
+  renders: number;
+  /** 最近一次 apply 的耗时（毫秒，由引擎用注入 clock 量）。 */
+  lastApplyMs: number;
+  /** 全部 apply 的耗时总和（毫秒；成功 / 失败都算）。 */
+  totalApplyMs: number;
+  /** 单次 apply 的最大耗时（毫秒；初值 0）。 */
+  maxApplyMs: number;
 }
 
 const COUNTERS: readonly MetricCounter[] = [
@@ -54,6 +75,7 @@ const COUNTERS: readonly MetricCounter[] = [
   "fullUpdates",
   "rejections",
   "notifications",
+  "renders",
 ];
 
 function zeroCounters(): Record<MetricCounter, number> {
@@ -64,6 +86,7 @@ function zeroCounters(): Record<MetricCounter, number> {
     fullUpdates: 0,
     rejections: 0,
     notifications: 0,
+    renders: 0,
   };
 }
 
@@ -76,6 +99,9 @@ export class RuntimeMetrics {
   private readonly counters: Record<MetricCounter, number> = zeroCounters();
   private diagnosticCount = 0;
   private recentDiagnostics: Diagnostic[] = [];
+  private lastTiming = 0;
+  private totalTiming = 0;
+  private maxTiming = 0;
 
   /** 按字段累加；只加给出的字段。 */
   count(delta: MetricsCounts): void {
@@ -93,6 +119,15 @@ export class RuntimeMetrics {
     this.recentDiagnostics = copyDiagnostics(diagnostics);
   }
 
+  /** 记一次 apply 耗时：覆盖 last、累加 total、max 取大；其余计数不动。 */
+  recordTiming(ms: number): void {
+    this.lastTiming = ms;
+    this.totalTiming += ms;
+    if (ms > this.maxTiming) {
+      this.maxTiming = ms;
+    }
+  }
+
   /** 当前快照；`version` 由调用方（引擎）用会话版本填。 */
   snapshot(version: number): RuntimeMetricsSnapshot {
     return {
@@ -105,10 +140,14 @@ export class RuntimeMetrics {
       diagnostics: this.diagnosticCount,
       lastDiagnostics: copyDiagnostics(this.recentDiagnostics),
       notifications: this.counters.notifications,
+      renders: this.counters.renders,
+      lastApplyMs: this.lastTiming,
+      totalApplyMs: this.totalTiming,
+      maxApplyMs: this.maxTiming,
     };
   }
 
-  /** 清零全部计数与最近诊断；快照的 version 下次仍由调用方填。 */
+  /** 清零全部计数、耗时与最近诊断；快照的 version 下次仍由调用方填。 */
   reset(): void {
     this.counters.opsBatches = 0;
     this.counters.opsCount = 0;
@@ -116,7 +155,11 @@ export class RuntimeMetrics {
     this.counters.fullUpdates = 0;
     this.counters.rejections = 0;
     this.counters.notifications = 0;
+    this.counters.renders = 0;
     this.diagnosticCount = 0;
     this.recentDiagnostics = [];
+    this.lastTiming = 0;
+    this.totalTiming = 0;
+    this.maxTiming = 0;
   }
 }
