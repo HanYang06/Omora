@@ -22,6 +22,8 @@
 | S4   | 权限薄层 + 生命周期账本 + 观测指标                         | 越权拒绝；卸载零残留；有指标      |
 | S5   | TS 宿主 / 组件命名空间 / 运行后来源                        | 示例来源不改引擎源码即可加界面    |
 
+> S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/core/document.ts` 的 v2 Slot/Document 契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
+
 ## 2. 兼容策略
 
 - **v1.5 加字段**：节点允许新增 `id / events / layout / reactions / collection / grant`，旧 `{type, props, children}` 仍可读；渲染器优先新字段，回退旧路径。

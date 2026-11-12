@@ -1,0 +1,88 @@
+{
+  "schema": "dendro.ui/2",
+  "document": {
+    "id": "dendro.window",
+    "kind": "dendro:window",
+    "owner": "dendro",
+    "props": {},
+    "layout": { "flow": "row", "capacity": "many" },
+    "children": [
+      {
+        "id": "dendro.window.nav",
+        "kind": "dendro:slot",
+        "owner": "dendro",
+        "props": {},
+        "layout": { "flow": "column", "capacity": "many", "size": { "width": 56 } },
+        "children": [
+          {
+            "id": "nav.ideas",
+            "kind": "dendro:page-link",
+            "owner": "ideas",
+            "props": { "label": "灵感", "icon": "ideas" },
+            "events": { "click": "h0" },
+            "reactions": [
+              { "on": { "event": "click" }, "do": [{ "effect": "navigate", "page": "page.ideas" }] }
+            ],
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "dendro.window.page",
+        "kind": "dendro:slot",
+        "owner": "dendro",
+        "props": {},
+        "layout": { "flow": "column", "capacity": "one", "size": { "width": "fill" } },
+        "children": [
+          {
+            "id": "page.ideas",
+            "kind": "dendro:page",
+            "owner": "ideas",
+            "props": {},
+            "children": [
+              {
+                "id": "ideas.feed",
+                "kind": "dendro:slot",
+                "owner": "ideas",
+                "props": {},
+                "layout": { "flow": "column", "capacity": "many" },
+                "collection": {
+                  "source": "ideas.feed",
+                  "key": "id",
+                  "templates": {
+                    "item": {
+                      "id": "tpl.ideas.item",
+                      "kind": "ideas:card",
+                      "owner": "ideas",
+                      "props": {},
+                      "bind": { "title": "item.title", "meta": "item.meta" },
+                      "children": []
+                    }
+                  },
+                  "select": "template"
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "page.ideas",
+      "label": "灵感",
+      "route": "/ideas",
+      "owner": "ideas"
+    }
+  ],
+  "active": "page.ideas",
+  "data": {
+    "ideas.feed": {
+      "revision": 5,
+      "items": [{ "id": "42", "template": "item", "title": "买牛奶", "meta": "刚刚" }]
+    }
+  },
+  "version": 3
+}
