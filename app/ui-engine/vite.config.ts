@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import { staticSkeletonPlugin } from "./src/compiler/vite-plugin";
+import { linkerGatePlugin } from "./src/link/vite-plugin";
 
 /**
  * 配置里 import 了引擎源码（构建期启动骨架编译器在 `src/compiler/`）。
@@ -7,7 +8,7 @@ import { staticSkeletonPlugin } from "./src/compiler/vite-plugin";
  * 统一走 runner loader 让 Vite 在加载时现转，pnpm scripts / CI / `omora dev` 都带这个参数。
  */
 export default defineConfig({
-  plugins: [staticSkeletonPlugin()],
+  plugins: [staticSkeletonPlugin(), linkerGatePlugin()],
   test: {
     environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
