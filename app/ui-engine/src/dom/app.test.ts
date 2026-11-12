@@ -83,6 +83,22 @@ describe("DomApp", () => {
     expect(container.querySelector(".omora-conn-label")?.textContent).toBe("已连接");
   });
 
+  it("挂载时清掉构建期注入的静态骨架，只留一份壳", () => {
+    const { connection } = fakeConnection(snapshot());
+    const container = document.createElement("div");
+    container.innerHTML = '<div class="omora-app" data-prerendered="true"></div>';
+    document.body.append(container);
+    const app = new DomApp(
+      connection as unknown as Connection,
+      createLogger({ call: () => Promise.resolve({}) }),
+    );
+
+    app.mount(container);
+
+    expect(container.querySelectorAll(".omora-app")).toHaveLength(1);
+    expect(container.querySelector("[data-prerendered]")).toBeNull();
+  });
+
   it("导航发 render(page)，事件带 handler 回传", async () => {
     const { connection } = fakeConnection(snapshot());
     const container = document.createElement("div");

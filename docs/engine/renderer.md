@@ -124,9 +124,29 @@ React 渲染层已删除；剩下的是框架无关的纯模块与 DOM 实现：
 - `shell/shell.tsx` → `dom/shell.ts`；
 - `app.tsx/main.tsx` → `dom/app.ts` + `dom/main.ts`，`index.html` 入口已切到后者。
 
-## 9. 验收
+## 9. 静态骨架编译（构建期）
+
+构建期编译器和运行时共用同一套 kind 与 `DomShell`：不复制静态模板，也不给 kind 加第二套实现。
+
+```text
+scripts/static_ui.py            空数据跑系统插件 → src/generated/static-tree.ts（结构数据）
+src/compiler/skeleton.ts        快照 → HTML（需要 DOM；kind 直接写 DOM）
+src/compiler/boot-skeleton.ts   启动快照 + 贡献组合 → 首帧
+src/compiler/node.ts            Node 宿主：jsdom 临时立 window/document，跑完还原
+src/compiler/vite-plugin.ts     Vite adapter：只决定何时编译、注进哪里
+```
+
+- `vite.config.ts` 的插件把编译结果注入 `<div id="root">`；`vite build` 的 `dist/index.html` 和 dev server 都带首帧 HTML，浏览器不必等 JS 解释整棵树。
+- 编译只产出结构，不注册事件：HTML 里的按钮是禁用态（运行时拿到静态快照时也如此），真快照到了由运行时接手。
+- 运行时挂载（`DomApp.mount`）先清掉预渲染 HTML，再用同一份快照重建；v0 只保证"首帧不等 JS"，还没做 hydration——首帧 DOM 会被替换一次。
+- 两道门禁：`static_ui.py --check` 查骨架数据是否最新；`skeleton_html.py` 查构建产物确实带编译后的 HTML（CI build job）。
+- `vite.config.ts` import 了引擎源码，所以 `dev/build/test/preview` 统一带 `--configLoader runner`（`omora dev` 同步）；bundle loader 会把整张引擎模块图打进配置并报无扩展名 import 警告。
+
+## 10. 验收
 
 - [x] 38 个 kind 全部有 DOM 实现与测试（`registry.test.ts` 钉住覆盖）；
 - [x] React 依赖与 React 文件删除；`index.html` 入口切到 DOM；
+- [x] 启动骨架由 Vite 在构建期编译进 `index.html`，产物门禁 `scripts/skeleton_html.py` 通过；
 - [x] `tsc` / eslint / prettier / vitest / vite build 全绿；
+- [ ] 首帧 hydration（复用预渲染 DOM，不重建）；
 - [ ] 灵感页三栏、搜索、捕捉、设置页的人工/端到端走查（下一阶段随 e2e 一起补）。
