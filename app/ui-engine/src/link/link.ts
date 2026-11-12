@@ -23,7 +23,7 @@ import {
   indexInto,
   indexNode,
   unindex,
-  validateRoot,
+  normalizeRoot,
 } from "./tree_index";
 import type {
   Diagnostic,
@@ -64,15 +64,15 @@ function compareMounts(left: Mount, right: Mount): number {
  * `options.requesterFor` 不给 = 系统来源，行为与 S2 完全一致（全放行）。
  */
 export function link(base: SlotNode, payload: unknown, options: LinkOptions = {}): LinkResult {
-  const baseDiagnostic = validateRoot(base, "$.base");
-  if (baseDiagnostic !== undefined) {
-    return { ok: false, diagnostics: [baseDiagnostic] };
+  const normalized = normalizeRoot(base, "$.base");
+  if (!normalized.ok) {
+    return { ok: false, diagnostics: [normalized.diagnostic] };
   }
   const parsed = parseLocalTrees(payload);
   if (!parsed.ok) {
     return { ok: false, diagnostics: parsed.diagnostics };
   }
-  return linkParsed(base, parsed.payload, options);
+  return linkParsed(normalized.root, parsed.payload, options);
 }
 
 function linkParsed(base: SlotNode, payload: LocalTreesPayload, options: LinkOptions): LinkResult {
