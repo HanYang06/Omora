@@ -1,6 +1,6 @@
 # 线上形状：文档、更新与数据
 
-> 状态：**提案**（S1 落定后转为已定未实现）。
+> 状态：**提案**；S1.1 已落 Python/TS 契约类型与跨语言 fixture，运行时未接入。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[docs/design/protocol.md](../design/protocol.md)（帧、传输、订阅）
 
