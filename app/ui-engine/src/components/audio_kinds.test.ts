@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mount } from "../testing";
+import { mount } from "../dom/testing";
 import {
   FakeAudio,
   mediaNode,

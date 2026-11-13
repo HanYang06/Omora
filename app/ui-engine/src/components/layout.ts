@@ -1,6 +1,6 @@
-import type { Node } from "../../core/types";
-import { handlerOf } from "../events";
-import type { Kind, KindRegistry } from "../types";
+import type { Node } from "../core/types";
+import { handlerOf } from "../dom/events";
+import type { Kind, KindRegistry } from "../dom/types";
 
 /**
  * 布局组 kind：column / row / list / item / split / rail / panel / slot（empty / card 在 cards.ts）。

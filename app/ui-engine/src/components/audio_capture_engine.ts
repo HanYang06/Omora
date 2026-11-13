@@ -4,8 +4,8 @@ import {
   resumeClock,
   startClock,
   type RecordClock,
-} from "../../capture/capture-rules";
-import { defaultDeviceSource, openMediaStream } from "../../capture/devices";
+} from "../capture/capture-rules";
+import { defaultDeviceSource, openMediaStream } from "../capture/devices";
 import type WaveSurfer from "wavesurfer.js";
 import type RecordPlugin from "wavesurfer.js/dist/plugins/record.js";
 import { loadWaveSurfer, stopTracks, WAVE_COLOR, WAVE_PROGRESS_COLOR } from "./media_shared";

@@ -1,5 +1,5 @@
-import type { Node } from "../../core/types";
-import type { Kind, KindRegistry } from "../types";
+import type { Node } from "../core/types";
+import type { Kind, KindRegistry } from "../dom/types";
 import { prop, setText } from "./media_shared";
 
 /**

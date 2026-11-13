@@ -44,7 +44,7 @@ Python 侧可以保留好用的构造器（`Row / Column / Split` 等），它�
 
 ## 4. 当前 legacy 词表
 
-legacy 有 38 个 kind，分两处手写：`app/sdk/omora/sdk/ui.py`、`controls.py` 与 `app/ui-engine/src/render/components.tsx`。目标是把它们收成一份 schema 后自动生成；迁移期先保留现状，新增组件必须回答“schema 在哪、另一侧怎么生成”。
+legacy 有 38 个 kind，分两处手写：`app/sdk/omora/sdk/ui.py`、`controls.py` 与 `app/ui-engine/src/components/`。目标是把它们收成一份 schema 后自动生成；迁移期先保留现状，新增组件必须回答“schema 在哪、另一侧怎么生成”。
 
 ## 5. 事件与数据契约
 

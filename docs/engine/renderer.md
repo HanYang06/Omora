@@ -1,7 +1,7 @@
 # 渲染层：DOM renderer
 
 > 状态：**已落**。React 已移除，38 个 kind 有 DOM 实现与测试；决策见 [ADR-0002](decisions/0002-no-react-dom-renderer.md)。
-> 本文定义 kind 接口、renderer 协调规则、测试约定；实现落在 `app/ui-engine/src/dom/`。
+> 本文定义 kind 接口、renderer 协调规则、测试约定；协调与桥在 `app/ui-engine/src/dom/`，38 个 kind 在 `app/ui-engine/src/components/`。
 
 ## 0. 一句话
 
@@ -10,16 +10,17 @@
 ## 1. 分层
 
 ```text
-app/main           挂载 + 连接 + 快照
-dom/app            会话/快照 → renderer
-dom/renderer       node ↔ element 协调、挂载/更新/卸载
-dom/kinds/*        kind → DOM（38 个）
-dom/registry       type → Kind 注册表
-dom/types          Kind / RenderContext
-dom/testing        测试用的 mount helper
+app/main             挂载 + 连接 + 快照
+dom/app              会话/快照 → renderer
+dom/renderer         node ↔ element 协调、挂载/更新/卸载
+components/*         kind → DOM（38 个）
+components/registry  type → Kind 注册表
+components/icons     内联图标
+dom/types            Kind / RenderContext
+dom/testing          测试用的 mount helper
 ```
 
-`dom/` 不依赖 React；`core/` 与 `render/` 中的协议、连接、patch、compose 保持框架无关。
+`dom/` 与 `components/` 不依赖 React；`core/` 与 `render/` 中的协议、连接、patch、compose 保持框架无关。
 
 ## 2. Kind 接口
 
@@ -120,23 +121,23 @@ renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, nod
 
 ## 7. kind 分组与写域
 
-| 文件              | kind                                                                                                                     |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `kinds/layout.ts` | column / row / list / item / split / rail / panel / slot / empty / card                                                  |
-| `kinds/basic.ts`  | text / icon / tile / chip / hotkey                                                                                       |
-| `kinds/form.ts`   | button / input / switch / checkbox / radio / select / textarea / number_input / slider / field / button_group / progress |
-| `kinds/nav.ts`    | tabs / accordion / search / suggestion / result                                                                          |
-| `kinds/media.ts`  | recorder / audio / audio_capture / video_capture / video / waveform                                                      |
+| 文件                   | kind                                                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `components/layout.ts` | column / row / list / item / split / rail / panel / slot / empty / card                                                  |
+| `components/basic.ts`  | text / icon / tile / chip / hotkey                                                                                       |
+| `components/form.ts`   | button / input / switch / checkbox / radio / select / textarea / number_input / slider / field / button_group / progress |
+| `components/nav.ts`    | tabs / accordion / search / suggestion / result                                                                          |
+| `components/media.ts`  | recorder / audio / audio_capture / video_capture / video / waveform                                                      |
 
-`registry.ts` 负责汇总这五个 map；各组只改自己的文件，避免冲突。
+`components/registry.ts` 负责汇总这五个 map；各组只改自己的文件，避免冲突。
 
 ## 8. 迁移记录
 
 React 渲染层已删除；剩下的是框架无关的纯模块与 DOM 实现：
 
-- `render/components.tsx` / `controls/*` / `cards/tiles/icons/waveform` → 已迁成 `kinds/*` 后删除；
+- `render/components.tsx` / `controls/*` / `cards/tiles/icons/waveform` → 已迁成 `components/*` 后删除；
 - `capture/*` React hooks → 已迁成 media kind 内部控制器后删除；保留 `devices / capture-rules / media-upload / video-quality` 纯规则；
-- `search/search.tsx` → `kinds/search.ts`；保留 `searchText.ts`；
+- `search/search.tsx` → `components/search.ts`；保留 `searchText.ts`；
 - `shell/shell.tsx` → `dom/shell.ts`；
 - `app.tsx/main.tsx` → `dom/app.ts` + `dom/main.ts`，`index.html` 入口已切到后者。
 

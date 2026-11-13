@@ -1,10 +1,10 @@
-import { planStop, timeUp } from "../../capture/capture-rules";
-import { captureErrorReason } from "../../capture/devices";
-import { uploadRecorded } from "../../capture/media-upload";
-import type { Node } from "../../core/types";
-import { handlerOf } from "../events";
-import { iconGlyph } from "../icons";
-import type { RenderContext } from "../types";
+import { planStop, timeUp } from "../capture/capture-rules";
+import { captureErrorReason } from "../capture/devices";
+import { uploadRecorded } from "../capture/media-upload";
+import type { Node } from "../core/types";
+import { handlerOf } from "../dom/events";
+import { iconGlyph } from "./icons";
+import type { RenderContext } from "../dom/types";
 import { createAudioCaptureEngine, type AudioCaptureEngine } from "./audio_capture_engine";
 import {
   actionButton,

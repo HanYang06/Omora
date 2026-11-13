@@ -1,5 +1,5 @@
-import type { Node } from "../../core/types";
-import type { Kind } from "../types";
+import type { Node } from "../core/types";
+import type { Kind } from "../dom/types";
 import { loadWaveSurfer, prop, WAVE_COLOR, WAVE_PROGRESS_COLOR } from "./media_shared";
 
 /**

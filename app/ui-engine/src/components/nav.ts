@@ -1,5 +1,5 @@
-import type { Node } from "../../core/types";
-import type { KindRegistry, RenderContext } from "../types";
+import type { Node } from "../core/types";
+import type { KindRegistry, RenderContext } from "../dom/types";
 
 function prop(node: Node, name: string): string | undefined {
   const value = node.props[name];

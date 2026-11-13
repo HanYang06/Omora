@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, vi } from "vitest";
-import type { Node } from "../../core/types";
-import type { Mounted } from "../testing";
+import type { Node } from "../core/types";
+import type { Mounted } from "../dom/testing";
 
 /**
  * 媒体组测试共用的替身与生命周期（不是 *.test.ts，vitest 不会单独跑它）。

@@ -4,7 +4,7 @@ import type { SlotNode } from "../core/document";
 import type { Node } from "../core/types";
 import { hydrateSession } from "../runtime/hydrate";
 import { applyFull, createSession } from "../runtime/session";
-import { registry } from "./registry";
+import { registry } from "../components/registry";
 import { DomRenderer } from "./renderer";
 import type { Kind, KindRegistry, RenderContext } from "./types";
 import { slotToNode } from "./slot/bridge";
