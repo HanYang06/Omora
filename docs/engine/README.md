@@ -141,7 +141,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 > S3-c 已落：标量 `in`/`bind` 绑定（`data_bind.ts`）、Session/pages/active、route op 与全量替换（`session.ts`），`sdk/update.py` 的 RouteOp + 共享 `route.json`。
 
-> S3-d 已落：`src/dom/slot/`（Slot→DOM 薄桥 + 命名空间别名 + Slot 原生结构 kind）、`engine/updates/hydrate.ts`、`engine/document/page_switch.ts` 与 fixture→DOM 集成 spike。数据更新/全量替换不重挂已验证。
+> S3-d 已落：`src/renderer/slot_bridge.ts` + `src/components/slot_kinds.ts` + `src/app/slot_registry.ts`（Slot→DOM 薄桥 + 命名空间别名 + Slot 原生结构 kind）、`engine/updates/hydrate.ts`、`engine/document/page_switch.ts` 与 fixture→DOM 集成 spike。数据更新/全量替换不重挂已验证。
 
 > S3-e 已落：renderer 跨父 move 复用元素（换页保留实例）、`?engine=slot` 预览入口（独立 chunk）、生命周期账本原语（S4 预落）。
 

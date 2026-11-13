@@ -24,8 +24,8 @@ import {
   type Layout,
   type PageEntry,
   type SlotNode,
-} from "../../contract/document";
-import type { CollectionItem } from "../../engine/collections/collection";
+} from "../contract/document";
+import type { CollectionItem } from "../engine/collections/collection";
 
 /** 页面 id（与 pages / active 对齐）。 */
 export const PAGE_IDEAS = "page.ideas";

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import type { Node } from "../core/types";
-import { mount } from "../dom/testing";
+import { mount } from "./testing";
 
 function make(
   type: string,

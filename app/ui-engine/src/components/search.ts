@@ -1,8 +1,8 @@
 import type { Node } from "../core/types";
 import { highlightParts, keyAction } from "../search/searchText";
-import { handlerOf } from "../dom/events";
+import { handlerOf } from "../renderer/events";
 import { iconGlyph } from "./icons";
-import type { KindRegistry, RenderContext } from "../dom/types";
+import type { KindRegistry, RenderContext } from "../renderer/types";
 
 export const SEARCH_DEBOUNCE_MS = 200;
 

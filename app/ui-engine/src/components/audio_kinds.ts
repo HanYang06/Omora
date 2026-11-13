@@ -1,7 +1,7 @@
 import type { Node } from "../core/types";
-import { handlerOf } from "../dom/events";
+import { handlerOf } from "../renderer/events";
 import { defaultDeviceSource, openMediaStream } from "../capture/devices";
-import type { KindRegistry, RenderContext } from "../dom/types";
+import type { KindRegistry, RenderContext } from "../renderer/types";
 import { clock, playQuietly, setHandler, stopTracks } from "./media_shared";
 import { waveformKind } from "./waveform_kind";
 

@@ -16,7 +16,7 @@
  * （预览不要静默空白）。
  */
 
-import type { CollectionItem } from "../../engine/collections/collection";
+import type { CollectionItem } from "../engine/collections/collection";
 import {
   FEED_SOURCE,
   HANDLER_ADD_CARD,

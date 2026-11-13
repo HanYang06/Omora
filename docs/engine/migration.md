@@ -31,11 +31,11 @@
 
 > S4 续进度（2026-11-13）：链接期挂载权限（`link/link.ts` + base 归一化）、来源宿主 `SourceHost`（注册/级联/fail closed）、审计 `AuditLog` 与 apply 耗时/渲染计数已落。来源热更新与网络帧接线、observe/intercept、重渲染节点数、Slot 路径替换主会话待续。
 
-> S4 进度（2026-11-13）：权限薄层（`host/permissions.ts` op 检查 + `contract/policy.ts` 纯策略，ops/data 运行期检查）、EngineRuntime（session + 生命周期账本 + 指标 + 变更通知，`host/engine.ts`/`metrics.ts`）、DocumentView（`dom/slot/view.ts`）已落。链接期权限、Producer Host/来源生命周期、订阅/媒体登记点、审计与耗时指标待续。
+> S4 进度（2026-11-13）：权限薄层（`host/permissions.ts` op 检查 + `contract/policy.ts` 纯策略，ops/data 运行期检查）、EngineRuntime（session + 生命周期账本 + 指标 + 变更通知，`host/engine.ts`/`metrics.ts`）、DocumentView（`app/view.ts`）已落。链接期权限、Producer Host/来源生命周期、订阅/媒体登记点、审计与耗时指标待续。
 
 > S3-e 进度（2026-11-13）：DOM renderer 支持跨父 move 复用元素（`renderer.ts`，换页保留实例）；Slot 预览入口 `?engine=slot`（独立 chunk）；生命周期账本原语（S4 预落）。Slot 会话替换主入口、layout 样式、S4 权限/观测待续。
 
-> S3-d 进度（2026-11-13）：Slot → DOM 薄桥（`src/dom/slot/`，`dendro:<legacy type>` 别名 + Slot 原生结构 kind）、会话水合（`engine/updates/hydrate.ts`）、换页分类（`engine/document/page_switch.ts`）与 fixture→DOM 集成 spike 已落。渲染结果：数据更新/全量替换不重挂；跨父 move 的 DOM 复用、Slot 路径进主入口、layout 样式待续。
+> S3-d 进度（2026-11-13）：Slot → DOM 薄桥（`src/renderer/slot_bridge.ts` + `src/app/slot_registry.ts`，`dendro:<legacy type>` 别名 + `src/components/slot_kinds.ts` 的 Slot 原生结构 kind）、会话水合（`engine/updates/hydrate.ts`）、换页分类（`engine/document/page_switch.ts`）与 fixture→DOM 集成 spike 已落。渲染结果：数据更新/全量替换不重挂；跨父 move 的 DOM 复用、Slot 路径进主入口、layout 样式待续。
 
 > S3-c 进度（2026-11-13）：标量 `in`/`bind` 绑定（`src/engine/updates/data_bind.ts`）、会话层 Session（pages/active/data）、route op 执行与全量文档替换（`src/engine/document/session.ts`）已落；Python `update.RouteOp` + 共享 `route.json`。渲染层按 id 换页协调、页面参数、灵感页 spike 待 S3-d。
 
@@ -45,7 +45,7 @@
 
 > S2 第一版进度（2026-11-13）：链接期编译器 `app/ui-engine/src/link/`（形状校验、多轮挂载、order/seq/容量/replace、六个诊断码、确定性/原子性）已落；`sdk/local_tree.py` + 共享 fixture 提供 local-trees 线上形状；`vite build` 用共享 fixture 跑构建期门禁。运行时接入、按 kind schema、权限、`before/after`、`static_ui.py` 编译门禁升级待后续。
 
-> 渲染层迁移（ADR-0002）已落：React 已删除；38 个 kind 有 DOM 实现与 jsdom 测试；`index.html` 入口切到 `src/dom/main.ts`；Vite 不再编译 React。启动骨架也已在构建期编译进 `index.html`（见 [renderer.md](renderer.md) §9）。
+> 渲染层迁移（ADR-0002）已落：React 已删除；38 个 kind 有 DOM 实现与 jsdom 测试；`index.html` 入口切到 `src/app/main.ts`；Vite 不再编译 React。启动骨架也已在构建期编译进 `index.html`（见 [renderer.md](renderer.md) §9）。
 
 ## 2. 兼容策略
 

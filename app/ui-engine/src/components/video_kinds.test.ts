@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { mount } from "../dom/testing";
+import { mount } from "./testing";
 import { mediaNode, trackMount, installMediaTestEnv } from "./media_test_support";
 
 installMediaTestEnv();

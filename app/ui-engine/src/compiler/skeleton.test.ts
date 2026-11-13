@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import type { Snapshot } from "../core/types";
-import { DomShell } from "../dom/shell";
+import { DomShell } from "../app/shell";
 import { initialSnapshot } from "../render/boot";
 import { withContributions } from "../render/view";
 import { compileSkeleton } from "./skeleton";

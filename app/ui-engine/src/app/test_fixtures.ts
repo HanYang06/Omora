@@ -1,25 +1,25 @@
 /**
- * dom/slot 测试的共享支持：读共享 `document.json`、手动物化集合、按 id 找/换子树。
+ * Slot 渲染测试的共享支持（app 层集成测试）：读共享 `document.json`、手动物化集合、按 id 找/换子树。
  * 只在测试里 import，不属于渲染引擎的生产模块图。
  */
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseDocument, type SlotDocument, type SlotNode } from "../../contract/document";
-import type { JsonObject } from "../../core/protocol";
-import type { Node } from "../../core/types";
-import { instantiateCollection } from "../../engine/collections/collection";
-import { DomRenderer } from "../renderer";
-import type { RenderContext } from "../types";
-import { slotRegistry } from "./registry";
+import { parseDocument, type SlotDocument, type SlotNode } from "../contract/document";
+import type { JsonObject } from "../core/protocol";
+import type { Node } from "../core/types";
+import { instantiateCollection } from "../engine/collections/collection";
+import { DomRenderer } from "../renderer/renderer";
+import type { RenderContext } from "../renderer/types";
+import { slotRegistry } from "./slot_registry";
 
 /**
  * 共享 fixture 的绝对路径。用 node:path 而不是 `new URL(..., import.meta.url)`：
  * jsdom 环境下 Vite 会把后者当资源 URL 改写成 dev server 地址，fileURLToPath 会拒收。
  */
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const DOCUMENT_FIXTURE_PATH = resolve(HERE, "../../../../sdk/tests/fixtures/document.json");
+export const DOCUMENT_FIXTURE_PATH = resolve(HERE, "../../../sdk/tests/fixtures/document.json");
 
 export interface RecordedSlotEvent {
   handler: string;

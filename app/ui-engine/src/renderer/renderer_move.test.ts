@@ -7,9 +7,9 @@ import { applyFull, createSession } from "../engine/document/session";
 import { registry } from "../components/registry";
 import { DomRenderer } from "./renderer";
 import type { Kind, KindRegistry, RenderContext } from "./types";
-import { slotToNode } from "./slot/bridge";
-import { createSlotRenderer } from "./slot/registry";
-import { findById, readDocumentFixture } from "./slot/test_fixtures";
+import { slotToNode } from "./slot_bridge";
+import { createSlotRenderer } from "../app/slot_registry";
+import { findById, readDocumentFixture } from "../app/test_fixtures";
 
 /**
  * 跨父 move 的行为测试：同一 id + 同 type 换父 / 换槽时复用同一个 DOM 元素，

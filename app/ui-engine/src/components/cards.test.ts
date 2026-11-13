@@ -2,9 +2,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Node } from "../core/types";
 import { registry } from "./registry";
-import { DomRenderer } from "../dom/renderer";
-import type { Mounted, RecordedEvent } from "../dom/testing";
-import type { RenderContext } from "../dom/types";
+import { DomRenderer } from "../renderer/renderer";
+import type { Mounted, RecordedEvent } from "./testing";
+import type { RenderContext } from "../renderer/types";
 import { cardKinds } from "./cards";
 
 function make(

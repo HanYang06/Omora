@@ -83,7 +83,7 @@ S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fu
 | `app/ui-engine/src/engine/`                | Document / 索引 / ops / 集合 / session    |
 | `app/ui-engine/src/host/`                  | EngineRuntime / 权限 / 账本 / 审计 / 指标 |
 | `host/engine.ts` + `metrics.ts`            | EngineRuntime（会话 + 账本 + 指标）       |
-| `dom/slot/view.ts`                         | DocumentView（引擎 ↔ DOM）                |
+| `app/view.ts`                              | DocumentView（引擎 ↔ DOM）                |
 | `host/sources.ts`                          | Producer Host（来源注册/级联）            |
 | `host/audit.ts`                            | 审计日志                                  |
 | `render/renderer.tsx` + `components.tsx`   | Renderer + 组件注册表                     |
@@ -98,7 +98,7 @@ S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fu
 - **权限薄层**（`contract/policy.ts` 纯策略 + `host/permissions.ts` op 检查 + `link/link.ts`）：链接期挂载检查 + 运行期 ops/data 检查，越权 E-PERMISSION；运行期由 host 把 requester 编译成 guard 注入 engine（engine 层本身不懂权限），不传 guard = 全放行（见 [permissions.md](permissions.md) §8）。
 - **来源宿主**（`host/sources.ts`）：owner → 局部树注册表；支持 `load` 整组替换与 `requesterFor` 权限透传；登记/移除后重新链接，死引用级联撤掉，其他失败回滚保留上一棵好树；dispose 走账本。
 - **来源模式引擎**（`host/engine_sources.ts`）：`SourceEngine` = SourceHost + EngineRuntime 组合；`createEngineFromLocalTrees(payload)` 从 local-trees 直接建引擎；`registerSource` / `removeSource` / `applyLocalTrees` 先由 host 重算权威树，再交引擎提交版本/水合/指标/审计/通知。
-- **DocumentView**（`dom/slot/view.ts`）：createEngine → 桥接根树 → DomRenderer；引擎通知后按 id 重画；`dispose` 取消监听/渲染器/账本三件套。
+- **DocumentView**（`app/view.ts`）：createEngine → 桥接根树 → DomRenderer；引擎通知后按 id 重画；`dispose` 取消监听/渲染器/账本三件套。
 - **未接**：来源热更新/activate 账本与网络帧接线、订阅与媒体登记点、跨连接会话、`observe`/`intercept`、重渲染节点数指标、Slot 路径替换主会话。
 
 ## 9. 未定

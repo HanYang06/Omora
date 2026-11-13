@@ -106,16 +106,16 @@
 
 ## 11. S3-d 实现（spike，已落）
 
-- **渲染接入**（`src/dom/slot/`）：SlotNode 经 `slotToNode` 薄桥 + `slotRegistry`（`dendro:<legacy type>` 别名 / 宿主别名 / Slot 原生结构 kind）交给现有 DOM renderer；不迁移 38 个 kind。
+- **渲染接入**（`src/renderer/slot_bridge.ts` + `src/app/slot_registry.ts`）：SlotNode 经 `slotToNode` 薄桥 + `slotRegistry`（`dendro:<legacy type>` 别名 / 宿主别名 / `src/components/slot_kinds.ts` 的 Slot 原生结构 kind）交给现有 DOM renderer；不迁移 38 个 kind。
 - **水合**（`src/engine/updates/hydrate.ts`）：全量文档的 data 投影按 source 物化成集合实例子树，session 可直接渲染。
 - **换页分类**（`src/engine/document/page_switch.ts`）：`diffPageTrees(previous, next)` 按 id 给出 keep / move / replace / cancel / add（live 子树；templates 不参与）。
-- **集成验证**（`src/dom/slot/spike.test.ts`）：fixture → session → 水合 → 渲染；数据更新/全量替换后同 id 元素复用；换页分类 + 渲染切页。
-- **S3-e 已补**：跨父 move 的 DOM 复用（renderer 跨渲染按 key 索引复用元素）、`?engine=slot` 预览入口。仍未接：Slot 路径替换 `dom/app.ts` 的 legacy 会话、layout 的 size/gap/align 进样式、路由参数。
+- **集成验证**（`src/app/spike.test.ts`）：fixture → session → 水合 → 渲染；数据更新/全量替换后同 id 元素复用；换页分类 + 渲染切页。
+- **S3-e 已补**：跨父 move 的 DOM 复用（renderer 跨渲染按 key 索引复用元素）、`?engine=slot` 预览入口。仍未接：Slot 路径替换 `app/app.ts` 的 legacy 会话、layout 的 size/gap/align 进样式、路由参数。
 
 ## 12. S3-e 实现（已落）
 
-- **跨父 move**（`src/dom/renderer.ts`）：跨渲染 key 索引 + 两阶段（构建/复用 → 统一 arrange → 销毁未认领旧条目）；同 id+type 换父复用元素，移动/保留的条目不跑 cleanup；换页保留实例由 `renderer_move.test.ts` 用共享 Slot 文档 + `applyFull` 验证。
-- **Slot 预览**（`src/dom/slot/preview.ts` + `preview_document.ts`）：`?engine=slot` 时动态 import 独立 chunk，跑内置 Slot 文档的 session/水合/渲染/切页/数据更新；legacy 仍是默认入口。
+- **跨父 move**（`src/renderer/renderer.ts`）：跨渲染 key 索引 + 两阶段（构建/复用 → 统一 arrange → 销毁未认领旧条目）；同 id+type 换父复用元素，移动/保留的条目不跑 cleanup；换页保留实例由 `renderer_move.test.ts` 用共享 Slot 文档 + `applyFull` 验证。
+- **Slot 预览**（`src/app/preview.ts` + `preview_document.ts`）：`?engine=slot` 时动态 import 独立 chunk，跑内置 Slot 文档的 session/水合/渲染/切页/数据更新；legacy 仍是默认入口。
 - **生命周期账本原语**（`src/host/lifecycle.ts`，S4 预落）：逆序清理、错误隔离、幂等、dispose 后 add fail-safe；尚未接运行时。
 - **未接**：Slot 会话替换主入口、layout 样式、S4 的权限/观测、渲染层局部状态与媒体清理接线。
 

@@ -1,6 +1,6 @@
 import type { Node } from "../core/types";
-import { handlerOf } from "../dom/events";
-import type { Kind, KindRegistry, RenderContext } from "../dom/types";
+import { handlerOf } from "../renderer/events";
+import type { Kind, KindRegistry, RenderContext } from "../renderer/types";
 
 /**
  * 表单选择类 kind：switch / checkbox / radio / select / field / button_group。

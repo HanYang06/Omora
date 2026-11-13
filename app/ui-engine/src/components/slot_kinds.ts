@@ -31,11 +31,11 @@
  * 直接复用，只有 Slot 结构 kind 与页链接在本文件实现。
  */
 
-import type { LayoutFlow, Scroll } from "../../contract/document";
-import type { Node } from "../../core/types";
-import { handlerOf } from "../events";
-import { iconGlyph, paintGlyph } from "../../components/icons";
-import type { Kind, KindRegistry } from "../types";
+import type { LayoutFlow, Scroll } from "../contract/document";
+import type { Node } from "../core/types";
+import { handlerOf } from "../renderer/events";
+import { iconGlyph, paintGlyph } from "./icons";
+import type { Kind, KindRegistry } from "../renderer/types";
 
 /** 没有图标时用壳层同款默认点。 */
 const DEFAULT_ICON = "dot";

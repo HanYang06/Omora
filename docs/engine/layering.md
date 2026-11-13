@@ -1,6 +1,6 @@
 # 分层与依赖方向
 
-> 状态：**决定已定**；契约层 `src/contract/` 与 engine / host 分层（阶段 1–2）已落，其余层按阶段迁移。
+> 状态：**决定已定**；契约层、engine / host、dom 拆分（阶段 1–3）已落，其余层按阶段迁移。
 > 相关：[README](README.md) · [renderer.md](renderer.md) · [components.md](components.md) · [migration.md](migration.md)
 
 ## 0. 一句话
@@ -11,10 +11,10 @@
 
 前端文件多，目录不治理会越来越懵。当前问题不是“文件多”，而是**层混在一起**：
 
-- `dom/` 一万多行里同时有 app 入口、壳、renderer、38+ 个组件、Slot 桥、预览；
+- `dom/` 曾同时有 app 入口、壳、renderer、38+ 个组件、Slot 桥、预览——已拆成 `renderer/`、`components/`、`app/`；
 - `runtime/` 曾同时有文档/集合算法、宿主设施（权限/账本/审计/指标/来源）、编排（EngineRuntime）——已拆成 `engine/` 与 `host/`；
 - `core/` 曾同时有契约（Slot/Document）与连接/日志/设备上报（契约已抽出，其余待归位）；
-- `link/` 曾反向依赖权限模块（已移到 `contract/policy`）；`host/engine` 曾依赖 `dom/renderer` 的统计类型（已移到 `contract/render`）；
+- `link/` 曾反向依赖权限模块（已移到 `contract/policy`）；`host/engine` 曾依赖 `renderer/renderer` 的统计类型（已移到 `contract/render`）；
 - 旧快照渲染还在 `render/`，但没有和 Slot 路径显式隔离。
 
 ## 2. 目标结构
@@ -40,10 +40,10 @@ app/ui-engine/src/
 当前进度：
 
 - [x] schema 重置为 `dendro.ui/1`、去掉 v1/v2 版本叙事（PR #75）
-- [x] `dom/kinds` + registry + icons 拆成顶层 `components/`（PR #76）
+- [x] kinds 目录 + registry + icons 拆成顶层 `components/`（PR #76）
 - [x] 契约层 `src/contract/` 抽取（document / diagnostics / policy / render），修掉倒置 1、2
 - [x] `runtime/` 拆成 `engine/`（document / collections / updates）与 `host/` 设施
-- [ ] `dom/` 拆成 renderer、Slot 桥、app 入口、shell
+- [x] `dom/` 拆成 `renderer/`（renderer + Kind 契约 + Slot 桥）、`components/`（Slot 原生 kind + 测试 helper）、`app/`（入口 / 壳 / 视图 / 预览 / 注册表）
 - [ ] `render/` 隔离成 legacy
 - [ ] build / platform 归位；`app/ui-engine` 包根再评估 engine / desktop 拆分
 
@@ -67,8 +67,8 @@ app/ui-engine/src/
 已知要修的倒置（1、2 已修；3、4 未做）：
 
 1. ~~`link/link.ts` → 权限模块~~：能力匹配已移到 `contract/policy`，link 与 host 都依赖它；
-2. ~~`host/engine.ts` → `dom/renderer`（`RenderStats`）~~：统计类型已移到 `contract/render`，engine 不依赖渲染实现；
-3. `compiler/` → `dom/shell`：构建期编译器是 adapter，迁到 `build/` 后依赖 renderer 是允许的；
+2. ~~`host/engine.ts` → `renderer/renderer`（`RenderStats`）~~：统计类型已移到 `contract/render`，engine 不依赖渲染实现；
+3. `compiler/` → `app/shell`：构建期编译器是 adapter，迁到 `build/` 后依赖 renderer / app 是允许的；
 4. `core/device-report.ts` → `capture/devices`：`core` 不再当“杂物间”，设备上报移到 platform/app 侧。
 
 本轮另把 `runtime/` 拆成 `engine/`（document / collections / updates）与 `host/`，并把权限检查从
@@ -77,7 +77,7 @@ ops / data / session 改成 host 注入的 guard：engine 层只认 guard，不�
 ## 4. 迁移方式
 
 - **一个 PR 只搬一层**，不改行为、不改 schema、不调预算；测试数与行为测试保持。
-- 先抽契约与策略（收益最大、冲突最小），再拆 runtime，再拆 dom/legacy，最后 build/platform。
+- 先抽契约与策略（收益最大、冲突最小），再拆 runtime，再拆渲染 / 入口，最后 build/platform 与 legacy。
 - 过渡期可以用 re-export shim，但一个层搬完后 shim 必须删。
 - 每步加 eslint `no-restricted-imports` 边界规则，让倒置在 CI 里直接红，而不是靠 review 记性。
 - 目录搬动后同步 renderer.md / components.md / AGENTS 结构表；预算与链接检查照常跑。

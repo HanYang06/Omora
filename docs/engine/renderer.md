@@ -1,7 +1,7 @@
 # 渲染层：DOM renderer
 
 > 状态：**已落**。React 已移除，38 个 kind 有 DOM 实现与测试；决策见 [ADR-0002](decisions/0002-no-react-dom-renderer.md)。
-> 本文定义 kind 接口、renderer 协调规则、测试约定；协调与桥在 `app/ui-engine/src/dom/`，38 个 kind 在 `app/ui-engine/src/components/`。
+> 本文定义 kind 接口、renderer 协调规则、测试约定；协调与 Slot 桥在 `app/ui-engine/src/renderer/`，38 个 kind 在 `app/ui-engine/src/components/`，入口 / 壳 / 视图 / 预览在 `app/ui-engine/src/app/`。
 
 ## 0. 一句话
 
@@ -11,16 +11,18 @@
 
 ```text
 app/main             挂载 + 连接 + 快照
-dom/app              会话/快照 → renderer
-dom/renderer         node ↔ element 协调、挂载/更新/卸载
+app/app              会话/快照 → renderer
+renderer/renderer    node ↔ element 协调、挂载/更新/卸载
+renderer/slot_bridge SlotNode → legacy Node 薄桥
 components/*         kind → DOM（38 个）
 components/registry  type → Kind 注册表
 components/icons     内联图标
-dom/types            Kind / RenderContext
-dom/testing          测试用的 mount helper
+renderer/types       Kind / RenderContext
+renderer/events      事件名 → handler id 解析（legacy 事件入口）
+components/testing   测试用的 mount helper
 ```
 
-`dom/` 与 `components/` 不依赖 React；`core/` 与 `render/` 中的协议、连接、patch、compose 保持框架无关。
+`renderer/`、`components/` 与 `app/` 不依赖 React；`core/` 与 `render/` 中的协议、连接、patch、compose 保持框架无关。
 
 ## 2. Kind 接口
 
@@ -115,7 +117,7 @@ renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, nod
 ## 6. 测试
 
 - 用 `jsdom`（已有 devDependency）；测试文件头写 `// @vitest-environment jsdom`。
-- 统一 helper：`dom/testing.ts` 提供 `mount(nodes)` → `{ root, renderer, events }`，断言 DOM 结构与事件 id。
+- 统一 helper：`components/testing.ts` 提供 `mount(nodes)` → `{ root, renderer, events }`，断言 DOM 结构与事件 id。
 - 每个 kind 至少：渲染出的标签/class、关键属性、事件 id、销毁清理。
 - 不再用 React `renderToString`；测试从“组件渲染”改成“DOM 行为”。
 
@@ -138,8 +140,8 @@ React 渲染层已删除；剩下的是框架无关的纯模块与 DOM 实现：
 - `render/components.tsx` / `controls/*` / `cards/tiles/icons/waveform` → 已迁成 `components/*` 后删除；
 - `capture/*` React hooks → 已迁成 media kind 内部控制器后删除；保留 `devices / capture-rules / media-upload / video-quality` 纯规则；
 - `search/search.tsx` → `components/search.ts`；保留 `searchText.ts`；
-- `shell/shell.tsx` → `dom/shell.ts`；
-- `app.tsx/main.tsx` → `dom/app.ts` + `dom/main.ts`，`index.html` 入口已切到后者。
+- `shell/shell.tsx` → `app/shell.ts`；
+- `app.tsx/main.tsx` → `app/app.ts` + `app/main.ts`，`index.html` 入口已切到后者。
 
 ## 9. 静态骨架编译（构建期）
 
@@ -163,14 +165,14 @@ src/compiler/vite-plugin.ts     Vite adapter：只决定何时编译、注进哪
 
 Slot 文档/运行时产出的是 `SlotNode`，现有 DOM renderer 只认 legacy `Node` 词表。S3-d 先用**薄桥 + 命名空间别名**把 Slot 接上，不迁移 38 个 kind 的实现：
 
-- `src/dom/slot/bridge.ts`：`slotToNode` 只做形状搬运——`type = slot.kind`（保留命名空间），复制 id/props/children/events/layout；不展开 `collection.templates`（模板不是挂载节点，实例化归运行时）。
-- `src/dom/slot/registry.ts`：`slotRegistry` = 所有 legacy type 的 `dendro:<type>` 别名 + 宿主别名（`ideas:card` → legacy `card`）+ Slot 原生 kind；Slot 原生 kind 后合并，同名时 Slot 语义优先。
-- `src/dom/slot/kinds.ts`：Slot 原生结构 kind（`dendro:window/page/slot/layer` 按 `layout.flow` 映射到现有 `.omora-row`/`.omora-column` class；S4 起 size/gap/align/scroll 也映射到 `--dendro-*` CSS 变量与 `data-*` 属性，`[data-dendro-layout]` 样式段消费）与 `dendro:page-link`（复用壳层导航按钮样式，事件走 `handlerOf` + `ctx.event`）。
+- `src/renderer/slot_bridge.ts`：`slotToNode` 只做形状搬运——`type = slot.kind`（保留命名空间），复制 id/props/children/events/layout；不展开 `collection.templates`（模板不是挂载节点，实例化归运行时）。
+- `src/app/slot_registry.ts`：`slotRegistry` = 所有 legacy type 的 `dendro:<type>` 别名 + 宿主别名（`ideas:card` → legacy `card`）+ Slot 原生 kind；Slot 原生 kind 后合并，同名时 Slot 语义优先。
+- `src/components/slot_kinds.ts`：Slot 原生结构 kind（`dendro:window/page/slot/layer` 按 `layout.flow` 映射到现有 `.omora-row`/`.omora-column` class；S4 起 size/gap/align/scroll 也映射到 `--dendro-*` CSS 变量与 `data-*` 属性，`[data-dendro-layout]` 样式段消费）与 `dendro:page-link`（复用壳层导航按钮样式，事件走 `handlerOf` + `ctx.event`）。
 - `Node` 增加可选 `layout` 字段；`kind` 语义由注册表决定，renderer 协调逻辑不变。
 
-**已证明**（`src/dom/slot/spike.test.ts`，共享 `document.json`）：session → 水合 → 桥 → DOM 渲染出母页面/导航/卡片；纯数据更新后同 id 卡片复用同一 DOM 元素、只改标题并新增一条；全量替换同 id 文档不重挂。换页用 `engine/document/page_switch.ts` 的 `diffPageTrees` 分类出 keep/move/replace/cancel/add。
+**已证明**（`src/app/spike.test.ts`，共享 `document.json`）：session → 水合 → 桥 → DOM 渲染出母页面/导航/卡片；纯数据更新后同 id 卡片复用同一 DOM 元素、只改标题并新增一条；全量替换同 id 文档不重挂。换页用 `engine/document/page_switch.ts` 的 `diffPageTrees` 分类出 keep/move/replace/cancel/add。
 
-**未接**：renderer 目前只在同一个父节点下按 id 协调，跨父的 `move` 会重建元素（换页移动的身份保留待补）；Slot 桥还没有接进 `dom/app.ts` / 主入口，legacy 页面仍走 legacy 路径；`layout` 的 size/gap/align 还没落到样式。
+**未接**：renderer 目前只在同一个父节点下按 id 协调，跨父的 `move` 会重建元素（换页移动的身份保留待补）；Slot 桥还没有接进 `app/app.ts` / 主入口，legacy 页面仍走 legacy 路径；`layout` 的 size/gap/align 还没落到样式。
 
 ## 11. 验收
 
