@@ -87,14 +87,14 @@ S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fu
 | `runtime/audit.ts`                         | 审计日志                               |
 | `render/renderer.tsx` + `components.tsx`   | Renderer + 组件注册表                  |
 | `packages/ui/ui.py`                        | 页面/文档注册（legacy）                |
-| —                                          | Producer Host、Diagnostics（待建）     |
+| —                                          | `contract/diagnostics`（已落）         |
 
 ## 8. S4 实现（已落）
 
 - **EngineRuntime**（`runtime/engine.ts`）：`createEngine` = createSession + hydrate；`applyOps` / `applyData` / `applyFull` / `applyLocalTrees` 成功后换会话、记指标、通知监听者，失败原子、记 rejections；`onChange` / `registerCleanup` / `dispose`（清监听 + 逆序账本，幂等）。`applyLocalTrees` = 链接全部局部树 → 替换树 → 版本 +1 → 当前 data 水合（全量更新闭环）。
 - **指标**（`runtime/metrics.ts`）：计数器 + 最近诊断快照 + apply 耗时 + 渲染计数，挂在 EngineRuntime 上。
 - **审计**（`runtime/audit.ts`）：有界 `AuditLog`（apply/reject/deny/diagnostic + code/owner/slot/changed）；EngineRuntime 每次 apply 记录，权限拒绝逐条 deny。
-- **权限薄层**（`runtime/permissions.ts` + `link/link.ts`）：链接期挂载检查 + 运行期 ops/data 检查，越权 E-PERMISSION；默认系统来源全放行（见 [permissions.md](permissions.md) §8）。
+- **权限薄层**（`contract/policy.ts` 纯策略 + `runtime/permissions.ts` op 检查 + `link/link.ts`）：链接期挂载检查 + 运行期 ops/data 检查，越权 E-PERMISSION；默认系统来源全放行（见 [permissions.md](permissions.md) §8）。
 - **来源宿主**（`runtime/sources.ts`）：owner → 局部树注册表；支持 `load` 整组替换与 `requesterFor` 权限透传；登记/移除后重新链接，死引用级联撤掉，其他失败回滚保留上一棵好树；dispose 走账本。
 - **来源模式引擎**（`runtime/engine_sources.ts`）：`SourceEngine` = SourceHost + EngineRuntime 组合；`createEngineFromLocalTrees(payload)` 从 local-trees 直接建引擎；`registerSource` / `removeSource` / `applyLocalTrees` 先由 host 重算权威树，再交引擎提交版本/水合/指标/审计/通知。
 - **DocumentView**（`dom/slot/view.ts`）：createEngine → 桥接根树 → DomRenderer；引擎通知后按 id 重画；`dispose` 取消监听/渲染器/账本三件套。

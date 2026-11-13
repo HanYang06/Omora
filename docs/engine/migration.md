@@ -23,7 +23,7 @@
 | S4   | 权限薄层 + 生命周期账本 + 观测指标                      | 越权拒绝；卸载零残留；有指标      |
 | S5   | TS 宿主 / 组件命名空间 / 运行后来源                     | 示例来源不改引擎源码即可加界面    |
 
-> S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/core/document.ts` 的 Slot 文档契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
+> S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/contract/document.ts` 的 Slot 文档契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
 
 > S5 起步进度（2026-11-14）：`SourceEngine`（SourceHost + EngineRuntime 组合，createEngineFromLocalTrees / registerSource / removeSource / applyLocalTrees）与 renderer 节点统计（created/updated/reused/removed → 指标）已落。schema 已重置为 `dendro.ui/1`、legacy/Slot 术语已收口；下一步拆组件目录与分层。
 
@@ -31,7 +31,7 @@
 
 > S4 续进度（2026-11-13）：链接期挂载权限（`link/link.ts` + base 归一化）、来源宿主 `SourceHost`（注册/级联/fail closed）、审计 `AuditLog` 与 apply 耗时/渲染计数已落。来源热更新与网络帧接线、observe/intercept、重渲染节点数、Slot 路径替换主会话待续。
 
-> S4 进度（2026-11-13）：权限薄层（`runtime/permissions.ts`，ops/data 运行期检查）、EngineRuntime（session + 生命周期账本 + 指标 + 变更通知，`runtime/engine.ts`/`metrics.ts`）、DocumentView（`dom/slot/view.ts`）已落。链接期权限、Producer Host/来源生命周期、订阅/媒体登记点、审计与耗时指标待续。
+> S4 进度（2026-11-13）：权限薄层（`runtime/permissions.ts` op 检查 + `contract/policy.ts` 纯策略，ops/data 运行期检查）、EngineRuntime（session + 生命周期账本 + 指标 + 变更通知，`runtime/engine.ts`/`metrics.ts`）、DocumentView（`dom/slot/view.ts`）已落。链接期权限、Producer Host/来源生命周期、订阅/媒体登记点、审计与耗时指标待续。
 
 > S3-e 进度（2026-11-13）：DOM renderer 支持跨父 move 复用元素（`renderer.ts`，换页保留实例）；Slot 预览入口 `?engine=slot`（独立 chunk）；生命周期账本原语（S4 预落）。Slot 会话替换主入口、layout 样式、S4 权限/观测待续。
 
