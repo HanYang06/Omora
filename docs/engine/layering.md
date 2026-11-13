@@ -1,6 +1,6 @@
 # 分层与依赖方向
 
-> 状态：**决定已定**；契约层、engine / host、dom 拆分、旧快照隔离（阶段 1–4）已落，其余层按阶段迁移。
+> 状态：**决定已定**；契约层、engine / host、dom 拆分、旧快照隔离、core 归位（阶段 1–5）已落，其余层按阶段迁移。
 > 相关：[README](README.md) · [renderer.md](renderer.md) · [components.md](components.md) · [migration.md](migration.md)
 
 ## 0. 一句话
@@ -13,7 +13,7 @@
 
 - `dom/` 曾同时有 app 入口、壳、renderer、38+ 个组件、Slot 桥、预览——已拆成 `renderer/`、`components/`、`app/`；
 - `runtime/` 曾同时有文档/集合算法、宿主设施（权限/账本/审计/指标/来源）、编排（EngineRuntime）——已拆成 `engine/` 与 `host/`；
-- `core/` 曾同时有契约（Slot/Document）与连接/日志/设备上报（契约已抽出，其余待归位）；
+- `core/` 曾同时有契约（Slot/Document）与连接/日志/设备上报（契约已抽出、连接/日志/topic 已归 app，只剩 device-report 待阶段 6）；
 - `link/` 曾反向依赖权限模块（已移到 `contract/policy`）；`host/engine` 曾依赖 `renderer/renderer` 的统计类型（已移到 `contract/render`）；
 - 旧快照渲染已隔离到 `legacy/render/`：只有 app 与编译期 adapter（compiler）引用它。
 
@@ -45,6 +45,7 @@ app/ui-engine/src/
 - [x] `runtime/` 拆成 `engine/`（document / collections / updates）与 `host/` 设施
 - [x] `dom/` 拆成 `renderer/`（renderer + Kind 契约 + Slot 桥）、`components/`（Slot 原生 kind + 测试 helper）、`app/`（入口 / 壳 / 视图 / 预览 / 注册表）
 - [x] 旧快照渲染（`render/`）隔离成 `legacy/render/`，只允许 app 与 compiler adapter 引用
+- [x] core 契约与工具归位（protocol / media 类型 → contract，Node → renderer，快照模型 → legacy，connection / log / topics → app）
 - [ ] build / platform 归位；`app/ui-engine` 包根再评估 engine / desktop 拆分
 
 ## 3. 依赖规则
