@@ -1,10 +1,5 @@
-import {
-  FrameError,
-  makeCall,
-  parseInboundFrame,
-  type ConnectionStatus,
-  type JsonObject,
-} from "../contract/protocol";
+import { FrameError, makeCall, parseInboundFrame } from "../contract/protocol";
+import type { ConnectionStatus, JsonObject } from "../contract/protocol";
 
 /** net 插件的默认端点。改这里就换地址。 */
 export const DEFAULT_URL = "ws://127.0.0.1:8765";
