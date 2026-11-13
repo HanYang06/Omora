@@ -10,9 +10,9 @@
  */
 
 import type { Capacity, SlotNode } from "../contract/document";
-import type { Diagnostic, DiagnosticCode } from "../link/types";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 import type { DocumentIndex } from "./document";
-import { makeDiagnostic } from "./diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 import type { MountOp, MoveOp, Op, ReplaceOp, UnmountOp, UpdateOp } from "./ops";
 
 /** 工作树：applyOps 里深拷出来的根；replace 根时换掉整个引用。 */

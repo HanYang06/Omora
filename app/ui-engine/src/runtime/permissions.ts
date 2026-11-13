@@ -15,9 +15,9 @@
  */
 
 import type { SlotNode } from "../contract/document";
-import type { Diagnostic } from "../link/types";
+import type { Diagnostic } from "../contract/diagnostics";
 import type { DocumentIndex } from "./document";
-import { makeDiagnostic } from "./diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 import type { Op } from "./ops";
 
 /** 权限能力（permissions.md §1）；`intercept` 当前只保留名字。 */

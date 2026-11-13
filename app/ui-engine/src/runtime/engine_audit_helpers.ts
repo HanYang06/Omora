@@ -3,7 +3,7 @@
  * 拆出来只为让 engine.ts 守住行数预算；语义与 EngineRuntime 文件头的审计说明一致。
  */
 
-import type { Diagnostic } from "../link/types";
+import type { Diagnostic } from "../contract/diagnostics";
 import type { AuditLog } from "./audit";
 
 /** 成功审计：一条 apply 汇总 + 成功但带条目级诊断时逐条 diagnostic。 */

@@ -28,8 +28,8 @@ import {
   type SlotDocument,
   type SlotNode,
 } from "../contract/document";
-import type { Diagnostic, DiagnosticCode } from "../link/types";
-import { makeDiagnostic } from "./diagnostics";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 
 /** 运行时持有的文档：唯一权威根树 + 单调递增的文档版本。 */
 export interface DocumentState {

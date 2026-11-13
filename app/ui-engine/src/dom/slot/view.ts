@@ -13,7 +13,7 @@ import type { JsonObject } from "../../core/protocol";
 import type { MediaData } from "../../core/types";
 import { createEngine, type EngineRuntime, type EngineApplyResult } from "../../runtime/engine";
 import type { Requester } from "../../runtime/permissions";
-import type { Diagnostic } from "../../link/types";
+import type { Diagnostic } from "../../contract/diagnostics";
 import { slotToNode } from "./bridge";
 import { createSlotRenderer } from "./registry";
 import type { RenderContext } from "../types";

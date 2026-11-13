@@ -7,7 +7,8 @@
  */
 
 import { DOCUMENT_SCHEMA, DocumentError, parseDocument, type SlotNode } from "../contract/document";
-import type { Diagnostic, DiagnosticCode, LocalTree, ParseLocalTreesResult } from "./types";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
+import type { LocalTree, ParseLocalTreesResult } from "./types";
 
 const PAYLOAD_CODE: DiagnosticCode = "E-PAYLOAD";
 

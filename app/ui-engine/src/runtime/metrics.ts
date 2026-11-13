@@ -32,7 +32,7 @@
 // 只借渲染器的统计类型（`import type` 在运行时擦除）：指标模块不 import 渲染实现，
 // 也不持有 DOM 引用；真正上报的是宿主（DocumentView）。
 import type { RenderStats } from "../dom/renderer";
-import type { Diagnostic } from "../link/types";
+import type { Diagnostic } from "../contract/diagnostics";
 
 /**
  * 可累加的计数字段；诊断条数只经 `recordDiagnostics` 累加（要同步维护最近诊断），

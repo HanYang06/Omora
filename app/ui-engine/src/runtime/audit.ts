@@ -15,7 +15,7 @@
  * - 纯模块：不碰 DOM、不读时钟、不打日志。
  */
 
-import type { DiagnosticCode } from "../link/types";
+import type { DiagnosticCode } from "../contract/diagnostics";
 
 /** 审计事件种类：成功应用 / 整批拒绝 / 权限拒绝 / 成功但有条目级诊断。 */
 export type AuditKind = "apply" | "reject" | "deny" | "diagnostic";

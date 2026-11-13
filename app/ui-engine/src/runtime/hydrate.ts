@@ -31,9 +31,9 @@
  */
 
 import type { SlotNode } from "../contract/document";
-import type { Diagnostic, DiagnosticCode } from "../link/types";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 import { instantiateCollection } from "./collection";
-import { makeDiagnostic } from "./diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 import type { SessionState } from "./session";
 
 const PAYLOAD_CODE: DiagnosticCode = "E-PAYLOAD";

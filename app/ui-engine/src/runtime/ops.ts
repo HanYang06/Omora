@@ -44,9 +44,9 @@
  */
 
 import { DOCUMENT_SCHEMA, DocumentError, parseDocument, type SlotNode } from "../contract/document";
-import type { Diagnostic, DiagnosticCode } from "../link/types";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 import { DocumentIndex, documentErrorDiagnostic, type DocumentState } from "./document";
-import { makeDiagnostic } from "./diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 import { applyOp, buildLiveLocations, type LiveLocations, type Working } from "./ops_apply";
 import { SYSTEM_REQUESTER, checkOpPermission, type RequesterOptions } from "./permissions";
 

@@ -6,7 +6,7 @@
  */
 
 import { DOCUMENT_SCHEMA, DocumentError, parseDocument, type SlotNode } from "../contract/document";
-import type { Diagnostic, DiagnosticCode } from "./types";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 
 /** 文本比较：不依赖 locale，保证诊断与排序确定。 */
 export function compareText(left: string, right: string): number {

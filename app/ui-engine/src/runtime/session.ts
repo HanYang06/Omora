@@ -25,9 +25,9 @@
  */
 
 import { DocumentError, parseDocument, type SlotDocument, type PageEntry } from "../contract/document";
-import type { Diagnostic, DiagnosticCode } from "../link/types";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 import type { DocumentState } from "./document";
-import { makeDiagnostic } from "./diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 import { applyOps, parseOps, type OpsBatch, type WireOp } from "./ops";
 import type { RequesterOptions } from "./permissions";
 

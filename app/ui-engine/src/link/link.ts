@@ -25,8 +25,8 @@ import {
   unindex,
   normalizeRoot,
 } from "./tree_index";
+import type { Diagnostic } from "../contract/diagnostics";
 import type {
-  Diagnostic,
   LinkOptions,
   LinkResult,
   LocalTree,

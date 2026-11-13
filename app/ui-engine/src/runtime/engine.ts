@@ -44,11 +44,12 @@
 import type { RenderStats } from "../dom/renderer";
 import { link } from "../link/link";
 import { WINDOW_SCAFFOLD } from "../link/scaffold";
-import type { Diagnostic, LinkOptions } from "../link/types";
+import type { Diagnostic } from "../contract/diagnostics";
+import type { LinkOptions } from "../link/types";
 import { AuditLog } from "./audit";
 import { auditApplied, auditRejected } from "./engine_audit_helpers";
 import { applyData as applyDataUpdate, type DataState } from "./data";
-import { makeDiagnostic } from "./diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 import { hydrateSession } from "./hydrate";
 import { LifecycleLedger, type DisposeReport } from "./lifecycle";
 import { RuntimeMetrics, type MetricsCounts, type RuntimeMetricsSnapshot } from "./metrics";

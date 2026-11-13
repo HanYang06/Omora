@@ -18,7 +18,8 @@
 import type { PageEntry } from "../contract/document";
 import type { RenderStats } from "../dom/renderer";
 import { parseLocalTrees } from "../link/parse";
-import type { Diagnostic, LocalTree, LocalTreesPayload } from "../link/types";
+import type { Diagnostic } from "../contract/diagnostics";
+import type { LocalTree, LocalTreesPayload } from "../link/types";
 import type { EngineApplyResult, EngineOptions, EngineRuntime } from "./engine";
 import { createEngine, type EngineChangeListener } from "./engine";
 import type { AuditLog } from "./audit";
