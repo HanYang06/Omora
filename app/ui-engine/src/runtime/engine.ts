@@ -46,6 +46,7 @@ import { link } from "../link/link";
 import { WINDOW_SCAFFOLD } from "../link/scaffold";
 import type { Diagnostic, LinkOptions } from "../link/types";
 import { AuditLog } from "./audit";
+import { auditApplied, auditRejected } from "./engine_audit_helpers";
 import { applyData as applyDataUpdate, type DataState } from "./data";
 import { makeDiagnostic } from "./diagnostics";
 import { hydrateSession } from "./hydrate";
@@ -322,7 +323,7 @@ export class EngineRuntime {
     // 派发前快照监听者：通知期间的取消从下一次 apply 起生效，通知数按快照长度计。
     const listeners = [...this.listeners];
     this.counter.count({ ...counts, notifications: listeners.length });
-    this.auditApplied(changed, diagnostics);
+    auditApplied(this.auditLog, changed, diagnostics);
     for (const listener of listeners) {
       try {
         listener(session, changed);
@@ -338,51 +339,13 @@ export class EngineRuntime {
     this.counter.count({ rejections: 1 });
     this.counter.recordDiagnostics(diagnostics);
     this.counter.recordTiming(elapsedMs);
-    this.auditRejected(diagnostics);
+    auditRejected(this.auditLog, diagnostics);
     return { ok: false, diagnostics };
   }
 
   /** 从 apply 起表到结算的毫秒数；只结算一次 clock，测试才能按调用次数喂假钟。 */
   private elapsed(start: number): number {
     return this.clock() - start;
-  }
-
-  /** 成功审计：一条 apply 汇总 + 成功但带条目级诊断时逐条 diagnostic。 */
-  private auditApplied(changed: string[], diagnostics: Diagnostic[]): void {
-    this.auditLog.record({ kind: "apply", changed: changed.length });
-    for (const diagnostic of diagnostics) {
-      this.auditLog.record({
-        kind: "diagnostic",
-        code: diagnostic.code,
-        owner: diagnostic.owner,
-        slot: diagnostic.slot,
-        message: diagnostic.message,
-      });
-    }
-  }
-
-  /** 失败审计：一条 reject 汇总（首条诊断）+ 含 E-PERMISSION 时逐条 deny。 */
-  private auditRejected(diagnostics: Diagnostic[]): void {
-    const first = diagnostics[0];
-    this.auditLog.record({
-      kind: "reject",
-      code: first?.code,
-      message: first?.message,
-      changed: 0,
-    });
-    for (const diagnostic of diagnostics) {
-      if (diagnostic.code !== "E-PERMISSION") {
-        continue;
-      }
-      this.auditLog.record({
-        kind: "deny",
-        code: diagnostic.code,
-        owner: diagnostic.owner,
-        slot: diagnostic.slot,
-        message: diagnostic.message,
-        changed: 0,
-      });
-    }
   }
 
   /** dispose 之后的统一拒绝：E-PAYLOAD，不改会话、不通知、不记指标。 */
