@@ -1,6 +1,6 @@
 ---
 name: omora-team
-description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teammate 各自 worktree/分支、Lead 合进集成分支并只开一个 PR（一个功能 = 一个 PR）、review + merge commit、跨区整合。多区并行、开团队、分工、worktree、PR 粒度、review/合并、快速迭代时先读。
+description: Omora 的 Agent 团队开发流程与成本规则：Lead 拆任务/写域、teammate 复用与 worktree/分支、Lead 合进集成分支并只开一个 PR、review + merge commit、跨区整合。多区并行、开团队/复用 Agent、分工、worktree、PR 粒度、review/合并、成本控制时先读。
 ---
 
 # Agent 团队开发流程
@@ -37,16 +37,46 @@ description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teamma
 - teammate：在自己 worktree 里开发、测试、提交、推分支；**不开 PR**（PR 由 Lead 统一开）；
   不合并；产品问题回 Lead；对自己的分支/worktree 负责，Lead 不改。
 
-## 2.1 智能体复用（硬规则）
+## 2.1 智能体复用与成本（硬规则）
 
-**一个任务一个 agent 是反模式。** 每 spawn 一次都是一份新上下文，缓存利用率低、成本高。
+**Agent 是长期变量，不是任务耗材。** 每 spawn 一次 = 一份新上下文 + 冷缓存；上下文复用才是缓存命中。上一轮一个重构用了 31 个 teammate，钱烧得比改动还快——这是反模式，不是勤奋。
 
-- 同一波/同一主题的连续任务，优先 **send_message 复用已有 teammate**，不要重新 spawn。
-- 一个 teammate 可以连续接多个 task：它保留仓库/接口/门禁上下文，第二件事只需要 brief 增量。
-- 并行上限按写域来：默认 2 个，最多 3 个；能串行就串行。
-- 只有这些情况才 spawn 新 agent：写域强冲突无法复用、旧 teammate 的 cwd/worktree 已不可用、需要独立 session 隔离。
-- 复用前先 `list_agents` 看谁还 inactive、cwd 是否可用；不可用就修复 cwd 或开新 worktree，而不是无脑 spawn。
-- 任务完成后 agent 进入 inactive 不是退役；下一个相关任务优先唤醒它。
+### 默认预算
+
+- **每轮默认 1 个 teammate；最多 2 个。** 超过 2 个先问用户，不要自己扩编。
+- 小任务 Lead 自己做，不开 agent：单文件、≤3 个文件、纯文档、纯改名、修一个明确缺陷。
+- 并行收益不明显就串行；接口没定、需要频繁对齐的任务先 Lead 定形状，再交给一个 teammate。
+- 团队成立条件（多写域、可独立跑门禁）成立但收益不够时，仍然自己做。
+
+### 复用手册（spawn 前必须走一遍）
+
+1. `list_agents`：找同写域、inactive 的 teammate（例：引擎/组件/渲染域长期复用同一个）。
+2. 复用优先 `send_message`：brief 只写**增量**——新 task id、新分支、当前 main/PR、写域、验收；旧上下文里的仓库结构/接口/门禁命令直接复用。
+3. cwd/worktree 不在了就**重建 worktree**，不要因此 spawn 新 agent；分支从最新 `origin/main` 起。
+4. 任务板复用同一个 owner：`reassign` / 继续 `claim` 给原 teammate，别新建一个 owner 只做一件事。
+5. 一个 teammate 可以连续接多个 task；完成一个后进入 inactive 不是退役，下一个相关任务优先唤醒它。
+
+### 只有这些情况才 spawn 新 agent
+
+- 写域强冲突，必须两个独立 worktree 同时写（且并行收益明确）；
+- 旧 teammate 的上下文已被证明过期/污染，复用成本高于新开；
+- 需要独立模型/权限/会话隔离；
+- 用户明确要求新开。
+
+### 复用注意
+
+- 复用不等于盲信旧上下文：brief 里先给当前 main/PR 与“先读当前文件”，禁止凭记忆改代码。
+- 一个 agent 连续做多件事时，每件独立提交、独立跑门禁；不要把一个 agent 的旧结论当事实。
+- 上下文过长时优先压缩/重述关键约束，而不是无限续聊；确实需要新会话才 spawn，并写明理由。
+- 每轮结束清理 worktree/branch 可以，但**保留 agent 身份**供下轮复用；身份比 worktree 便宜。
+
+### 成本反模式
+
+- 一个任务一个 agent、一个 PR 一个 agent；
+- 纯文档/纯改名/单文件修复也开 teammate；
+- 先 spawn 再想任务；spawn 前没查 `list_agents`；
+- 为了“看起来并行”把串行任务拆成多个 agent；
+- 不复用 brief，每轮重新交代整个仓库背景。
 
 ## 3. Lead 开工前
 
@@ -118,6 +148,7 @@ description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teamma
 - 产品决策自己拍；用户被绕过。
 - 把“发了任务”当完成；完成 = PR 合了 + 集成跑通。
 - 一个任务 spawn 一个 agent；同类任务连续开新上下文，不复用、不合并 brief。
+- 一轮开 3+ 个 teammate 却不问用户；纯文档/改名也开 agent。
 
 ## 8. 模板
 
