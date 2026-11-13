@@ -1,7 +1,7 @@
-import type { Node } from "../../core/types";
-import { handlerOf } from "../events";
-import { iconGlyph, paintGlyph } from "../icons";
-import type { KindRegistry, RenderContext } from "../types";
+import type { Node } from "../core/types";
+import { handlerOf } from "../dom/events";
+import { iconGlyph, paintGlyph } from "./icons";
+import type { KindRegistry, RenderContext } from "../dom/types";
 
 /** props 里的字符串字段；不是字符串就等于没给。 */
 function stringProp(node: Node, name: string): string | undefined {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import type { Node } from "../../core/types";
-import { mount, type Mounted } from "../testing";
+import type { Node } from "../core/types";
+import { mount, type Mounted } from "../dom/testing";
 
 const mounted: Mounted[] = [];
 

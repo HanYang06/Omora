@@ -8,9 +8,9 @@ import {
   type DeviceState,
   type DeviceTracker,
   type Gate,
-} from "../../capture/devices";
+} from "../capture/devices";
 import type WaveSurfer from "wavesurfer.js";
-import type { Node } from "../../core/types";
+import type { Node } from "../core/types";
 
 /**
  * 媒体 / 捕捉组共用的 DOM 小工具：props 读取、时钟、文本、handler、播放、

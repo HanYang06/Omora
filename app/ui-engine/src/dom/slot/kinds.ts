@@ -34,7 +34,7 @@
 import type { LayoutFlow, Scroll } from "../../core/document";
 import type { Node } from "../../core/types";
 import { handlerOf } from "../events";
-import { iconGlyph, paintGlyph } from "../icons";
+import { iconGlyph, paintGlyph } from "../../components/icons";
 import type { Kind, KindRegistry } from "../types";
 
 /** 没有图标时用壳层同款默认点。 */

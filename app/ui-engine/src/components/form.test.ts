@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import type { Node } from "../../core/types";
-import { handlerOf } from "../events";
-import { mount, type Mounted } from "../testing";
+import type { Node } from "../core/types";
+import { handlerOf } from "../dom/events";
+import { mount, type Mounted } from "../dom/testing";
 
 /** 表单输入类 kind：渲染标签/class、事件 id、更新与清理都在真实 DOM 上验。 */
 

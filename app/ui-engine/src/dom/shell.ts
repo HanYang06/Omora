@@ -1,9 +1,9 @@
 import type { ConnectionStatus } from "../core/connection";
 import type { JsonObject } from "../core/protocol";
 import type { MediaData, PageEntry, Snapshot } from "../core/types";
-import { iconGlyph } from "./icons";
+import { iconGlyph } from "../components/icons";
 import { DomRenderer } from "./renderer";
-import { registry } from "./registry";
+import { registry } from "../components/registry";
 import type { RenderContext } from "./types";
 
 const STATUS_TEXT: Record<ConnectionStatus, string> = {

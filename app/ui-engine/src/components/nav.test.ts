@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import type { Node } from "../../core/types";
-import { mount } from "../testing";
+import type { Node } from "../core/types";
+import { mount } from "../dom/testing";
 
 function node(type: string, props: Record<string, unknown> = {}, children: Node[] = []): Node {
   return { type, props, children };

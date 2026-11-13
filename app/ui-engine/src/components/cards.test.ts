@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
-import type { Node } from "../../core/types";
-import { registry } from "../registry";
-import { DomRenderer } from "../renderer";
-import type { Mounted, RecordedEvent } from "../testing";
-import type { RenderContext } from "../types";
+import type { Node } from "../core/types";
+import { registry } from "./registry";
+import { DomRenderer } from "../dom/renderer";
+import type { Mounted, RecordedEvent } from "../dom/testing";
+import type { RenderContext } from "../dom/types";
 import { cardKinds } from "./cards";
 
 function make(

@@ -12,7 +12,7 @@
 
 import type { SlotNode } from "../../core/document";
 import { DomRenderer } from "../renderer";
-import { registry as legacyRegistry } from "../registry";
+import { registry as legacyRegistry } from "../../components/registry";
 import type { Kind, KindRegistry, RenderContext } from "../types";
 import { slotToNode } from "./bridge";
 import { slotKinds } from "./kinds";
