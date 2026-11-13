@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { SlotNode } from "../../contract/document";
-import { slotToNode } from "./bridge";
+import type { SlotNode } from "../contract/document";
+import { slotToNode } from "./slot_bridge";
 
 function slot(over: Partial<SlotNode> & { id: string }): SlotNode {
   return { kind: "dendro:slot", owner: "test", props: {}, children: [], ...over };

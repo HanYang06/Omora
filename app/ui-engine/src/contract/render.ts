@@ -2,8 +2,8 @@
  * 契约层：渲染节点统计（纯类型）。
  *
  * 一次渲染对节点做的事：新建 / 更新 / 复用 / 销毁；数值都描述**最近一次** render。
- * 从 dom/renderer_util.ts 抽到契约层：runtime 的指标 / 引擎只依赖这个统计形状，
- * 不再反向依赖渲染实现（dom/render）。
+ * 从 renderer/renderer_util.ts 抽到契约层：runtime 的指标 / 引擎只依赖这个统计形状，
+ * 不再反向依赖渲染实现（renderer/）。
  *
  * created 与 reused 互补（同一次渲染里每个存活的条目恰好落进一个），updated 是 reused
  * 的子集：复用的元素里真正执行了 kind.update 的那部分。这样既能看「这轮复用了多少节点」，

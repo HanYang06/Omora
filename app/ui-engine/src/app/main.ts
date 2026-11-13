@@ -24,7 +24,7 @@ function startLegacy(container: HTMLElement): void {
 
 /** Slot 运行时只在需要时拉：preview 是独立 chunk，不进主 chunk。 */
 function startPreview(container: HTMLElement): void {
-  void import("./slot/preview")
+  void import("./preview")
     .then((preview) => {
       preview.mountPreview(container);
     })

@@ -2,9 +2,9 @@ import { planStop, timeUp } from "../capture/capture-rules";
 import { captureErrorReason } from "../capture/devices";
 import { uploadRecorded } from "../capture/media-upload";
 import type { Node } from "../core/types";
-import { handlerOf } from "../dom/events";
+import { handlerOf } from "../renderer/events";
 import { iconGlyph } from "./icons";
-import type { RenderContext } from "../dom/types";
+import type { RenderContext } from "../renderer/types";
 import { createAudioCaptureEngine, type AudioCaptureEngine } from "./audio_capture_engine";
 import {
   actionButton,

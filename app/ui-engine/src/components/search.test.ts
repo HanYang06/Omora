@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JsonObject } from "../core/protocol";
 import type { Node } from "../core/types";
 import { registry } from "./registry";
-import { DomRenderer } from "../dom/renderer";
-import type { RenderContext } from "../dom/types";
+import { DomRenderer } from "../renderer/renderer";
+import type { RenderContext } from "../renderer/types";
 import { SEARCH_DEBOUNCE_MS, searchKinds } from "./search";
 
 afterEach(() => {

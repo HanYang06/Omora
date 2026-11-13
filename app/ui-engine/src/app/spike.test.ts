@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { SlotNode } from "../../contract/document";
-import { applyData, type DataState } from "../../engine/updates/data";
-import { hydrateSession } from "../../engine/updates/hydrate";
-import { diffPageTrees } from "../../engine/document/page_switch";
-import { applyFull, createSession, type SessionState } from "../../engine/document/session";
-import { slotToNode } from "./bridge";
-import { createSlotRenderer } from "./registry";
+import type { SlotNode } from "../contract/document";
+import { applyData, type DataState } from "../engine/updates/data";
+import { hydrateSession } from "../engine/updates/hydrate";
+import { diffPageTrees } from "../engine/document/page_switch";
+import { applyFull, createSession, type SessionState } from "../engine/document/session";
+import { slotToNode } from "../renderer/slot_bridge";
+import { createSlotRenderer } from "./slot_registry";
 import { DOCUMENT_FIXTURE_PATH } from "./test_fixtures";
 
 /**

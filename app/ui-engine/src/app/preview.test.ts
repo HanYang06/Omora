@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
-import { wantsPreview } from "../main";
+import { wantsPreview } from "./main";
 import { mountPreview, type PreviewHandle } from "./preview";
 
 interface Mounted {
@@ -128,7 +128,7 @@ describe("?engine=slot 入口接线", () => {
     try {
       // 模块已在文件顶部被 import 过一次：清缓存，让入口按当前 URL / #root 重新启动。
       vi.resetModules();
-      await import("../main");
+      await import("./main");
       await vi.waitFor(() => {
         expect(root.querySelector('[data-type="dendro:window"]')).not.toBeNull();
       });

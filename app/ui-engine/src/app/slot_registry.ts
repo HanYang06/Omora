@@ -10,12 +10,12 @@
  * 而不是 legacy 的无 layout `slot`——同名时 Slot 语义优先。
  */
 
-import type { SlotNode } from "../../contract/document";
-import { DomRenderer } from "../renderer";
-import { registry as legacyRegistry } from "../../components/registry";
-import type { Kind, KindRegistry, RenderContext } from "../types";
-import { slotToNode } from "./bridge";
-import { slotKinds } from "./kinds";
+import type { SlotNode } from "../contract/document";
+import { DomRenderer } from "../renderer/renderer";
+import { registry as legacyRegistry } from "../components/registry";
+import type { Kind, KindRegistry, RenderContext } from "../renderer/types";
+import { slotToNode } from "../renderer/slot_bridge";
+import { slotKinds } from "../components/slot_kinds";
 
 function namespacedLegacyKinds(): Record<string, Kind> {
   const aliases: Record<string, Kind> = {};

@@ -1,6 +1,6 @@
 import type { Node } from "../core/types";
-import { handlerOf } from "../dom/events";
-import type { Kind, KindRegistry } from "../dom/types";
+import { handlerOf } from "../renderer/events";
+import type { Kind, KindRegistry } from "../renderer/types";
 
 /**
  * 布局组 kind：column / row / list / item / split / rail / panel / slot（empty / card 在 cards.ts）。
@@ -11,7 +11,7 @@ import type { Kind, KindRegistry } from "../dom/types";
  * 本组没有 document 级监听、定时器或媒体，卸载只需 renderer 移除元素本身。
  */
 
-/** 与 core/shared.ts 同语义，但 dom/ 不依赖 React 类型。 */
+/** 与 core/shared.ts 同语义，但 renderer/ 不依赖 React 类型。 */
 function prop(node: Node, name: string): string | undefined {
   const value = node.props[name];
   return typeof value === "string" ? value : undefined;

@@ -6,7 +6,7 @@ import { layoutKinds } from "./layout";
 import { mediaKinds } from "./media";
 import { navKinds } from "./nav";
 import { searchKinds } from "./search";
-import type { KindRegistry } from "../dom/types";
+import type { KindRegistry } from "../renderer/types";
 
 /** type → Kind；分组文件由不同 owner 维护，这里只汇总。 */
 export const registry: KindRegistry = {

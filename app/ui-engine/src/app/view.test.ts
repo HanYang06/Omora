@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { applyData as applyDataUpdate, type DataState } from "../../engine/updates/data";
+import { applyData as applyDataUpdate, type DataState } from "../engine/updates/data";
 import { mountDocumentView } from "./view";
 import { DOCUMENT_FIXTURE_PATH } from "./test_fixtures";
 

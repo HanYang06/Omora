@@ -9,14 +9,14 @@
  * （`noteRender`）；两个计数互不代替，见 host/metrics.ts 文件头。
  */
 
-import type { JsonObject } from "../../core/protocol";
-import type { MediaData } from "../../core/types";
-import { createEngine, type EngineRuntime, type EngineApplyResult } from "../../host/engine";
-import type { Requester } from "../../contract/policy";
-import type { Diagnostic } from "../../contract/diagnostics";
-import { slotToNode } from "./bridge";
-import { createSlotRenderer } from "./registry";
-import type { RenderContext } from "../types";
+import type { JsonObject } from "../core/protocol";
+import type { MediaData } from "../core/types";
+import { createEngine, type EngineRuntime, type EngineApplyResult } from "../host/engine";
+import type { Requester } from "../contract/policy";
+import type { Diagnostic } from "../contract/diagnostics";
+import { slotToNode } from "../renderer/slot_bridge";
+import { createSlotRenderer } from "./slot_registry";
+import type { RenderContext } from "../renderer/types";
 
 export interface DocumentViewOptions {
   /** 运行期变更主体；缺省 = 系统来源（全放行）。 */

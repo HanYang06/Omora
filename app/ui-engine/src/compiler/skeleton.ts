@@ -1,6 +1,6 @@
 import type { ConnectionStatus } from "../core/connection";
 import type { Snapshot } from "../core/types";
-import { DomShell } from "../dom/shell";
+import { DomShell } from "../app/shell";
 
 /**
  * 构建期编译器：把一份快照编译成首帧 HTML。

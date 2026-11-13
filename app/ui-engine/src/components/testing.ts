@@ -1,8 +1,8 @@
 import type { JsonObject } from "../core/protocol";
 import type { Node } from "../core/types";
-import { registry } from "../components/registry";
-import { DomRenderer } from "./renderer";
-import type { RenderContext } from "./types";
+import { registry } from "./registry";
+import { DomRenderer } from "../renderer/renderer";
+import type { RenderContext } from "../renderer/types";
 
 export interface RecordedEvent {
   handler: string;

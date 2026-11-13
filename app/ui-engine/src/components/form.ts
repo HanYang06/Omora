@@ -1,6 +1,6 @@
 import type { Node } from "../core/types";
-import { handlerOf } from "../dom/events";
-import type { Kind, KindRegistry, RenderContext } from "../dom/types";
+import { handlerOf } from "../renderer/events";
+import type { Kind, KindRegistry, RenderContext } from "../renderer/types";
 
 /** 表单输入类 kind：button / input / textarea / number_input / slider / progress。 */
 

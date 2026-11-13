@@ -2,9 +2,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { Node } from "../core/types";
 import { registry } from "./registry";
-import { DomRenderer } from "../dom/renderer";
-import type { Mounted, RecordedEvent } from "../dom/testing";
-import type { RenderContext } from "../dom/types";
+import { DomRenderer } from "../renderer/renderer";
+import type { Mounted, RecordedEvent } from "./testing";
+import type { RenderContext } from "../renderer/types";
 import { formChoiceKinds } from "./form_choice";
 
 /** 表单选择类 kind：受控状态、事件 id、局部更新与清理都在真实 DOM 上验。 */

@@ -1,4 +1,4 @@
-import type { KindRegistry } from "../dom/types";
+import type { KindRegistry } from "../renderer/types";
 import { audioKinds } from "./audio_kinds";
 import { captureKinds } from "./capture_kinds";
 import { videoKinds } from "./video_kinds";
