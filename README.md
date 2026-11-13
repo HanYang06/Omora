@@ -16,13 +16,13 @@
 
 ## 目录
 
-| 位置             | 是什么                                         |
-| ---------------- | ---------------------------------------------- |
-| `app/core/`      | 内核：`omora-core`（workspace member）         |
-| `app/sdk/`       | 插件 API：`omora-sdk`（workspace member）      |
-| `packages/`      | 系统插件：`omora-plugin-*`（workspace member） |
-| `app/ui-engine/` | 渲染引擎（TS）+ Electron 桌面壳（`shell/`）    |
-| `docs/`          | 事实来源                                       |
+| 位置             | 是什么                                                                                                                       |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `app/core/`      | 内核：`omora-core`（workspace member）                                                                                       |
+| `app/sdk/`       | 插件 API：`omora-sdk`（workspace member）                                                                                    |
+| `packages/`      | 系统插件：`omora-plugin-*`（workspace member）                                                                               |
+| `app/ui-engine/` | 渲染引擎（TS，`src/{contract,link,engine,host,renderer,components,app,legacy,build,platform}`）+ Electron 桌面壳（`shell/`） |
+| `docs/`          | 事实来源                                                                                                                     |
 
 Python 侧是一个 uv workspace：一个 lock、一个 venv；每个包有自己的 pyproject / 依赖 / 代码 / tests，import 命名空间是 `omora.*`。
 

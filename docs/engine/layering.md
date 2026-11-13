@@ -1,6 +1,6 @@
 # 分层与依赖方向
 
-> 状态：**决定已定**；契约层、engine / host、dom 拆分、旧快照隔离、core 归位（阶段 1–5）已落，其余层按阶段迁移。
+> 状态：**决定已定**；六个阶段全部完成（contract / link / engine / host / renderer / components / app / legacy / build / platform）。
 > 相关：[README](README.md) · [renderer.md](renderer.md) · [components.md](components.md) · [migration.md](migration.md)
 
 ## 0. 一句话
@@ -13,9 +13,9 @@
 
 - `dom/` 曾同时有 app 入口、壳、renderer、38+ 个组件、Slot 桥、预览——已拆成 `renderer/`、`components/`、`app/`；
 - `runtime/` 曾同时有文档/集合算法、宿主设施（权限/账本/审计/指标/来源）、编排（EngineRuntime）——已拆成 `engine/` 与 `host/`；
-- `core/` 曾同时有契约（Slot/Document）与连接/日志/设备上报（契约已抽出、连接/日志/topic 已归 app，只剩 device-report 待阶段 6）；
+- `core/` 曾同时有契约（Slot/Document）与连接/日志/设备上报（已全部归位：契约 → contract、连接/日志/topic → app、device-report → app，core/ 删除）；
 - `link/` 曾反向依赖权限模块（已移到 `contract/policy`）；`host/engine` 曾依赖 `renderer/renderer` 的统计类型（已移到 `contract/render`）；
-- 旧快照渲染已隔离到 `legacy/render/`：只有 app 与编译期 adapter（compiler）引用它。
+- 旧快照渲染已隔离到 `legacy/render/`：只有 app 与构建期 adapter（build）引用它。
 
 ## 2. 目标结构
 
@@ -30,9 +30,9 @@ app/ui-engine/src/
   host/          来源宿主、EngineRuntime/SourceEngine、权限、生命周期账本、审计、指标
   renderer/      DOM renderer、Kind 契约、Slot → 渲染节点桥；不含组件
   components/    38+ 个 kind 实现、注册表、图标；只依赖 contract + renderer 类型
-  app/           入口、连接、壳、会话装配
-  legacy/        旧快照渲染路径（隔离，迁移结束删除）
-  build/         Vite 插件、启动骨架编译 host（adapter）
+  app/           入口、连接、日志、topic、会话装配、device-report
+  legacy/        旧快照渲染路径（隔离：只给 app 与 build 过渡期引用，之后删除）
+  build/         Vite 插件、启动骨架编译、链接期门禁（构建期 adapter）
   platform/      media / capture / search 等宿主工具
   generated/  styles/
 ```
@@ -46,32 +46,34 @@ app/ui-engine/src/
 - [x] `dom/` 拆成 `renderer/`（renderer + Kind 契约 + Slot 桥）、`components/`（Slot 原生 kind + 测试 helper）、`app/`（入口 / 壳 / 视图 / 预览 / 注册表）
 - [x] 旧快照渲染（`render/`）隔离成 `legacy/render/`，只允许 app 与 compiler adapter 引用
 - [x] core 契约与工具归位（protocol / media 类型 → contract，Node → renderer，快照模型 → legacy，connection / log / topics → app）
-- [ ] build / platform 归位；`app/ui-engine` 包根再评估 engine / desktop 拆分
+- [x] build / platform 归位（compiler → build，capture / media / search → platform，device-report → app，core/ 删除）
+- [ ] `app/ui-engine` 包根再评估 engine / desktop 拆分（非目录阶段，后续）
 
 ## 3. 依赖规则
 
-只允许箭头方向：`contract → link → engine.* → host → renderer/components → app`；`build` 是 adapter，可以依赖 renderer/components，但不被运行时依赖；`legacy` 只允许 app 引用。
+只允许箭头方向：`contract → link → engine.* → host → renderer → components → app`；`platform` 是宿主工具旁支（只依赖 contract）；`build` 是构建期 adapter（可依赖 contract / link / renderer / components / host / legacy，不被运行时依赖）；`legacy` 只允许 app 与 build 过渡期引用。
 
-| 层            | 可以依赖                                         | 禁止                              |
-| ------------- | ------------------------------------------------ | --------------------------------- |
-| `contract/`   | 无（纯类型/纯函数）                              | DOM、renderer、engine、host、app  |
-| `link/`       | contract                                         | engine/host、DOM、app             |
-| `engine/*`    | contract、link 的输出                            | DOM、renderer、host、app          |
-| `host/`       | contract、link、engine                           | renderer/DOM、app                 |
-| `renderer/`   | contract                                         | engine、link、host、app           |
-| `components/` | contract、renderer 类型、platform 工具（只读）   | engine、link、host、app、DOM 状态 |
-| `app/`        | 全部（组合根）                                   | 被下层反向 import                 |
-| `legacy/`     | contract、renderer                               | engine、host、app（只给 app 用）  |
-| `build/`      | contract、renderer、components、host（只做编译） | 被运行时 import                   |
-| `platform/`   | contract                                         | DOM 组件、engine、host            |
+| 层            | 可以依赖                                           | 禁止                                                         |
+| ------------- | -------------------------------------------------- | ------------------------------------------------------------ |
+| `contract/`   | 无（纯类型/纯函数）                                | DOM、renderer、engine、host、app                             |
+| `link/`       | contract                                           | engine/host、DOM、app                                        |
+| `engine/*`    | contract、link 的输出                              | renderer、host、platform、app                                |
+| `host/`       | contract、link、engine                             | renderer/DOM、app                                            |
+| `renderer/`   | contract                                           | engine、link、host、platform、app                            |
+| `components/` | contract、renderer 类型、platform 工具（只读）     | engine、link、host、app、DOM 状态                            |
+| `app/`        | 全部（组合根）                                     | 被下层反向 import                                            |
+| `legacy/`     | contract、renderer、components                     | engine、host、app（只给 app/build）                          |
+| `build/`      | contract、link、renderer、components、host、legacy | app、engine、platform；被运行时 import                       |
+| `platform/`   | contract、platform 内部                            | renderer、components、engine、host、link、legacy、app、build |
 
-已知要修的倒置（1、2 已修；3、4 未做）：
+已知要修的倒置（全部已解）：
 
 1. ~~`link/link.ts` → 权限模块~~：能力匹配已移到 `contract/policy`，link 与 host 都依赖它；
 2. ~~`host/engine.ts` → `renderer/renderer`（`RenderStats`）~~：统计类型已移到 `contract/render`，engine 不依赖渲染实现；
-3. `compiler/` → `app/shell`：构建期编译器是 adapter，迁到 `build/` 后依赖 renderer / app 是允许的；
-4. `core/device-report.ts` → `capture/devices`：`core` 不再当“杂物间”，设备上报移到 platform/app 侧；
-5. `compiler/` → `legacy/render/`：过渡期允许的 adapter 依赖（构建期静态骨架仍用旧快照组合），
+3. ~~构建期编译器 → `app/shell`~~：已解——DomShell 随旧快照壳移到 `legacy/shell`，`build/` 只依赖 legacy，不碰 app；
+4. ~~device-report → 设备检测~~：已解——device-report 移到 `app/device_report`，
+   platform/capture 只被 app 与 components 使用，platform 不 import 上层；
+5. `build/` → `legacy/render/`：过渡期允许的 adapter 依赖（构建期静态骨架仍用旧快照组合），
    legacy 删除时一起消失；其余目录不得 import legacy。
 
 本轮另把 `runtime/` 拆成 `engine/`（document / collections / updates）与 `host/`，并把权限检查从

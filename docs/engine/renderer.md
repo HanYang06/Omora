@@ -138,21 +138,21 @@ renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, nod
 React 渲染层已删除；剩下的是框架无关的纯模块与 DOM 实现：
 
 - 旧 React 组件文件（`components.tsx` / `controls/*` / `cards/tiles/icons/waveform`）→ 已迁成 `components/*` 后删除；
-- `capture/*` React hooks → 已迁成 media kind 内部控制器后删除；保留 `devices / capture-rules / media-upload / video-quality` 纯规则；
-- `search/search.tsx` → `components/search.ts`；保留 `searchText.ts`；
+- 旧 capture 组件的 React hooks → 已迁成 media kind 内部控制器后删除；保留 `devices / capture-rules / media-upload / video-quality` 纯规则（现在 `platform/capture/`）；
+- `search/search.tsx` → `components/search.ts`；`searchText.ts` 保留在 `platform/search.ts`；
 - `shell/shell.tsx` → `app/shell.ts`；
 - `app.tsx/main.tsx` → `app/app.ts` + `app/main.ts`，`index.html` 入口已切到后者。
 
 ## 9. 静态骨架编译（构建期）
 
-构建期编译器和运行时共用同一套 kind 与 `DomShell`：不复制静态模板，也不给 kind 加第二套实现。
+构建期编译器和运行时共用同一套 kind 与 `DomShell`（`DomShell` 随旧快照壳在 `legacy/shell.ts`，`build/` 只依赖 legacy）：不复制静态模板，也不给 kind 加第二套实现。
 
 ```text
 scripts/static_ui.py            空数据跑系统插件 → src/generated/static-tree.ts（结构数据）
-src/compiler/skeleton.ts        快照 → HTML（需要 DOM；kind 直接写 DOM）
-src/compiler/boot-skeleton.ts   启动快照 + 贡献组合 → 首帧
-src/compiler/node.ts            Node 宿主：jsdom 临时立 window/document，跑完还原
-src/compiler/vite-plugin.ts     Vite adapter：只决定何时编译、注进哪里
+src/build/skeleton.ts        快照 → HTML（需要 DOM；kind 直接写 DOM）
+src/build/boot-skeleton.ts   启动快照 + 贡献组合 → 首帧
+src/build/node.ts            Node 宿主：jsdom 临时立 window/document，跑完还原
+src/build/vite-plugin.ts     Vite adapter：只决定何时编译、注进哪里
 ```
 
 - `vite.config.ts` 的插件把编译结果注入 `<div id="root">`；`vite build` 的 `dist/index.html` 和 dev server 都带首帧 HTML，浏览器不必等 JS 解释整棵树。
