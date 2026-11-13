@@ -1,4 +1,4 @@
-import type { ConnectionStatus } from "../core/connection";
+import type { ConnectionStatus } from "../contract/protocol";
 import type { Snapshot } from "../core/types";
 import { DomShell } from "../app/shell";
 

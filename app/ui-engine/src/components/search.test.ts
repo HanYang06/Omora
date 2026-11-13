@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { JsonObject } from "../core/protocol";
+import type { JsonObject } from "../contract/protocol";
 import type { Node } from "../core/types";
 import { registry } from "./registry";
 import { DomRenderer } from "../renderer/renderer";

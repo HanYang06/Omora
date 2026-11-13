@@ -1,5 +1,5 @@
-import type { ConnectionStatus } from "../core/connection";
-import type { JsonObject } from "../core/protocol";
+import type { ConnectionStatus } from "../contract/protocol";
+import type { JsonObject } from "../contract/protocol";
 import type { MediaData, PageEntry, Snapshot } from "../core/types";
 import { iconGlyph } from "../components/icons";
 import { DomRenderer } from "../renderer/renderer";

@@ -9,7 +9,7 @@
  * （`noteRender`）；两个计数互不代替，见 host/metrics.ts 文件头。
  */
 
-import type { JsonObject } from "../core/protocol";
+import type { JsonObject } from "../contract/protocol";
 import type { MediaData } from "../core/types";
 import { createEngine, type EngineRuntime, type EngineApplyResult } from "../host/engine";
 import type { Requester } from "../contract/policy";

@@ -1,4 +1,4 @@
-import type { JsonObject } from "../core/protocol";
+import type { JsonObject } from "../contract/protocol";
 import type { MediaData } from "../core/types";
 
 export type Caller = (target: string, method: string, args: JsonObject) => Promise<unknown>;

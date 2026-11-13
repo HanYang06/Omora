@@ -8,7 +8,7 @@ import {
   type LogEntry,
   type Logger,
 } from "./log";
-import type { JsonObject } from "./protocol";
+import type { JsonObject } from "../contract/protocol";
 
 interface Batch {
   target: string;

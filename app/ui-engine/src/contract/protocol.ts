@@ -39,6 +39,9 @@ export type InboundFrame = ResultFrame | ErrorFrame | EventFrame;
 
 export const BAD_FRAME = "bad_frame";
 
+/** 连接状态；Connection 与 shell / 构建期 skeleton 共用，属于线上协议形状。 */
+export type ConnectionStatus = "idle" | "connecting" | "open" | "closed" | "failed";
+
 /** 与 Python 的 FrameError 同形状：code 与 frame_id 会带给对端。 */
 export class FrameError extends Error {
   readonly code: string;

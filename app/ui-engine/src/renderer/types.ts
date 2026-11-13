@@ -1,4 +1,4 @@
-import type { JsonObject } from "../core/protocol";
+import type { JsonObject } from "../contract/protocol";
 import type { MediaData, Node } from "../core/types";
 
 /** kind 唯一的运行时出口：发事件、取媒体、登记卸载清理。 */

@@ -1,4 +1,4 @@
-import type { JsonObject } from "./protocol";
+import type { JsonObject } from "../contract/protocol";
 
 /**
  * 与内核同一套级别（app/core/omora/core/log.py 的 LEVELS）：

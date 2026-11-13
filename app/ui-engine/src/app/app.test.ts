@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
-import type { Connection } from "../core/connection";
-import { createLogger } from "../core/log";
-import type { JsonObject } from "../core/protocol";
+import type { Connection } from "./connection";
+import { createLogger } from "./log";
+import type { JsonObject } from "../contract/protocol";
 import type { Snapshot } from "../core/types";
 import { DomApp } from "./app";
 

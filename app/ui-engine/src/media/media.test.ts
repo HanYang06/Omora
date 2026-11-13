@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fetchMedia, uploadMedia, type FetchLike } from "./media";
-import type { JsonObject } from "../core/protocol";
+import type { JsonObject } from "../contract/protocol";
 
 describe("fetchMedia", () => {
   it("调 media.load 时用 media_id，并把 mime / data 取回来", async () => {
