@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, vi } from "vitest";
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import type { Mounted } from "./testing";
 
 /**

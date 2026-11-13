@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Node } from "../../core/types";
+import type { Node } from "../../renderer/types";
 import { compose, type Contribution } from "./compose";
 
 function node(type: string, props: Record<string, unknown> = {}, children: Node[] = []): Node {

@@ -1,5 +1,5 @@
 import type { ConnectionStatus } from "../contract/protocol";
-import type { Snapshot } from "../core/types";
+import type { Snapshot } from "../legacy/types";
 import { DomShell } from "../app/shell";
 
 /**

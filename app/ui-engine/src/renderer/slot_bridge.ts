@@ -13,7 +13,7 @@
  */
 
 import type { Layout, SlotNode } from "../contract/document";
-import type { Node } from "../core/types";
+import type { Node } from "./types";
 
 function copyLayout(layout: Layout): Layout {
   const copy: Layout = { flow: layout.flow, capacity: layout.capacity };

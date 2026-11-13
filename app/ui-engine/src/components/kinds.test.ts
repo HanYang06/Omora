@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import type { Layout } from "../contract/document";
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import { mountNode, type MountedSlot } from "../app/test_fixtures";
 
 function node(type: string, over: Partial<Node> = {}): Node {

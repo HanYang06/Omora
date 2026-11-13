@@ -10,7 +10,7 @@
  */
 
 import type { JsonObject } from "../contract/protocol";
-import type { MediaData } from "../core/types";
+import type { MediaData } from "../contract/protocol";
 import { createEngine, type EngineRuntime, type EngineApplyResult } from "../host/engine";
 import type { Requester } from "../contract/policy";
 import type { Diagnostic } from "../contract/diagnostics";

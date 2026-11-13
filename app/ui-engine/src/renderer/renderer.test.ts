@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import type { Node } from "../core/types";
+import type { Node } from "./types";
 import { registry } from "../components/registry";
 import { DomRenderer } from "./renderer";
 import { mount } from "../components/testing";

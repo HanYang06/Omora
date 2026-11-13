@@ -1,5 +1,5 @@
 import type { JsonObject } from "../contract/protocol";
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import { registry } from "./registry";
 import { DomRenderer } from "../renderer/renderer";
 import type { RenderContext } from "../renderer/types";

@@ -42,6 +42,14 @@ export const BAD_FRAME = "bad_frame";
 /** 连接状态；Connection 与 shell / 构建期 skeleton 共用，属于线上协议形状。 */
 export type ConnectionStatus = "idle" | "connecting" | "open" | "closed" | "failed";
 
+/** 媒体服务取回来的一件东西：mime + base64。 */
+export interface MediaData {
+  mime: string;
+  data: string;
+}
+
+export type MediaResolver = (media: string) => Promise<MediaData>;
+
 /** 与 Python 的 FrameError 同形状：code 与 frame_id 会带给对端。 */
 export class FrameError extends Error {
   readonly code: string;

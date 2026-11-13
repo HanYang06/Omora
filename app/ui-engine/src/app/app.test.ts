@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Connection } from "./connection";
 import { createLogger } from "./log";
 import type { JsonObject } from "../contract/protocol";
-import type { Snapshot } from "../core/types";
+import type { Snapshot } from "../legacy/types";
 import { DomApp } from "./app";
 
 function snapshot(overrides: Partial<Snapshot> = {}): Snapshot {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import { handlerOf } from "../renderer/events";
 import { mount, type Mounted } from "./testing";
 

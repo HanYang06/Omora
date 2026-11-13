@@ -1,4 +1,5 @@
-import type { Node, Snapshot } from "../../core/types";
+import type { Node } from "../../renderer/types";
+import type { Snapshot } from "../types";
 import { OM_WINDOW_PAGE } from "../../generated/keys";
 import { compose } from "./compose";
 

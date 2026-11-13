@@ -1,4 +1,4 @@
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import type { Kind } from "../renderer/types";
 import { loadWaveSurfer, prop, WAVE_COLOR, WAVE_PROGRESS_COLOR } from "./media_shared";
 

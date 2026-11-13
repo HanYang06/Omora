@@ -8,7 +8,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseDocument, type SlotDocument, type SlotNode } from "../contract/document";
 import type { JsonObject } from "../contract/protocol";
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import { instantiateCollection } from "../engine/collections/collection";
 import { DomRenderer } from "../renderer/renderer";
 import type { RenderContext } from "../renderer/types";

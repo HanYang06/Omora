@@ -1,4 +1,4 @@
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import { handlerOf } from "../renderer/events";
 import { iconGlyph, paintGlyph } from "./icons";
 import type { KindRegistry, RenderContext } from "../renderer/types";

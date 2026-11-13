@@ -1,34 +1,11 @@
-import type { Layout } from "../contract/document";
-
 /**
- * 界面节点与页面快照。形状是合同：Python 的 sdk/ui.py 产出的就是它。
+ * 旧快照协议模型（legacy）：贡献、页面登记与全量快照。
  *
- * props 对渲染引擎不透明；可调用字段（如 on_click）已经序列化成 handler id。
+ * 这是 legacy 渲染路径的线上形状（协议 §2 / §6）；与 Slot 文档无关，随 legacy
+ * 路径一起删除。Node 是渲染层契约（renderer/types），legacy → renderer 允许。
  */
-export interface Node {
-  type: string;
-  props: Record<string, unknown>;
-  children: Node[];
-  /** legacy 加字段：稳定身份；缺省时渲染端按父路径+位置协调。 */
-  id?: string;
-  /** legacy 加字段：事件名 → handler id；kind 优先读它，再回退 props.on_*。 */
-  events?: Record<string, string>;
-  /**
-   * Slot 桥加字段：Slot 的 layout 描述符（S3-d）。legacy kind 不读它，
-   * Slot 原生 kind 按 layout.flow 决定容器 class；渲染器只当数据搬运。
-   */
-  layout?: Layout;
-}
 
-export type EventHandler = (handler: string, payload?: Record<string, unknown>) => void;
-
-/** 媒体服务取回来的一件东西：mime + base64。 */
-export interface MediaData {
-  mime: string;
-  data: string;
-}
-
-export type MediaResolver = (media: string) => Promise<MediaData>;
+import type { Node } from "../renderer/types";
 
 /**
  * 一份贡献：某个插件交来的一棵树 + 落点键 + 顺序（协议 §2）。
