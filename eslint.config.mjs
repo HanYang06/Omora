@@ -46,14 +46,33 @@ export default tseslint.config(
     },
   },
   {
+    name: "omora/ui-engine/boundaries/no-build",
+    files: ["app/ui-engine/src/**/*.{ts,tsx}"],
+    // build 是构建期 adapter：除 build 自身与测试外，运行时代码不得 import build/**。
+    ignores: ["**/*.test.{ts,tsx}", "app/ui-engine/src/build/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/build/**", "../build/**", "../../build/**", "../../../build/**"],
+              message: "build 只允许构建期自身引用；运行时不得 import build/",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     name: "omora/ui-engine/boundaries/no-legacy",
     files: ["app/ui-engine/src/**/*.{ts,tsx}"],
-    // legacy 的合法引用方：app（组合根）、compiler（过渡期 adapter）与 generated
-    // （生成物 static-tree 就是旧快照数据，随 legacy 删除一起消失）；测试不卡。
+    // legacy 的合法引用方：app（组合根）、build（构建期 adapter：启动骨架预渲染）
+    // 与 generated（生成物 static-tree 就是旧快照数据，随 legacy 删除一起消失）；测试不卡。
     ignores: [
       "**/*.test.{ts,tsx}",
       "app/ui-engine/src/app/**",
-      "app/ui-engine/src/compiler/**",
+      "app/ui-engine/src/build/**",
       "app/ui-engine/src/generated/**",
       "app/ui-engine/src/legacy/**",
       "app/ui-engine/src/renderer/**",
@@ -69,7 +88,7 @@ export default tseslint.config(
             {
               group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
               message:
-                "legacy 只允许 app/ 与 compiler/（过渡期 adapter）引用；其余层不得 import legacy/",
+                "legacy 只允许 app/ 与 build/（过渡期 adapter）引用；其余层不得 import legacy/",
             },
           ],
         },
@@ -125,8 +144,17 @@ export default tseslint.config(
               message: "contract 层不得 import legacy/",
             },
             {
-              group: ["**/core/**", "../core/**", "../../core/**", "../../../core/**"],
-              message: "contract 层不得 import core/",
+              group: ["**/build/**", "../build/**", "../../build/**", "../../../build/**"],
+              message: "contract 层不得 import build/",
+            },
+            {
+              group: [
+                "**/platform/**",
+                "../platform/**",
+                "../../platform/**",
+                "../../../platform/**",
+              ],
+              message: "contract 层不得 import platform/",
             },
           ],
         },
@@ -138,7 +166,8 @@ export default tseslint.config(
     files: ["app/ui-engine/src/legacy/**/*.{ts,tsx}"],
     ignores: ["**/*.test.{ts,tsx}"],
     rules: {
-      // legacy 只依赖 contract / core 类型 / renderer；不碰宿主、引擎、链接器、组件与入口。
+      // legacy 只依赖 contract / renderer / components（旧快照三栏壳组合组件做渲染）；
+      // 不碰宿主、引擎、链接器、入口与构建期 adapter。
       "no-restricted-imports": [
         "error",
         {
@@ -160,8 +189,8 @@ export default tseslint.config(
               message: "legacy 层不得 import app/",
             },
             {
-              group: ["**/components/**", "../components/**", "../../components/**"],
-              message: "legacy 层不得 import components/",
+              group: ["**/build/**", "../build/**", "../../build/**", "../../../build/**"],
+              message: "legacy 层不得 import build/",
             },
           ],
         },
@@ -174,7 +203,7 @@ export default tseslint.config(
     // 测试文件允许跨层（renderer_move.test 会 import app/slot_registry）。
     ignores: ["**/*.test.{ts,tsx}"],
     rules: {
-      // renderer 是最底层：只依赖 contract / core 类型，不管组件、宿主、引擎与入口。
+      // renderer 是最底层：只依赖 contract，不管组件、宿主、引擎、平台与入口。
       "no-restricted-imports": [
         "error",
         {
@@ -205,8 +234,17 @@ export default tseslint.config(
               message: "renderer 层不得 import legacy/",
             },
             {
-              group: ["**/core/**", "../core/**", "../../core/**", "../../../core/**"],
-              message: "renderer 层不得 import core/",
+              group: ["**/build/**", "../build/**", "../../build/**", "../../../build/**"],
+              message: "renderer 层不得 import build/",
+            },
+            {
+              group: [
+                "**/platform/**",
+                "../platform/**",
+                "../../platform/**",
+                "../../../platform/**",
+              ],
+              message: "renderer 层不得 import platform/",
             },
           ],
         },
@@ -243,6 +281,10 @@ export default tseslint.config(
               group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
               message: "components 层不得 import legacy/",
             },
+            {
+              group: ["**/build/**", "../build/**", "../../build/**", "../../../build/**"],
+              message: "components 层不得 import build/",
+            },
           ],
         },
       ],
@@ -253,7 +295,7 @@ export default tseslint.config(
     files: ["app/ui-engine/src/engine/**/*.{ts,tsx}"],
     rules: {
       // 依赖方向：contract → link → engine → host → renderer/components → app。
-      // engine 只允许 contract / link / engine 自己；host / dom / app 都不行。
+      // engine 只允许 contract / link / engine 自己；host / platform / app 都不行。
       "no-restricted-imports": [
         "error",
         {
@@ -265,6 +307,19 @@ export default tseslint.config(
             {
               group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
               message: "engine 层不得 import legacy/（engine 只依赖 contract / link）",
+            },
+            {
+              group: ["**/build/**", "../build/**", "../../build/**", "../../../build/**"],
+              message: "engine 层不得 import build/",
+            },
+            {
+              group: [
+                "**/platform/**",
+                "../platform/**",
+                "../../platform/**",
+                "../../../platform/**",
+              ],
+              message: "engine 层不得 import platform/",
             },
           ],
         },
@@ -282,6 +337,86 @@ export default tseslint.config(
             {
               group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
               message: "host 层不得 import legacy/（依赖方向 host → renderer）",
+            },
+            {
+              group: ["**/build/**", "../build/**", "../../build/**", "../../../build/**"],
+              message: "host 层不得 import build/",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: "omora/ui-engine/boundaries/platform",
+    files: ["app/ui-engine/src/platform/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}"],
+    rules: {
+      // platform 是宿主工具（媒体 / 捕获 / 搜索），只依赖 contract 与 platform 内部；
+      // 不碰渲染、组件、引擎、宿主设施、链接器、入口与构建期 adapter。
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/renderer/**", "../renderer/**", "../../renderer/**"],
+              message: "platform 层不得 import renderer/",
+            },
+            {
+              group: ["**/components/**", "../components/**", "../../components/**"],
+              message: "platform 层不得 import components/",
+            },
+            {
+              group: ["**/engine/**", "../engine/**", "../../engine/**"],
+              message: "platform 层不得 import engine/",
+            },
+            {
+              group: ["**/host/**", "../host/**", "../../host/**"],
+              message: "platform 层不得 import host/",
+            },
+            {
+              group: ["**/link/**", "../link/**", "../../link/**"],
+              message: "platform 层不得 import link/",
+            },
+            {
+              group: ["**/legacy/**", "../legacy/**", "../../legacy/**"],
+              message: "platform 层不得 import legacy/",
+            },
+            {
+              group: ["**/app/**", "../app/**", "../../app/**"],
+              message: "platform 层不得 import app/",
+            },
+            {
+              group: ["**/build/**", "../build/**", "../../build/**"],
+              message: "platform 层不得 import build/",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: "omora/ui-engine/boundaries/build",
+    files: ["app/ui-engine/src/build/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}"],
+    rules: {
+      // build 是构建期 adapter：可以依赖 contract / link / renderer / components /
+      // host / legacy（启动骨架预渲染仍走 legacy），但不碰 app 与 engine / platform。
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/app/**", "../app/**", "../../app/**"],
+              message: "build 层不得 import app/（构建期 adapter 不进组合根）",
+            },
+            {
+              group: ["**/engine/**", "../engine/**", "../../engine/**"],
+              message: "build 层不得 import engine/",
+            },
+            {
+              group: ["**/platform/**", "../platform/**", "../../platform/**"],
+              message: "build 层不得 import platform/",
             },
           ],
         },
