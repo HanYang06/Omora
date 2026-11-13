@@ -37,6 +37,17 @@ description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teamma
 - teammate：在自己 worktree 里开发、测试、提交、推分支；**不开 PR**（PR 由 Lead 统一开）；
   不合并；产品问题回 Lead；对自己的分支/worktree 负责，Lead 不改。
 
+## 2.1 智能体复用（硬规则）
+
+**一个任务一个 agent 是反模式。** 每 spawn 一次都是一份新上下文，缓存利用率低、成本高。
+
+- 同一波/同一主题的连续任务，优先 **send_message 复用已有 teammate**，不要重新 spawn。
+- 一个 teammate 可以连续接多个 task：它保留仓库/接口/门禁上下文，第二件事只需要 brief 增量。
+- 并行上限按写域来：默认 2 个，最多 3 个；能串行就串行。
+- 只有这些情况才 spawn 新 agent：写域强冲突无法复用、旧 teammate 的 cwd/worktree 已不可用、需要独立 session 隔离。
+- 复用前先 `list_agents` 看谁还 inactive、cwd 是否可用；不可用就修复 cwd 或开新 worktree，而不是无脑 spawn。
+- 任务完成后 agent 进入 inactive 不是退役；下一个相关任务优先唤醒它。
+
 ## 3. Lead 开工前
 
 1. base 干净：前置 PR 已合，main 最新。
@@ -51,7 +62,7 @@ description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teamma
    - 不开 PR、不 merge；产品决策回 Lead
 5. 先建集成分支：`git worktree add ../Omora-wt-int -b feat/<slug> origin/main`，
    把冻结的契约（通常是 SDK 节点 / 载荷形状）先提交上去并 push，teammate 从它开分支。
-6. `spawn_teammate`（fresh）；`reassign` task 给 teammate；第一条消息就是 brief。
+6. 先查可复用的 inactive teammate；确需新上下文才 `spawn`。`reassign` task 给 owner；第一条消息就是 brief。
 
 ## 4. teammate 的循环
 
@@ -106,6 +117,7 @@ description: Omora 的 Agent 团队开发流程：Lead 拆任务/写域、teamma
 - squash/rebase 合并；丢分支边界。
 - 产品决策自己拍；用户被绕过。
 - 把“发了任务”当完成；完成 = PR 合了 + 集成跑通。
+- 一个任务 spawn 一个 agent；同类任务连续开新上下文，不复用、不合并 brief。
 
 ## 8. 模板
 
