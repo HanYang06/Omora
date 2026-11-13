@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { Layout } from "../../core/document";
 import type { Node } from "../../core/types";
-import { mountNode, type MountedV2 } from "./test_fixtures";
+import { mountNode, type MountedSlot } from "./test_fixtures";
 
 function node(type: string, over: Partial<Node> = {}): Node {
   return { type, props: {}, children: [], ...over };
@@ -12,7 +12,7 @@ function layoutNode(layout: Layout, over: Partial<Node> = {}): Node {
   return node("dendro:slot", { id: "layout-node", layout, ...over });
 }
 
-function byType(mounted: MountedV2, type: string): HTMLElement {
+function byType(mounted: MountedSlot, type: string): HTMLElement {
   const el = mounted.container.querySelector<HTMLElement>(`[data-type="${type}"]`);
   if (el === null) {
     throw new Error("没有渲染出 " + type);
@@ -62,7 +62,7 @@ describe("v2 容器 kind：layout.flow → 现有布局 class", () => {
     const el = byType(mounted, "dendro:window");
     expect(el.className).toBe("omora-row");
     expect(el.dataset.flow).toBe("row");
-    expect(el.dataset.dendroLayout).toBe("v2");
+    expect(el.dataset.dendroLayout).toBe("slot");
     mounted.destroy();
   });
 
@@ -88,7 +88,7 @@ describe("v2 容器 kind：layout.flow → 现有布局 class", () => {
     const slotEl = byType(mounted, "dendro:slot");
     expect(slotEl.className).toBe("omora-column");
     expect(slotEl.dataset.flow).toBe("column");
-    expect(slotEl.dataset.dendroLayout).toBe("v2");
+    expect(slotEl.dataset.dendroLayout).toBe("slot");
 
     const layerEl = byType(mounted, "dendro:layer");
     expect(layerEl.className).toBe("omora-column");
@@ -98,7 +98,7 @@ describe("v2 容器 kind：layout.flow → 现有布局 class", () => {
     expect(pageEl.className).toBe("");
     expect(pageEl.hasAttribute("data-flow")).toBe(false);
     // marker 不依赖 layout：没有 layout 的 v2 容器也标出来，样式段才有统一钩子。
-    expect(pageEl.dataset.dendroLayout).toBe("v2");
+    expect(pageEl.dataset.dendroLayout).toBe("slot");
     mounted.destroy();
   });
 });
@@ -230,7 +230,7 @@ describe("v2 容器 kind：update 清理与原地更新", () => {
     expect(after.className).toBe("omora-row");
     expect(after.dataset.flow).toBe("row");
     expect(after.dataset.type).toBe("dendro:slot");
-    expect(after.dataset.dendroLayout).toBe("v2");
+    expect(after.dataset.dendroLayout).toBe("slot");
     expectNoLayoutStyles(after);
     mounted.destroy();
   });

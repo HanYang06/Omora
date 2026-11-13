@@ -2,7 +2,7 @@
  * v2 Slot → DOM 渲染的薄桥（S3-d）。
  *
  * 只改形状、不做任何渲染决策或数据展开：
- * - `type = slot.kind`，保留命名空间（交给 `v2Registry` 找实现：`dendro:<type>`
+ * - `type = slot.kind`，保留命名空间（交给 `slotRegistry` 找实现：`dendro:<type>`
  *   别名复用 v1 kind，v2 原生结构 kind 在 kinds.ts）；
  * - 复制 id / props / children / events / layout 这几个渲染层认识的字段；
  * - **不展开 `collection.templates`**：模板不是挂载节点，实例化是运行时

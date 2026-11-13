@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { SlotNode } from "../../core/document";
 import { slotToNode } from "./bridge";
 import { mountSlot } from "./registry";
-import { fixtureWithInstantiatedFeed, mountNode, type RecordedV2Event } from "./test_fixtures";
+import { fixtureWithInstantiatedFeed, mountNode, type RecordedSlotEvent } from "./test_fixtures";
 
 function slot(over: Partial<SlotNode> & { id: string }): SlotNode {
   return { kind: "dendro:slot", owner: "test", props: {}, children: [], ...over };
@@ -129,7 +129,7 @@ describe("渲染接入的其余约定", () => {
   });
 
   it("mountSlot 助手把根树挂进容器，dispose 后清空", () => {
-    const events: RecordedV2Event[] = [];
+    const events: RecordedSlotEvent[] = [];
     const container = document.createElement("div");
     document.body.append(container);
 

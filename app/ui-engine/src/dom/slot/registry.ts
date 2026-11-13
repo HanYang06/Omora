@@ -12,34 +12,34 @@
 
 import type { SlotNode } from "../../core/document";
 import { DomRenderer } from "../renderer";
-import { registry as v1Registry } from "../registry";
+import { registry as legacyRegistry } from "../registry";
 import type { Kind, KindRegistry, RenderContext } from "../types";
 import { slotToNode } from "./bridge";
-import { v2Kinds } from "./kinds";
+import { slotKinds } from "./kinds";
 
-function namespacedV1Kinds(): Record<string, Kind> {
+function namespacedLegacyKinds(): Record<string, Kind> {
   const aliases: Record<string, Kind> = {};
-  for (const [type, kind] of Object.entries(v1Registry)) {
+  for (const [type, kind] of Object.entries(legacyRegistry)) {
     aliases["dendro:" + type] = kind;
   }
   return aliases;
 }
 
 function hostAliases(): Record<string, Kind> {
-  const card = v1Registry["card"];
+  const card = legacyRegistry["card"];
   return card === undefined ? {} : { "ideas:card": card };
 }
 
 /** v2 kind → Kind；别名与 v2 原生 kind 合成一张表。 */
-export const v2Registry: KindRegistry = {
-  ...namespacedV1Kinds(),
+export const slotRegistry: KindRegistry = {
+  ...namespacedLegacyKinds(),
   ...hostAliases(),
-  ...v2Kinds,
+  ...slotKinds,
 };
 
 /** 用 v2 注册表建 DomRenderer；SlotNode 先用 bridge.ts 的 slotToNode 桥接再 render。 */
 export function createSlotRenderer(context: RenderContext): DomRenderer {
-  return new DomRenderer({ registry: v2Registry, context });
+  return new DomRenderer({ registry: slotRegistry, context });
 }
 
 /**

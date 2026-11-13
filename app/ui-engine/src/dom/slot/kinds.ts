@@ -41,7 +41,7 @@ import type { Kind, KindRegistry } from "../types";
 const DEFAULT_ICON = "dot";
 
 /** 所有 v2 容器共享的 marker 值；styles.css 用 [data-dendro-layout] 命中。 */
-const LAYOUT_MARKER = "v2";
+const LAYOUT_MARKER = "slot";
 
 /**
  * 间距 token → CSS 值的对照表（第一版约定；词表未在 docs 固定）。
@@ -252,7 +252,7 @@ const pageLink: Kind = {
 };
 
 /** v2 原生 kind 注册表；名字带命名空间，与 v1 词表别名共用一张 v2 注册表。 */
-export const v2Kinds: KindRegistry = {
+export const slotKinds: KindRegistry = {
   "dendro:window": layoutContainer,
   "dendro:page": layoutContainer,
   "dendro:slot": layoutContainer,

@@ -58,7 +58,7 @@ export interface SlotNode {
   grant?: Grant;
 }
 
-export interface PageEntryV2 {
+export interface PageEntry {
   id: string;
   label: string;
   route: string;
@@ -66,10 +66,10 @@ export interface PageEntryV2 {
   icon?: string;
 }
 
-export interface DocumentV2 {
+export interface SlotDocument {
   schema: string;
   document: SlotNode;
-  pages: PageEntryV2[];
+  pages: PageEntry[];
   active: string;
   data: Record<string, unknown>;
   version: number;
@@ -321,9 +321,9 @@ function parseSlot(value: unknown, seen: Set<string>, path: string): SlotNode {
   return slot;
 }
 
-function parsePage(value: unknown, path: string): PageEntryV2 {
+function parsePage(value: unknown, path: string): PageEntry {
   const record = requireRecord(value, "bad_page", path);
-  const page: PageEntryV2 = {
+  const page: PageEntry = {
     id: requireString(record.id, "bad_page", path + ".id"),
     label: requireString(record.label, "bad_page", path + ".label"),
     route: requireString(record.route, "bad_page", path + ".route"),
@@ -336,7 +336,7 @@ function parsePage(value: unknown, path: string): PageEntryV2 {
 }
 
 /** 校验一份 v2 文档；不合法抛 DocumentError，合法返回规范化对象。 */
-export function parseDocument(value: unknown): DocumentV2 {
+export function parseDocument(value: unknown): SlotDocument {
   const record = requireRecord(value, "bad_document", "$");
   const schema = requireString(record.schema, "bad_schema", "$.schema");
   if (schema !== DOCUMENT_SCHEMA) {

@@ -24,7 +24,7 @@
  * `applySessionOps` 的 pages / data 未变时直接复用引用（结构共享）。
  */
 
-import { DocumentError, parseDocument, type DocumentV2, type PageEntryV2 } from "../core/document";
+import { DocumentError, parseDocument, type SlotDocument, type PageEntry } from "../core/document";
 import type { Diagnostic, DiagnosticCode } from "../link/types";
 import type { DocumentState } from "./document";
 import { makeDiagnostic } from "./diagnostics";
@@ -36,7 +36,7 @@ export interface SessionState {
   /** 当前文档：权威根树 + 文档版本。 */
   document: DocumentState;
   /** 页面侧表（id / label / route / owner），供导航与路由使用。 */
-  pages: PageEntryV2[];
+  pages: PageEntry[];
   /** 当前活动页 id；没有页面时是空串。 */
   active: string;
   /** 数据文档投影：source → 该 source 的状态。 */
@@ -52,7 +52,7 @@ export type SessionOpsResult =
 export type ApplyFullResult =
   { ok: true; session: SessionState } | { ok: false; diagnostics: Diagnostic[] };
 
-type ParsedDocument = { ok: true; document: DocumentV2 } | { ok: false; diagnostics: Diagnostic[] };
+type ParsedDocument = { ok: true; document: SlotDocument } | { ok: false; diagnostics: Diagnostic[] };
 
 /** 把整份文档的 DocumentError 归一成诊断：版本 → E-VERSION，重复 id → E-ID-DUPLICATE，其余 E-PAYLOAD。 */
 function documentFailure(error: DocumentError): Diagnostic {
@@ -77,7 +77,7 @@ function parseFullDocument(value: unknown): ParsedDocument {
 }
 
 /** 从已校验的整份文档建立会话：root / pages / data 深拷，避免会话与线上 payload 共享可变对象。 */
-function sessionFrom(document: DocumentV2): CreateSessionResult {
+function sessionFrom(document: SlotDocument): CreateSessionResult {
   try {
     return {
       ok: true,

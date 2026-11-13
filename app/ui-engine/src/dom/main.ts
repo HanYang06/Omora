@@ -11,10 +11,10 @@ import "../styles/media.css";
  * 其它（含 `?engine=v1`、空查询）继续走原来的 v1 主路径。
  */
 export function wantsPreview(search: string): boolean {
-  return new URLSearchParams(search).get("engine") === "v2";
+  return new URLSearchParams(search).get("engine") === "slot";
 }
 
-function startV1(container: HTMLElement): void {
+function startLegacy(container: HTMLElement): void {
   const connection = new Connection();
   const logger = createLogger({
     call: (target, method, args) => connection.call(target, method, args),
@@ -24,7 +24,7 @@ function startV1(container: HTMLElement): void {
 
 /** v2 运行时只在需要时拉：preview 是独立 chunk，不进主 chunk。 */
 function startPreview(container: HTMLElement): void {
-  void import("./v2/preview")
+  void import("./slot/preview")
     .then((preview) => {
       preview.mountPreview(container);
     })
@@ -43,7 +43,7 @@ export function bootstrap(container: HTMLElement, search: string): void {
     startPreview(container);
     return;
   }
-  startV1(container);
+  startLegacy(container);
 }
 
 // 被测试 / 工具 import 时没有 #root，不能起副作用；真正入口（index.html）一定有。

@@ -15,7 +15,7 @@
  * “增量重链”。
  */
 
-import type { PageEntryV2 } from "../core/document";
+import type { PageEntry } from "../core/document";
 import type { RenderStats } from "../dom/renderer";
 import { parseLocalTrees } from "../link/parse";
 import type { Diagnostic, LocalTree, LocalTreesPayload } from "../link/types";
@@ -30,7 +30,7 @@ import type { SessionState } from "./session";
 
 /** createEngineFromLocalTrees 的可选输入：页面侧表 / 数据文档 / 引擎设施。 */
 export interface SourceEngineOptions extends EngineOptions {
-  pages?: readonly PageEntryV2[];
+  pages?: readonly PageEntry[];
   active?: string;
   data?: Record<string, unknown>;
 }
