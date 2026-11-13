@@ -47,7 +47,8 @@ import {
 import { applyScalarBinding, replaceSlotById } from "./data_bind";
 import { DocumentIndex, type DocumentState } from "./document";
 import { makeDiagnostic } from "../contract/diagnostics";
-import { SYSTEM_REQUESTER, checkPermission, type RequesterOptions } from "./permissions";
+import { SYSTEM_REQUESTER, checkPermission } from "../contract/policy";
+import type { RequesterOptions } from "./permissions";
 
 const PAYLOAD_CODE: DiagnosticCode = "E-PAYLOAD";
 

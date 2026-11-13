@@ -48,7 +48,8 @@ import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 import { DocumentIndex, documentErrorDiagnostic, type DocumentState } from "./document";
 import { makeDiagnostic } from "../contract/diagnostics";
 import { applyOp, buildLiveLocations, type LiveLocations, type Working } from "./ops_apply";
-import { SYSTEM_REQUESTER, checkOpPermission, type RequesterOptions } from "./permissions";
+import { SYSTEM_REQUESTER } from "../contract/policy";
+import { checkOpPermission, type RequesterOptions } from "./permissions";
 
 /** 改一个节点的 props（浅合并）。 */
 export interface UpdateOp {

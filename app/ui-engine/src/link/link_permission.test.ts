@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { Grant, SlotNode } from "../contract/document";
-import { SYSTEM_REQUESTER, type Requester } from "../runtime/permissions";
+import { SYSTEM_REQUESTER, type Requester } from "../contract/policy";
 import { link } from "./link";
 import { WINDOW_SCAFFOLD } from "./scaffold";
 import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";

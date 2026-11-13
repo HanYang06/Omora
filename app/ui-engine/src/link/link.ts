@@ -8,14 +8,13 @@
  * （`permissions.md` §4「组合/链接期」）；越权 → `E-PERMISSION`，整次链接失败、
  * 不产树。默认无 options = 系统来源，现有 fixture 与构建门禁行为不变。
  *
- * 检查器复用 `runtime/permissions.ts` 的 `can` / `SYSTEM_REQUESTER`，grant token
- * 求值只有一份实现，不在 link 里复制。runtime 对 link 的依赖只有 `link/types.ts`
- * 且全是 `import type`（编译期擦除），所以 link 反向 import 运行期模块不构成 ESM
- * 模块环；`Requester` 形状另定义在 `link/types.ts`，与 runtime 的同名接口结构一致。
+ * 检查器复用契约层 `contract/policy.ts` 的 `can` / `SYSTEM_REQUESTER`：link 只向下
+ * 依赖 contract，不再反向 import runtime；grant token 求值只有一份实现，不在 link
+ * 里复制。
  */
 
 import type { Capacity, SlotNode } from "../contract/document";
-import { can, SYSTEM_REQUESTER, type Capability } from "../runtime/permissions";
+import { can, SYSTEM_REQUESTER, type Capability, type Requester } from "../contract/policy";
 import { collectIds, makeDiagnostic, parseLocalTrees, sortDiagnostics } from "./parse";
 import {
   assignDepths,
@@ -31,7 +30,6 @@ import type {
   LinkResult,
   LocalTree,
   LocalTreesPayload,
-  Requester,
 } from "./types";
 
 interface Mount {
@@ -285,7 +283,7 @@ function linkParsed(base: SlotNode, payload: LocalTreesPayload, options: LinkOpt
   /**
    * 链接期权限检查：replace 挂载要目标 slot 的 replace 能力，普通挂载要 mount。
    *
-   * 检查器复用 runtime/permissions 的 `can`（grant token 求值只有一份实现），这里
+   * 检查器复用 contract/policy 的 `can`（grant token 求值只有一份实现），这里
    * 只挑检查对象、造 E-PERMISSION 诊断：现场 owner 记局部树 owner，slot 记 mountAt。
    * 返回 true = 本槽有越权挂载，整次链接必须失败。
    */

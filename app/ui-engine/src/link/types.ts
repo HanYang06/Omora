@@ -6,6 +6,7 @@
 
 import type { Diagnostic } from "../contract/diagnostics";
 import type { SlotNode } from "../contract/document";
+import type { Requester } from "../contract/policy";
 
 /**
  * 一棵局部树。
@@ -37,18 +38,6 @@ export type ParseLocalTreesResult =
 export type LinkResult =
   | { ok: true; tree: SlotNode; ids: Map<string, SlotNode> }
   | { ok: false; diagnostics: Diagnostic[] };
-
-/**
- * 链接期权限主体。
- *
- * 形状与 `runtime/permissions.ts` 的 `Requester` 一致（结构类型，两边的对象可互换）；
- * 定义在 link 里，是为了不让 `link/types.ts`（runtime 的类型依赖）反向 import runtime。
- */
-export interface Requester {
-  owner: string;
-  tiers?: readonly string[];
-  roles?: readonly string[];
-}
 
 /** `link()` 的可选参数。 */
 export interface LinkOptions {

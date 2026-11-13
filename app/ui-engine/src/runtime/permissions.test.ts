@@ -7,7 +7,7 @@ import {
   checkPermission,
   type Capability,
   type Requester,
-} from "./permissions";
+} from "../contract/policy";
 import { node, stateOf } from "./test_fixtures";
 
 /**

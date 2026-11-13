@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Grant, SlotNode } from "../contract/document";
 import { DocumentIndex, type DocumentState } from "./document";
 import { applyOps } from "./ops";
-import type { Requester } from "./permissions";
+import type { Requester } from "../contract/policy";
 import { batchOf, expectApplied, expectFailed, node, stateOf } from "./test_fixtures";
 
 /**

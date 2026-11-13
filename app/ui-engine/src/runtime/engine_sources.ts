@@ -25,7 +25,7 @@ import { createEngine, type EngineChangeListener } from "./engine";
 import type { AuditLog } from "./audit";
 import type { DisposeReport } from "./lifecycle";
 import type { RuntimeMetricsSnapshot } from "./metrics";
-import type { Requester } from "./permissions";
+import type { Requester } from "../contract/policy";
 import { SourceHost, type SourceHostResult } from "./sources";
 import type { SessionState } from "./session";
 

@@ -53,7 +53,7 @@ import { makeDiagnostic } from "../contract/diagnostics";
 import { hydrateSession } from "./hydrate";
 import { LifecycleLedger, type DisposeReport } from "./lifecycle";
 import { RuntimeMetrics, type MetricsCounts, type RuntimeMetricsSnapshot } from "./metrics";
-import type { Requester } from "./permissions";
+import type { Requester } from "../contract/policy";
 import { parseOps } from "./ops";
 import {
   applyFull as applyFullDocument,
