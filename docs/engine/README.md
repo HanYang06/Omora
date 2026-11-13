@@ -85,7 +85,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 ## 6. 实现状态（与代码的差距）
 
-文档写的是**契约**，不是现状说明书。当前代码是 v1 契约 + DOM 渲染器 + v2 链接器/运行时核心：490 条 Python 测试、811 条 TS 测试全绿，但离本文的模型还有距离。
+文档写的是**契约**，不是现状说明书。当前代码是 v1 契约 + DOM 渲染器 + v2 链接器/运行时核心：490 条 Python 测试、843 条 TS 测试全绿，但离本文的模型还有距离。
 
 | 能力     | 代码现状（v1）                                                  | 目标                            | 状态                       |
 | -------- | --------------------------------------------------------------- | ------------------------------- | -------------------------- |
@@ -148,7 +148,9 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 > S4 续落：链接期挂载权限（含 base grant 归一化）、`SourceHost`（来源注册/死引用级联/fail closed）、`AuditLog` 与 apply 耗时/渲染计数。
 
-> S4 续（二）：`EngineRuntime.applyLocalTrees`（全量局部树重链 → 树替换 → 水合 → 版本+1/指标/审计）已落；v2 布局 size/gap/align/scroll 落到 CSS 变量与 `[data-dendro-layout]` 样式；`?engine=v2` 预览改用 EngineRuntime + DocumentView。来源宿主接网络帧、v2 替换主会话、`observe`/`intercept`、重渲染节点数待续。
+> S4 续（二）：`EngineRuntime.applyLocalTrees`（全量局部树重链 → 树替换 → 水合 → 版本+1/指标/审计）已落；v2 布局 size/gap/align/scroll 落到 CSS 变量与 `[data-dendro-layout]` 样式；`?engine=v2` 预览改用 EngineRuntime + DocumentView。
+
+> S5 起步：`SourceEngine`（SourceHost + EngineRuntime 组合，createEngineFromLocalTrees / registerSource / removeSource / applyLocalTrees）与 renderer 节点统计（created/updated/reused/removed → 指标）已落。下一步：v1/v2 术语与 schema 重置、组件目录与分层整改。
 
 | S3 | 索引 + 三种更新 + 集合绑定；灵感页 spike | 数据更新不重挂；换页协调正确 |
 | S4 | 权限薄层 + 生命周期账本 + 观测指标 | 越权拒绝；卸载零残留 |

@@ -30,17 +30,23 @@
  * recordTiming 结算。成功记一条 apply 审计（changed = 被触碰的子树根个数），失败记一条
  * reject 审计（首条诊断的 code / message，changed = 0）；成功但带条目级诊断时逐条记
  * diagnostic，失败里含 E-PERMISSION 时额外逐条记 deny（带现场 owner / slot）。
- * `audit` getter 暴露日志本体，`noteRender` 供 DocumentView 每次重画累加渲染计数。
+ * `audit` getter 暴露日志本体，`noteRender` 供 DocumentView 每次重画累加渲染计数，
+ * `recordRenderStats` 再把这次渲染的节点统计（新建 / 更新 / 复用 / 销毁）交给指标累加；
+ * 两者都在 dispose 后收口、不再计数。apply 本身不触发渲染，所以渲染统计与 apply 指标
+ * 解耦：渲染在通知之后由视图完成，再单独上报。
  *
  * 生命周期：registerCleanup 把清理登记进 LifecycleLedger，dispose 时先清空监听再
  * 逆序撤销全部清理（单个失败隔离、最后汇总）。dispose 幂等，之后再 apply 一律
  * E-PAYLOAD 失败：不改会话、不通知、不记指标 / 审计（引擎已收口，不再观测）。
  */
 
+// 只借渲染器的统计类型（`import type` 运行时擦除）；引擎不 import 渲染实现。
+import type { RenderStats } from "../dom/renderer";
 import { link } from "../link/link";
 import { WINDOW_SCAFFOLD } from "../link/scaffold";
 import type { Diagnostic, LinkOptions } from "../link/types";
 import { AuditLog } from "./audit";
+import { auditApplied, auditRejected } from "./engine_audit_helpers";
 import { applyData as applyDataUpdate, type DataState } from "./data";
 import { makeDiagnostic } from "./diagnostics";
 import { hydrateSession } from "./hydrate";
@@ -132,6 +138,17 @@ export class EngineRuntime {
       return;
     }
     this.counter.count({ renders: 1 });
+  }
+
+  /**
+   * 记一次渲染的节点统计（DocumentView 每次重画后调，参数是渲染器 `stats` 副本）：
+   * 节点计数累加、`lastRender` 覆盖；dispose 后引擎收口，不再记。
+   */
+  recordRenderStats(stats: RenderStats): void {
+    if (this.isDisposed) {
+      return;
+    }
+    this.counter.recordRenderStats(stats);
   }
 
   /** 登记一个清理函数，返回撤销登记的函数；账本语义见 lifecycle.ts。 */
@@ -306,7 +323,7 @@ export class EngineRuntime {
     // 派发前快照监听者：通知期间的取消从下一次 apply 起生效，通知数按快照长度计。
     const listeners = [...this.listeners];
     this.counter.count({ ...counts, notifications: listeners.length });
-    this.auditApplied(changed, diagnostics);
+    auditApplied(this.auditLog, changed, diagnostics);
     for (const listener of listeners) {
       try {
         listener(session, changed);
@@ -322,51 +339,13 @@ export class EngineRuntime {
     this.counter.count({ rejections: 1 });
     this.counter.recordDiagnostics(diagnostics);
     this.counter.recordTiming(elapsedMs);
-    this.auditRejected(diagnostics);
+    auditRejected(this.auditLog, diagnostics);
     return { ok: false, diagnostics };
   }
 
   /** 从 apply 起表到结算的毫秒数；只结算一次 clock，测试才能按调用次数喂假钟。 */
   private elapsed(start: number): number {
     return this.clock() - start;
-  }
-
-  /** 成功审计：一条 apply 汇总 + 成功但带条目级诊断时逐条 diagnostic。 */
-  private auditApplied(changed: string[], diagnostics: Diagnostic[]): void {
-    this.auditLog.record({ kind: "apply", changed: changed.length });
-    for (const diagnostic of diagnostics) {
-      this.auditLog.record({
-        kind: "diagnostic",
-        code: diagnostic.code,
-        owner: diagnostic.owner,
-        slot: diagnostic.slot,
-        message: diagnostic.message,
-      });
-    }
-  }
-
-  /** 失败审计：一条 reject 汇总（首条诊断）+ 含 E-PERMISSION 时逐条 deny。 */
-  private auditRejected(diagnostics: Diagnostic[]): void {
-    const first = diagnostics[0];
-    this.auditLog.record({
-      kind: "reject",
-      code: first?.code,
-      message: first?.message,
-      changed: 0,
-    });
-    for (const diagnostic of diagnostics) {
-      if (diagnostic.code !== "E-PERMISSION") {
-        continue;
-      }
-      this.auditLog.record({
-        kind: "deny",
-        code: diagnostic.code,
-        owner: diagnostic.owner,
-        slot: diagnostic.slot,
-        message: diagnostic.message,
-        changed: 0,
-      });
-    }
   }
 
   /** dispose 之后的统一拒绝：E-PAYLOAD，不改会话、不通知、不记指标。 */

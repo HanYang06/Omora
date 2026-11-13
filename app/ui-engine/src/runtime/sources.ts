@@ -4,6 +4,10 @@
  * 依据 docs/engine/composition.md §5「时机」与 §7「局部树的生命周期」：
  * - 每个来源（插件 / worker / 独立进程 / 测试 fixture）登记自己的局部树；宿主把所有
  *   来源的局部树拼成一个 local-trees payload，交给链接器重算唯一权威根树。
+ * - load 是整组替换（线上 local-trees 全量负载的入口）：给定树一次重链接落成，允许
+ *   空数组（清空来源）；跨 owner 依赖（B 的树挂进 A 树声明的 slot）在同一批里解析。
+ * - requesterFor 原样透传给链接器，register / remove / load 的重链接都生效；不传 =
+ *   系统来源全放行（链接器默认）。
  * - fail closed：链接失败时 registry 与当前根树都不变，只回诊断；调用方修好再重试。
  * - 来源被撤时，挂在它声明的 slot 下的其他来源贡献失去落点（E-TARGET-MISSING），
  *   级联撤掉这些树并各记一条死引用诊断；若重链接仍失败（歧义 / 容量 / 环等），
@@ -24,7 +28,7 @@
  * - 未注册任何来源时 tree 就是构造时给的 base（默认 WINDOW_SCAFFOLD）。
  * - remove 一个未注册的 owner 是幂等空操作（返回当前树、dropped / 诊断为空）：撤来源
  *   本身不是失败，重复撤销不应该报错。
- * - register / remove 都是整体提交：候选注册表先链接成功才替换内部状态；失败只回诊断。
+ * - register / remove / load 都是整体提交：链接成功才替换内部状态，失败只回诊断。
  * - dispose 复用 E-PAYLOAD 表示「调用方时机错误」，与 runtime/engine.ts 一致。
  */
 
@@ -35,6 +39,7 @@ import { WINDOW_SCAFFOLD } from "../link/scaffold";
 import type { Diagnostic, LinkResult, LocalTree, LocalTreesPayload } from "../link/types";
 import { makeDiagnostic } from "./diagnostics";
 import { LifecycleLedger, type DisposeReport } from "./lifecycle";
+import type { Requester } from "./permissions";
 
 /** 级联撤掉的一棵局部树：属于哪个来源、原本挂到哪个 slot。 */
 export interface DroppedSource {
@@ -43,10 +48,10 @@ export interface DroppedSource {
 }
 
 /**
- * 一次 register / remove 的结果。
+ * 一次 register / remove / load 的结果。
  *
- * 成功给当前权威根树与本次记录（register 的 dropped 恒为空）；失败只给诊断，registry
- * 与根树保持操作前的样子（原子回滚）。
+ * 成功给当前权威根树与本次记录（register / load 的 dropped 恒为空）；失败只给诊断，
+ * registry 与根树保持操作前的样子（原子回滚）。
  */
 export type SourceHostResult =
   | { ok: true; tree: SlotNode; diagnostics: Diagnostic[]; dropped: DroppedSource[] }
@@ -58,10 +63,15 @@ export interface SourceHostOptions {
   base?: SlotNode;
   /** 生命周期账本；缺省自建。dispose 时整本收口。 */
   ledger?: LifecycleLedger;
+  /**
+   * 每棵局部树的请求主体，透传给链接器的 requesterFor（register / remove / load 的
+   * 重链接都生效）；不传 = 系统来源全放行。
+   */
+  requesterFor?: (tree: LocalTree) => Requester;
 }
 
-/** dispose 之后的操作拒绝信息：引擎已收口，继续登记 / 撤销属于调用方时机错误。 */
-const DISPOSED_MESSAGE = "来源宿主已销毁（dispose），不再接受 register / remove";
+/** dispose 之后的操作拒绝信息：引擎已收口，继续登记 / 撤销 / 整组 load 属调用方时机错误。 */
+const DISPOSED_MESSAGE = "来源宿主已销毁（dispose），不再接受 register / remove / load";
 
 /** dispose 之后的统一拒绝：E-PAYLOAD，与 EngineRuntime.dispose 的约定一致。 */
 function disposedFailure(): SourceHostResult {
@@ -71,10 +81,10 @@ function disposedFailure(): SourceHostResult {
   };
 }
 
-/** owner 必须是非空字符串；失败返回诊断（不抛）。 */
-function validateOwner(owner: unknown): Diagnostic | undefined {
+/** owner 必须是非空字符串；失败返回诊断（不抛）。path 让 register / load 各自定位现场。 */
+function validateOwner(owner: unknown, path = "$.owner"): Diagnostic | undefined {
   if (typeof owner !== "string" || owner.trim() === "") {
-    return makeDiagnostic("E-PAYLOAD", "来源 owner 必须是非空字符串", { path: "$.owner" });
+    return makeDiagnostic("E-PAYLOAD", "来源 owner 必须是非空字符串", { path });
   }
   return undefined;
 }
@@ -87,6 +97,11 @@ function isObject(value: unknown): boolean {
 /** 运行期防御：trees 必须是数组；同上，不做类型收窄。 */
 function isObjectArray(value: unknown): boolean {
   return Array.isArray(value);
+}
+
+/** register / load 的宿主层形状错误：统一返回 E-PAYLOAD，不抛、不改状态。 */
+function payloadFailure(message: string, path: string): SourceHostResult {
+  return { ok: false, diagnostics: [makeDiagnostic("E-PAYLOAD", message, { path })] };
 }
 
 /** 稳定文本序：注册表序列化、级联记录都靠它得到与到达顺序无关的结果。 */
@@ -148,6 +163,7 @@ function dropTreesAt(
  * host.register("ideas", [pageTree]);          // 成功：tree 里出现 pageTree
  * host.register("audio", [cardTree]);          // 失败：只回诊断，registry / tree 不变
  * host.remove("ideas");                        // 挂 ideas.feed 的贡献级联撤掉
+ * host.load(payloadTrees);                     // 线上全量负载：整组替换注册表
  * host.dispose();                              // 账本收口，之后操作一律拒绝
  * ```
  */
@@ -155,6 +171,7 @@ export class SourceHost {
   private current: SlotNode;
   private readonly base: SlotNode;
   private readonly ledger: LifecycleLedger;
+  private readonly requesterFor: ((tree: LocalTree) => Requester) | undefined;
   private registry = new Map<string, LocalTree[]>();
   private seq = 1;
   private isDisposed = false;
@@ -163,6 +180,7 @@ export class SourceHost {
     this.base = options.base ?? WINDOW_SCAFFOLD;
     this.current = this.base;
     this.ledger = options.ledger ?? new LifecycleLedger();
+    this.requesterFor = options.requesterFor;
   }
 
   /** 当前权威根树；未注册来源时就是 base。只读，调用方不得原地改写。 */
@@ -244,6 +262,45 @@ export class SourceHost {
   }
 
   /**
+   * 用给定局部树整组替换注册表（线上 `local-trees` 全量负载的宿主入口）：先按
+   * `tree.owner` 分组校验，再只重链接一次；成功才提交新 registry 与根树，失败时两者
+   * 保持操作前的样子（fail closed，只回诊断）。允许空数组（清空来源，树回到 base）；
+   * 跨 owner 依赖（B 的树挂进 A 树声明的 slot）也在这同一次链接里落成。
+   *
+   * 只做宿主这层校验（trees 是数组、每棵是对象且 owner 非空）；树形状 / 落点 / 顺序 /
+   * 容量 / 环 / 权限交给链接器。参数按 owner 分组拷进注册表，之后改数组参数不影响宿主
+   * （树对象本身不深拷，见文件头边界）。
+   */
+  load(trees: readonly LocalTree[]): SourceHostResult {
+    if (this.isDisposed) {
+      return disposedFailure();
+    }
+    if (!isObjectArray(trees)) {
+      return payloadFailure("trees 必须是局部树数组", "$.trees");
+    }
+    const candidate = new Map<string, LocalTree[]>();
+    for (const [index, tree] of trees.entries()) {
+      const path = `$.trees[${String(index)}]`;
+      if (!isObject(tree)) {
+        return payloadFailure("局部树必须是对象", path);
+      }
+      const ownerDiagnostic = validateOwner(tree.owner, path + ".owner");
+      if (ownerDiagnostic !== undefined) {
+        return { ok: false, diagnostics: [ownerDiagnostic] };
+      }
+      const group = candidate.get(tree.owner) ?? [];
+      group.push(tree);
+      candidate.set(tree.owner, group);
+    }
+    const linked = this.relink(candidate);
+    if (!linked.ok) {
+      return linked;
+    }
+    this.commit(candidate, linked.tree);
+    return { ok: true, tree: this.current, diagnostics: [], dropped: [] };
+  }
+
+  /**
    * 撤销一个来源：先撤来源本身，再按 composition.md §7 级联撤掉失去落点的树。
    *
    * 每轮重链接一次：失败且只含死引用（E-TARGET-MISSING）时，把 mountAt 落在缺失 slot
@@ -308,7 +365,7 @@ export class SourceHost {
 
   /**
    * 卸载：账本整本收口（逆序撤销登记，失败隔离由账本负责）；幂等。
-   * 之后 register / remove 一律 E-PAYLOAD 失败；registry 与根树保留供检查，不再变。
+   * 之后 register / remove / load 一律 E-PAYLOAD 失败；registry 与根树保留供检查，不再变。
    */
   dispose(): DisposeReport {
     if (this.isDisposed) {
@@ -326,7 +383,7 @@ export class SourceHost {
 
   /**
    * 把候选注册表拼成 local-trees payload 交给链接器，不改 registry 与当前树。
-   * owner 排序让 payload 顺序与注册顺序无关（链接器本身也与到达顺序无关，这里再钉一层）。
+   * owner 排序让 payload 顺序与注册顺序无关；配了 requesterFor 就透传给链接器。
    */
   private relink(registry: ReadonlyMap<string, readonly LocalTree[]>): LinkResult {
     const trees: LocalTree[] = [];
@@ -335,6 +392,9 @@ export class SourceHost {
     }
     const payload: LocalTreesPayload = { kind: "local-trees", seq: this.seq, trees };
     this.seq += 1;
-    return link(this.base, payload);
+    if (this.requesterFor === undefined) {
+      return link(this.base, payload);
+    }
+    return link(this.base, payload, { requesterFor: this.requesterFor });
   }
 }

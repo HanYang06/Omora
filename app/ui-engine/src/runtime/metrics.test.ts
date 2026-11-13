@@ -18,6 +18,11 @@ const ZERO_SNAPSHOT: RuntimeMetricsSnapshot = {
   lastDiagnostics: [],
   notifications: 0,
   renders: 0,
+  nodesCreated: 0,
+  nodesUpdated: 0,
+  nodesReused: 0,
+  nodesRemoved: 0,
+  lastRender: { created: 0, updated: 0, reused: 0, removed: 0 },
   lastApplyMs: 0,
   totalApplyMs: 0,
   maxApplyMs: 0,
@@ -42,6 +47,11 @@ describe("RuntimeMetrics：计数与快照", () => {
       lastDiagnostics: [],
       notifications: 1,
       renders: 0,
+      nodesCreated: 0,
+      nodesUpdated: 0,
+      nodesReused: 0,
+      nodesRemoved: 0,
+      lastRender: { created: 0, updated: 0, reused: 0, removed: 0 },
       lastApplyMs: 0,
       totalApplyMs: 0,
       maxApplyMs: 0,
@@ -111,6 +121,42 @@ describe("RuntimeMetrics：计数与快照", () => {
     expect(metrics.snapshot(1)).toMatchObject({ renders: 2, notifications: 1 });
   });
 
+  it("recordRenderStats 累加节点计数，并把 lastRender 换成这次渲染的副本", () => {
+    const metrics = new RuntimeMetrics();
+
+    metrics.recordRenderStats({ created: 5, updated: 0, reused: 0, removed: 0 });
+    expect(metrics.snapshot(1)).toMatchObject({
+      nodesCreated: 5,
+      nodesUpdated: 0,
+      nodesReused: 0,
+      nodesRemoved: 0,
+      lastRender: { created: 5, updated: 0, reused: 0, removed: 0 },
+    });
+
+    metrics.recordRenderStats({ created: 1, updated: 2, reused: 3, removed: 4 });
+    expect(metrics.snapshot(1)).toMatchObject({
+      nodesCreated: 6,
+      nodesUpdated: 2,
+      nodesReused: 3,
+      nodesRemoved: 4,
+      lastRender: { created: 1, updated: 2, reused: 3, removed: 4 },
+    });
+  });
+
+  it("lastRender 是副本：改快照或改传入的统计都不影响内部状态", () => {
+    const metrics = new RuntimeMetrics();
+    const source = { created: 1, updated: 2, reused: 3, removed: 4 };
+    metrics.recordRenderStats(source);
+
+    const snapshot = metrics.snapshot(1);
+    snapshot.lastRender.created = 99;
+    source.created = 88;
+
+    const next = metrics.snapshot(1);
+    expect(next.lastRender).toEqual({ created: 1, updated: 2, reused: 3, removed: 4 });
+    expect(next.nodesCreated).toBe(1);
+  });
+
   it("recordTiming 覆盖 last、累加 total、max 取大，且不动其余计数", () => {
     const metrics = new RuntimeMetrics();
     metrics.count({ dataUpdates: 1 });
@@ -152,6 +198,7 @@ describe("RuntimeMetrics：计数与快照", () => {
       notifications: 6,
       renders: 2,
     });
+    metrics.recordRenderStats({ created: 5, updated: 3, reused: 2, removed: 1 });
     metrics.recordTiming(40);
     metrics.recordDiagnostics([diagnostic("失败")]);
 
