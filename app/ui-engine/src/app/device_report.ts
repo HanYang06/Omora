@@ -1,5 +1,5 @@
-import type { Connection } from "../app/connection";
-import { detectDevices } from "../capture/devices";
+import type { Connection } from "./connection";
+import { detectDevices } from "../platform/capture/devices";
 
 /**
  * 客户端设备事实：引擎枚举完交给 manager，由插件自己解释。

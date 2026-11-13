@@ -4,7 +4,7 @@ import { compileBootSkeletonInNode } from "./node";
 /**
  * Vite adapter：构建 / dev 期把启动骨架编译进 index.html。
  *
- * 编译核心在 `src/compiler/`；这里只决定"什么时候编译、注进哪里"，不碰 kind。
+ * 编译核心在 `src/build/`；这里只决定"什么时候编译、注进哪里"，不碰 kind。
  * 每次请求都重新编译（不缓存）：dev 下改了骨架或文案，刷新就能看到，不会有旧 HTML。
  */
 

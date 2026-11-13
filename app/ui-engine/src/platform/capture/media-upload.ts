@@ -1,5 +1,5 @@
 import { planUpload, uploadFailureReason, type UploadPlan } from "./capture-rules";
-import { uploadMedia } from "../media/media";
+import { uploadMedia } from "../media";
 
 export interface UploadAttempt {
   /** 上传成功才有 */

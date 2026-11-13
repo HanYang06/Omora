@@ -1,7 +1,7 @@
-import { planStop, timeUp } from "../capture/capture-rules";
-import { captureErrorReason } from "../capture/devices";
-import { uploadRecorded } from "../capture/media-upload";
-import { DEFAULT_SECONDS } from "../capture/video/video-quality";
+import { planStop, timeUp } from "../platform/capture/capture-rules";
+import { captureErrorReason } from "../platform/capture/devices";
+import { uploadRecorded } from "../platform/capture/media-upload";
+import { DEFAULT_SECONDS } from "../platform/capture/video/video-quality";
 import type { Node } from "../renderer/types";
 import { handlerOf } from "../renderer/events";
 import type { RenderContext } from "../renderer/types";

@@ -1,16 +1,16 @@
 import type { ConnectionStatus } from "../contract/protocol";
 import type { Connection } from "./connection";
-import { reportDevicesOnce } from "../core/device-report";
+import { reportDevicesOnce } from "./device_report";
 import type { Logger } from "./log";
 import type { JsonObject } from "../contract/protocol";
 import { topicsToSync } from "./topics";
 import type { MediaData } from "../contract/protocol";
 import type { PageEntry, Snapshot } from "../legacy/types";
-import { fetchMedia } from "../media/media";
+import { fetchMedia } from "../platform/media";
 import { initialSnapshot, isStale } from "../legacy/render/boot";
 import { applySnapshotUpdate, isSnapshot } from "../legacy/render/patch";
 import { withContributions } from "../legacy/render/view";
-import { DomShell, type ShellOptions } from "./shell";
+import { DomShell, type ShellOptions } from "../legacy/shell";
 
 const SNAPSHOT_TOPIC = "ui.snapshot";
 
