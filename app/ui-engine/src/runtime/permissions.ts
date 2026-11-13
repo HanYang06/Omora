@@ -1,5 +1,5 @@
 /**
- * Dendrolink v2 权限薄层（S4）：能力 × 主体的 grant 检查。
+ * Dendrolink 权限薄层（S4）：能力 × 主体的 grant 检查。
  *
  * 语义按 `docs/engine/permissions.md`：
  * - 系统来源（tier 含 `system`）默认全能力；slot 的 owner 对自己的子树全能力；
@@ -20,7 +20,7 @@ import type { DocumentIndex } from "./document";
 import { makeDiagnostic } from "./diagnostics";
 import type { Op } from "./ops";
 
-/** 权限能力（permissions.md §1）；`intercept` 在 v1 只保留名字。 */
+/** 权限能力（permissions.md §1）；`intercept` 当前只保留名字。 */
 export type Capability =
   "read" | "mount" | "replace" | "update" | "remove" | "observe" | "intercept";
 

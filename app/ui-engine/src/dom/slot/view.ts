@@ -1,7 +1,7 @@
 /**
  * 文档视图（S4）：把 EngineRuntime 接到 DOM renderer 上。
  *
- * 这是宿主使用 v2 运行时的最小胶水：建引擎（createSession + hydrate）→ 桥接根树 →
+ * 这是宿主使用 Slot 运行时的最小胶水：建引擎（createSession + hydrate）→ 桥接根树 →
  * 现有 DomRenderer；引擎每次成功 apply 通过 onChange 通知视图按 id 重画（跨父 move
  * 由 renderer 复用元素）。视图不持有业务状态，也不改会话。
  *
@@ -87,7 +87,7 @@ export class DocumentView {
   }
 }
 
-/** 从整份 v2 文档建引擎 + 视图；文档不合法返回诊断、不建视图。 */
+/** 从整份 Slot 文档建引擎 + 视图；文档不合法返回诊断、不建视图。 */
 export function mountDocumentView(
   container: HTMLElement,
   document: unknown,

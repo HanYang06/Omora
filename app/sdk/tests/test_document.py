@@ -1,4 +1,4 @@
-"""v2 文档契约：Python 序列化必须与跨语言 fixture 完全一致。"""
+"""Slot 文档契约：Python 序列化必须与跨语言 fixture 完全一致。"""
 
 from __future__ import annotations
 

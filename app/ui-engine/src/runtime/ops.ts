@@ -1,5 +1,5 @@
 /**
- * Dendrolink v2 局部树更新（ops）：线上形状校验 + 原子应用。
+ * Dendrolink 局部树更新（ops）：线上形状校验 + 原子应用。
  *
  * payload：`{kind:"ops", document, base, seq, ops:[...]}`
  * - `parseOps` 只做形状校验（字段类型 / 取值域 / 每种 op 形状与 Slot 合法性），

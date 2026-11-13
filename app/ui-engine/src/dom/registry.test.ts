@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { registry } from "./registry";
 
-/** v1 节点词表的全部 type；DOM renderer 必须一个不少。 */
+/** legacy 节点词表的全部 type；DOM renderer 必须一个不少。 */
 const EXPECTED = [
   "column",
   "row",
@@ -45,7 +45,7 @@ const EXPECTED = [
 ];
 
 describe("kind registry", () => {
-  it("覆盖 v1 的全部 38 个节点类型", () => {
+  it("覆盖 legacy 的全部 38 个节点类型", () => {
     expect(Object.keys(registry).sort()).toEqual([...EXPECTED].sort());
   });
 

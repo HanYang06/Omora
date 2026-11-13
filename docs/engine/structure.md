@@ -66,7 +66,7 @@
 - 路由声明与历史的细节在 updates.md / runtime.md 展开。
 - S3-c 已落：`SessionState` 持有 `pages` / `active`，route op 校验目标页存在后改 active。
 - S3-d 已落：`runtime/page_switch.ts` 的 `diffPageTrees` 按 id 分类 keep/move/replace/cancel/add。
-- S3-e 已落：DOM renderer 支持跨父 move 复用元素（同 id+type 跨渲染认领旧元素），换页 move 现在保留实例；`?engine=v2` 有预览入口。
+- S3-e 已落：DOM renderer 支持跨父 move 复用元素（同 id+type 跨渲染认领旧元素），换页 move 现在保留实例；`?engine=slot` 有预览入口。
 
 ## 7. 示例
 

@@ -1,6 +1,6 @@
 # 契约：Slot
 
-> 状态：**已定未实现**。本文定义 Dendrolink 唯一的节点原语；代码当前仍是 v1 的 `{type, props, children}`。
+> 状态：**已定未实现**。本文定义 Dendrolink 唯一的节点原语；代码当前仍是 legacy 的 `{type, props, children}`。
 > 依赖：[README](README.md) · [ADR-0001](decisions/0001-name.md)
 > 相关：[addressing.md](addressing.md) · [structure.md](structure.md) · [rules.md](rules.md) · [composition.md](composition.md)
 
@@ -34,7 +34,7 @@ Slot 是 Dendrolink 唯一的节点类型：一个带稳定 id、布局规则、
 - 每个 kind 声明：类别（文档 / 容器 / 叶子 / 行为）、是否允许 layout、props schema、事件名、可挂端口、是否允许 collection。
 - schema 单一来源【建议】：以 Python 词表为源导出 TS 类型、校验器、文档与键索引，两端不再手写两份。
 - 未知 kind 只把该节点降级成占位并记诊断，不连累兄弟；未知 props 字段按严格模式拒绝或忽略，由 schema 决定。
-- 契约版本写在文档信封上：`dendro.ui/2`；版本与兼容规则在 wire 文档（待写）。
+- 契约版本写在文档信封上：`dendro.ui/1`；版本与兼容规则在 wire 文档（待写）。
 
 ## 3. 只有三种写操作
 

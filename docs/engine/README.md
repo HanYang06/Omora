@@ -2,7 +2,7 @@
 
 > **Dendrolink：把局部树链接成权威根树的链接期引擎。**
 >
-> 状态：**设计已定，实现未开始**。本文是引擎文档集的索引与总纲；契约细节在后续文档里，代码当前仍是 v1 渲染器。
+> 状态：**设计已定，实现未开始**。本文是引擎文档集的索引与总纲；契约细节在后续文档里，代码当前以 legacy 节点模型渲染为主，Slot 文档运行时逐块接入。
 > 基线：main@f090ea1（另有未提交的仓库结构迁移 refactor/repo-layout）。
 > 命名决定见 [ADR-0001](decisions/0001-name.md)。
 
@@ -37,7 +37,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 | 简称 / 口头   | Dendro、树链引擎                                                                         |
 | 英文标题      | Dendrolink: A Link-Time Engine for Composing Local Trees into an Authoritative Root Tree |
 | 中文标题      | 《Dendrolink：把局部树链接成权威根树的链接期引擎》                                       |
-| schema        | `dendro.ui/2`                                                                            |
+| schema        | `dendro.ui/1`                                                                            |
 | 引擎内置 kind | `dendro:slot` / `dendro:page` / `dendro:layer` / `dendro:window`                         |
 | 宿主导入 kind | 保持 `ideas:card` 这种                                                                   |
 | id 前缀       | `dendro.window` / `dendro.window.page`                                                   |
@@ -67,7 +67,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 | [components.md](components.md)            | 组件词表、schema 单一来源、authoring API 与 wire 形态    | 已写   |
 | [wire.md](wire.md)                        | 引擎 payload 形状；帧/传输仍归 `docs/design/protocol.md` | 已写   |
 | [testing.md](testing.md)                  | 九条不变量、fixture、编译诊断测试、集合等价测试          | 已写   |
-| [migration.md](migration.md)              | v1→v2、兼容层、S0–S5、旧文档去向                         | 已写   |
+| [migration.md](migration.md)              | legacy→Dendrolink、兼容层、S0–S5、旧文档去向             | 已写   |
 | [archive/](archive/)                      | 已退役的提案与旧设计                                     | 已退役 |
 
 旧草案（`docs/design/ui-tree.md`）已拆入本系列并删除。
@@ -81,26 +81,26 @@ Dendrolink 是一个 **UI 文档运行时**：
 5. `composition.md` + `updates.md`：局部树怎么合成权威根树、之后怎么更新。
 6. `permissions.md` + `runtime.md`：谁能动它、引擎内部怎么分层。
 7. `components.md` + `wire.md` + `testing.md`：怎么加组件、线上长什么样、拿什么验收。
-8. `migration.md`：从 v1 到 v2 怎么走。
+8. `migration.md`：从 legacy 到 Dendrolink 怎么走。
 
 ## 6. 实现状态（与代码的差距）
 
-文档写的是**契约**，不是现状说明书。当前代码是 v1 契约 + DOM 渲染器 + v2 链接器/运行时核心：490 条 Python 测试、843 条 TS 测试全绿，但离本文的模型还有距离。
+文档写的是**契约**，不是现状说明书。当前代码是 legacy 节点契约 + DOM 渲染器 + Dendrolink 链接器/运行时核心：490 条 Python 测试、843 条 TS 测试全绿，但离本文的模型还有距离。
 
-| 能力     | 代码现状（v1）                                                  | 目标                            | 状态                       |
-| -------- | --------------------------------------------------------------- | ------------------------------- | -------------------------- |
-| 节点契约 | `{type, props, children}`，无 layout/reactions/collection/grant | Slot 信封                       | 已定未实现                 |
-| 文档契约 | 无（只有 v1 节点）                                              | Slot/Document v2 类型 + fixture | S1.1 已落，运行时未接入    |
-| 寻址     | 位置 + handler 代次（`owner:serial:index`）                     | 稳定 id + 三张索引              | 已定未实现                 |
-| 组合     | TS 组合器 + 全局键；Python 只发 append                          | 链接期编译 + 诊断               | 已定未实现                 |
-| 更新     | 全量 + 路径补丁                                                 | 全量 / 数据 / 局部树            | 已定未实现                 |
-| 规则     | 回调塞在 props 里                                               | 结构 + 规则两张网               | 已定未实现                 |
-| 集合     | 插件自己组条目树                                                | 模板 + keyed reconcile          | 已定未实现                 |
-| 权限     | 无                                                              | 能力 × 主体                     | 设计概念，格式先留         |
-| 生命周期 | Python `ctx.effect`；TS 无账本                                  | 引擎级挂载/卸载账本             | 已定未实现                 |
-| 组件词表 | 38 个 kind，Python/TS 两处手写                                  | schema 单一来源 + 代码生成      | 已定未实现                 |
-| 渲染层   | DOM kind 词表 + DomRenderer（React 已删除）                     | 同左，38 个 kind 全覆盖         | 已落                       |
-| 启动骨架 | 空数据快照 + 运行时解释整棵树                                   | 构建期编译成首帧 HTML           | 已落（首帧；无 hydration） |
+| 能力     | 代码现状（legacy）                                              | 目标                         | 状态                       |
+| -------- | --------------------------------------------------------------- | ---------------------------- | -------------------------- |
+| 节点契约 | `{type, props, children}`，无 layout/reactions/collection/grant | Slot 信封                    | 已定未实现                 |
+| 文档契约 | 无（只有 legacy 节点）                                          | Slot/Document 类型 + fixture | S1.1 已落，运行时未接入    |
+| 寻址     | 位置 + handler 代次（`owner:serial:index`）                     | 稳定 id + 三张索引           | 已定未实现                 |
+| 组合     | TS 组合器 + 全局键；Python 只发 append                          | 链接期编译 + 诊断            | 已定未实现                 |
+| 更新     | 全量 + 路径补丁                                                 | 全量 / 数据 / 局部树         | 已定未实现                 |
+| 规则     | 回调塞在 props 里                                               | 结构 + 规则两张网            | 已定未实现                 |
+| 集合     | 插件自己组条目树                                                | 模板 + keyed reconcile       | 已定未实现                 |
+| 权限     | 无                                                              | 能力 × 主体                  | 设计概念，格式先留         |
+| 生命周期 | Python `ctx.effect`；TS 无账本                                  | 引擎级挂载/卸载账本          | 已定未实现                 |
+| 组件词表 | 38 个 kind，Python/TS 两处手写                                  | schema 单一来源 + 代码生成   | 已定未实现                 |
+| 渲染层   | DOM kind 词表 + DomRenderer（React 已删除）                     | 同左，38 个 kind 全覆盖      | 已落                       |
+| 启动骨架 | 空数据快照 + 运行时解释整棵树                                   | 构建期编译成首帧 HTML        | 已落（首帧；无 hydration） |
 
 ## 7. 术语
 
@@ -121,7 +121,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 - 设计讨论：2026-11-12 ~ 2026-11-13。
 - 基线：`main@f090ea1`；工作区另有未提交的仓库结构迁移（`refactor/repo-layout`）。
-- 收敛前的材料：旧提案归档在 [archive/ui-engine-subsystem.md](archive/ui-engine-subsystem.md)；旧 v1 文档（`ui-engine.md` / `ui-plugins.md`）已删除，内容并入本系列。
+- 收敛前的材料：旧提案归档在 [archive/ui-engine-subsystem.md](archive/ui-engine-subsystem.md)；旧 legacy 文档（`ui-engine.md` / `ui-plugins.md`）已删除，内容并入本系列。
 - 产品页面设计（[ui-rules.md](../design/ui-rules.md)、[ui-home.md](../design/ui-home.md)、[ui-capture.md](../design/ui-capture.md)）不属于引擎契约，留在 `docs/design/`，引擎文档只链接。
 
 ## 9. 落地阶段
@@ -129,10 +129,10 @@ Dendrolink 是一个 **UI 文档运行时**：
 | 阶段 | 内容                                                                      | 退出条件                  |
 | ---- | ------------------------------------------------------------------------- | ------------------------- |
 | S0   | 收尾：仓库结构迁移单独 PR；提案文档入 docs；删已合并 worktree；修过期数字 | 工作区干净，CI 绿         |
-| S1   | 契约：schema 单一来源；Slot v2 序列化；跨语言 fixture                     | 同一 fixture 两侧结论一致 |
+| S1   | 契约：schema 单一来源；Slot 序列化；跨语言 fixture                        | 同一 fixture 两侧结论一致 |
 | S2   | 链接期组合：诊断码、顺序模型、构建期编译门禁                              | 冲突在 CI 可复现          |
 
-> S2 第一版已落：`app/ui-engine/src/link/`（v2 局部树 → 权威根树 + 诊断）、`sdk/local_tree.py`、共享 fixture 与 `vite build` 门禁。`static_ui.py` 升级、运行时接入与按 kind schema 待后续。
+> S2 第一版已落：`app/ui-engine/src/link/`（Slot 局部树 → 权威根树 + 诊断）、`sdk/local_tree.py`、共享 fixture 与 `vite build` 门禁。`static_ui.py` 升级、运行时接入与按 kind schema 待后续。
 
 > S3-a 已落：`app/ui-engine/src/runtime/` 的文档状态/三张索引、局部树 ops（原子/版本/changed）、集合绑定原语，`sdk/update.py` + 共享 `ops.json`。
 
@@ -140,17 +140,17 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 > S3-c 已落：标量 `in`/`bind` 绑定（`data_bind.ts`）、Session/pages/active、route op 与全量替换（`session.ts`），`sdk/update.py` 的 RouteOp + 共享 `route.json`。
 
-> S3-d 已落：`src/dom/v2/`（Slot→DOM 薄桥 + 命名空间别名 + v2 原生结构 kind）、`runtime/hydrate.ts`、`runtime/page_switch.ts` 与 fixture→DOM 集成 spike。数据更新/全量替换不重挂已验证。
+> S3-d 已落：`src/dom/slot/`（Slot→DOM 薄桥 + 命名空间别名 + Slot 原生结构 kind）、`runtime/hydrate.ts`、`runtime/page_switch.ts` 与 fixture→DOM 集成 spike。数据更新/全量替换不重挂已验证。
 
-> S3-e 已落：renderer 跨父 move 复用元素（换页保留实例）、`?engine=v2` 预览入口（独立 chunk）、生命周期账本原语（S4 预落）。
+> S3-e 已落：renderer 跨父 move 复用元素（换页保留实例）、`?engine=slot` 预览入口（独立 chunk）、生命周期账本原语（S4 预落）。
 
 > S4 第一版已落：`EngineRuntime`（session + 生命周期账本 + 指标 + 变更通知）、`DocumentView`（引擎 ↔ DOM）、权限薄层（ops/data 运行期 E-PERMISSION）。
 
 > S4 续落：链接期挂载权限（含 base grant 归一化）、`SourceHost`（来源注册/死引用级联/fail closed）、`AuditLog` 与 apply 耗时/渲染计数。
 
-> S4 续（二）：`EngineRuntime.applyLocalTrees`（全量局部树重链 → 树替换 → 水合 → 版本+1/指标/审计）已落；v2 布局 size/gap/align/scroll 落到 CSS 变量与 `[data-dendro-layout]` 样式；`?engine=v2` 预览改用 EngineRuntime + DocumentView。
+> S4 续（二）：`EngineRuntime.applyLocalTrees`（全量局部树重链 → 树替换 → 水合 → 版本+1/指标/审计）已落；Slot 布局 size/gap/align/scroll 落到 CSS 变量与 `[data-dendro-layout]` 样式；`?engine=slot` 预览改用 EngineRuntime + DocumentView。
 
-> S5 起步：`SourceEngine`（SourceHost + EngineRuntime 组合，createEngineFromLocalTrees / registerSource / removeSource / applyLocalTrees）与 renderer 节点统计（created/updated/reused/removed → 指标）已落。下一步：v1/v2 术语与 schema 重置、组件目录与分层整改。
+> S5 起步：`SourceEngine`（SourceHost + EngineRuntime 组合，createEngineFromLocalTrees / registerSource / removeSource / applyLocalTrees）与 renderer 节点统计（created/updated/reused/removed → 指标）已落。schema 已重置为 dendro.ui/1、legacy/Slot 术语已收口；下一步：组件目录与分层整改。
 
 | S3 | 索引 + 三种更新 + 集合绑定；灵感页 spike | 数据更新不重挂；换页协调正确 |
 | S4 | 权限薄层 + 生命周期账本 + 观测指标 | 越权拒绝；卸载零残留 |

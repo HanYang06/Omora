@@ -1,10 +1,10 @@
-"""Dendrolink v2 文档契约：Slot 文档、序列化与校验（S1.1）。
+"""Dendrolink 文档契约：Slot 文档、序列化与校验（S1.1）。
 
-这是目标契约的第一块实现：只定义线上形状与校验，不接入现有 v1 运行时。
-命名空间是 `dendro.ui/2`；引擎 kind 用 `dendro:*`，宿主/领域 kind 用 `ideas:*`。
+这是目标契约的第一块实现：只定义线上形状与校验，不接入 legacy 运行时。
+命名空间是 `dendro.ui/1`；引擎 kind 用 `dendro:*`，宿主/领域 kind 用 `ideas:*`。
 
-与 v1 的关系：`omora.sdk.ui` 的 Node / Page 仍是当前运行时的节点；本模块的 Slot
-是 v2 通用节点，后续序列化会迁到这里。
+与 legacy 的关系：`omora.sdk.ui` 的 Node / Page 仍是 legacy 运行时的节点；本模块的 Slot
+是通用节点，后续序列化会迁到这里。
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ Handler = Callable[[dict[str, Any]], None]
 JsonObject = dict[str, Any]
 Register = Callable[[Handler], str]
 
-SCHEMA = "dendro.ui/2"
+SCHEMA = "dendro.ui/1"
 _KIND_PARTS = 2
 FLOWS = frozenset({"column", "row", "stack", "none"})
 CAPACITIES = frozenset({"none", "one", "many"})

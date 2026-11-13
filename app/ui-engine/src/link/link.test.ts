@@ -102,7 +102,7 @@ describe("link：共享 fixture → 权威根树", () => {
     expect(result.ids.has("t.item")).toBe(true);
   });
 
-  it("产出的根树仍是合法 v2 文档", () => {
+  it("产出的根树仍是合法 Slot 文档", () => {
     const result = expectLinked(linkFixture());
 
     expect(() =>

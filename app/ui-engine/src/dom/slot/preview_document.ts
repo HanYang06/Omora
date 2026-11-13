@@ -1,7 +1,7 @@
 /**
- * `?engine=v2` 预览入口的内置示例文档（S3-e）：手写在 TS 里，不 import 测试 fixture。
+ * `?engine=slot` 预览入口的内置示例文档（S3-e）：手写在 TS 里，不 import 测试 fixture。
  *
- * 只为演示「session → 水合 → v2 桥 → DOM」这条路径，形状如下：
+ * 只为演示「session → 水合 → Slot 桥 → DOM」这条路径，形状如下：
  *
  *   dendro.window（row）
  *   ├─ dendro.window.nav（column，56px）
@@ -20,9 +20,9 @@
 import {
   DOCUMENT_SCHEMA,
   type Collection,
-  type DocumentV2,
+  type SlotDocument,
   type Layout,
-  type PageEntryV2,
+  type PageEntry,
   type SlotNode,
 } from "../../core/document";
 import type { CollectionItem } from "../../runtime/collection";
@@ -45,7 +45,7 @@ const PAGE_SLOT_ID = "dendro.window.page";
 const TEMPLATE_ID = "tpl.ideas.item";
 
 /** 预览用的页面侧表（导航两个入口）。 */
-export const PREVIEW_PAGES: readonly PageEntryV2[] = [
+export const PREVIEW_PAGES: readonly PageEntry[] = [
   { id: PAGE_IDEAS, label: "灵感", route: "/ideas", owner: "ideas", icon: "ideas" },
   { id: PAGE_PROJECTS, label: "项目", route: "/projects", owner: "projects", icon: "projects" },
 ];
@@ -225,12 +225,12 @@ function pageFor(active: string): SlotNode {
 }
 
 /**
- * 构造某个活动页的完整 v2 文档。
+ * 构造某个活动页的完整 Slot 文档。
  *
  * 每次返回全新对象（页面子树、data 条目都重新建），调用方可以直接交给
  * `createSession` / `applyFull`，不会与上一份文档共享可变状态。
  */
-export function previewDocument(active: string, feed: PreviewFeed, version: number): DocumentV2 {
+export function previewDocument(active: string, feed: PreviewFeed, version: number): SlotDocument {
   return {
     schema: DOCUMENT_SCHEMA,
     document: slotOf({

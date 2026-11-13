@@ -59,13 +59,13 @@ export interface Kind {
 
 ### 身份
 
-- 有 `node.id` 用 id；没有时用 **父路径 + 位置** 作为临时键（v1 兼容）。
+- 有 `node.id` 用 id；没有时用 **父路径 + 位置** 作为临时键（legacy 兼容）。
 - 同一个键、同一个 type：复用元素，调 `update`；
 - 同一个键、type 变了：`destroy` 旧元素，`create` 新元素；
 - 旧键消失：`destroy` + 移除；
 - 新键出现：`create` + 插入到正确位置。
 
-更新按 **引用** 短路：`node` 引用没变就整棵跳过（v1 patch 保留了未变子树的引用）。
+更新按 **引用** 短路：`node` 引用没变就整棵跳过（legacy patch 保留了未变子树的引用）。
 
 ### 跨父移动（S3-e）
 
@@ -77,7 +77,7 @@ renderer 维护跨渲染的 key → 元素索引（有 id 用 id；没有时用�
 - 引用不变的子树跳过 `kind.update`，但元素仍要挂到新 host；
 - 无 id 节点仍按父路径 + 位置复用，换父即重建。
 
-这条让"换页 = 按 id 协调"第一次真正保留实例：`renderer_move.test.ts` 用共享 v2 文档 `applyFull` 换页后断言卡片 DOM 元素引用不变。
+这条让"换页 = 按 id 协调"第一次真正保留实例：`renderer_move.test.ts` 用共享 Slot 文档 `applyFull` 换页后断言卡片 DOM 元素引用不变。
 
 ### 渲染节点统计（S5 起步）
 
@@ -105,7 +105,7 @@ renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, nod
 
 - 局部状态归渲染端：kind 可以在元素上存状态，或闭包持有；不要上升成全局。
 - 媒体、监听、定时器统一走 `ctx.cleanup`；节点卸载/换页/连接关闭时逆序执行。
-- 正在进行中的录制/上传：卸载时按现有 v1 行为“停止并提交”，由 capture kind 自己实现。
+- 正在进行中的录制/上传：卸载时按现有 legacy 行为“停止并提交”，由 capture kind 自己实现。
 
 ### 隐藏 vs 卸载（v0 限制）
 
@@ -158,18 +158,18 @@ src/compiler/vite-plugin.ts     Vite adapter：只决定何时编译、注进哪
 - 两道门禁：`static_ui.py --check` 查骨架数据是否最新；`skeleton_html.py` 查构建产物确实带编译后的 HTML（CI build job）。
 - `vite.config.ts` import 了引擎源码，所以 `dev/build/test/preview` 统一带 `--configLoader runner`（`omora dev` 同步）；bundle loader 会把整张引擎模块图打进配置并报无扩展名 import 警告。
 
-## 10. v2 Slot → DOM（S3-d spike，已落）
+## 10. Slot → DOM（S3-d spike，已落）
 
-v2 文档/运行时产出的是 `SlotNode`，现有 DOM renderer 只认 v1 `Node` 词表。S3-d 先用**薄桥 + 命名空间别名**把 v2 接上，不迁移 38 个 kind 的实现：
+Slot 文档/运行时产出的是 `SlotNode`，现有 DOM renderer 只认 legacy `Node` 词表。S3-d 先用**薄桥 + 命名空间别名**把 Slot 接上，不迁移 38 个 kind 的实现：
 
-- `src/dom/v2/bridge.ts`：`slotToNode` 只做形状搬运——`type = slot.kind`（保留命名空间），复制 id/props/children/events/layout；不展开 `collection.templates`（模板不是挂载节点，实例化归运行时）。
-- `src/dom/v2/registry.ts`：`v2Registry` = 所有 v1 type 的 `dendro:<type>` 别名 + 宿主别名（`ideas:card` → v1 `card`）+ v2 原生 kind；v2 原生 kind 后合并，同名时 v2 语义优先。
-- `src/dom/v2/kinds.ts`：v2 原生结构 kind（`dendro:window/page/slot/layer` 按 `layout.flow` 映射到现有 `.omora-row`/`.omora-column` class；S4 起 size/gap/align/scroll 也映射到 `--dendro-*` CSS 变量与 `data-*` 属性，`[data-dendro-layout]` 样式段消费）与 `dendro:page-link`（复用壳层导航按钮样式，事件走 `handlerOf` + `ctx.event`）。
+- `src/dom/slot/bridge.ts`：`slotToNode` 只做形状搬运——`type = slot.kind`（保留命名空间），复制 id/props/children/events/layout；不展开 `collection.templates`（模板不是挂载节点，实例化归运行时）。
+- `src/dom/slot/registry.ts`：`slotRegistry` = 所有 legacy type 的 `dendro:<type>` 别名 + 宿主别名（`ideas:card` → legacy `card`）+ Slot 原生 kind；Slot 原生 kind 后合并，同名时 Slot 语义优先。
+- `src/dom/slot/kinds.ts`：Slot 原生结构 kind（`dendro:window/page/slot/layer` 按 `layout.flow` 映射到现有 `.omora-row`/`.omora-column` class；S4 起 size/gap/align/scroll 也映射到 `--dendro-*` CSS 变量与 `data-*` 属性，`[data-dendro-layout]` 样式段消费）与 `dendro:page-link`（复用壳层导航按钮样式，事件走 `handlerOf` + `ctx.event`）。
 - `Node` 增加可选 `layout` 字段；`kind` 语义由注册表决定，renderer 协调逻辑不变。
 
-**已证明**（`src/dom/v2/spike.test.ts`，共享 `document.json`）：session → 水合 → 桥 → DOM 渲染出母页面/导航/卡片；纯数据更新后同 id 卡片复用同一 DOM 元素、只改标题并新增一条；全量替换同 id 文档不重挂。换页用 `runtime/page_switch.ts` 的 `diffPageTrees` 分类出 keep/move/replace/cancel/add。
+**已证明**（`src/dom/slot/spike.test.ts`，共享 `document.json`）：session → 水合 → 桥 → DOM 渲染出母页面/导航/卡片；纯数据更新后同 id 卡片复用同一 DOM 元素、只改标题并新增一条；全量替换同 id 文档不重挂。换页用 `runtime/page_switch.ts` 的 `diffPageTrees` 分类出 keep/move/replace/cancel/add。
 
-**未接**：renderer 目前只在同一个父节点下按 id 协调，跨父的 `move` 会重建元素（换页移动的身份保留待补）；v2 桥还没有接进 `dom/app.ts` / 主入口，v1 页面仍走 v1 路径；`layout` 的 size/gap/align 还没落到样式。
+**未接**：renderer 目前只在同一个父节点下按 id 协调，跨父的 `move` 会重建元素（换页移动的身份保留待补）；Slot 桥还没有接进 `dom/app.ts` / 主入口，legacy 页面仍走 legacy 路径；`layout` 的 size/gap/align 还没落到样式。
 
 ## 11. 验收
 
@@ -178,6 +178,6 @@ v2 文档/运行时产出的是 `SlotNode`，现有 DOM renderer 只认 v1 `Node
 - [x] 启动骨架由 Vite 在构建期编译进 `index.html`，产物门禁 `scripts/skeleton_html.py` 通过；
 - [x] `tsc` / eslint / prettier / vitest / vite build 全绿；
 - [ ] 首帧 hydration（复用预渲染 DOM，不重建）；
-- [x] v2 SlotNode 经薄桥 + 命名空间别名直接渲染；跨父 move 复用元素已接（`renderer_move.test.ts`）；
-- [x] `?engine=v2` 预览入口（独立 chunk，v1 默认路径不变）；
+- [x] SlotNode 经薄桥 + 命名空间别名直接渲染；跨父 move 复用元素已接（`renderer_move.test.ts`）；
+- [x] `?engine=slot` 预览入口（独立 chunk，legacy 默认路径不变）；
 - [ ] 灵感页三栏、搜索、捕捉、设置页的人工/端到端走查（下一阶段随 e2e 一起补）。

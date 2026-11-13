@@ -1,5 +1,5 @@
 /**
- * Dendrolink v2 会话（S3-c）：全量文档 → SessionState，route op 与全量替换。
+ * Dendrolink 会话（S3-c）：全量文档 → SessionState，route op 与全量替换。
  *
  * 会话 = 文档运行时（根树 + 文档版本）+ 三样会话侧状态：`pages`（页面侧表）、
  * `active`（当前活动页 id）、`data`（数据文档投影）。树上只物化当前活动页的子树；
@@ -12,7 +12,7 @@
  *   DocumentState 层的 `applyOps` → 设置 active（多条 route 按声明顺序，最后一条生效）。
  *   版本只涨一次；`changed` 只来自树 op（route 不改根树，active 的最终值在返回的
  *   session 里）。任何一步失败整批不生效，调用方手里的 session 原样不动。
- * - `applyFull`：用整份 v2 文档做全量替换（版本对不上时的兜底）。比当前版本旧的
+ * - `applyFull`：用整份 Slot 文档做全量替换（版本对不上时的兜底）。比当前版本旧的
  *   全量直接拒绝（E-VERSION）；否则 root / pages / active / data / version 全换。
  *
  * route 为什么不在 ops 层执行：route 不碰根树，只改会话侧表与 active；而 ops 层的
@@ -24,7 +24,7 @@
  * `applySessionOps` 的 pages / data 未变时直接复用引用（结构共享）。
  */
 
-import { DocumentError, parseDocument, type DocumentV2, type PageEntryV2 } from "../core/document";
+import { DocumentError, parseDocument, type SlotDocument, type PageEntry } from "../core/document";
 import type { Diagnostic, DiagnosticCode } from "../link/types";
 import type { DocumentState } from "./document";
 import { makeDiagnostic } from "./diagnostics";
@@ -36,7 +36,7 @@ export interface SessionState {
   /** 当前文档：权威根树 + 文档版本。 */
   document: DocumentState;
   /** 页面侧表（id / label / route / owner），供导航与路由使用。 */
-  pages: PageEntryV2[];
+  pages: PageEntry[];
   /** 当前活动页 id；没有页面时是空串。 */
   active: string;
   /** 数据文档投影：source → 该 source 的状态。 */
@@ -52,7 +52,8 @@ export type SessionOpsResult =
 export type ApplyFullResult =
   { ok: true; session: SessionState } | { ok: false; diagnostics: Diagnostic[] };
 
-type ParsedDocument = { ok: true; document: DocumentV2 } | { ok: false; diagnostics: Diagnostic[] };
+type ParsedDocument =
+  { ok: true; document: SlotDocument } | { ok: false; diagnostics: Diagnostic[] };
 
 /** 把整份文档的 DocumentError 归一成诊断：版本 → E-VERSION，重复 id → E-ID-DUPLICATE，其余 E-PAYLOAD。 */
 function documentFailure(error: DocumentError): Diagnostic {
@@ -77,7 +78,7 @@ function parseFullDocument(value: unknown): ParsedDocument {
 }
 
 /** 从已校验的整份文档建立会话：root / pages / data 深拷，避免会话与线上 payload 共享可变对象。 */
-function sessionFrom(document: DocumentV2): CreateSessionResult {
+function sessionFrom(document: SlotDocument): CreateSessionResult {
   try {
     return {
       ok: true,
@@ -114,7 +115,7 @@ function lastRoutedPage(ops: WireOp[]): string | undefined {
 }
 
 /**
- * 校验整份 v2 文档并建立会话。
+ * 校验整份 Slot 文档并建立会话。
  *
  * 不合法返回诊断、不抛；成功时 version / pages / active 照文档保留，root / data 深拷。
  */
@@ -229,7 +230,7 @@ export function applySessionOps(
 }
 
 /**
- * 全量替换：整份 v2 文档接管会话状态。
+ * 全量替换：整份 Slot 文档接管会话状态。
  *
  * - 文档不合法 → 形状诊断（E-PAYLOAD / E-VERSION / E-ID-DUPLICATE）；
  * - `current` 存在且全量版本更旧 → E-VERSION（旧全量不回退，防止乱序到达把新状态盖掉）；

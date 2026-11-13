@@ -4,11 +4,11 @@
 
 ## 现在
 
-- 母 UI（浅色，三栏）+ 界面库 v1 + 灵感页（三栏工作台）+ 音频 / 视频捕获已落。
+- 母 UI（浅色，三栏）+ 界面库 + 灵感页（三栏工作台）+ 音频 / 视频捕获已落。
 - 仓库是 uv workspace：`omora-core` / `omora-sdk` / 每个 `omora-plugin-*` 都是 member；import 命名空间 `omora.*`。
 - 存储：SQLite（`.omora/omora.db`）；媒体文件（`.omora/media`）。
 - 测试：Python 365 条、TS 288 条，全绿。
-- 引擎文档系列已落：Dendrolink（树链引擎）契约见 [docs/engine/README.md](engine/README.md)；代码仍是 v1，迁移按 S0–S5。
+- 引擎文档系列已落：Dendrolink（树链引擎）契约见 [docs/engine/README.md](engine/README.md)；代码仍以 legacy 节点模型为主，迁移按 S0–S5。
 - 门禁：`.github/workflows/ci.yml` 全绿（ruff / mypy / pytest + 覆盖率 / eslint / prettier / tsc / vitest + 覆盖率 / 安全扫描 / 构建 / Windows）。
 - 灵感页有传统（非 AI）搜索：建议下拉、结果视图、详情与返回。
 - 插件管理器已落：清单、`[tool.omora]` 条件（平台 / 能力 / 依赖服务）、开关与设置页；
@@ -101,7 +101,7 @@ WebSocket 端到端都有行为测试。
 - 引擎：`recorder` / `audio` 组件，媒体按需取
 - 验收：`check.py` 全绿；无头浏览器 + 假麦克风录 2 秒，列表出现“语音 0:02”，播放按钮在
 
-## 已完成：母 UI 与界面库 v1
+## 已完成：母 UI 与界面库
 
 证明了「母页面定槽位 → 插件登记页面 → 页面用词表组合 → 事件带载荷回插件」。
 
@@ -121,7 +121,7 @@ WebSocket 端到端都有行为测试。
 - 录了即存：停止 = 落库，没有保存确认；录完给一条「已保存」：播放（音频）+ 再录一条 + 收起
 - 视频去掉「回看 / 重录 / 保存」：停即上传即提交，上传失败原地给重试，字节不出内存
 - 卸载即提交：收起、换页、关窗口都不会把正在录的那段丢掉
-- 文字 v1 只做就地一行、回车即存 —— 它要回答的是「什么时候算一条」，另开一份设计
+- 文字当前只做就地一行、回车即存 —— 它要回答的是「什么时候算一条」，另开一份设计
 
 验收：`uv run python scripts/check.py` 全绿；人工走一遍录音 / 视频 / 收起 / 断网重试。
 

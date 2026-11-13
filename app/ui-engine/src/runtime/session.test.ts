@@ -11,7 +11,7 @@ import {
 } from "./session";
 
 /**
- * 共享 fixture（不许改）：document.json 是 version 3 的整份 v2 文档（active page.ideas）；
+ * 共享 fixture（不许改）：document.json 是 version 3 的整份 Slot 文档（active page.ideas）；
  * route.json 是 base 3 → document 4、仅一条 route page.ideas 的 ops 批量。
  */
 const DOCUMENT_FIXTURE_PATH = fileURLToPath(
@@ -62,7 +62,7 @@ function nodeProps(session: SessionState, id: string): Record<string, unknown> |
 /** 两页文档：active 在 page.ideas，树上只物化当前页（structure.md §2）。 */
 function twoPageDocument(over: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    schema: "dendro.ui/2",
+    schema: "dendro.ui/1",
     document: {
       id: "dendro.window",
       kind: "dendro:window",
@@ -102,7 +102,7 @@ function twoPageDocument(over: Record<string, unknown> = {}): Record<string, unk
 /** 全量替换用的另一份文档：树 / pages / active / data 全不同。 */
 function replacementDocument(version: number): Record<string, unknown> {
   return {
-    schema: "dendro.ui/2",
+    schema: "dendro.ui/1",
     document: {
       id: "dendro.window",
       kind: "dendro:window",

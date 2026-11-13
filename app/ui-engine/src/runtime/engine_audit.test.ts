@@ -78,7 +78,7 @@ function steppedClock(...steps: number[]): () => number {
 /** 全量替换用的另一份文档：树 / pages / active / data 全不同。 */
 function replacementDocument(version: number): Record<string, unknown> {
   return {
-    schema: "dendro.ui/2",
+    schema: "dendro.ui/1",
     document: {
       id: "dendro.window",
       kind: "dendro:window",

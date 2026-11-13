@@ -2,7 +2,7 @@ import type { Node } from "../core/types";
 
 /**
  * 组合器：把若干份贡献挂到根树的键上，产出一棵新树和一个 key → 节点 的索引。
- * 当前实现是 v1 贡献模型；目标契约见 docs/engine/composition.md。
+ * 当前实现是 legacy 贡献模型；目标契约见 docs/engine/composition.md。
  *
  * 纯函数：入参不改；产出的新树里，没被碰到过的子树仍是入参里的原对象
  * （渲染端按节点引用 memo，补丁也靠它）。

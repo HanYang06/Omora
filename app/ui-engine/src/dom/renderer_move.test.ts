@@ -7,9 +7,9 @@ import { applyFull, createSession } from "../runtime/session";
 import { registry } from "./registry";
 import { DomRenderer } from "./renderer";
 import type { Kind, KindRegistry, RenderContext } from "./types";
-import { slotToNode } from "./v2/bridge";
-import { createSlotRenderer } from "./v2/registry";
-import { findById, readDocumentFixture } from "./v2/test_fixtures";
+import { slotToNode } from "./slot/bridge";
+import { createSlotRenderer } from "./slot/registry";
+import { findById, readDocumentFixture } from "./slot/test_fixtures";
 
 /**
  * 跨父 move 的行为测试：同一 id + 同 type 换父 / 换槽时复用同一个 DOM 元素，
@@ -388,7 +388,7 @@ describe("dispose", () => {
     expect(rootEl.parentElement).toBeNull();
   });
 });
-describe("v2 换页 move：跨页保留实例", () => {
+describe("Slot 换页 move：跨页保留实例", () => {
   it("换页后同一张卡片的 DOM 元素被复用，旧页消失", () => {
     const fixture = readDocumentFixture();
     const created = createSession(fixture);

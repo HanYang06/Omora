@@ -9,13 +9,13 @@ export interface Node {
   type: string;
   props: Record<string, unknown>;
   children: Node[];
-  /** v1.5 加字段：稳定身份；缺省时渲染端按父路径+位置协调。 */
+  /** legacy 加字段：稳定身份；缺省时渲染端按父路径+位置协调。 */
   id?: string;
-  /** v1.5 加字段：事件名 → handler id；kind 优先读它，再回退 props.on_*。 */
+  /** legacy 加字段：事件名 → handler id；kind 优先读它，再回退 props.on_*。 */
   events?: Record<string, string>;
   /**
-   * v2 桥加字段：Slot 的 layout 描述符（S3-d）。v1 kind 不读它，
-   * v2 原生 kind 按 layout.flow 决定容器 class；渲染器只当数据搬运。
+   * Slot 桥加字段：Slot 的 layout 描述符（S3-d）。legacy kind 不读它，
+   * Slot 原生 kind 按 layout.flow 决定容器 class；渲染器只当数据搬运。
    */
   layout?: Layout;
 }

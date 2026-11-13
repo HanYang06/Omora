@@ -11,7 +11,7 @@
 - `withEventProps` 让 React 读懂引擎的 events；
 - 用 Node id 当 React key，让 React 协调对齐引擎身份；
 - memo / 引用保持，求 React 不要重渲染引擎没变的节点；
-- diff 额外兼容节点级新字段，避免 v1 补丁把 id/events 丢掉。
+- diff 额外兼容节点级新字段，避免 legacy 补丁把 id/events 丢掉。
 
 同时组件数量是固定成本：不管有没有 React，引擎都要为 38 个 kind 写原生实现，否则树发过来没人认识。React 并没有省掉这批组件，只多出一整套“node → props/state/hooks → React element → DOM”的翻译。
 
@@ -27,7 +27,7 @@ Vite 侧同理：现在 Vite 编译的是 JSX → `React.createElement`，引擎
 
 ## 分两步
 
-1. **DOM renderer 对齐**：核心 renderer + 38 个 kind + 测试；删除 React 依赖与 React 测试基建；行为与现有 v1 对齐。
+1. **DOM renderer 对齐**：核心 renderer + 38 个 kind + 测试；删除 React 依赖与 React 测试基建；行为与现有 legacy 实现对齐。
 2. **编译接入 Vite**：静态骨架编译成 DOM/HTML；Vite 插件运行引擎的 compiler（核心逻辑留在引擎内，Vite 只是 adapter）。
 
 ## 后果

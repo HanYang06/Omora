@@ -1,5 +1,5 @@
 /**
- * Dendrolink v2 文档运行时（S3-a）：文档状态与三张索引。
+ * Dendrolink 文档运行时（S3-a）：文档状态与三张索引。
  *
  * 这一层只做两件事：
  * 1. `createState`：把一棵根树校验成 `DocumentState`（根树 + 文档版本）；
@@ -25,7 +25,7 @@ import {
   DOCUMENT_SCHEMA,
   DocumentError,
   parseDocument,
-  type DocumentV2,
+  type SlotDocument,
   type SlotNode,
 } from "../core/document";
 import type { Diagnostic, DiagnosticCode } from "../link/types";
@@ -74,7 +74,7 @@ export function documentErrorDiagnostic(
  * 不会影响文档。文档版本默认 1。
  */
 export function createState(root: unknown, version = 1): CreateStateResult {
-  let document: DocumentV2;
+  let document: SlotDocument;
   try {
     document = parseDocument({
       schema: DOCUMENT_SCHEMA,

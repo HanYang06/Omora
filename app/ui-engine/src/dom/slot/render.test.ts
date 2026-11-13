@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { SlotNode } from "../../core/document";
 import { slotToNode } from "./bridge";
 import { mountSlot } from "./registry";
-import { fixtureWithInstantiatedFeed, mountNode, type RecordedV2Event } from "./test_fixtures";
+import { fixtureWithInstantiatedFeed, mountNode, type RecordedSlotEvent } from "./test_fixtures";
 
 function slot(over: Partial<SlotNode> & { id: string }): SlotNode {
   return { kind: "dendro:slot", owner: "test", props: {}, children: [], ...over };
@@ -65,8 +65,8 @@ describe("共享 document.json：渲染接入", () => {
   });
 });
 
-describe("v1 词表别名", () => {
-  it("dendro:text / dendro:button 走 v1 实现，事件同样回传", () => {
+describe("legacy 词表别名", () => {
+  it("dendro:text / dendro:button 走 legacy 实现，事件同样回传", () => {
     const root = slotToNode(
       slot({
         id: "alias.root",
@@ -92,7 +92,7 @@ describe("v1 词表别名", () => {
     mounted.destroy();
   });
 
-  it("ideas:card 别名渲染成 v1 card", () => {
+  it("ideas:card 别名渲染成 legacy card", () => {
     const root = slotToNode(
       slot({
         id: "alias.root",
@@ -129,7 +129,7 @@ describe("渲染接入的其余约定", () => {
   });
 
   it("mountSlot 助手把根树挂进容器，dispose 后清空", () => {
-    const events: RecordedV2Event[] = [];
+    const events: RecordedSlotEvent[] = [];
     const container = document.createElement("div");
     document.body.append(container);
 

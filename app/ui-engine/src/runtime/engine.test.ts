@@ -12,7 +12,7 @@ import { LifecycleLedger } from "./lifecycle";
 import { RuntimeMetrics } from "./metrics";
 
 /**
- * 共享 fixture（不许改）：document.json 是 version 3 的整份 v2 文档（active page.ideas，
+ * 共享 fixture（不许改）：document.json 是 version 3 的整份 Slot 文档（active page.ideas，
  * ideas.feed 集合 + 一条数据）；route.json 是 base 3 → document 4、仅一条 route 的批量。
  */
 const DOCUMENT_FIXTURE_PATH = fileURLToPath(
@@ -85,7 +85,7 @@ function itemsPayload(revision: number, title: string): Record<string, unknown> 
 /** 全量替换用的另一份文档：树 / pages / active / data 全不同。 */
 function replacementDocument(version: number): Record<string, unknown> {
   return {
-    schema: "dendro.ui/2",
+    schema: "dendro.ui/1",
     document: {
       id: "dendro.window",
       kind: "dendro:window",

@@ -37,7 +37,7 @@ const UPDATE = {
 };
 
 describe("DocumentView：引擎 ↔ DOM", () => {
-  it("从 v2 文档建视图并渲染根树", () => {
+  it("从 Slot 文档建视图并渲染根树", () => {
     const { container, view } = boot();
     expect(container.querySelector('[data-type="dendro:window"]')).not.toBeNull();
     expect(container.querySelector(".omora-page-link")?.getAttribute("aria-label")).toBe("灵感");

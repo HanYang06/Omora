@@ -68,7 +68,7 @@ class Recorder implements VideoRecorder {
         return;
       }
       this.streamValue = opened;
-      // 先让 ISP 收敛，别把开头那次亮度跳变录进去（v1 的预热）。
+      // 先让 ISP 收敛，别把开头那次亮度跳变录进去（legacy 的预热）。
       await delay(WARMUP_MS);
       if (this.disposed) {
         this.release();

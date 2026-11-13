@@ -7,7 +7,7 @@ import { hydrateSession, type HydrateResult } from "./hydrate";
 import { createSession, type SessionState } from "./session";
 
 /**
- * 共享 fixture（不许改）：整份 v2 文档（version 3，active page.ideas）。
+ * 共享 fixture（不许改）：整份 Slot 文档（version 3，active page.ideas）。
  * ideas.feed 带 collection（source = ideas.feed，模板 item 把 title / meta 绑定），
  * data 里只有一条 item id = 42。
  */

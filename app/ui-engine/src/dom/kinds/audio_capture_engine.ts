@@ -11,14 +11,14 @@ import type RecordPlugin from "wavesurfer.js/dist/plugins/record.js";
 import { loadWaveSurfer, stopTracks, WAVE_COLOR, WAVE_PROGRESS_COLOR } from "./media_shared";
 
 /**
- * audio_capture 的录制引擎：优先用 v1 同款 wavesurfer record 插件
+ * audio_capture 的录制引擎：优先用 legacy 同款 wavesurfer record 插件
  * （滚动实时波形 + 录音 / 暂停 / 时长都由插件给）。
  *
  * 波形库加载失败（或环境没有 WebAudio / Canvas）时降级成裸 MediaRecorder：
  * 录得到、传得出，只是不画实时波形。降级路径同样可测。
  */
 
-/** 实时波形看最近多少秒（v1 同值）。 */
+/** 实时波形看最近多少秒（legacy 同值）。 */
 const WAVE_WINDOW_SECONDS = 10;
 
 export interface AudioCaptureEvents {
@@ -139,7 +139,7 @@ class Engine implements AudioCaptureEngine {
     this.stopTicker();
     if (this.plugin !== null) {
       if (this.plugin.isActive()) {
-        // 还在录：停下来，等 record-end 交完这段再销毁（v1 的卸载即提交）。
+        // 还在录：停下来，等 record-end 交完这段再销毁（legacy 的卸载即提交）。
         try {
           this.plugin.stopRecording();
         } catch (error) {

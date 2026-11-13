@@ -14,7 +14,7 @@ function flagProp(node: Node, name: string): boolean {
   return node.props[name] === true;
 }
 
-/** 有 handler 就写 data-handler，没有就删掉——和 v1 的 markup 一致。 */
+/** 有 handler 就写 data-handler，没有就删掉——和 legacy markup 一致。 */
 function setHandler(el: HTMLElement, handler: string | undefined): void {
   if (handler === undefined) {
     el.removeAttribute("data-handler");
@@ -23,7 +23,7 @@ function setHandler(el: HTMLElement, handler: string | undefined): void {
   }
 }
 
-/** 没有 handler 的按钮/药丸在 v1 里就是禁用态。 */
+/** 没有 handler 的按钮/药丸在 legacy 里就是禁用态。 */
 function setDisabled(el: HTMLElement, disabled: boolean): void {
   if (disabled) {
     el.setAttribute("disabled", "");

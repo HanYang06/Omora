@@ -21,7 +21,7 @@ import {
 /**
  * audio_capture：大圆钮 + 计时 + 提示 + 实时波形 + 一行动作。
  *
- * 版式与 v1 一致；录音机制在 audio_capture_engine（wavesurfer record 插件，
+ * 版式与 legacy 实现一致；录音机制在 audio_capture_engine（wavesurfer record 插件，
  * 失败时降级 MediaRecorder）。这里只管设备门禁、界面、上传与卸载即提交。
  */
 

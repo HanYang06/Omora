@@ -41,12 +41,12 @@ function titleTexts(container: HTMLElement): (string | null)[] {
 }
 
 describe("wantsPreview", () => {
-  it("只有 ?engine=v2 走预览：v1 与空查询都留在原路径", () => {
-    expect(wantsPreview("?engine=v2")).toBe(true);
-    expect(wantsPreview("?engine=v2&debug=1")).toBe(true);
-    expect(wantsPreview("?engine=v1")).toBe(false);
+  it("只有 ?engine=slot 走预览：legacy 与空查询都留在原路径", () => {
+    expect(wantsPreview("?engine=slot")).toBe(true);
+    expect(wantsPreview("?engine=slot&debug=1")).toBe(true);
+    expect(wantsPreview("?engine=legacy")).toBe(false);
     expect(wantsPreview("")).toBe(false);
-    expect(wantsPreview("?engine=V2")).toBe(false);
+    expect(wantsPreview("?engine=SLOT")).toBe(false);
   });
 });
 
@@ -119,12 +119,12 @@ describe("mountPreview", () => {
   });
 });
 
-describe("?engine=v2 入口接线", () => {
-  it("查询串为 engine=v2 时入口动态挂载预览，不建 Connection", async () => {
+describe("?engine=slot 入口接线", () => {
+  it("查询串为 engine=slot 时入口动态挂载预览，不建 Connection", async () => {
     const root = document.createElement("div");
     root.id = "root";
     document.body.append(root);
-    window.history.replaceState({}, "", "/?engine=v2");
+    window.history.replaceState({}, "", "/?engine=slot");
     try {
       // 模块已在文件顶部被 import 过一次：清缓存，让入口按当前 URL / #root 重新启动。
       vi.resetModules();

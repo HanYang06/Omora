@@ -10,7 +10,7 @@
 
 ## 1. schema 与版本
 
-- 文档信封带 `"schema": "dendro.ui/2"`。
+- 文档信封带 `"schema": "dendro.ui/1"`。
 - 文档版本单调递增；每个更新带 `base` 与 `seq`。
 - 数据源有独立 `revision`，同 revision 幂等。
 - 版本对不上时客户端请求全量；“永远有全量兜底”保持不变。
@@ -19,7 +19,7 @@
 
 ```jsonc
 {
-  "schema": "dendro.ui/2",
+  "schema": "dendro.ui/1",
   "document": { "id": "dendro.window", "kind": "dendro:window", "children": [] },
   "pages": [{ "id": "page.ideas", "label": "灵感", "route": "/ideas", "owner": "ideas" }],
   "active": "page.ideas",
@@ -122,7 +122,7 @@ S3-c 已落 route op：Python `omora.sdk.update.RouteOp`、TS `src/runtime/sessi
 ## 7. 与现有协议的关系
 
 - 仍只有 `call / result / error / event` 四种帧。
-- v1 的 `ui.render` / `ui.event` / `ui.snapshot` 语义保留：全量走 render，变化走 snapshot，事件走 event。
+- legacy 的 `ui.render` / `ui.event` / `ui.snapshot` 语义保留：全量走 render，变化走 snapshot，事件走 event。
 - 变化只是 payload 从“页面快照 + 路径补丁”变成“文档 + 按 id 的更新”。
 
 ## 8. 未定

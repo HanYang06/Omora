@@ -16,7 +16,7 @@ function prop(node: Node, name: string): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-/** v1.5 事件入口：events.click 优先，回退 props.on_click；空串不算。 */
+/** legacy 事件入口：events.click 优先，回退 props.on_click；空串不算。 */
 function clickHandler(node: Node): string | undefined {
   const handler = handlerOf(node, "click");
   return handler !== undefined && handler.length > 0 ? handler : undefined;
@@ -72,7 +72,7 @@ function updateEmpty(el: HTMLElement, node: Node): void {
   }
 }
 
-/** empty：空状态；没有 hint 就不画第二行。子节点不参与渲染（与 v1 一致）。 */
+/** empty：空状态；没有 hint 就不画第二行。子节点不参与渲染（与 legacy 一致）。 */
 const empty: Kind = {
   create(node) {
     const el = container("div", "omora-empty", "empty");
@@ -142,7 +142,7 @@ function updateCard(el: HTMLElement, node: Node): void {
     parts.title.textContent = title;
   }
 
-  // meta 在标题右边；有才插进去（v1 的 head 里只有 title + 可选 meta）。
+  // meta 在标题右边；有才插进去（legacy head 里只有 title + 可选 meta）。
   const meta = prop(node, "meta") ?? "";
   if (meta.length === 0) {
     parts.meta.remove();

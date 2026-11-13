@@ -1,5 +1,5 @@
 /**
- * Dendrolink v2 换页协调（S3-d）：按 id 给旧页子树与新页子树分类。
+ * Dendrolink 换页协调（S3-d）：按 id 给旧页子树与新页子树分类。
  *
  * 语义依据 docs/engine/structure.md §5「页面切换 = 按 id 协调」：换页是页面槽位的
  * 子树替换 + 一条 route 意图，协调按 id 做，而不是整页重建。

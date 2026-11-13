@@ -247,7 +247,7 @@ describe("instantiateCollection：模板实例化", () => {
     expect(plain).toEqual(snapshot);
   });
 
-  it("实例化结果仍是合法的 v2 文档", () => {
+  it("实例化结果仍是合法的 Slot 文档", () => {
     const result = expectInstantiated(
       instantiateCollection(feed(), [item("42", { title: "x" }), item("7", { title: "y" })]),
     );

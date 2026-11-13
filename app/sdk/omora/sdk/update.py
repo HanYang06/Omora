@@ -1,4 +1,4 @@
-"""Dendrolink v2 更新操作：线上形状与序列化（S3-a / S3-c）。
+"""Dendrolink 更新操作：线上形状与序列化（S3-a / S3-c）。
 
 一次更新是一个原子批量：`update` / `mount` / `move` / `unmount` / `replace` /
 `route` 按声明序应用，只涨一个文档版本。本模块只定义线上形状与 Python

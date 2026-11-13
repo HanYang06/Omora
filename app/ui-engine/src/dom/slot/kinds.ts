@@ -1,15 +1,15 @@
 /**
- * v2 原生 kind（S3-d）：`dendro:window` / `dendro:page` / `dendro:slot` /
+ * Slot 原生 kind（S3-d）：`dendro:window` / `dendro:page` / `dendro:slot` /
  * `dendro:layer` 与 `dendro:page-link`。
  *
- * 容器 kind 保留 v1 布局 class，同时把 Slot 的 `layout` 描述符（flow /
+ * 容器 kind 保留 legacy 布局 class，同时把 Slot 的 `layout` 描述符（flow /
  * gap / align / scroll / size）落成 DOM 可消费的形式；capacity 只做语义，
  * 不进样式。落点契约由 `syncContainer` 实现，测试逐条钉住：
  *
- * - class 保持 v1 形态（不新增 class，避免改变既有 className 契约）：
+ * - class 保持 legacy 形态（不新增 class，避免改变既有 className 契约）：
  *   `row` → `.omora-row`；`column` / `stack` → `.omora-column`；
  *   `none` / 没有 layout → 不加布局 class（div 的自然块流）。
- * - marker：所有 v2 容器都带 `data-dendro-layout="v2"`，作为样式段钩子与调试标记。
+ * - marker：所有 Slot 容器都带 `data-dendro-layout="slot"`，作为样式段钩子与调试标记。
  * - `data-type` 记完整 kind；`data-flow` 记 flow（缺省时删除）。
  * - gap token → `--dendro-gap`（写 CSS 值）+ `data-gap`（写原始 token）：
  *   `none → 0`；`xs/sm/md/lg/xl → var(--s1/--s2/--s3/--s4/--s5)`；
@@ -25,10 +25,10 @@
  *   数字 → `<n>px`，`fill` → `100%`，其余字符串原样（如 `12rem` / `auto`）。
  *   size 的其它键（min / max 等）暂不进样式。
  * - update 原地改：字段消失时删掉对应 CSS 变量与 data 属性；变量写在内联样式上，
- *   只命中本元素的 v2 样式段（styles.css 的 `[data-dendro-layout]`）。
+ *   只命中本元素的 Slot 样式段（styles.css 的 `[data-dendro-layout]`）。
  *
- * 这里不复制 v1 kind 的渲染逻辑：v1 词表经 registry.ts 的 `dendro:<type>` 别名
- * 直接复用，只有 v2 结构 kind 与页链接在本文件实现。
+ * 这里不复制 legacy kind 的渲染逻辑：legacy 词表经 registry.ts 的 `dendro:<type>` 别名
+ * 直接复用，只有 Slot 结构 kind 与页链接在本文件实现。
  */
 
 import type { LayoutFlow, Scroll } from "../../core/document";
@@ -40,8 +40,8 @@ import type { Kind, KindRegistry } from "../types";
 /** 没有图标时用壳层同款默认点。 */
 const DEFAULT_ICON = "dot";
 
-/** 所有 v2 容器共享的 marker 值；styles.css 用 [data-dendro-layout] 命中。 */
-const LAYOUT_MARKER = "v2";
+/** 所有 Slot 容器共享的 marker 值；styles.css 用 [data-dendro-layout] 命中。 */
+const LAYOUT_MARKER = "slot";
 
 /**
  * 间距 token → CSS 值的对照表（第一版约定；词表未在 docs 固定）。
@@ -223,7 +223,7 @@ function syncPageLink(el: HTMLElement, node: Node): void {
  * page-link：导航里的一个页面入口。按钮形状复用壳层 `.omora-shell-item` 样式，
  * 另带 `.omora-page-link` 作为语义钩子；label / icon 落到可访问性属性与图标，
  * click 一律经 handlerOf + ctx.event 回传 handler id——不做导航，那是运行时的事。
- * 没有 handler 时按钮禁用（和 v1 的「无 handler = 禁用态」一致）。
+ * 没有 handler 时按钮禁用（和 legacy 的「无 handler = 禁用态」一致）。
  */
 const pageLink: Kind = {
   create(node, ctx) {
@@ -251,8 +251,8 @@ const pageLink: Kind = {
   childrenHosts: () => null,
 };
 
-/** v2 原生 kind 注册表；名字带命名空间，与 v1 词表别名共用一张 v2 注册表。 */
-export const v2Kinds: KindRegistry = {
+/** Slot 原生 kind 注册表；名字带命名空间，与 legacy 词表别名共用一张 Slot 注册表。 */
+export const slotKinds: KindRegistry = {
   "dendro:window": layoutContainer,
   "dendro:page": layoutContainer,
   "dendro:slot": layoutContainer,

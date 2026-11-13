@@ -358,7 +358,7 @@ export class EngineRuntime {
 }
 
 /**
- * 从整份 v2 文档建引擎：createSession + hydrateSession；不合法返回诊断、不建引擎。
+ * 从整份 Slot 文档建引擎：createSession + hydrateSession；不合法返回诊断、不建引擎。
  *
  * 水合期间的条目级诊断（坏条目只丢自己，ok 仍为 true）记进指标，不阻断建引擎。
  */

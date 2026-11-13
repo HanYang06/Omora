@@ -1,7 +1,7 @@
-"""Dendrolink v2 文档契约的序列化与校验（S1.1）。
+"""Dendrolink 文档契约的序列化与校验（S1.1）。
 
 类型定义在 §document.py§；本模块只做“校验 + 生成线上形状”，
-与 Python 端 v1 运行时无关，后续 S1.2 才接入序列化链路。
+与 Python 端 legacy 运行时无关，后续 S1.2 才接入序列化链路。
 """
 
 from __future__ import annotations
@@ -105,7 +105,7 @@ def _serialize_slot(slot: Slot, register: Register) -> JsonObject:
 
 
 def serialize_slot(slot: Slot, register: Register) -> JsonObject:
-    """一个 Slot → v2 线上形状；重复 id / 坏 kind 会抛 DocumentError。"""
+    """一个 Slot → 线上形状；重复 id / 坏 kind 会抛 DocumentError。"""
     _validate_slot(slot, set())
     return _serialize_slot(slot, register)
 
@@ -137,7 +137,7 @@ def _validate_document(document: Document) -> None:
 
 
 def serialize_document(document: Document, register: Register) -> JsonObject:
-    """一份文档 → v2 线上形状；根树、模板、页面侧表一起校验。"""
+    """一份文档 → 线上形状；根树、模板、页面侧表一起校验。"""
     _validate_document(document)
     return {
         "schema": document.schema,
