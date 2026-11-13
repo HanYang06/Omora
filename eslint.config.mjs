@@ -48,11 +48,13 @@ export default tseslint.config(
   {
     name: "omora/ui-engine/boundaries/no-legacy",
     files: ["app/ui-engine/src/**/*.{ts,tsx}"],
-    // legacy 的合法引用方：app（组合根）与 compiler（过渡期 adapter）；测试不卡。
+    // legacy 的合法引用方：app（组合根）、compiler（过渡期 adapter）与 generated
+    // （生成物 static-tree 就是旧快照数据，随 legacy 删除一起消失）；测试不卡。
     ignores: [
       "**/*.test.{ts,tsx}",
       "app/ui-engine/src/app/**",
       "app/ui-engine/src/compiler/**",
+      "app/ui-engine/src/generated/**",
       "app/ui-engine/src/legacy/**",
       "app/ui-engine/src/renderer/**",
       "app/ui-engine/src/components/**",
@@ -68,6 +70,63 @@ export default tseslint.config(
               group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
               message:
                 "legacy 只允许 app/ 与 compiler/（过渡期 adapter）引用；其余层不得 import legacy/",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: "omora/ui-engine/boundaries/contract",
+    files: ["app/ui-engine/src/contract/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}"],
+    rules: {
+      // contract 是最底层：只依赖自己（纯类型 / 纯函数）与同层模块，不 import 任何其他层。
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/link/**", "../link/**", "../../link/**", "../../../link/**"],
+              message: "contract 层不得 import link/",
+            },
+            {
+              group: ["**/engine/**", "../engine/**", "../../engine/**", "../../../engine/**"],
+              message: "contract 层不得 import engine/",
+            },
+            {
+              group: ["**/host/**", "../host/**", "../../host/**", "../../../host/**"],
+              message: "contract 层不得 import host/",
+            },
+            {
+              group: [
+                "**/renderer/**",
+                "../renderer/**",
+                "../../renderer/**",
+                "../../../renderer/**",
+              ],
+              message: "contract 层不得 import renderer/",
+            },
+            {
+              group: [
+                "**/components/**",
+                "../components/**",
+                "../../components/**",
+                "../../../components/**",
+              ],
+              message: "contract 层不得 import components/",
+            },
+            {
+              group: ["**/app/**", "../app/**", "../../app/**", "../../../app/**"],
+              message: "contract 层不得 import app/",
+            },
+            {
+              group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
+              message: "contract 层不得 import legacy/",
+            },
+            {
+              group: ["**/core/**", "../core/**", "../../core/**", "../../../core/**"],
+              message: "contract 层不得 import core/",
             },
           ],
         },
@@ -144,6 +203,10 @@ export default tseslint.config(
             {
               group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
               message: "renderer 层不得 import legacy/",
+            },
+            {
+              group: ["**/core/**", "../core/**", "../../core/**", "../../../core/**"],
+              message: "renderer 层不得 import core/",
             },
           ],
         },
