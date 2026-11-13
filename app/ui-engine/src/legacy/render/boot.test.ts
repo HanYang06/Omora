@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PageEntry, Snapshot } from "../core/types";
+import type { PageEntry, Snapshot } from "../../core/types";
 import { bootSnapshot, isStale, pagesMatch } from "./boot";
 
 function snapshot(page: string): Snapshot {

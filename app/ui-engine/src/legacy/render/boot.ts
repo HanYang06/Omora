@@ -1,5 +1,5 @@
-import type { PageEntry, Snapshot } from "../core/types";
-import { STATIC_ORDER, STATIC_SNAPSHOTS } from "../generated/static-tree";
+import type { PageEntry, Snapshot } from "../../core/types";
+import { STATIC_ORDER, STATIC_SNAPSHOTS } from "../../generated/static-tree";
 
 /**
  * 启动骨架：不等后端先画第一页。

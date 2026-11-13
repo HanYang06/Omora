@@ -1,4 +1,4 @@
-import type { Node } from "../core/types";
+import type { Node } from "../../core/types";
 
 /**
  * 组合器：把若干份贡献挂到根树的键上，产出一棵新树和一个 key → 节点 的索引。

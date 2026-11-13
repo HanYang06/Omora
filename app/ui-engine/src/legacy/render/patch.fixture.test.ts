@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import type { Snapshot } from "../core/types";
+import type { Snapshot } from "../../core/types";
 import { applySnapshotUpdate } from "./patch";
 
 /** 补丁语义的跨语言钉：同一份 fixture 由 Python 的 diff 与这里的 apply 各跑一遍。 */
@@ -24,7 +24,7 @@ interface Fixture {
   page_changes: PageChangeCase[];
 }
 
-const FIXTURE_URL = new URL("../../../sdk/tests/fixtures/patch.json", import.meta.url);
+const FIXTURE_URL = new URL("../../../../sdk/tests/fixtures/patch.json", import.meta.url);
 const fixture = JSON.parse(readFileSync(fileURLToPath(FIXTURE_URL), "utf8")) as Fixture;
 
 describe("补丁：与 Python 共用同一份 fixture", () => {

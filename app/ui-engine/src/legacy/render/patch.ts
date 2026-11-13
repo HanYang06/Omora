@@ -1,4 +1,4 @@
-import type { Node, PageEntry, Snapshot } from "../core/types";
+import type { Node, PageEntry, Snapshot } from "../../core/types";
 
 /**
  * ui.snapshot 的载荷（协议 §6）有两种：带 `content` 的全量、带 `ops` 的补丁。

@@ -46,6 +46,70 @@ export default tseslint.config(
     },
   },
   {
+    name: "omora/ui-engine/boundaries/no-legacy",
+    files: ["app/ui-engine/src/**/*.{ts,tsx}"],
+    // legacy 的合法引用方：app（组合根）与 compiler（过渡期 adapter）；测试不卡。
+    ignores: [
+      "**/*.test.{ts,tsx}",
+      "app/ui-engine/src/app/**",
+      "app/ui-engine/src/compiler/**",
+      "app/ui-engine/src/legacy/**",
+      "app/ui-engine/src/renderer/**",
+      "app/ui-engine/src/components/**",
+      "app/ui-engine/src/engine/**",
+      "app/ui-engine/src/host/**",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
+              message:
+                "legacy 只允许 app/ 与 compiler/（过渡期 adapter）引用；其余层不得 import legacy/",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: "omora/ui-engine/boundaries/legacy",
+    files: ["app/ui-engine/src/legacy/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}"],
+    rules: {
+      // legacy 只依赖 contract / core 类型 / renderer；不碰宿主、引擎、链接器、组件与入口。
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/host/**", "../host/**", "../../host/**", "../../../host/**"],
+              message: "legacy 层不得 import host/",
+            },
+            {
+              group: ["**/engine/**", "../engine/**", "../../engine/**", "../../../engine/**"],
+              message: "legacy 层不得 import engine/",
+            },
+            {
+              group: ["**/link/**", "../link/**", "../../link/**", "../../../link/**"],
+              message: "legacy 层不得 import link/",
+            },
+            {
+              group: ["**/app/**", "../app/**", "../../app/**", "../../../app/**"],
+              message: "legacy 层不得 import app/",
+            },
+            {
+              group: ["**/components/**", "../components/**", "../../components/**"],
+              message: "legacy 层不得 import components/",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     name: "omora/ui-engine/boundaries/renderer",
     files: ["app/ui-engine/src/renderer/**/*.{ts,tsx}"],
     // 测试文件允许跨层（renderer_move.test 会 import app/slot_registry）。
@@ -76,6 +140,10 @@ export default tseslint.config(
             {
               group: ["**/components/**", "../components/**", "../../components/**"],
               message: "renderer 层不得 import components/",
+            },
+            {
+              group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
+              message: "renderer 层不得 import legacy/",
             },
           ],
         },
@@ -108,6 +176,10 @@ export default tseslint.config(
               group: ["**/app/**", "../app/**", "../../app/**", "../../../app/**"],
               message: "components 层不得 import app/",
             },
+            {
+              group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
+              message: "components 层不得 import legacy/",
+            },
           ],
         },
       ],
@@ -128,8 +200,8 @@ export default tseslint.config(
               message: "engine 层不得 import host/（依赖方向 contract → link → engine → host）",
             },
             {
-              group: ["**/dom/**", "../dom/**", "../../dom/**", "../../../dom/**"],
-              message: "engine 层不得 import dom/（engine 只依赖 contract / link）",
+              group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
+              message: "engine 层不得 import legacy/（engine 只依赖 contract / link）",
             },
           ],
         },
@@ -145,8 +217,8 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ["**/dom/**", "../dom/**", "../../dom/**"],
-              message: "host 层不得 import dom/（依赖方向 engine → host → renderer）",
+              group: ["**/legacy/**", "../legacy/**", "../../legacy/**", "../../../legacy/**"],
+              message: "host 层不得 import legacy/（依赖方向 host → renderer）",
             },
           ],
         },

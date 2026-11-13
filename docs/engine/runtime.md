@@ -75,20 +75,20 @@ S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fu
 
 ## 7. legacy 映射
 
-| 现在的位置                                 | 目标层                                    |
-| ------------------------------------------ | ----------------------------------------- |
-| `app/ui-engine/src/app.tsx`                | Session + 容器                            |
-| `render/compose.ts`                        | Compiler/Linker（legacy 贡献模型）        |
-| `render/patch.ts` + `packages/ui/_diff.py` | Document + 更新管线（legacy，待替换）     |
-| `app/ui-engine/src/engine/`                | Document / 索引 / ops / 集合 / session    |
-| `app/ui-engine/src/host/`                  | EngineRuntime / 权限 / 账本 / 审计 / 指标 |
-| `host/engine.ts` + `metrics.ts`            | EngineRuntime（会话 + 账本 + 指标）       |
-| `app/view.ts`                              | DocumentView（引擎 ↔ DOM）                |
-| `host/sources.ts`                          | Producer Host（来源注册/级联）            |
-| `host/audit.ts`                            | 审计日志                                  |
-| `render/renderer.tsx` + `components.tsx`   | Renderer + 组件注册表                     |
-| `packages/ui/ui.py`                        | 页面/文档注册（legacy）                   |
-| —                                          | `contract/diagnostics`（已落）            |
+| 现在的位置                                        | 目标层                                    |
+| ------------------------------------------------- | ----------------------------------------- |
+| `app/ui-engine/src/app.tsx`                       | Session + 容器                            |
+| `legacy/render/compose.ts`                        | Compiler/Linker（legacy 贡献模型）        |
+| `legacy/render/patch.ts` + `packages/ui/_diff.py` | Document + 更新管线（legacy，待替换）     |
+| `app/ui-engine/src/engine/`                       | Document / 索引 / ops / 集合 / session    |
+| `app/ui-engine/src/host/`                         | EngineRuntime / 权限 / 账本 / 审计 / 指标 |
+| `host/engine.ts` + `metrics.ts`                   | EngineRuntime（会话 + 账本 + 指标）       |
+| `app/view.ts`                                     | DocumentView（引擎 ↔ DOM）                |
+| `host/sources.ts`                                 | Producer Host（来源注册/级联）            |
+| `host/audit.ts`                                   | 审计日志                                  |
+| `renderer/` + `components/`                       | Renderer + 组件注册表（已落）             |
+| `packages/ui/ui.py`                               | 页面/文档注册（legacy）                   |
+| —                                                 | `contract/diagnostics`（已落）            |
 
 ## 8. S4 实现（已落）
 
