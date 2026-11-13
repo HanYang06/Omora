@@ -41,18 +41,19 @@
  */
 
 // 只借渲染器的统计类型（`import type` 运行时擦除）；引擎不 import 渲染实现。
-import type { RenderStats } from "../dom/renderer";
+import type { RenderStats } from "../contract/render";
 import { link } from "../link/link";
 import { WINDOW_SCAFFOLD } from "../link/scaffold";
-import type { Diagnostic, LinkOptions } from "../link/types";
+import type { Diagnostic } from "../contract/diagnostics";
+import type { LinkOptions } from "../link/types";
 import { AuditLog } from "./audit";
 import { auditApplied, auditRejected } from "./engine_audit_helpers";
 import { applyData as applyDataUpdate, type DataState } from "./data";
-import { makeDiagnostic } from "./diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 import { hydrateSession } from "./hydrate";
 import { LifecycleLedger, type DisposeReport } from "./lifecycle";
 import { RuntimeMetrics, type MetricsCounts, type RuntimeMetricsSnapshot } from "./metrics";
-import type { Requester } from "./permissions";
+import type { Requester } from "../contract/policy";
 import { parseOps } from "./ops";
 import {
   applyFull as applyFullDocument,

@@ -10,7 +10,7 @@
  * 而不是 legacy 的无 layout `slot`——同名时 Slot 语义优先。
  */
 
-import type { SlotNode } from "../../core/document";
+import type { SlotNode } from "../../contract/document";
 import { DomRenderer } from "../renderer";
 import { registry as legacyRegistry } from "../../components/registry";
 import type { Kind, KindRegistry, RenderContext } from "../types";

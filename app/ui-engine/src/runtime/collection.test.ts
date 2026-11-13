@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { DOCUMENT_SCHEMA, parseDocument, type Collection, type SlotNode } from "../core/document";
+import {
+  DOCUMENT_SCHEMA,
+  parseDocument,
+  type Collection,
+  type SlotNode,
+} from "../contract/document";
 import {
   applyCollectionChanges,
   instantiateCollection,

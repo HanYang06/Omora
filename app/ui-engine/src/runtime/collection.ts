@@ -27,9 +27,9 @@
  * - 身份字段始终以 `change.key` 为准；change 自带的身份字段与之不一致时记 `E-PAYLOAD`。
  */
 
-import type { Collection, SlotNode } from "../core/document";
+import type { Collection, SlotNode } from "../contract/document";
 import { makeDiagnostic } from "../link/parse";
-import type { Diagnostic, DiagnosticCode } from "../link/types";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 
 const TEMPLATE_CODE: DiagnosticCode = "E-TEMPLATE";
 const PAYLOAD_CODE: DiagnosticCode = "E-PAYLOAD";

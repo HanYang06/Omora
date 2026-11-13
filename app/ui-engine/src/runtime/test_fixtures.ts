@@ -5,7 +5,7 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import { createState, type DocumentState } from "./document";
 import { parseOps, type ApplyOpsResult, type OpsBatch } from "./ops";
 

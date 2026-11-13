@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseDocument, type SlotDocument, type SlotNode } from "../../core/document";
+import { parseDocument, type SlotDocument, type SlotNode } from "../../contract/document";
 import type { JsonObject } from "../../core/protocol";
 import type { Node } from "../../core/types";
 import { instantiateCollection } from "../../runtime/collection";

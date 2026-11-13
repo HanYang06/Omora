@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Grant, SlotNode } from "../core/document";
+import type { Grant, SlotNode } from "../contract/document";
 import { applyData, type DataState } from "./data";
 import {
   SYSTEM_REQUESTER,
@@ -7,7 +7,7 @@ import {
   checkPermission,
   type Capability,
   type Requester,
-} from "./permissions";
+} from "../contract/policy";
 import { node, stateOf } from "./test_fixtures";
 
 /**

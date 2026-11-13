@@ -81,7 +81,7 @@
 
 ## 9. S2 实现（已落）
 
-- **代码**：`app/ui-engine/src/link/` —— `parse.ts` 第一遍（复用 `core/document.ts` 的 Slot 校验）、`link.ts` 第二遍（多轮挂载 + 排序 + 容量 + replace）、`scaffold.ts`（窗口骨架）、`vite-plugin.ts`（构建期门禁）。
+- **代码**：`app/ui-engine/src/link/` —— `parse.ts` 第一遍（复用 `contract/document.ts` 的 Slot 校验）、`link.ts` 第二遍（多轮挂载 + 排序 + 容量 + replace）、`scaffold.ts`（窗口骨架）、`vite-plugin.ts`（构建期门禁）。
 - **输入**：`{kind: "local-trees", seq, trees: [{owner, root, mountAt, order, seq, replace?}]}`；Python 序列化在 `app/sdk/omora/sdk/local_tree.py`，两侧共用 `app/sdk/tests/fixtures/local-trees.json`。
 - **输出**：`{ok: true, tree, ids}` 或 `{ok: false, diagnostics}`。有 error 不产树（原子）；不改入参；诊断按 `(code, owner, slot, path, message)` 排序，与到达顺序无关。
 - **多轮**：落点可以由另一棵局部树引入；骨架只给 `dendro.window.nav` / `dendro.window.page`，其余槽位由来源补齐。

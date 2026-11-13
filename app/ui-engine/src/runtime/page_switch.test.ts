@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { parseDocument, type SlotNode } from "../core/document";
+import { parseDocument, type SlotNode } from "../contract/document";
 import { diffPageTrees, type PageSwitchPlan } from "./page_switch";
 
 const DOCUMENT_FIXTURE_PATH = fileURLToPath(

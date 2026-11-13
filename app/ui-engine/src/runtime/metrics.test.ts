@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeDiagnostic } from "./diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 import { RuntimeMetrics, type RuntimeMetricsSnapshot } from "./metrics";
 
 function diagnostic(message: string) {

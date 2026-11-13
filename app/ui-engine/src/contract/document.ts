@@ -1,8 +1,8 @@
 /**
  * Dendrolink 文档契约（Slot，S1.1）。
  *
- * 只定义线上形状与校验，不接入 legacy 渲染；与 Python 的 `omora.sdk.document`
- * 共用 `app/sdk/tests/fixtures/document.json`。
+ * 契约层：纯类型 + 纯校验，无 DOM、无算法。只定义线上形状与校验，不接入 legacy
+ * 渲染；与 Python 的 `omora.sdk.document` 共用 `app/sdk/tests/fixtures/document.json`。
  */
 
 export const DOCUMENT_SCHEMA = "dendro.ui/1";

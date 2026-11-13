@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import type { SlotNode } from "../../core/document";
+import type { SlotNode } from "../../contract/document";
 import { slotToNode } from "./bridge";
 import { mountSlot } from "./registry";
 import { fixtureWithInstantiatedFeed, mountNode, type RecordedSlotEvent } from "./test_fixtures";

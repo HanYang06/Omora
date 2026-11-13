@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseLocalTrees } from "./parse";
-import type { DiagnosticCode } from "./types";
+import type { DiagnosticCode } from "../contract/diagnostics";
 import { fixturePayload, payloadOf, readFixture, slot, tree } from "./test_fixtures";
 
 function codesOf(value: unknown): DiagnosticCode[] {

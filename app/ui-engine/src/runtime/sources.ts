@@ -32,14 +32,14 @@
  * - dispose 复用 E-PAYLOAD 表示「调用方时机错误」，与 runtime/engine.ts 一致。
  */
 
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import { link } from "../link/link";
 import { sortDiagnostics } from "../link/parse";
 import { WINDOW_SCAFFOLD } from "../link/scaffold";
-import type { Diagnostic, LinkResult, LocalTree, LocalTreesPayload } from "../link/types";
-import { makeDiagnostic } from "./diagnostics";
+import { makeDiagnostic, type Diagnostic } from "../contract/diagnostics";
+import type { LinkResult, LocalTree, LocalTreesPayload } from "../link/types";
 import { LifecycleLedger, type DisposeReport } from "./lifecycle";
-import type { Requester } from "./permissions";
+import type { Requester } from "../contract/policy";
 
 /** 级联撤掉的一棵局部树：属于哪个来源、原本挂到哪个 slot。 */
 export interface DroppedSource {

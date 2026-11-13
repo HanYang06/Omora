@@ -1,3 +1,4 @@
+import type { RenderStats } from "../contract/render";
 import type { Node } from "../core/types";
 import type { KindRegistry, RenderContext } from "./types";
 import {
@@ -8,10 +9,9 @@ import {
   placeholder,
   zeroStats,
   type Rendered,
-  type RenderStats,
 } from "./renderer_util";
 
-export type { RenderStats } from "./renderer_util";
+export type { RenderStats } from "../contract/render";
 
 export interface DomRendererOptions {
   registry: KindRegistry;

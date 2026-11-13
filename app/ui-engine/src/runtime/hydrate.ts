@@ -30,10 +30,10 @@
  * 运行时不变量被破坏的情况）返回 `ok:false` 诊断，不抛。
  */
 
-import type { SlotNode } from "../core/document";
-import type { Diagnostic, DiagnosticCode } from "../link/types";
+import type { SlotNode } from "../contract/document";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 import { instantiateCollection } from "./collection";
-import { makeDiagnostic } from "./diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 import type { SessionState } from "./session";
 
 const PAYLOAD_CODE: DiagnosticCode = "E-PAYLOAD";

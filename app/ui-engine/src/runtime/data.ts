@@ -36,8 +36,8 @@
  * （集合 slot 互为祖先这种病态结构），它也不会出现在后续替换里。
  */
 
-import type { SlotNode } from "../core/document";
-import type { Diagnostic, DiagnosticCode } from "../link/types";
+import type { SlotNode } from "../contract/document";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 import {
   applyCollectionChanges,
   instantiateCollection,
@@ -46,8 +46,9 @@ import {
 } from "./collection";
 import { applyScalarBinding, replaceSlotById } from "./data_bind";
 import { DocumentIndex, type DocumentState } from "./document";
-import { makeDiagnostic } from "./diagnostics";
-import { SYSTEM_REQUESTER, checkPermission, type RequesterOptions } from "./permissions";
+import { makeDiagnostic } from "../contract/diagnostics";
+import { SYSTEM_REQUESTER, checkPermission } from "../contract/policy";
+import type { RequesterOptions } from "./permissions";
 
 const PAYLOAD_CODE: DiagnosticCode = "E-PAYLOAD";
 

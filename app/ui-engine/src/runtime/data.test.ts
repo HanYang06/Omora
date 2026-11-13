@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import type { DataState } from "./data";
 import { applyData, parseData, type ApplyDataResult } from "./data";
 import { DocumentIndex, type DocumentState } from "./document";

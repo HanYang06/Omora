@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import { link } from "./link";
 import { WINDOW_SCAFFOLD } from "./scaffold";
-import type { Diagnostic, DiagnosticCode } from "./types";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 import { fixturePayload, payloadOf, slot, tree } from "./test_fixtures";
 
 function diagnosticsOf(payload: unknown, base: SlotNode = WINDOW_SCAFFOLD): Diagnostic[] {

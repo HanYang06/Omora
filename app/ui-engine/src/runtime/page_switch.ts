@@ -38,7 +38,7 @@
  * replace [{ from: B, to: C }]；cancel / add 为空。
  */
 
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 
 /** 换页协调计划：给渲染协调器按 id 执行保留 / 移动 / 替换 / 取消 / 新增。 */
 export interface PageSwitchPlan {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import type { Node } from "../core/types";
 import { hydrateSession } from "../runtime/hydrate";
 import { applyFull, createSession } from "../runtime/session";

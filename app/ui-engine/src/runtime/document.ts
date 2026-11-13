@@ -27,9 +27,9 @@ import {
   parseDocument,
   type SlotDocument,
   type SlotNode,
-} from "../core/document";
-import type { Diagnostic, DiagnosticCode } from "../link/types";
-import { makeDiagnostic } from "./diagnostics";
+} from "../contract/document";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 
 /** 运行时持有的文档：唯一权威根树 + 单调递增的文档版本。 */
 export interface DocumentState {
@@ -49,7 +49,7 @@ export interface ParentRef {
 export type CreateStateResult =
   { ok: true; state: DocumentState } | { ok: false; diagnostics: Diagnostic[] };
 
-/** 把 `core/document.ts` 的 DocumentError 归一成运行时诊断（createState / 节点解析共用）。 */
+/** 把 `contract/document.ts` 的 DocumentError 归一成运行时诊断（createState / 节点解析共用）。 */
 export function documentErrorDiagnostic(
   error: DocumentError,
   prefix: string,

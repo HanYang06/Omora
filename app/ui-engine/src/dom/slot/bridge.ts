@@ -12,7 +12,7 @@
  * 仍共享引用——渲染器只读 props，不需要深拷）。
  */
 
-import type { Layout, SlotNode } from "../../core/document";
+import type { Layout, SlotNode } from "../../contract/document";
 import type { Node } from "../../core/types";
 
 function copyLayout(layout: Layout): Layout {

@@ -31,7 +31,7 @@
  * 直接复用，只有 Slot 结构 kind 与页链接在本文件实现。
  */
 
-import type { LayoutFlow, Scroll } from "../../core/document";
+import type { LayoutFlow, Scroll } from "../../contract/document";
 import type { Node } from "../../core/types";
 import { handlerOf } from "../events";
 import { iconGlyph, paintGlyph } from "../../components/icons";

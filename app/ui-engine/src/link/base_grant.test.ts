@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import { link } from "./link";
-import type { Requester } from "./types";
+import type { Requester } from "../contract/policy";
 
 /**
  * base 归一化 + 链接期权限：base 上的 grant 在线上是扁平能力表，链接器必须先用

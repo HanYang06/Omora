@@ -10,7 +10,8 @@ import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 import { link } from "./link";
 import { WINDOW_SCAFFOLD } from "./scaffold";
-import type { Diagnostic, LinkResult } from "./types";
+import type { Diagnostic } from "../contract/diagnostics";
+import type { LinkResult } from "./types";
 
 const FIXTURE_URL = new URL("../../../sdk/tests/fixtures/local-trees.json", import.meta.url);
 

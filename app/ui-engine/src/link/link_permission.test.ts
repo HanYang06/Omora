@@ -10,11 +10,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { Grant, SlotNode } from "../core/document";
-import { SYSTEM_REQUESTER, type Requester } from "../runtime/permissions";
+import type { Grant, SlotNode } from "../contract/document";
+import { SYSTEM_REQUESTER, type Requester } from "../contract/policy";
 import { link } from "./link";
 import { WINDOW_SCAFFOLD } from "./scaffold";
-import type { Diagnostic, DiagnosticCode, LinkOptions, LinkResult } from "./types";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
+import type { LinkOptions, LinkResult } from "./types";
 import { expectLinked, fixturePayload, payloadOf, slot, tree } from "./test_fixtures";
 
 const RESTRICTED: Requester = { owner: "eco" };

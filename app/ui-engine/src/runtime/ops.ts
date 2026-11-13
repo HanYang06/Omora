@@ -43,12 +43,13 @@
  * 不是被触碰子树里的所有后代 id；渲染层用它决定重画哪些子树根。
  */
 
-import { DOCUMENT_SCHEMA, DocumentError, parseDocument, type SlotNode } from "../core/document";
-import type { Diagnostic, DiagnosticCode } from "../link/types";
+import { DOCUMENT_SCHEMA, DocumentError, parseDocument, type SlotNode } from "../contract/document";
+import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 import { DocumentIndex, documentErrorDiagnostic, type DocumentState } from "./document";
-import { makeDiagnostic } from "./diagnostics";
+import { makeDiagnostic } from "../contract/diagnostics";
 import { applyOp, buildLiveLocations, type LiveLocations, type Working } from "./ops_apply";
-import { SYSTEM_REQUESTER, checkOpPermission, type RequesterOptions } from "./permissions";
+import { SYSTEM_REQUESTER } from "../contract/policy";
+import { checkOpPermission, type RequesterOptions } from "./permissions";
 
 /** 改一个节点的 props（浅合并）。 */
 export interface UpdateOp {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import { DocumentIndex, type DocumentState } from "./document";
 import { applyOps, type ApplyOpsResult, type OpsBatch } from "./ops";
 import { batchOf, expectApplied, expectFailed, node, stateOf } from "./test_fixtures";
