@@ -81,7 +81,7 @@ def render_module(snapshots: dict[str, dict[str, Any]]) -> str:
     names = list(snapshots)
     lines = [
         "/** 生成物：启动骨架。别手改——跑 `uv run python scripts/static_ui.py`。 */",
-        'import type { Snapshot } from "../core/types";',
+        'import type { Snapshot } from "../legacy/types";',
         "",
         f'export const STATIC_HASH = "{hash_of(snapshots)}";',
         "",
