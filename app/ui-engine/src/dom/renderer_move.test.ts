@@ -2,8 +2,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SlotNode } from "../contract/document";
 import type { Node } from "../core/types";
-import { hydrateSession } from "../runtime/hydrate";
-import { applyFull, createSession } from "../runtime/session";
+import { hydrateSession } from "../engine/updates/hydrate";
+import { applyFull, createSession } from "../engine/document/session";
 import { registry } from "../components/registry";
 import { DomRenderer } from "./renderer";
 import type { Kind, KindRegistry, RenderContext } from "./types";

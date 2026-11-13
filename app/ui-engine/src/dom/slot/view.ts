@@ -6,12 +6,12 @@
  * 由 renderer 复用元素）。视图不持有业务状态，也不改会话。
  *
  * 观测：每次重画后把渲染器的节点统计上报给引擎（`recordRenderStats`）并记一次渲染
- * （`noteRender`）；两个计数互不代替，见 runtime/metrics.ts 文件头。
+ * （`noteRender`）；两个计数互不代替，见 host/metrics.ts 文件头。
  */
 
 import type { JsonObject } from "../../core/protocol";
 import type { MediaData } from "../../core/types";
-import { createEngine, type EngineRuntime, type EngineApplyResult } from "../../runtime/engine";
+import { createEngine, type EngineRuntime, type EngineApplyResult } from "../../host/engine";
 import type { Requester } from "../../contract/policy";
 import type { Diagnostic } from "../../contract/diagnostics";
 import { slotToNode } from "./bridge";

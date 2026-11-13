@@ -9,7 +9,7 @@
  *
  * 纯策略集中到契约层，修掉 link → runtime 的反向依赖：链接期与运行期共用同一份
  * grant token 求值。运行期的 op 检查点（按 op 找目标 slot、批量原子语义）留在
- * runtime/permissions.ts，不在契约层。
+ * host/permissions.ts，不在契约层。
  *
  * 检查点与默认分层见 permissions.md §3 / §4；本层不是安全边界（§6），只是协作 /
  * 一致性契约。
