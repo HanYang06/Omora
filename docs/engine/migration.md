@@ -62,11 +62,11 @@
 | `packages/ui/omora/ui.py`                 | 文档/局部树注册 + 数据路由          | S2–S3                                           |
 | `packages/ui/omora/_diff.py`              | 文档增量（按 id）或删除             | S3                                              |
 | `app/ui-engine/src/app.tsx`               | Session + 运行时容器                | S3                                              |
-| `render/compose.ts`                       | legacy 贡献组合（运行时，待替换）   | S3                                              |
+| `legacy/render/compose.ts`                | legacy 贡献组合（运行时，待替换）   | S3                                              |
 | `app/ui-engine/src/link/`                 | Compiler/Linker（Slot 局部树）      | S2 已落（运行时未接）                           |
 | `app/ui-engine/src/engine/`               | Document / 索引 / ops / 集合        | S3-a 已落（渲染接入未做）                       |
-| `render/patch.ts`                         | Document 更新管线（legacy，待替换） | S3 未接                                         |
-| `render/renderer.tsx` / `components.tsx`  | Renderer + schema 生成注册表        | S1–S3                                           |
+| `legacy/render/patch.ts`                  | Document 更新管线（legacy，待替换） | S3 未接                                         |
+| `renderer/` / `components/`               | Renderer + schema 生成注册表        | S1–S3 已落                                      |
 | `scripts/static_ui.py`                    | 构建期编译门禁                      | 未升级（门禁暂由 `src/link` 共享 fixture 承担） |
 | `scripts/keys.py` / generated             | slot id 生成器                      | S1                                              |
 

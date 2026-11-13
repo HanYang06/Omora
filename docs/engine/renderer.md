@@ -22,7 +22,7 @@ renderer/events      事件名 → handler id 解析（legacy 事件入口）
 components/testing   测试用的 mount helper
 ```
 
-`renderer/`、`components/` 与 `app/` 不依赖 React；`core/` 与 `render/` 中的协议、连接、patch、compose 保持框架无关。
+`renderer/`、`components/` 与 `app/` 不依赖 React；`core/` 与 `legacy/render/` 中的协议、连接、patch、compose 保持框架无关。
 
 ## 2. Kind 接口
 
@@ -137,7 +137,7 @@ renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, nod
 
 React 渲染层已删除；剩下的是框架无关的纯模块与 DOM 实现：
 
-- `render/components.tsx` / `controls/*` / `cards/tiles/icons/waveform` → 已迁成 `components/*` 后删除；
+- 旧 React 组件文件（`components.tsx` / `controls/*` / `cards/tiles/icons/waveform`）→ 已迁成 `components/*` 后删除；
 - `capture/*` React hooks → 已迁成 media kind 内部控制器后删除；保留 `devices / capture-rules / media-upload / video-quality` 纯规则；
 - `search/search.tsx` → `components/search.ts`；保留 `searchText.ts`；
 - `shell/shell.tsx` → `app/shell.ts`；

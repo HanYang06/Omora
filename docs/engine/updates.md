@@ -85,7 +85,7 @@
 - **局部树 ops**（`src/engine/document/ops.ts` + `ops_apply.ts`）：`parseOps` 校验 `{kind:"ops", document, base, seq, ops}`；`applyOps` 要求 `base == 当前版本` 且 `document == base + 1`（否则 `E-VERSION`），按序在深拷上应用，任一失败整批不生效；成功返回新状态 + `changed`（本次触碰的子树根 id）。
 - **op 语义**：`update`（props 浅合并）、`mount`（at 缺省尾部，越界夹取；容量/重复 id 校验）、`move`（先删后插、成环 `E-CYCLE`）、`unmount`（根不可卸）、`replace`（原位、新 id 可换）。模板节点可 update 内容，结构操作返回 `E-PAYLOAD`（位置由 templates 命名表决定）。
 - **跨语言**：Python `omora.sdk.update.serialize_ops` 产出同一形状，两侧共用 `app/sdk/tests/fixtures/ops.json`。
-- **未接**：纯数据更新（data router / 集合）、`route`、渲染层（legacy 仍走 `render/patch.ts`）、全量更新与运行时会话接线。
+- **未接**：纯数据更新（data router / 集合）、`route`、渲染层（legacy 仍走 `legacy/render/patch.ts`）、全量更新与运行时会话接线。
 
 ## 9. S3-b 实现（已落）
 

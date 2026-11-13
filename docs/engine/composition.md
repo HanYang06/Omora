@@ -86,7 +86,7 @@
 - **输出**：`{ok: true, tree, ids}` 或 `{ok: false, diagnostics}`。有 error 不产树（原子）；不改入参；诊断按 `(code, owner, slot, path, message)` 排序，与到达顺序无关。
 - **多轮**：落点可以由另一棵局部树引入；骨架只给 `dendro.window.nav` / `dendro.window.page`，其余槽位由来源补齐。
 - **门禁**：`vite build` / dev server 的 `buildStart` 用共享 fixture 跑一遍 `link`，冲突让构建失败；链接器与门禁不进客户端 bundle。共享 fixture 的序列化由 Python 测试逐字段钉住。
-- **未接**：运行时仍是 legacy 贡献模型（`render/compose.ts`）；按 kind 的 props/events schema、权限、`before/after`、`E-TEMPLATE`、孤儿绑定/死规则警告、`static_ui.py` 的编译门禁升级都还没做。
+- **未接**：运行时仍是 legacy 贡献模型（`legacy/render/compose.ts`）；按 kind 的 props/events schema、权限、`before/after`、`E-TEMPLATE`、孤儿绑定/死规则警告、`static_ui.py` 的编译门禁升级都还没做。
 - **测试**：每个已落诊断码至少一条失败路径；乱序不变、重复到达幂等、失败不产树、入参不变、`ids` 覆盖 `collection.templates`、replace/容量行为；`vite buildStart` 对合法 fixture 通过、对冲突 fixture 抛错。
 
 ## 10. S4 来源宿主与链接期权限（已落）
