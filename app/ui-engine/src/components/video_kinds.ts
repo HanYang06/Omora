@@ -1,4 +1,4 @@
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import type { Kind, KindRegistry } from "../renderer/types";
 import { prop, setText } from "./media_shared";
 

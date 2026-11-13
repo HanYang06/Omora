@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ConnectionStatus } from "./connection";
+import type { ConnectionStatus } from "../contract/protocol";
 import { DEVICE_METHOD, DEVICE_TARGET, reportClientDevices, reportDevices } from "./device-report";
 
 vi.mock("../capture/devices", () => ({

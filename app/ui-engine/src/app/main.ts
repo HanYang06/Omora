@@ -1,5 +1,5 @@
-import { Connection } from "../core/connection";
-import { createLogger } from "../core/log";
+import { Connection } from "./connection";
+import { createLogger } from "./log";
 import { DomApp } from "./app";
 import "../styles/styles.css";
 import "../styles/media.css";

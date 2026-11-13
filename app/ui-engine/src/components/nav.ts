@@ -1,4 +1,4 @@
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import type { KindRegistry, RenderContext } from "../renderer/types";
 
 function prop(node: Node, name: string): string | undefined {

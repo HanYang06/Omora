@@ -5,7 +5,7 @@
  */
 
 import type { RenderStats } from "../contract/render";
-import type { Node } from "../core/types";
+import type { Node } from "./types";
 import type { Kind } from "./types";
 
 export interface Rendered {

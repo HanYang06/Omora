@@ -1,4 +1,4 @@
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import type { Kind, KindRegistry, RenderContext } from "../renderer/types";
 import { AudioCaptureController } from "./audio_capture_kind";
 import { VideoCaptureController } from "./video_capture_kind";

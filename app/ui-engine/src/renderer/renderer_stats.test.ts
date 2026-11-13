@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import type { Node } from "../core/types";
+import type { Node } from "./types";
 import { DomRenderer } from "./renderer";
 import type { Kind, KindRegistry, RenderContext } from "./types";
 

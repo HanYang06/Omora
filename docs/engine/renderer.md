@@ -22,7 +22,7 @@ renderer/events      事件名 → handler id 解析（legacy 事件入口）
 components/testing   测试用的 mount helper
 ```
 
-`renderer/`、`components/` 与 `app/` 不依赖 React；`core/` 与 `legacy/render/` 中的协议、连接、patch、compose 保持框架无关。
+`renderer/`、`components/` 与 `app/` 不依赖 React；`contract/`（协议）与 `legacy/render/`（patch / compose）保持框架无关。
 
 ## 2. Kind 接口
 

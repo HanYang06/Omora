@@ -1,5 +1,5 @@
 /** 生成物：启动骨架。别手改——跑 `uv run python scripts/static_ui.py`。 */
-import type { Snapshot } from "../core/types";
+import type { Snapshot } from "../legacy/types";
 
 export const STATIC_HASH = "104983449193";
 

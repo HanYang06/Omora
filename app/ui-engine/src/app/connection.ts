@@ -1,4 +1,5 @@
-import { FrameError, makeCall, parseInboundFrame, type JsonObject } from "./protocol";
+import { FrameError, makeCall, parseInboundFrame } from "../contract/protocol";
+import type { ConnectionStatus, JsonObject } from "../contract/protocol";
 
 /** net 插件的默认端点。改这里就换地址。 */
 export const DEFAULT_URL = "ws://127.0.0.1:8765";
@@ -10,8 +11,6 @@ export const DEFAULT_CALL_TIMEOUT_MS = 30_000;
 export const RECONNECT_BASE_MS = 500;
 export const RECONNECT_MAX_MS = 10_000;
 const RECONNECT_JITTER = 0.2;
-
-export type ConnectionStatus = "idle" | "connecting" | "open" | "closed" | "failed";
 
 /** 只用到 WebSocket 的几个成员，测试里可以打桩。 */
 export interface WebSocketLike {

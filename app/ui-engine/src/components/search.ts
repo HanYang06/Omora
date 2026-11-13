@@ -1,4 +1,4 @@
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import { highlightParts, keyAction } from "../search/searchText";
 import { handlerOf } from "../renderer/events";
 import { iconGlyph } from "./icons";

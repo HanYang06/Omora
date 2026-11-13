@@ -1,5 +1,5 @@
 import type { RenderStats } from "../contract/render";
-import type { Node } from "../core/types";
+import type { Node } from "./types";
 import type { KindRegistry, RenderContext } from "./types";
 import {
   UNKNOWN_KIND,

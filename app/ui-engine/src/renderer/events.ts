@@ -1,4 +1,4 @@
-import type { Node } from "../core/types";
+import type { Node } from "./types";
 
 /**
  * legacy 事件解析：优先 node.events[event]，再回退 props.on_<event>。

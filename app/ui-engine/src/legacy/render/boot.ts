@@ -1,4 +1,4 @@
-import type { PageEntry, Snapshot } from "../../core/types";
+import type { PageEntry, Snapshot } from "../types";
 import { STATIC_ORDER, STATIC_SNAPSHOTS } from "../../generated/static-tree";
 
 /**

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
-import type { Snapshot } from "../core/types";
+import type { Snapshot } from "../legacy/types";
 import { DomShell } from "./shell";
 
 function snapshot(overrides: Partial<Snapshot> = {}): Snapshot {

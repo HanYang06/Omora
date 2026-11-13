@@ -1,4 +1,4 @@
-import type { Connection } from "./connection";
+import type { Connection } from "../app/connection";
 import { detectDevices } from "../capture/devices";
 
 /**

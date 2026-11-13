@@ -1,9 +1,11 @@
-import type { Connection, ConnectionStatus } from "../core/connection";
+import type { ConnectionStatus } from "../contract/protocol";
+import type { Connection } from "./connection";
 import { reportDevicesOnce } from "../core/device-report";
-import type { Logger } from "../core/log";
-import type { JsonObject } from "../core/protocol";
-import { topicsToSync } from "../core/topics";
-import type { MediaData, PageEntry, Snapshot } from "../core/types";
+import type { Logger } from "./log";
+import type { JsonObject } from "../contract/protocol";
+import { topicsToSync } from "./topics";
+import type { MediaData } from "../contract/protocol";
+import type { PageEntry, Snapshot } from "../legacy/types";
 import { fetchMedia } from "../media/media";
 import { initialSnapshot, isStale } from "../legacy/render/boot";
 import { applySnapshotUpdate, isSnapshot } from "../legacy/render/patch";

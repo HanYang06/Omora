@@ -1,7 +1,7 @@
 import { planStop, timeUp } from "../capture/capture-rules";
 import { captureErrorReason } from "../capture/devices";
 import { uploadRecorded } from "../capture/media-upload";
-import type { Node } from "../core/types";
+import type { Node } from "../renderer/types";
 import { handlerOf } from "../renderer/events";
 import { iconGlyph } from "./icons";
 import type { RenderContext } from "../renderer/types";

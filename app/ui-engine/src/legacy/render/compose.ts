@@ -1,4 +1,7 @@
-import type { Node } from "../../core/types";
+import type { Node } from "../../renderer/types";
+import type { Contribution } from "../types";
+
+export type { Contribution };
 
 /**
  * 组合器：把若干份贡献挂到根树的键上，产出一棵新树和一个 key → 节点 的索引。
@@ -10,15 +13,6 @@ import type { Node } from "../../core/types";
  * replace 之后键留在原处（由引擎打在替换树根上），所以同一个键可以被
  * 后来的 replace 接着覆盖，覆盖链才接得下去。
  */
-export interface Contribution {
-  owner: string;
-  target: string;
-  op: "replace" | "before" | "after" | "append";
-  order?: number;
-  seq?: number;
-  tree: Node;
-}
-
 export interface ComposeResult {
   tree: Node;
   /** key → 节点，供替换、卸载、调试用。 */
