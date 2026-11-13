@@ -39,7 +39,7 @@
 - `in` 声明“我消费哪个数据源/路径”，引擎据此建绑定索引。
 - 数据到达时：先按绑定更新值，再查 `reactions` 里 `on data` 的规则跑效果。
 - 数据绑定本身可视为一条特殊反应（读值 → 改 props），但保留 `in` 是为了静态算出绑定关系、做最小更新。
-- S3-c 已落的最小绑定语义（`src/runtime/data_bind.ts`）：标量数据到达时，对 `in` 含该 source 的 slot，按每个 `bind` 的 pointer 解析 `data[source].value`（pointer 等于 source 或带 `source.` 前缀时先去掉；只有一个 input 时 pointer 直接用；多 input 且没写 source 前缀则跳过），解析到值写进 props，解析不到保留原值；`in[].path` 目前只作订阅提示，不参与解析。有变化的节点进 `changed`。
+- S3-c 已落的最小绑定语义（`src/engine/updates/data_bind.ts`）：标量数据到达时，对 `in` 含该 source 的 slot，按每个 `bind` 的 pointer 解析 `data[source].value`（pointer 等于 source 或带 `source.` 前缀时先去掉；只有一个 input 时 pointer 直接用；多 input 且没写 source 前缀则跳过），解析到值写进 props，解析不到保留原值；`in[].path` 目前只作订阅提示，不参与解析。有变化的节点进 `changed`。
 
 ## 5. 规则索引与确定性
 

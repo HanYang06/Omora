@@ -31,17 +31,17 @@
 
 > S4 续进度（2026-11-13）：链接期挂载权限（`link/link.ts` + base 归一化）、来源宿主 `SourceHost`（注册/级联/fail closed）、审计 `AuditLog` 与 apply 耗时/渲染计数已落。来源热更新与网络帧接线、observe/intercept、重渲染节点数、Slot 路径替换主会话待续。
 
-> S4 进度（2026-11-13）：权限薄层（`runtime/permissions.ts` op 检查 + `contract/policy.ts` 纯策略，ops/data 运行期检查）、EngineRuntime（session + 生命周期账本 + 指标 + 变更通知，`runtime/engine.ts`/`metrics.ts`）、DocumentView（`dom/slot/view.ts`）已落。链接期权限、Producer Host/来源生命周期、订阅/媒体登记点、审计与耗时指标待续。
+> S4 进度（2026-11-13）：权限薄层（`host/permissions.ts` op 检查 + `contract/policy.ts` 纯策略，ops/data 运行期检查）、EngineRuntime（session + 生命周期账本 + 指标 + 变更通知，`host/engine.ts`/`metrics.ts`）、DocumentView（`dom/slot/view.ts`）已落。链接期权限、Producer Host/来源生命周期、订阅/媒体登记点、审计与耗时指标待续。
 
 > S3-e 进度（2026-11-13）：DOM renderer 支持跨父 move 复用元素（`renderer.ts`，换页保留实例）；Slot 预览入口 `?engine=slot`（独立 chunk）；生命周期账本原语（S4 预落）。Slot 会话替换主入口、layout 样式、S4 权限/观测待续。
 
-> S3-d 进度（2026-11-13）：Slot → DOM 薄桥（`src/dom/slot/`，`dendro:<legacy type>` 别名 + Slot 原生结构 kind）、会话水合（`runtime/hydrate.ts`）、换页分类（`runtime/page_switch.ts`）与 fixture→DOM 集成 spike 已落。渲染结果：数据更新/全量替换不重挂；跨父 move 的 DOM 复用、Slot 路径进主入口、layout 样式待续。
+> S3-d 进度（2026-11-13）：Slot → DOM 薄桥（`src/dom/slot/`，`dendro:<legacy type>` 别名 + Slot 原生结构 kind）、会话水合（`engine/updates/hydrate.ts`）、换页分类（`engine/document/page_switch.ts`）与 fixture→DOM 集成 spike 已落。渲染结果：数据更新/全量替换不重挂；跨父 move 的 DOM 复用、Slot 路径进主入口、layout 样式待续。
 
-> S3-c 进度（2026-11-13）：标量 `in`/`bind` 绑定（`src/runtime/data_bind.ts`）、会话层 Session（pages/active/data）、route op 执行与全量文档替换（`src/runtime/session.ts`）已落；Python `update.RouteOp` + 共享 `route.json`。渲染层按 id 换页协调、页面参数、灵感页 spike 待 S3-d。
+> S3-c 进度（2026-11-13）：标量 `in`/`bind` 绑定（`src/engine/updates/data_bind.ts`）、会话层 Session（pages/active/data）、route op 执行与全量文档替换（`src/engine/document/session.ts`）已落；Python `update.RouteOp` + 共享 `route.json`。渲染层按 id 换页协调、页面参数、灵感页 spike 待 S3-d。
 
-> S3-b 进度（2026-11-13）：data router 已落（`src/runtime/data.ts`：parseData / applyData、revision 幂等、集合全量/增量接入、changed），Python `sdk/data.py` + 共享 `data.json` 提供纯数据线上形状。标量绑定、`route`、全量文档会话、渲染接入待续。
+> S3-b 进度（2026-11-13）：data router 已落（`src/engine/updates/data.ts`：parseData / applyData、revision 幂等、集合全量/增量接入、changed），Python `sdk/data.py` + 共享 `data.json` 提供纯数据线上形状。标量绑定、`route`、全量文档会话、渲染接入待续。
 
-> S3-a 进度（2026-11-13）：文档运行时核心已落 —— `app/ui-engine/src/runtime/document.ts`（`DocumentState` + 三张索引）、`ops.ts` + `ops_apply.ts`（局部树 ops 原子应用、版本/base、changed）、`collection.ts`（模板实例化 + keyed reconcile 原语）；`sdk/update.py` + 共享 `ops.json` 提供 ops 线上形状。纯数据更新/数据路由、`route`、渲染接入、全量更新会话接线待 S3-b。
+> S3-a 进度（2026-11-13）：文档运行时核心已落 —— `app/ui-engine/src/engine/document/document.ts`（`DocumentState` + 三张索引）、`ops.ts` + `ops_apply.ts`（局部树 ops 原子应用、版本/base、changed）、`collection.ts`（模板实例化 + keyed reconcile 原语）；`sdk/update.py` + 共享 `ops.json` 提供 ops 线上形状。纯数据更新/数据路由、`route`、渲染接入、全量更新会话接线待 S3-b。
 
 > S2 第一版进度（2026-11-13）：链接期编译器 `app/ui-engine/src/link/`（形状校验、多轮挂载、order/seq/容量/replace、六个诊断码、确定性/原子性）已落；`sdk/local_tree.py` + 共享 fixture 提供 local-trees 线上形状；`vite build` 用共享 fixture 跑构建期门禁。运行时接入、按 kind schema、权限、`before/after`、`static_ui.py` 编译门禁升级待后续。
 
@@ -64,7 +64,7 @@
 | `app/ui-engine/src/app.tsx`               | Session + 运行时容器                | S3                                              |
 | `render/compose.ts`                       | legacy 贡献组合（运行时，待替换）   | S3                                              |
 | `app/ui-engine/src/link/`                 | Compiler/Linker（Slot 局部树）      | S2 已落（运行时未接）                           |
-| `app/ui-engine/src/runtime/`              | Document / 索引 / ops / 集合        | S3-a 已落（渲染接入未做）                       |
+| `app/ui-engine/src/engine/`               | Document / 索引 / ops / 集合        | S3-a 已落（渲染接入未做）                       |
 | `render/patch.ts`                         | Document 更新管线（legacy，待替换） | S3 未接                                         |
 | `render/renderer.tsx` / `components.tsx`  | Renderer + schema 生成注册表        | S1–S3                                           |
 | `scripts/static_ui.py`                    | 构建期编译门禁                      | 未升级（门禁暂由 `src/link` 共享 fixture 承担） |
@@ -72,12 +72,12 @@
 
 ## 4. 旧文档去向
 
-| 旧文档                               | 去向                                         |
-| ------------------------------------ | -------------------------------------------- |
-| `docs/design/ui-engine.md`           | 节点/流程并入 runtime/components/wire 后删除 |
-| `docs/design/ui-plugins.md`          | 键/贡献并入 addressing/composition 后删除    |
-| `docs/design/ui-engine-subsystem.md` | 归档到 `docs/engine/archive/`（已退役）      |
-| `docs/design/ui-tree.md`（草案）     | 已拆入本系列后删除                           |
+| 旧文档                               | 去向                                                            |
+| ------------------------------------ | --------------------------------------------------------------- |
+| `docs/design/ui-engine.md`           | 节点/流程并入 `runtime.md` / `components.md` / `wire.md` 后删除 |
+| `docs/design/ui-plugins.md`          | 键/贡献并入 addressing/composition 后删除                       |
+| `docs/design/ui-engine-subsystem.md` | 归档到 `docs/engine/archive/`（已退役）                         |
+| `docs/design/ui-tree.md`（草案）     | 已拆入本系列后删除                                              |
 
 ## 5. 风险与回滚
 
