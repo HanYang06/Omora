@@ -1,6 +1,6 @@
 # 测试：不变量与验收
 
-> 状态：**建议**；S2 已补编译诊断测试（每个已落 E- 码一条失败路径）、乱序/幂等/原子性质测试与跨语言 `local-trees` fixture 契约测试；S3-a 已补索引/ops/集合原语测试与 `ops` fixture 契约测试；S3-b 已补 data router 与 `data` fixture 契约测试；S3-c 已补标量绑定、session/route/全量替换与 `route` fixture 契约测试；S3-d 已补 v2 渲染桥/换页分类/会话水合与 fixture→DOM 集成 spike；S3-e 已补跨父 move 复用、v2 预览入口与生命周期账本原语测试；S4 已补权限薄层（链接期+运行期）、EngineRuntime/指标/审计、来源宿主、local-trees 全量更新与 DocumentView 集成测试；v2 预览改走 EngineRuntime/DocumentView 后行为测试不变。
+> 状态：**建议**；S2 已补编译诊断测试（每个已落 E- 码一条失败路径）、乱序/幂等/原子性质测试与跨语言 `local-trees` fixture 契约测试；S3-a 已补索引/ops/集合原语测试与 `ops` fixture 契约测试；S3-b 已补 data router 与 `data` fixture 契约测试；S3-c 已补标量绑定、session/route/全量替换与 `route` fixture 契约测试；S3-d 已补 v2 渲染桥/换页分类/会话水合与 fixture→DOM 集成 spike；S3-e 已补跨父 move 复用、v2 预览入口与生命周期账本原语测试；S4 已补权限薄层（链接期+运行期）、EngineRuntime/指标/审计、来源宿主、local-trees 全量更新与 DocumentView 集成测试；v2 预览改走 EngineRuntime/DocumentView 后行为测试不变；SourceEngine / SourceHost.load / renderer 节点统计已有独立测试。
 > 依赖：[README](README.md) · [composition.md](composition.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[omora-testing skill](../../.agents/skills/omora-testing/SKILL.md)
 
@@ -84,3 +84,4 @@ S3-c 已落：`src/runtime/data.test.ts` 补标量 `in`/`bind` 绑定（单/多 
 - 用 mock 掉引擎内部，测不到组合/更新语义；
 - 用快照全量对比掩盖身份丢失；
 - 没有失败路径的测试。
+  S5 起步补：`engine_sources.test.ts` 覆盖从 local-trees 建 SourceEngine、register/remove/整组替换、权限拒绝、dispose 与之后拒绝；`sources_load.test.ts` 覆盖 host 整组 load 与 requesterFor；`renderer_stats.test.ts` / `engine_render_stats.test.ts` 覆盖 created/updated/reused/removed 与指标累加。

@@ -8,7 +8,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 本地优先的灵感与项目管理工具：灵感、项目、需求互相可追溯；默认本地跑，也能部署成网页。
 
-当前状态：闭环已通，母 UI（浅色，三栏：图标栏 + 索引栏 + 主区）+ 界面库 v1 + 灵感页 + 传统搜索 + 音频 / 视频捕获（两个独立插件、客户端设备门禁）+ uv workspace 已落——`omora-core` / `omora-sdk` / `omora-plugin-*`、boot / 配置、store（SQLite）/ manager / media / ui / audio / video / ideas / projects / requirements / net 插件、渲染引擎（`app/ui-engine/`）。React 已移除，渲染层直写 DOM；启动骨架由 Vite 在构建期编译进 HTML；链接期编译器第一版（v2 局部树 + 诊断 + 构建门禁）已落；文档运行时核心（三张索引 + 原子 ops + 集合绑定原语 + data router + 标量绑定/session/route）已落；v2 Slot 已能经薄桥直接渲染 DOM（spike），跨父 move 复用元素，`?engine=v2` 可预览；S4 第一版与续作（EngineRuntime/DocumentView/权限薄层/来源宿主/审计/local-trees 全量更新/v2 布局样式）已落。UI 插件体系（键 / 贡献 / 组合器 / 静态骨架 / 键索引）已落，深色主题、转写、AI 待做。
+当前状态：闭环已通，母 UI（浅色，三栏：图标栏 + 索引栏 + 主区）+ 界面库 v1 + 灵感页 + 传统搜索 + 音频 / 视频捕获（两个独立插件、客户端设备门禁）+ uv workspace 已落——`omora-core` / `omora-sdk` / `omora-plugin-*`、boot / 配置、store（SQLite）/ manager / media / ui / audio / video / ideas / projects / requirements / net 插件、渲染引擎（`app/ui-engine/`）。React 已移除，渲染层直写 DOM；启动骨架由 Vite 在构建期编译进 HTML；链接期编译器第一版（v2 局部树 + 诊断 + 构建门禁）已落；文档运行时核心（三张索引 + 原子 ops + 集合绑定原语 + data router + 标量绑定/session/route）已落；v2 Slot 已能经薄桥直接渲染 DOM（spike），跨父 move 复用元素，`?engine=v2` 可预览；S4 第一版与续作（EngineRuntime/DocumentView/权限薄层/来源宿主/审计/local-trees 全量更新/v2 布局样式）已落；S5 起步（SourceEngine 来源模式 + renderer 节点统计）已落。UI 插件体系（键 / 贡献 / 组合器 / 静态骨架 / 键索引）已落，深色主题、转写、AI 待做。
 
 ## 结构
 
@@ -40,6 +40,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 - 不确定就问，不猜需求；有多种解释就列出来。
 - 一次只做一件事；不顺手改邻近代码。
 - 多区任务走 Agent 团队：Lead 拆任务（写域/依赖）→ 每个 teammate 自己的 worktree/分支 → 合成一条集成分支 → **只开一个 PR** → Lead review + merge commit；review 问题回给 owner 改，Lead 不亲自改别人的分支/worktree；详见 [omora-team](.agents/skills/omora-team/SKILL.md)。
+- **Agent 要复用，不要一任务一 spawn**：同类任务优先 send_message 唤醒 inactive teammate；默认并行 ≤2，能串行就串行；spawn 是例外不是默认。
 - **一个功能 = 一个 PR**：同一件事的文档、实现、测试放在同一个 PR 里，PR 内按事件拆提交。多区并行也只提一个 PR。只有要独立回滚、或一次 review 看不完（净变更 > 800 行）才拆。
 - 跑过才算完成；跑不了就明说没验证。
 - 不用"应该可以""理论上没问题"。

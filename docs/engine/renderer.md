@@ -79,6 +79,10 @@ renderer 维护跨渲染的 key → 元素索引（有 id 用 id；没有时用�
 
 这条让"换页 = 按 id 协调"第一次真正保留实例：`renderer_move.test.ts` 用共享 v2 文档 `applyFull` 换页后断言卡片 DOM 元素引用不变。
 
+### 渲染节点统计（S5 起步）
+
+`DomRenderer.stats` 给出最近一次 render 的 `{created, updated, reused, removed}`：created 与 reused 互补，updated 是 reused 的子集（真正执行了 `kind.update` 的部分），removed 是本次销毁的旧条目数；每次 render 清零，dispose 不参与。`DocumentView` 把 stats 与 renders 一起上报 EngineRuntime，指标侧累计 `nodesCreated/nodesUpdated/nodesReused/nodesRemoved` 与 `lastRender`。
+
 ### children
 
 renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, node)[i]`；没声明就全挂到 `el`。

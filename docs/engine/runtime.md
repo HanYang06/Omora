@@ -1,6 +1,6 @@
 # 运行时：分层、生命周期与失败
 
-> 状态：**已定未实现**；分层名称是【建议】。S3-a–e 已落文档状态/三张索引、ops、data router、绑定/session、v2 渲染桥/水合/换页分类、跨父 move 与预览；S4 已落 EngineRuntime（session + ledger + metrics）、DocumentView、权限薄层（链接期 + 运行期）、来源宿主（SourceHost）、审计与耗时指标。多客户端、来源热更新接线、v2 替换主会话仍待。
+> 状态：**已定未实现**；分层名称是【建议】。S3-a–e 已落文档状态/三张索引、ops、data router、绑定/session、v2 渲染桥/水合/换页分类、跨父 move 与预览；S4 已落 EngineRuntime（session + ledger + metrics + render stats）、DocumentView、权限薄层（链接期 + 运行期）、来源宿主（SourceHost + load/requesterFor）、来源模式引擎（SourceEngine）、审计与耗时指标。多客户端、来源热更新接线、v2 替换主会话仍待。
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md) · [updates.md](updates.md)
 > 相关：[components.md](components.md) · [wire.md](wire.md) · [testing.md](testing.md)
 
@@ -71,7 +71,7 @@
 
 至少要能量出：组合/链接耗时、补丁字节与 op 数、丢弃的贡献数、未知 kind 数、迟到事件数、一次更新触发的重渲染节点数。指标进日志与开发面板，不上用户界面。
 
-S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fullUpdates / rejections / diagnostics / lastDiagnostics / notifications / renders / lastApplyMs / totalApplyMs / maxApplyMs + version）挂在 `EngineRuntime` 上，成功/失败都记账、每次 apply 计时；`AuditLog` 结构化记录 apply/reject/deny/diagnostic；`DocumentView` 每次渲染调 `noteRender()`。重渲染节点数仍待补；`?engine=v2` 预览已改用 EngineRuntime + DocumentView（dogfood）。
+S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fullUpdates / rejections / diagnostics / lastDiagnostics / notifications / renders / lastApplyMs / totalApplyMs / maxApplyMs + version）挂在 `EngineRuntime` 上，成功/失败都记账、每次 apply 计时；`AuditLog` 结构化记录 apply/reject/deny/diagnostic；`DocumentView` 每次渲染调 `noteRender()` 并上报 `RenderStats`（created/updated/reused/removed）到指标；`?engine=v2` 预览已改用 EngineRuntime + DocumentView（dogfood）。
 
 ## 7. v1 映射
 
@@ -95,7 +95,8 @@ S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fu
 - **指标**（`runtime/metrics.ts`）：计数器 + 最近诊断快照 + apply 耗时 + 渲染计数，挂在 EngineRuntime 上。
 - **审计**（`runtime/audit.ts`）：有界 `AuditLog`（apply/reject/deny/diagnostic + code/owner/slot/changed）；EngineRuntime 每次 apply 记录，权限拒绝逐条 deny。
 - **权限薄层**（`runtime/permissions.ts` + `link/link.ts`）：链接期挂载检查 + 运行期 ops/data 检查，越权 E-PERMISSION；默认系统来源全放行（见 [permissions.md](permissions.md) §8）。
-- **来源宿主**（`runtime/sources.ts`）：owner → 局部树注册表；登记/移除后重新链接，死引用级联撤掉，其他失败回滚保留上一棵好树；dispose 走账本。
+- **来源宿主**（`runtime/sources.ts`）：owner → 局部树注册表；支持 `load` 整组替换与 `requesterFor` 权限透传；登记/移除后重新链接，死引用级联撤掉，其他失败回滚保留上一棵好树；dispose 走账本。
+- **来源模式引擎**（`runtime/engine_sources.ts`）：`SourceEngine` = SourceHost + EngineRuntime 组合；`createEngineFromLocalTrees(payload)` 从 local-trees 直接建引擎；`registerSource` / `removeSource` / `applyLocalTrees` 先由 host 重算权威树，再交引擎提交版本/水合/指标/审计/通知。
 - **DocumentView**（`dom/v2/view.ts`）：createEngine → 桥接根树 → DomRenderer；引擎通知后按 id 重画；`dispose` 取消监听/渲染器/账本三件套。
 - **未接**：来源热更新/activate 账本与网络帧接线、订阅与媒体登记点、跨连接会话、`observe`/`intercept`、重渲染节点数指标、v2 替换主会话。
 
