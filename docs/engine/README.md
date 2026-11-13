@@ -37,7 +37,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 | 简称 / 口头   | Dendro、树链引擎                                                                         |
 | 英文标题      | Dendrolink: A Link-Time Engine for Composing Local Trees into an Authoritative Root Tree |
 | 中文标题      | 《Dendrolink：把局部树链接成权威根树的链接期引擎》                                       |
-| schema        | `dendro.ui/2`                                                                            |
+| schema        | `dendro.ui/1`                                                                            |
 | 引擎内置 kind | `dendro:slot` / `dendro:page` / `dendro:layer` / `dendro:window`                         |
 | 宿主导入 kind | 保持 `ideas:card` 这种                                                                   |
 | id 前缀       | `dendro.window` / `dendro.window.page`                                                   |

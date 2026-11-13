@@ -5,7 +5,7 @@
  * 共用 `app/sdk/tests/fixtures/document.json`。
  */
 
-export const DOCUMENT_SCHEMA = "dendro.ui/2";
+export const DOCUMENT_SCHEMA = "dendro.ui/1";
 
 export type LayoutFlow = "column" | "row" | "stack" | "none";
 export type Capacity = "none" | "one" | "many";

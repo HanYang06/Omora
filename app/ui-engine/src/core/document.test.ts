@@ -12,7 +12,7 @@ function slot(over: Record<string, unknown> = {}): Record<string, unknown> {
 
 function documentOf(over: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    schema: "dendro.ui/2",
+    schema: "dendro.ui/1",
     document: slot(),
     pages: [],
     active: "",
@@ -60,7 +60,7 @@ describe("v2 文档契约：与 Python 共用同一份 fixture", () => {
   it("解析共享 fixture", () => {
     const document = parseDocument(fixture);
 
-    expect(document.schema).toBe("dendro.ui/2");
+    expect(document.schema).toBe("dendro.ui/1");
     expect(document.active).toBe("page.ideas");
     expect(document.pages).toHaveLength(1);
 

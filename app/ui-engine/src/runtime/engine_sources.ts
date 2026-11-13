@@ -216,7 +216,7 @@ export function createEngineFromLocalTrees(
   }
   const created = createEngine(
     {
-      schema: "dendro.ui/2",
+      schema: "dendro.ui/1",
       document: host.tree,
       pages: [...(options.pages ?? [])],
       active: options.active ?? "",

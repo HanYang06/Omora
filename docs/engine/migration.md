@@ -51,7 +51,7 @@
 - **v1.5 加字段**：节点允许新增 `id / events / layout / reactions / collection / grant`，旧 `{type, props, children}` 仍可读；渲染器优先新字段，回退旧路径。
 - **双读窗口**：S1–S3 期间新旧序列化并行，fixture 同时覆盖；S4 后删除旧路径。
 - **全量兜底**：迁移期协议允许新引擎向旧客户端发全量；不做长期双协议。
-- **命名空间迁移**：`omora.ui/2` / `omora:*` / `om.*` → `dendro.ui/2` / `dendro:*` / `dendro.*`；在 S1 一次性换掉，fixture 与生成物同步。
+- **命名空间迁移**：`omora.ui/2` / `omora:*` / `om.*` → `dendro.ui/1` / `dendro:*` / `dendro.*`；在 S1 一次性换掉，fixture 与生成物同步。
 
 ## 3. 代码迁移映射
 
