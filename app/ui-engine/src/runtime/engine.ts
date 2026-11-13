@@ -41,7 +41,7 @@
  */
 
 // 只借渲染器的统计类型（`import type` 运行时擦除）；引擎不 import 渲染实现。
-import type { RenderStats } from "../dom/renderer";
+import type { RenderStats } from "../contract/render";
 import { link } from "../link/link";
 import { WINDOW_SCAFFOLD } from "../link/scaffold";
 import type { Diagnostic } from "../contract/diagnostics";

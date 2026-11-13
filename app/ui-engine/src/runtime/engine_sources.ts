@@ -16,7 +16,7 @@
  */
 
 import type { PageEntry } from "../contract/document";
-import type { RenderStats } from "../dom/renderer";
+import type { RenderStats } from "../contract/render";
 import { parseLocalTrees } from "../link/parse";
 import type { Diagnostic } from "../contract/diagnostics";
 import type { LocalTree, LocalTreesPayload } from "../link/types";

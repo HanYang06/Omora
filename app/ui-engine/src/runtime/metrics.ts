@@ -29,9 +29,9 @@
  * - `reset` 清零全部计数、最近诊断与最近渲染统计；引擎不主动 reset（宿主 / 开发面板按需调用）。
  */
 
-// 只借渲染器的统计类型（`import type` 在运行时擦除）：指标模块不 import 渲染实现，
+// 只借契约层的统计类型（`import type` 在运行时擦除）：指标模块不 import 渲染实现，
 // 也不持有 DOM 引用；真正上报的是宿主（DocumentView）。
-import type { RenderStats } from "../dom/renderer";
+import type { RenderStats } from "../contract/render";
 import type { Diagnostic } from "../contract/diagnostics";
 
 /**

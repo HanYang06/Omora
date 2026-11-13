@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import type { RenderStats } from "../dom/renderer";
+import type { RenderStats } from "../contract/render";
 import { createEngine, type EngineRuntime } from "./engine";
 
 /**
