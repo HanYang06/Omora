@@ -168,7 +168,7 @@ Slot 文档/运行时产出的是 `SlotNode`，现有 DOM renderer 只认 legacy
 - `src/dom/slot/kinds.ts`：Slot 原生结构 kind（`dendro:window/page/slot/layer` 按 `layout.flow` 映射到现有 `.omora-row`/`.omora-column` class；S4 起 size/gap/align/scroll 也映射到 `--dendro-*` CSS 变量与 `data-*` 属性，`[data-dendro-layout]` 样式段消费）与 `dendro:page-link`（复用壳层导航按钮样式，事件走 `handlerOf` + `ctx.event`）。
 - `Node` 增加可选 `layout` 字段；`kind` 语义由注册表决定，renderer 协调逻辑不变。
 
-**已证明**（`src/dom/slot/spike.test.ts`，共享 `document.json`）：session → 水合 → 桥 → DOM 渲染出母页面/导航/卡片；纯数据更新后同 id 卡片复用同一 DOM 元素、只改标题并新增一条；全量替换同 id 文档不重挂。换页用 `runtime/page_switch.ts` 的 `diffPageTrees` 分类出 keep/move/replace/cancel/add。
+**已证明**（`src/dom/slot/spike.test.ts`，共享 `document.json`）：session → 水合 → 桥 → DOM 渲染出母页面/导航/卡片；纯数据更新后同 id 卡片复用同一 DOM 元素、只改标题并新增一条；全量替换同 id 文档不重挂。换页用 `engine/document/page_switch.ts` 的 `diffPageTrees` 分类出 keep/move/replace/cancel/add。
 
 **未接**：renderer 目前只在同一个父节点下按 id 协调，跨父的 `move` 会重建元素（换页移动的身份保留待补）；Slot 桥还没有接进 `dom/app.ts` / 主入口，legacy 页面仍走 legacy 路径；`layout` 的 size/gap/align 还没落到样式。
 

@@ -135,13 +135,13 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 > S2 第一版已落：`app/ui-engine/src/link/`（Slot 局部树 → 权威根树 + 诊断）、`sdk/local_tree.py`、共享 fixture 与 `vite build` 门禁。`static_ui.py` 升级、运行时接入与按 kind schema 待后续。
 
-> S3-a 已落：`app/ui-engine/src/runtime/` 的文档状态/三张索引、局部树 ops（原子/版本/changed）、集合绑定原语，`sdk/update.py` + 共享 `ops.json`。
+> S3-a 已落：`app/ui-engine/src/engine/` 的文档状态/三张索引、局部树 ops（原子/版本/changed）、集合绑定原语，`sdk/update.py` + 共享 `ops.json`。
 
-> S3-b 已落：`src/runtime/data.ts` 的 data router（revision 幂等、集合全量/增量、changed），`sdk/data.py` + 共享 `data.json`。
+> S3-b 已落：`src/engine/updates/data.ts` 的 data router（revision 幂等、集合全量/增量、changed），`sdk/data.py` + 共享 `data.json`。
 
 > S3-c 已落：标量 `in`/`bind` 绑定（`data_bind.ts`）、Session/pages/active、route op 与全量替换（`session.ts`），`sdk/update.py` 的 RouteOp + 共享 `route.json`。
 
-> S3-d 已落：`src/dom/slot/`（Slot→DOM 薄桥 + 命名空间别名 + Slot 原生结构 kind）、`runtime/hydrate.ts`、`runtime/page_switch.ts` 与 fixture→DOM 集成 spike。数据更新/全量替换不重挂已验证。
+> S3-d 已落：`src/dom/slot/`（Slot→DOM 薄桥 + 命名空间别名 + Slot 原生结构 kind）、`engine/updates/hydrate.ts`、`engine/document/page_switch.ts` 与 fixture→DOM 集成 spike。数据更新/全量替换不重挂已验证。
 
 > S3-e 已落：renderer 跨父 move 复用元素（换页保留实例）、`?engine=slot` 预览入口（独立 chunk）、生命周期账本原语（S4 预落）。
 

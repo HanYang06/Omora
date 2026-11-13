@@ -1,6 +1,6 @@
 # 集合绑定：用数据实例化已声明的结构
 
-> 状态：**建议**（作者已认同方向，细节未定稿）；S3-a 已落实例化与 keyed reconcile 原语（`src/runtime/collection.ts`），数据路由与渲染接入未做。
+> 状态：**建议**（作者已认同方向，细节未定稿）；S3-a 已落实例化与 keyed reconcile 原语（`src/engine/collections/collection.ts`），数据路由与渲染接入未做。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [rules.md](rules.md)
 > 相关：[updates.md](updates.md) · [composition.md](composition.md)
 
@@ -108,10 +108,10 @@
 
 ## 9. S3-a 实现（已落）
 
-- 代码：`app/ui-engine/src/runtime/collection.ts` —— `instantiateCollection(slot, items)` 与 `applyCollectionChanges(slot, items, changes)`。
+- 代码：`app/ui-engine/src/engine/collections/collection.ts` —— `instantiateCollection(slot, items)` 与 `applyCollectionChanges(slot, items, changes)`。
 - id 派生：条目根 `<collectionSlotId>#<itemKey>`，子节点 `<父实例 id>/<模板节点 id>`；同 key 跨更新 id 稳定，不同 key 不撞。
 - `bind`：prop → `item.title` / `item.a.b` / 裸 `title`；解析到值就覆盖 props，解析不到保留模板原值；实例不保留 `bind`。
 - 模板选择：`item[collection.select]` 查表；key/模板缺失、模板不存在 → 丢该条并记 `E-TEMPLATE`，其余照常；条目 key 重复记 `E-ID-DUPLICATE` 只保留第一条。
 - 增量：insert / update / remove / move 维护条目列表后整槽重建；构造上保证「增量终态 == 全量实例化」。模板内嵌套 collection 不实例化（§8 未定）。
-- 已接 data router（`src/runtime/data.ts`）：按 source 找集合 slot，items 全量 / changes 增量，revision 幂等；坏条目诊断随更新返回。
+- 已接 data router（`src/engine/updates/data.ts`）：按 source 找集合 slot，items 全量 / changes 增量，revision 幂等；坏条目诊断随更新返回。
 - 未接：标量→props 绑定、坏条目界面上报、窗口化。

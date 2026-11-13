@@ -11,7 +11,7 @@
  *      └─ page.projects：一条标题 text
  *
  * feed 是集合 slot（source = `ideas.feed`，按 `id` 选模板 `item` = ideas:card），
- * data 里放同一份条目投影——物化交给 `runtime/hydrate.ts`，这里只写文档。
+ * data 里放同一份条目投影——物化交给 `engine/updates/hydrate.ts`，这里只写文档。
  *
  * 整份文档只带**当前活动页**那棵子树（和线上全量文档一致：非活动页不在树上），
  * 所以切页由 preview.ts 用 `applyFull` 换整份文档，version 由调用方给（切页 +1）。
@@ -25,7 +25,7 @@ import {
   type PageEntry,
   type SlotNode,
 } from "../../contract/document";
-import type { CollectionItem } from "../../runtime/collection";
+import type { CollectionItem } from "../../engine/collections/collection";
 
 /** 页面 id（与 pages / active 对齐）。 */
 export const PAGE_IDEAS = "page.ideas";

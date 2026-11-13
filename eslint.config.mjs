@@ -46,6 +46,46 @@ export default tseslint.config(
     },
   },
   {
+    name: "omora/ui-engine/boundaries/engine",
+    files: ["app/ui-engine/src/engine/**/*.{ts,tsx}"],
+    rules: {
+      // 依赖方向：contract → link → engine → host → renderer/components → app。
+      // engine 只允许 contract / link / engine 自己；host / dom / app 都不行。
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/host/**", "../host/**", "../../host/**", "../../../host/**"],
+              message: "engine 层不得 import host/（依赖方向 contract → link → engine → host）",
+            },
+            {
+              group: ["**/dom/**", "../dom/**", "../../dom/**", "../../../dom/**"],
+              message: "engine 层不得 import dom/（engine 只依赖 contract / link）",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: "omora/ui-engine/boundaries/host",
+    files: ["app/ui-engine/src/host/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/dom/**", "../dom/**", "../../dom/**"],
+              message: "host 层不得 import dom/（依赖方向 engine → host → renderer）",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     name: "omora/shell",
     files: ["app/ui-engine/shell/**/*.cjs"],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],

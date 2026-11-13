@@ -73,9 +73,9 @@
 ## 8. S4 实现（已落）
 
 - **纯策略**（`app/ui-engine/src/contract/policy.ts`）：`Capability` / `Requester {owner, tiers?, roles?}` / `SYSTEM_REQUESTER` / `PermissionCheck`；`can` 依 §3 默认分层与 §2 token 求值；`checkPermission` 产出带现场（owner/slot）的 `E-PERMISSION`。链接期与运行期共用这一份。
-- **op 级检查点**（`app/ui-engine/src/runtime/permissions.ts`）：按 op 语义找目标 slot（见下条），纯策略不再放在这一层。
-- **运行期接线**：`applyOps(state, batch, {requester})` 按 op 语义检查（update→update；mount→mount；replace→replace；unmount→父 remove；move→旧父 remove + 目标 mount），拒绝整批原子失败；`applyData(..., {requester})` 对集合消费者/标量绑定消费者检查 update，拒绝时文档与 data 都不变。缺省 requester = 系统来源（全放行），现有行为不变。
-- **会话/引擎**：`applySessionOps` 接受 requester 并透传给树 op；`EngineRuntime` 的 `EngineOptions.requester` 统一传给 ops/data。
+- **op 级检查点**（`app/ui-engine/src/host/permissions.ts`）：按 op 语义找目标 slot（见下条），纯策略不再放在这一层。
+- **运行期接线**：engine 的 `applyOps(state, batch, {guard})` 按 op 语义检查（update→update；mount→mount；replace→replace；unmount→父 remove；move→旧父 remove + 目标 mount），返回诊断即整批原子失败；`applyData(..., {guard})` 对集合消费者/标量绑定消费者检查 update，拒绝时文档与 data 都不变。engine 层只认 guard、不懂权限；host 用 `checkOpPermission` / `checkPermission` 构造 guard 注入。不传 guard = 不检查（等价于系统来源全放行）。
+- **会话/引擎**：`applySessionOps` 接受 `{guard}` 并透传给树 op（route 不查权限）；`EngineRuntime` 的 `EngineOptions.requester` 在 host 侧编译成 ops / data 两个 guard，不传 requester = 不传 guard。
 - **链接期**（`src/link/link.ts`）：挂载前按目标 slot 检查 `mount` / `replace`，越权 `E-PERMISSION` 不产树；base 先归一化，扁平 grant 可读。
-- **审计**（`runtime/audit.ts` + `EngineRuntime`）：apply/reject/deny/diagnostic 结构化记录，权限拒绝逐条记 deny（code/owner/slot）。
+- **审计**（`host/audit.ts` + `EngineRuntime`）：apply/reject/deny/diagnostic 结构化记录，权限拒绝逐条记 deny（code/owner/slot）。
 - **未接**：`observe`/`intercept`、数据 source 级发布/订阅权限、`applyFull` 的权限检查、链接期 `read` 级可见性；本层不是安全边界（§6）。

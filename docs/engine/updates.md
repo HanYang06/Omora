@@ -81,15 +81,15 @@
 
 ## 8. S3-a 实现（已落）
 
-- **文档状态**（`app/ui-engine/src/runtime/document.ts`）：`DocumentState = {root, version}`；`createState` 用 Slot 文档校验器接管根树；`DocumentIndex` 从根树重建三张索引（见 [addressing.md](addressing.md)）。
-- **局部树 ops**（`src/runtime/ops.ts` + `ops_apply.ts`）：`parseOps` 校验 `{kind:"ops", document, base, seq, ops}`；`applyOps` 要求 `base == 当前版本` 且 `document == base + 1`（否则 `E-VERSION`），按序在深拷上应用，任一失败整批不生效；成功返回新状态 + `changed`（本次触碰的子树根 id）。
+- **文档状态**（`app/ui-engine/src/engine/document/document.ts`）：`DocumentState = {root, version}`；`createState` 用 Slot 文档校验器接管根树；`DocumentIndex` 从根树重建三张索引（见 [addressing.md](addressing.md)）。
+- **局部树 ops**（`src/engine/document/ops.ts` + `ops_apply.ts`）：`parseOps` 校验 `{kind:"ops", document, base, seq, ops}`；`applyOps` 要求 `base == 当前版本` 且 `document == base + 1`（否则 `E-VERSION`），按序在深拷上应用，任一失败整批不生效；成功返回新状态 + `changed`（本次触碰的子树根 id）。
 - **op 语义**：`update`（props 浅合并）、`mount`（at 缺省尾部，越界夹取；容量/重复 id 校验）、`move`（先删后插、成环 `E-CYCLE`）、`unmount`（根不可卸）、`replace`（原位、新 id 可换）。模板节点可 update 内容，结构操作返回 `E-PAYLOAD`（位置由 templates 命名表决定）。
 - **跨语言**：Python `omora.sdk.update.serialize_ops` 产出同一形状，两侧共用 `app/sdk/tests/fixtures/ops.json`。
 - **未接**：纯数据更新（data router / 集合）、`route`、渲染层（legacy 仍走 `render/patch.ts`）、全量更新与运行时会话接线。
 
 ## 9. S3-b 实现（已落）
 
-- **data router**（`app/ui-engine/src/runtime/data.ts`）：`parseData` 校验 `{kind:"data", owner, source, revision, value|items|changes}`；`applyData(document, data, payload)` 纯函数、原子（信封非法 `ok:false`，文档与 data 都不变；坏条目按集合契约 `ok:true` + 诊断）。
+- **data router**（`app/ui-engine/src/engine/updates/data.ts`）：`parseData` 校验 `{kind:"data", owner, source, revision, value|items|changes}`；`applyData(document, data, payload)` 纯函数、原子（信封非法 `ok:false`，文档与 data 都不变；坏条目按集合契约 `ok:true` + 诊断）。
 - **幂等**：每个 source 记住 `revision`；`payload.revision <= 当前 revision` 直接 no-op（changed/诊断为空）。文档版本不动（数据 revision 独立）。
 - **集合**：按 `DocumentIndex.slotsFor(source)` 找 `collection.source === source` 的 slot；`items` 全量走 `instantiateCollection`，`changes` 走 `applyCollectionChanges`；替换 slot 保持原位/原 id，替换后重建索引；多个消费者共同更新，`changed` 是集合 slot id。
 - **标量**：写 `data[source].value`，并按 `in`/`bind` 更新消费者 props（S3-c，见 [rules.md](rules.md) §4）；解析不到的值保留原 props。
@@ -98,17 +98,17 @@
 
 ## 10. S3-c 实现（已落）
 
-- **绑定**（`src/runtime/data_bind.ts`）：标量数据按 `in` 找消费者，按 `bind` pointer 从 `data[source].value` 解析并写 props；解析不到保留原值；有变化才替换节点并进 `changed`（结构相同值不换节点）。多 input 歧义时跳过、不报错。
-- **会话**（`src/runtime/session.ts`）：`SessionState {document, pages, active, data}`；`createSession` 用 Slot 文档校验器接管全量文档；`applyFull` 全量替换（旧版本拒绝 E-VERSION，同/新版本接受，全换不合并）。
-- **route**（`src/runtime/session.ts` + `ops.ts`）：ops 批量可含 `{op:"route", page, params?}`；`applySessionOps` 先校验目标页存在（不存在 E-TARGET-MISSING，整批不生效），再复用树 op 的原子应用，最后设置 active；版本只涨一次，route 不进 `changed`；`params` 只做形状校验，页面参数消费留给渲染/路由层。
+- **绑定**（`src/engine/updates/data_bind.ts`）：标量数据按 `in` 找消费者，按 `bind` pointer 从 `data[source].value` 解析并写 props；解析不到保留原值；有变化才替换节点并进 `changed`（结构相同值不换节点）。多 input 歧义时跳过、不报错。
+- **会话**（`src/engine/document/session.ts`）：`SessionState {document, pages, active, data}`；`createSession` 用 Slot 文档校验器接管全量文档；`applyFull` 全量替换（旧版本拒绝 E-VERSION，同/新版本接受，全换不合并）。
+- **route**（`src/engine/document/session.ts` + `ops.ts`）：ops 批量可含 `{op:"route", page, params?}`；`applySessionOps` 先校验目标页存在（不存在 E-TARGET-MISSING，整批不生效），再复用树 op 的原子应用，最后设置 active；版本只涨一次，route 不进 `changed`；`params` 只做形状校验，页面参数消费留给渲染/路由层。
 - **跨语言**：Python `omora.sdk.update.RouteOp` 与共享 `app/sdk/tests/fixtures/route.json`。
 - **未接**：渲染层（换页按 id 协调）、页面参数、灵感页 spike；`applyOps`（DocumentState 层）本身仍拒绝 route，route 必须走 session。
 
 ## 11. S3-d 实现（spike，已落）
 
 - **渲染接入**（`src/dom/slot/`）：SlotNode 经 `slotToNode` 薄桥 + `slotRegistry`（`dendro:<legacy type>` 别名 / 宿主别名 / Slot 原生结构 kind）交给现有 DOM renderer；不迁移 38 个 kind。
-- **水合**（`src/runtime/hydrate.ts`）：全量文档的 data 投影按 source 物化成集合实例子树，session 可直接渲染。
-- **换页分类**（`src/runtime/page_switch.ts`）：`diffPageTrees(previous, next)` 按 id 给出 keep / move / replace / cancel / add（live 子树；templates 不参与）。
+- **水合**（`src/engine/updates/hydrate.ts`）：全量文档的 data 投影按 source 物化成集合实例子树，session 可直接渲染。
+- **换页分类**（`src/engine/document/page_switch.ts`）：`diffPageTrees(previous, next)` 按 id 给出 keep / move / replace / cancel / add（live 子树；templates 不参与）。
 - **集成验证**（`src/dom/slot/spike.test.ts`）：fixture → session → 水合 → 渲染；数据更新/全量替换后同 id 元素复用；换页分类 + 渲染切页。
 - **S3-e 已补**：跨父 move 的 DOM 复用（renderer 跨渲染按 key 索引复用元素）、`?engine=slot` 预览入口。仍未接：Slot 路径替换 `dom/app.ts` 的 legacy 会话、layout 的 size/gap/align 进样式、路由参数。
 
@@ -116,7 +116,7 @@
 
 - **跨父 move**（`src/dom/renderer.ts`）：跨渲染 key 索引 + 两阶段（构建/复用 → 统一 arrange → 销毁未认领旧条目）；同 id+type 换父复用元素，移动/保留的条目不跑 cleanup；换页保留实例由 `renderer_move.test.ts` 用共享 Slot 文档 + `applyFull` 验证。
 - **Slot 预览**（`src/dom/slot/preview.ts` + `preview_document.ts`）：`?engine=slot` 时动态 import 独立 chunk，跑内置 Slot 文档的 session/水合/渲染/切页/数据更新；legacy 仍是默认入口。
-- **生命周期账本原语**（`src/runtime/lifecycle.ts`，S4 预落）：逆序清理、错误隔离、幂等、dispose 后 add fail-safe；尚未接运行时。
+- **生命周期账本原语**（`src/host/lifecycle.ts`，S4 预落）：逆序清理、错误隔离、幂等、dispose 后 add fail-safe；尚未接运行时。
 - **未接**：Slot 会话替换主入口、layout 样式、S4 的权限/观测、渲染层局部状态与媒体清理接线。
 
 ## 13. S4 local-trees 全量更新（已落）

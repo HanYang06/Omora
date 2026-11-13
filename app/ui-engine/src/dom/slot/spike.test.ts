@@ -2,10 +2,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { SlotNode } from "../../contract/document";
-import { applyData, type DataState } from "../../runtime/data";
-import { hydrateSession } from "../../runtime/hydrate";
-import { diffPageTrees } from "../../runtime/page_switch";
-import { applyFull, createSession, type SessionState } from "../../runtime/session";
+import { applyData, type DataState } from "../../engine/updates/data";
+import { hydrateSession } from "../../engine/updates/hydrate";
+import { diffPageTrees } from "../../engine/document/page_switch";
+import { applyFull, createSession, type SessionState } from "../../engine/document/session";
 import { slotToNode } from "./bridge";
 import { createSlotRenderer } from "./registry";
 import { DOCUMENT_FIXTURE_PATH } from "./test_fixtures";

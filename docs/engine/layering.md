@@ -1,6 +1,6 @@
 # 分层与依赖方向
 
-> 状态：**决定已定**；契约层 `src/contract/` 已落（阶段 1），其余层按阶段迁移。
+> 状态：**决定已定**；契约层 `src/contract/` 与 engine / host 分层（阶段 1–2）已落，其余层按阶段迁移。
 > 相关：[README](README.md) · [renderer.md](renderer.md) · [components.md](components.md) · [migration.md](migration.md)
 
 ## 0. 一句话
@@ -12,9 +12,9 @@
 前端文件多，目录不治理会越来越懵。当前问题不是“文件多”，而是**层混在一起**：
 
 - `dom/` 一万多行里同时有 app 入口、壳、renderer、38+ 个组件、Slot 桥、预览；
-- `runtime/` 同时有文档/集合算法、宿主设施（权限/账本/审计/指标/来源）、编排（EngineRuntime）；
+- `runtime/` 曾同时有文档/集合算法、宿主设施（权限/账本/审计/指标/来源）、编排（EngineRuntime）——已拆成 `engine/` 与 `host/`；
 - `core/` 曾同时有契约（Slot/Document）与连接/日志/设备上报（契约已抽出，其余待归位）；
-- `link/` 曾反向依赖 `runtime/permissions`；`runtime/engine` 曾依赖 `dom/renderer` 的统计类型（均已修）；
+- `link/` 曾反向依赖权限模块（已移到 `contract/policy`）；`host/engine` 曾依赖 `dom/renderer` 的统计类型（已移到 `contract/render`）；
 - 旧快照渲染还在 `render/`，但没有和 Slot 路径显式隔离。
 
 ## 2. 目标结构
@@ -42,7 +42,7 @@ app/ui-engine/src/
 - [x] schema 重置为 `dendro.ui/1`、去掉 v1/v2 版本叙事（PR #75）
 - [x] `dom/kinds` + registry + icons 拆成顶层 `components/`（PR #76）
 - [x] 契约层 `src/contract/` 抽取（document / diagnostics / policy / render），修掉倒置 1、2
-- [ ] `runtime/` 拆成 engine 算法与 host 设施
+- [x] `runtime/` 拆成 `engine/`（document / collections / updates）与 `host/` 设施
 - [ ] `dom/` 拆成 renderer、Slot 桥、app 入口、shell
 - [ ] `render/` 隔离成 legacy
 - [ ] build / platform 归位；`app/ui-engine` 包根再评估 engine / desktop 拆分
@@ -54,7 +54,7 @@ app/ui-engine/src/
 | 层            | 可以依赖                                         | 禁止                              |
 | ------------- | ------------------------------------------------ | --------------------------------- |
 | `contract/`   | 无（纯类型/纯函数）                              | DOM、renderer、engine、host、app  |
-| `link/`       | contract                                         | runtime/host、DOM、app            |
+| `link/`       | contract                                         | engine/host、DOM、app             |
 | `engine/*`    | contract、link 的输出                            | DOM、renderer、host、app          |
 | `host/`       | contract、link、engine                           | renderer/DOM、app                 |
 | `renderer/`   | contract                                         | engine、link、host、app           |
@@ -66,10 +66,13 @@ app/ui-engine/src/
 
 已知要修的倒置（1、2 已修；3、4 未做）：
 
-1. ~~`link/link.ts` → `runtime/permissions`~~：能力匹配已移到 `contract/policy`，link 与 host 都依赖它；
-2. ~~`runtime/engine.ts` → `dom/renderer`（`RenderStats`）~~：统计类型已移到 `contract/render`，engine 不依赖渲染实现；
+1. ~~`link/link.ts` → 权限模块~~：能力匹配已移到 `contract/policy`，link 与 host 都依赖它；
+2. ~~`host/engine.ts` → `dom/renderer`（`RenderStats`）~~：统计类型已移到 `contract/render`，engine 不依赖渲染实现；
 3. `compiler/` → `dom/shell`：构建期编译器是 adapter，迁到 `build/` 后依赖 renderer 是允许的；
 4. `core/device-report.ts` → `capture/devices`：`core` 不再当“杂物间”，设备上报移到 platform/app 侧。
+
+本轮另把 `runtime/` 拆成 `engine/`（document / collections / updates）与 `host/`，并把权限检查从
+ops / data / session 改成 host 注入的 guard：engine 层只认 guard，不再 import host。
 
 ## 4. 迁移方式
 

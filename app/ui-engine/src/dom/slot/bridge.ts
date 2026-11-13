@@ -6,7 +6,7 @@
  *   别名复用 legacy kind，Slot 原生结构 kind 在 kinds.ts）；
  * - 复制 id / props / children / events / layout 这几个渲染层认识的字段；
  * - **不展开 `collection.templates`**：模板不是挂载节点，实例化是运行时
- *   （`runtime/collection.ts`）的职责；桥只搬 `slot.children`，模板永远不进 DOM。
+ *   （`engine/collections/collection.ts`）的职责；桥只搬 `slot.children`，模板永远不进 DOM。
  *
  * 入参不被改写；props / children / events / layout 是浅拷贝（props 里的值对象
  * 仍共享引用——渲染器只读 props，不需要深拷）。

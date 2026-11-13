@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { parseDocument, type SlotDocument, type SlotNode } from "../../contract/document";
 import type { JsonObject } from "../../core/protocol";
 import type { Node } from "../../core/types";
-import { instantiateCollection } from "../../runtime/collection";
+import { instantiateCollection } from "../../engine/collections/collection";
 import { DomRenderer } from "../renderer";
 import type { RenderContext } from "../types";
 import { slotRegistry } from "./registry";

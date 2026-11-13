@@ -80,7 +80,7 @@
 
 ## 8. S3-a 实现（已落）
 
-- 代码：`app/ui-engine/src/runtime/document.ts` 的 `DocumentIndex`，从根树独立重建；`ops.ts` 每次应用批量后重建（一致性是构造出来的，不做增量对齐）。
+- 代码：`app/ui-engine/src/engine/document/document.ts` 的 `DocumentIndex`，从根树独立重建；`ops.ts` 每次应用批量后重建（一致性是构造出来的，不做增量对齐）。
 - 索引三项：`get(id)`、`parentOf(id) → {parentId, order}`、`slotsFor(source) → [id]`（`in[].source` 与 `collection.source` 都算消费）。
 - 全寻址包含 `collection.templates` 里的模板子树：可 `get`、可 update 内容；模板根 `parentOf.order = -1`（命名表位置，不是 children 序号），`childrenOf(集合 slot)` 不含模板根。
 - 未接：`source/path → slots` 的路径级细分、反查索引驱动渲染/事件、跨更新增量维护（当前每步重建，先保证正确性）。

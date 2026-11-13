@@ -107,11 +107,11 @@ S2 已落的最小形状：`kind` 必填；`seq` 是非负整数；`trees[]` 每
 | `route`   | page    | 路由意图；由引擎展开成 page slot 的协调 |
 | `data`    | source  | 数据更新（见 §4）                       |
 
-S3-a 已落 `update` / `mount` / `move` / `unmount` / `replace` 的 Python 序列化（`omora.sdk.update.serialize_ops`）与 TS 解析/原子应用（`src/runtime/ops.ts`），base/document 版本语义为 `base == 当前版本` 且 `document == base + 1`；`route` 与 `data` op 还没接。共享 fixture：`app/sdk/tests/fixtures/ops.json`。
+S3-a 已落 `update` / `mount` / `move` / `unmount` / `replace` 的 Python 序列化（`omora.sdk.update.serialize_ops`）与 TS 解析/原子应用（`src/engine/document/ops.ts`），base/document 版本语义为 `base == 当前版本` 且 `document == base + 1`；`route` 与 `data` op 还没接。共享 fixture：`app/sdk/tests/fixtures/ops.json`。
 
-S3-b 已落 §4 的三种 data 负载：Python `omora.sdk.data.serialize_data_updates`、TS `src/runtime/data.ts`（parse + revision 幂等 + 集合全量/增量），共享 fixture `app/sdk/tests/fixtures/data.json`。
+S3-b 已落 §4 的三种 data 负载：Python `omora.sdk.data.serialize_data_updates`、TS `src/engine/updates/data.ts`（parse + revision 幂等 + 集合全量/增量），共享 fixture `app/sdk/tests/fixtures/data.json`。
 
-S3-c 已落 route op：Python `omora.sdk.update.RouteOp`、TS `src/runtime/session.ts` 的 `applySessionOps`（先校验目标页，再应用树 ops，再改 active；`params` 只做形状校验），共享 fixture `app/sdk/tests/fixtures/route.json`。全量文档用 `document.json` 作为共享形状，`createSession` / `applyFull` 已经接上。
+S3-c 已落 route op：Python `omora.sdk.update.RouteOp`、TS `src/engine/document/session.ts` 的 `applySessionOps`（先校验目标页，再应用树 ops，再改 active；`params` 只做形状校验），共享 fixture `app/sdk/tests/fixtures/route.json`。全量文档用 `document.json` 作为共享形状，`createSession` / `applyFull` 已经接上。
 
 ## 6. 诊断与错误
 
