@@ -46,6 +46,74 @@ export default tseslint.config(
     },
   },
   {
+    name: "omora/ui-engine/boundaries/renderer",
+    files: ["app/ui-engine/src/renderer/**/*.{ts,tsx}"],
+    // 测试文件允许跨层（renderer_move.test 会 import app/slot_registry）。
+    ignores: ["**/*.test.{ts,tsx}"],
+    rules: {
+      // renderer 是最底层：只依赖 contract / core 类型，不管组件、宿主、引擎与入口。
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/host/**", "../host/**", "../../host/**", "../../../host/**"],
+              message:
+                "renderer 层不得 import host/（依赖方向 contract → renderer → components → app）",
+            },
+            {
+              group: ["**/engine/**", "../engine/**", "../../engine/**", "../../../engine/**"],
+              message: "renderer 层不得 import engine/",
+            },
+            {
+              group: ["**/link/**", "../link/**", "../../link/**", "../../../link/**"],
+              message: "renderer 层不得 import link/",
+            },
+            {
+              group: ["**/app/**", "../app/**", "../../app/**", "../../../app/**"],
+              message: "renderer 层不得 import app/",
+            },
+            {
+              group: ["**/components/**", "../components/**", "../../components/**"],
+              message: "renderer 层不得 import components/",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: "omora/ui-engine/boundaries/components",
+    files: ["app/ui-engine/src/components/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}"],
+    rules: {
+      // components 只依赖 contract、renderer 类型与 platform 工具；不碰宿主/引擎/链接器/入口。
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/host/**", "../host/**", "../../host/**", "../../../host/**"],
+              message: "components 层不得 import host/（依赖方向 renderer → components → app）",
+            },
+            {
+              group: ["**/engine/**", "../engine/**", "../../engine/**", "../../../engine/**"],
+              message: "components 层不得 import engine/",
+            },
+            {
+              group: ["**/link/**", "../link/**", "../../link/**", "../../../link/**"],
+              message: "components 层不得 import link/",
+            },
+            {
+              group: ["**/app/**", "../app/**", "../../app/**", "../../../app/**"],
+              message: "components 层不得 import app/",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     name: "omora/ui-engine/boundaries/engine",
     files: ["app/ui-engine/src/engine/**/*.{ts,tsx}"],
     rules: {
