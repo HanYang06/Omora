@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Grant, SlotNode } from "../core/document";
+import type { Grant, SlotNode } from "../contract/document";
 import { DocumentIndex, type DocumentState } from "./document";
 import { applyOps } from "./ops";
 import type { Requester } from "./permissions";

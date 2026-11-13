@@ -9,7 +9,7 @@
  * 对它们做结构操作返回 E-PAYLOAD。理由与语义见 ops.ts 文件头。
  */
 
-import type { Capacity, SlotNode } from "../core/document";
+import type { Capacity, SlotNode } from "../contract/document";
 import type { Diagnostic, DiagnosticCode } from "../link/types";
 import type { DocumentIndex } from "./document";
 import { makeDiagnostic } from "./diagnostics";

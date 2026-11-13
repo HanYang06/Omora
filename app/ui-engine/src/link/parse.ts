@@ -1,12 +1,12 @@
 /**
  * `local-trees` payload 的校验器（链接期编译器第一遍）。
  *
- * 逐棵树复用 `core/document.ts` 的 `parseDocument`（不另写一套 Slot 校验），
+ * 逐棵树复用 `contract/document.ts` 的 `parseDocument`（不另写一套 Slot 校验），
  * 再合并做跨树校验：root.owner 必须等于 tree.owner，全局 id 唯一。
  * 失败返回诊断，不抛。
  */
 
-import { DOCUMENT_SCHEMA, DocumentError, parseDocument, type SlotNode } from "../core/document";
+import { DOCUMENT_SCHEMA, DocumentError, parseDocument, type SlotNode } from "../contract/document";
 import type { Diagnostic, DiagnosticCode, LocalTree, ParseLocalTreesResult } from "./types";
 
 const PAYLOAD_CODE: DiagnosticCode = "E-PAYLOAD";

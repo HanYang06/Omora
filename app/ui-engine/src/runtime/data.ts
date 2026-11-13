@@ -36,7 +36,7 @@
  * （集合 slot 互为祖先这种病态结构），它也不会出现在后续替换里。
  */
 
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import type { Diagnostic, DiagnosticCode } from "../link/types";
 import {
   applyCollectionChanges,

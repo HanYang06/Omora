@@ -26,7 +26,7 @@
  * 子树（含 `collection.templates`），放在这里避免两个模块互相 import 成环。
  */
 
-import type { Input, SlotNode } from "../core/document";
+import type { Input, SlotNode } from "../contract/document";
 import type { DataState } from "./data";
 import { DocumentIndex } from "./document";
 

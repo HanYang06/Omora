@@ -14,7 +14,7 @@
  * 模块环；`Requester` 形状另定义在 `link/types.ts`，与 runtime 的同名接口结构一致。
  */
 
-import type { Capacity, SlotNode } from "../core/document";
+import type { Capacity, SlotNode } from "../contract/document";
 import { can, SYSTEM_REQUESTER, type Capability } from "../runtime/permissions";
 import { collectIds, makeDiagnostic, parseLocalTrees, sortDiagnostics } from "./parse";
 import {

@@ -14,7 +14,7 @@
  * 一致性契约。
  */
 
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import type { Diagnostic } from "../link/types";
 import type { DocumentIndex } from "./document";
 import { makeDiagnostic } from "./diagnostics";

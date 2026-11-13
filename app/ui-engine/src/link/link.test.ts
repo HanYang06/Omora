@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DOCUMENT_SCHEMA, parseDocument } from "../core/document";
+import { DOCUMENT_SCHEMA, parseDocument } from "../contract/document";
 import { link } from "./link";
 import { WINDOW_SCAFFOLD } from "./scaffold";
 import type { LocalTree, LocalTreesPayload } from "./types";

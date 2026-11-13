@@ -5,7 +5,7 @@
  * 由局部树按 `mountAt` 填。骨架是只读常量：链接器先深拷再改，改不到这里。
  */
 
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 
 function deepFreeze<T>(value: T): T {
   if (Array.isArray(value)) {

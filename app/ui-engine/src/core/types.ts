@@ -1,4 +1,4 @@
-import type { Layout } from "./document";
+import type { Layout } from "../contract/document";
 
 /**
  * 界面节点与页面快照。形状是合同：Python 的 sdk/ui.py 产出的就是它。

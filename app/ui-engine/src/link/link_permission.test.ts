@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { Grant, SlotNode } from "../core/document";
+import type { Grant, SlotNode } from "../contract/document";
 import { SYSTEM_REQUESTER, type Requester } from "../runtime/permissions";
 import { link } from "./link";
 import { WINDOW_SCAFFOLD } from "./scaffold";

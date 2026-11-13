@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { SlotNode } from "../../core/document";
+import type { SlotNode } from "../../contract/document";
 import { applyData, type DataState } from "../../runtime/data";
 import { hydrateSession } from "../../runtime/hydrate";
 import { diffPageTrees } from "../../runtime/page_switch";

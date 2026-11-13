@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SlotNode } from "../../core/document";
+import type { SlotNode } from "../../contract/document";
 import { slotToNode } from "./bridge";
 
 function slot(over: Partial<SlotNode> & { id: string }): SlotNode {

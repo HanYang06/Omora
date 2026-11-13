@@ -24,7 +24,7 @@ import {
   type Layout,
   type PageEntry,
   type SlotNode,
-} from "../../core/document";
+} from "../../contract/document";
 import type { CollectionItem } from "../../runtime/collection";
 
 /** 页面 id（与 pages / active 对齐）。 */

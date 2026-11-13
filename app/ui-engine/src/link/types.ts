@@ -5,7 +5,7 @@
  * 线上形状不合法”补的码（设计文档只列了链接冲突码，交付说明里已记）。
  */
 
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 
 export type DiagnosticSeverity = "error" | "warning";
 

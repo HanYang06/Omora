@@ -15,7 +15,7 @@
  * “增量重链”。
  */
 
-import type { PageEntry } from "../core/document";
+import type { PageEntry } from "../contract/document";
 import type { RenderStats } from "../dom/renderer";
 import { parseLocalTrees } from "../link/parse";
 import type { Diagnostic, LocalTree, LocalTreesPayload } from "../link/types";

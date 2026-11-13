@@ -32,7 +32,7 @@
  * - dispose 复用 E-PAYLOAD 表示「调用方时机错误」，与 runtime/engine.ts 一致。
  */
 
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import { link } from "../link/link";
 import { sortDiagnostics } from "../link/parse";
 import { WINDOW_SCAFFOLD } from "../link/scaffold";

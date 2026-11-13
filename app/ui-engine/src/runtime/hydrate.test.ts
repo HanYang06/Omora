@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import { DocumentIndex } from "./document";
 import { hydrateSession, type HydrateResult } from "./hydrate";
 import { createSession, type SessionState } from "./session";

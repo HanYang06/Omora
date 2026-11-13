@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import type { Layout } from "../../core/document";
+import type { Layout } from "../../contract/document";
 import type { Node } from "../../core/types";
 import { mountNode, type MountedSlot } from "./test_fixtures";
 

@@ -5,7 +5,7 @@
  * 与 runtime 的“全寻址”约定一致。
  */
 
-import { DOCUMENT_SCHEMA, DocumentError, parseDocument, type SlotNode } from "../core/document";
+import { DOCUMENT_SCHEMA, DocumentError, parseDocument, type SlotNode } from "../contract/document";
 import type { Diagnostic, DiagnosticCode } from "./types";
 
 /** 文本比较：不依赖 locale，保证诊断与排序确定。 */

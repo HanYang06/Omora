@@ -30,7 +30,7 @@
  * 运行时不变量被破坏的情况）返回 `ok:false` 诊断，不抛。
  */
 
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import type { Diagnostic, DiagnosticCode } from "../link/types";
 import { instantiateCollection } from "./collection";
 import { makeDiagnostic } from "./diagnostics";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SlotNode } from "../core/document";
+import type { SlotNode } from "../contract/document";
 import { WINDOW_SCAFFOLD } from "../link/scaffold";
 import type { LocalTree } from "../link/types";
 import { DocumentIndex } from "./document";
