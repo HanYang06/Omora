@@ -1,5 +1,5 @@
-import { initialSnapshot } from "../render/boot";
-import { withContributions } from "../render/view";
+import { initialSnapshot } from "../legacy/render/boot";
+import { withContributions } from "../legacy/render/view";
 import { compileSkeleton } from "./skeleton";
 
 /**

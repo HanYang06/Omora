@@ -2,8 +2,8 @@
 import { describe, expect, it } from "vitest";
 import type { Snapshot } from "../core/types";
 import { DomShell } from "../app/shell";
-import { initialSnapshot } from "../render/boot";
-import { withContributions } from "../render/view";
+import { initialSnapshot } from "../legacy/render/boot";
+import { withContributions } from "../legacy/render/view";
 import { compileSkeleton } from "./skeleton";
 
 function bootView(): Snapshot {

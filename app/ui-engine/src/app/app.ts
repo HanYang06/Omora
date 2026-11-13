@@ -5,9 +5,9 @@ import type { JsonObject } from "../core/protocol";
 import { topicsToSync } from "../core/topics";
 import type { MediaData, PageEntry, Snapshot } from "../core/types";
 import { fetchMedia } from "../media/media";
-import { initialSnapshot, isStale } from "../render/boot";
-import { applySnapshotUpdate, isSnapshot } from "../render/patch";
-import { withContributions } from "../render/view";
+import { initialSnapshot, isStale } from "../legacy/render/boot";
+import { applySnapshotUpdate, isSnapshot } from "../legacy/render/patch";
+import { withContributions } from "../legacy/render/view";
 import { DomShell, type ShellOptions } from "./shell";
 
 const SNAPSHOT_TOPIC = "ui.snapshot";

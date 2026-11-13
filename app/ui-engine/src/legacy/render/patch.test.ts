@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applySnapshotUpdate } from "./patch";
-import type { Node, Snapshot } from "../core/types";
+import type { Node, Snapshot } from "../../core/types";
 
 function node(type: string, props: Record<string, unknown> = {}, children: Node[] = []): Node {
   return { type, props, children };
