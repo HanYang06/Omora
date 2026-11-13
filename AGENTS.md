@@ -12,14 +12,14 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 ## 结构
 
-| 位置             | 是什么                                                                              | 语言    |
-| ---------------- | ----------------------------------------------------------------------------------- | ------- |
-| `app/core/`      | 内核：插件宿主；package `omora-core`                                                | Python  |
-| `app/sdk/`       | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk`                     | Python  |
-| `packages/`      | 系统插件：`omora-plugin-*`，uv workspace 的 member                                  | Python  |
-| `app/ui-engine/` | 渲染引擎 + 桌面壳：组件注册表、贡献组合、事件、静态骨架；Electron 主进程在 `shell/` | TS / JS |
-| 运行后插件目录   | 生态插件，单独装；现在为空                                                          | 待定    |
-| `docs/`          | 架构与事实来源                                                                      | —       |
+| 位置             | 是什么                                                                                    | 语言    |
+| ---------------- | ----------------------------------------------------------------------------------------- | ------- |
+| `app/core/`      | 内核：插件宿主；package `omora-core`                                                      | Python  |
+| `app/sdk/`       | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk`                           | Python  |
+| `packages/`      | 系统插件：`omora-plugin-*`，uv workspace 的 member                                        | Python  |
+| `app/ui-engine/` | 渲染引擎 + 桌面壳：组件目录与注册表、贡献组合、事件、静态骨架；Electron 主进程在 `shell/` | TS / JS |
+| 运行后插件目录   | 生态插件，单独装；现在为空                                                                | 待定    |
+| `docs/`          | 架构与事实来源                                                                            | —       |
 
 两个进程、两个 runtime：Python（内核 + 插件）与 TS（渲染引擎）。中间只有一条消息协议，由 net 插件（系统插件）持有。
 
