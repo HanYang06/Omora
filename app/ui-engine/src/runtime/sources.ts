@@ -36,9 +36,8 @@ import type { SlotNode } from "../contract/document";
 import { link } from "../link/link";
 import { sortDiagnostics } from "../link/parse";
 import { WINDOW_SCAFFOLD } from "../link/scaffold";
-import type { Diagnostic } from "../contract/diagnostics";
+import { makeDiagnostic, type Diagnostic } from "../contract/diagnostics";
 import type { LinkResult, LocalTree, LocalTreesPayload } from "../link/types";
-import { makeDiagnostic } from "../contract/diagnostics";
 import { LifecycleLedger, type DisposeReport } from "./lifecycle";
 import type { Requester } from "../contract/policy";
 
