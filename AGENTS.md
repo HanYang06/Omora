@@ -40,7 +40,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 - 不确定就问，不猜需求；有多种解释就列出来。
 - 一次只做一件事；不顺手改邻近代码。
 - 多区任务走 Agent 团队：Lead 拆任务（写域/依赖）→ 每个 teammate 自己的 worktree/分支 → 合成一条集成分支 → **只开一个 PR** → Lead review + merge commit；review 问题回给 owner 改，Lead 不亲自改别人的分支/worktree；详见 [omora-team](.agents/skills/omora-team/SKILL.md)。
-- **Agent 要复用，不要一任务一 spawn**：同类任务优先 send_message 唤醒 inactive teammate；默认并行 ≤2，能串行就串行；spawn 是例外不是默认。
+- **Agent 要复用，不要一任务一 spawn**：同类任务优先 send_message 唤醒 inactive teammate；每轮默认 1 个、最多 2 个，超了先问用户；小任务 Lead 自己做；spawn 前必须查 `list_agents` 并说明为什么不能复用。
 - **一个功能 = 一个 PR**：同一件事的文档、实现、测试放在同一个 PR 里，PR 内按事件拆提交。多区并行也只提一个 PR。只有要独立回滚、或一次 review 看不完（净变更 > 800 行）才拆。
 - 跑过才算完成；跑不了就明说没验证。
 - 不用"应该可以""理论上没问题"。
