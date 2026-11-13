@@ -52,13 +52,13 @@ S3-b 已落：`src/engine/updates/data.test.ts` 覆盖共享 `data.json` 的标�
 
 S4 续落（二）：`engine_local.test.ts` 覆盖 applyLocalTrees 重链/版本+1/水合/指标/权限拒绝/非法 payload/dispose；`kinds.test.ts` 覆盖 layout token → CSS 变量/data 属性与 update 清理；`preview.test.ts` 在预览改用 DocumentView 后原 6 条行为断言全过。
 
-S4 续落：`host/sources.test.ts` 覆盖来源注册/更新/移除、死引用级联、歧义/容量 fail closed、dispose；`host/audit.test.ts` 覆盖审计顺序/容量/副本；`engine.test.ts` 补注入 clock 的 apply 耗时、deny 审计、noteRender；`link/link_permission.test.ts` 与 `link/base_grant.test.ts` 覆盖链接期挂载/replace 权限、扁平 grant 归一化；`dom/slot/view.test.ts` 补渲染计数。
+S4 续落：`host/sources.test.ts` 覆盖来源注册/更新/移除、死引用级联、歧义/容量 fail closed、dispose；`host/audit.test.ts` 覆盖审计顺序/容量/副本；`engine.test.ts` 补注入 clock 的 apply 耗时、deny 审计、noteRender；`link/link_permission.test.ts` 与 `link/base_grant.test.ts` 覆盖链接期挂载/replace 权限、扁平 grant 归一化；`app/view.test.ts` 补渲染计数。
 
-S4 已落：`permissions.test.ts` / `ops_permissions.test.ts` 覆盖 grant token、默认分层、五类 op 拒绝与 data 消费者拒绝、批量原子；`engine.test.ts` 覆盖 createEngine 水合、applyOps/applyData/applyFull、指标、监听、dispose 与之后拒绝；`metrics.test.ts` 覆盖计数器/诊断快照；`dom/slot/view.test.ts` 覆盖引擎↔DOM 自动重画、同 id 不重挂、权限拒绝视图不动、dispose 清容器与账本。链接期权限、observe/intercept 未实现，故无对应测试。
+S4 已落：`permissions.test.ts` / `ops_permissions.test.ts` 覆盖 grant token、默认分层、五类 op 拒绝与 data 消费者拒绝、批量原子；`engine.test.ts` 覆盖 createEngine 水合、applyOps/applyData/applyFull、指标、监听、dispose 与之后拒绝；`metrics.test.ts` 覆盖计数器/诊断快照；`app/view.test.ts` 覆盖引擎↔DOM 自动重画、同 id 不重挂、权限拒绝视图不动、dispose 清容器与账本。链接期权限、observe/intercept 未实现，故无对应测试。
 
-S3-e 已落：`src/dom/renderer_move.test.ts` 覆盖同 id+type 跨父 move、整棵子树 move、move+重排+删除+新增的 cleanup、childrenHosts 多槽、换 type 重建、重复 id、无 id 路径规则、dispose 递归清理，以及共享 Slot 文档 `applyFull` 换页后卡片元素复用；`src/dom/slot/preview.test.ts` 覆盖 `?engine=slot` 解析、示例文档渲染、切页、加卡片不重挂与入口接线；`src/host/lifecycle.test.ts` 覆盖逆序/错误隔离/幂等/fail-safe。
+S3-e 已落：`src/renderer/renderer_move.test.ts` 覆盖同 id+type 跨父 move、整棵子树 move、move+重排+删除+新增的 cleanup、childrenHosts 多槽、换 type 重建、重复 id、无 id 路径规则、dispose 递归清理，以及共享 Slot 文档 `applyFull` 换页后卡片元素复用；`src/app/preview.test.ts` 覆盖 `?engine=slot` 解析、示例文档渲染、切页、加卡片不重挂与入口接线；`src/host/lifecycle.test.ts` 覆盖逆序/错误隔离/幂等/fail-safe。
 
-S3-d 已落：`src/dom/slot/*.test.ts` 覆盖桥的字段搬运/不展开模板、Slot 原生 kind（layout.flow / page-link 事件）、命名空间别名、整棵 fixture 根渲染；`src/engine/document/page_switch.test.ts` 覆盖 keep/move/replace/cancel/add 与确定性；`hydrate.test.ts` 覆盖数据投影物化/缺失/坏条目；`src/dom/slot/spike.test.ts` 覆盖 session→水合→DOM、数据更新与全量替换后同 id 元素复用、换页分类与渲染切页。跨父 move 的 DOM 复用未实现。
+S3-d 已落：`src/renderer/bridge.test.ts`、`src/components/kinds.test.ts`、`src/app/slot_render.test.ts` 覆盖桥的字段搬运/不展开模板、Slot 原生 kind（layout.flow / page-link 事件）、命名空间别名、整棵 fixture 根渲染；`src/engine/document/page_switch.test.ts` 覆盖 keep/move/replace/cancel/add 与确定性；`hydrate.test.ts` 覆盖数据投影物化/缺失/坏条目；`src/app/spike.test.ts` 覆盖 session→水合→DOM、数据更新与全量替换后同 id 元素复用、换页分类与渲染切页。跨父 move 的 DOM 复用未实现。
 
 S3-c 已落：`src/engine/updates/data.test.ts` 补标量 `in`/`bind` 绑定（单/多 input、嵌套路径、解析不到保留、props 未变不换节点、多消费者、revision 幂等）；`session.test.ts` 覆盖共享 `document.json` 接管、`route.json` 应用、两页切页/缺页原子失败、route+树 op 混批、全量替换版本规则；跨语言由 Python `test_update.py` 的 RouteOp 与 `route.json` 钉住。渲染接入仍未实现。
 
