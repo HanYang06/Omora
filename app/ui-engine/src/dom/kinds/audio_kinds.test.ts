@@ -28,7 +28,7 @@ beforeEach(() => {
 });
 
 describe("recorder", () => {
-  it("按 v1 出录音条：dot + 提示，on_submit 落在 data-handler（events 优先，props 回退）", () => {
+  it("按 legacy 出录音条：dot + 提示，on_submit 落在 data-handler（events 优先，props 回退）", () => {
     const preferred = trackMount(
       mount(mediaNode("recorder", { on_submit: "legacy" }, { events: { submit: "next" } })),
     );
@@ -156,7 +156,7 @@ describe("waveform", () => {
     expect(waveSurferMock.create).not.toHaveBeenCalled();
   });
 
-  it("有 src 时按 v1 参数建 wavesurfer，卸载时销毁", async () => {
+  it("有 src 时按 legacy 参数建 wavesurfer，卸载时销毁", async () => {
     const mounted = trackMount(mount(mediaNode("waveform", { src: "http://127.0.0.1:1/media/a" })));
     const el = mounted.root.querySelector(".omora-waveform");
     await vi.waitFor(() => {

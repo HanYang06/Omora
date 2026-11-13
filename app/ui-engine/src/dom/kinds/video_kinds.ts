@@ -6,7 +6,7 @@ import { prop, setText } from "./media_shared";
  * video：一条视频。有 src 就出 <video controls>，没有就出"媒体通道未就绪"。
  *
  * 用 display: contents 的 span 包装，missing ↔ video 可以原地切换，内部 markup
- * 与 v1 一致（data-type / data-media 都在真正的节点上）。
+ * 与 legacy 一致（data-type / data-media 都在真正的节点上）。
  */
 
 interface VideoState {

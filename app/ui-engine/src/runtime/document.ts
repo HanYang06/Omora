@@ -1,5 +1,5 @@
 /**
- * Dendrolink v2 文档运行时（S3-a）：文档状态与三张索引。
+ * Dendrolink 文档运行时（S3-a）：文档状态与三张索引。
  *
  * 这一层只做两件事：
  * 1. `createState`：把一棵根树校验成 `DocumentState`（根树 + 文档版本）；

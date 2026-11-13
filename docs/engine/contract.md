@@ -1,6 +1,6 @@
 # 契约：Slot
 
-> 状态：**已定未实现**。本文定义 Dendrolink 唯一的节点原语；代码当前仍是 v1 的 `{type, props, children}`。
+> 状态：**已定未实现**。本文定义 Dendrolink 唯一的节点原语；代码当前仍是 legacy 的 `{type, props, children}`。
 > 依赖：[README](README.md) · [ADR-0001](decisions/0001-name.md)
 > 相关：[addressing.md](addressing.md) · [structure.md](structure.md) · [rules.md](rules.md) · [composition.md](composition.md)
 

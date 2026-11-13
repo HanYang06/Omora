@@ -115,7 +115,7 @@ describe("button", () => {
     expect(after.dataset.handler).toBe("a:1:1");
   });
 
-  it("node.events 优先于 props.on_click（v1.5 事件入口）", () => {
+  it("node.events 优先于 props.on_click（legacy 事件入口）", () => {
     const source: Node = {
       type: "button",
       props: { text: "走", on_click: "old:1" },

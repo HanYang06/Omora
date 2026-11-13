@@ -388,7 +388,7 @@ describe("dispose", () => {
     expect(rootEl.parentElement).toBeNull();
   });
 });
-describe("v2 换页 move：跨页保留实例", () => {
+describe("Slot 换页 move：跨页保留实例", () => {
   it("换页后同一张卡片的 DOM 元素被复用，旧页消失", () => {
     const fixture = readDocumentFixture();
     const created = createSession(fixture);

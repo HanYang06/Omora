@@ -23,7 +23,7 @@ import { createVideoRecorder, type VideoRecorder } from "./video_recorder";
  * video_capture：摄像头只在点的时候打开；录完先出本地回放，再上传媒体通道。
  *
  * 录制机制在 video_recorder；这里管设备门禁、实时预览 / 回放、上传与重试、
- * 卸载即提交。markup 与 v1 一致。
+ * 卸载即提交。markup 与 legacy 一致。
  */
 
 export class VideoCaptureController {

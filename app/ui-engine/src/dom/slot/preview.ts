@@ -1,7 +1,7 @@
 /**
- * `?engine=v2` 预览入口（S3-e / S4 dogfood）：内置 v2 文档 → EngineRuntime → DocumentView → DOM。
+ * `?engine=slot` 预览入口（S3-e / S4 dogfood）：内置 Slot 文档 → EngineRuntime → DocumentView → DOM。
  *
- * 目的：给 v2 渲染路径一个不依赖 Python 的可见入口，并让 S4 的宿主入口
+ * 目的：给 Slot 渲染路径一个不依赖 Python 的可见入口，并让 S4 的宿主入口
  * `mountDocumentView`（createEngine + hydrate + 渲染 + 变更通知）在真实入口上跑一遍：
  * - 初始渲染灵感页（window / 两个 page-link / toolbar / 2 张卡片）；
  * - 点导航 page-link 切页：`engine.applyFull` 换整份文档（active 改变、version +1），
@@ -54,16 +54,16 @@ function mountView(
 ): DocumentView {
   const mounted = mountDocumentView(container, previewDocument(PAGE_IDEAS, feed, 1), {
     onEvent: (handler) => onEvent(handler),
-    loadMedia: () => Promise.reject(new Error("v2 预览不加载媒体")),
+    loadMedia: () => Promise.reject(new Error("Slot 预览不加载媒体")),
   });
   if (!mounted.ok) {
-    throw new Error("v2 预览建视图失败：" + JSON.stringify(mounted.diagnostics));
+    throw new Error("Slot 预览建视图失败：" + JSON.stringify(mounted.diagnostics));
   }
   return mounted.view;
 }
 
 /**
- * 在 `container` 上挂一个 v2 预览：建引擎 + 视图 → 交互经 DOM 事件 → handler id → 闭包。
+ * 在 `container` 上挂一个 Slot 预览：建引擎 + 视图 → 交互经 DOM 事件 → handler id → 闭包。
  *
  * 返回句柄只负责卸载；预览维护的 feed 快照留在闭包里，文档 / 会话 / 渲染全部交给引擎
  * 与视图：切页只提交一次 applyFull，加卡只提交一次全量 items 的 applyData。
@@ -81,7 +81,7 @@ export function mountPreview(container: HTMLElement): PreviewHandle {
     const version = view.engine.session.document.version + 1;
     const applied = view.engine.applyFull(previewDocument(target, feed, version));
     if (!applied.ok) {
-      console.error("[omora] v2 预览切页失败:", applied.diagnostics);
+      console.error("[omora] Slot 预览切页失败:", applied.diagnostics);
     }
   }
 
@@ -101,7 +101,7 @@ export function mountPreview(container: HTMLElement): PreviewHandle {
       items,
     });
     if (!applied.ok) {
-      console.error("[omora] v2 预览追加卡片失败:", applied.diagnostics);
+      console.error("[omora] Slot 预览追加卡片失败:", applied.diagnostics);
       return;
     }
     feed = nextFeed;

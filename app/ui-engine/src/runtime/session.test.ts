@@ -11,7 +11,7 @@ import {
 } from "./session";
 
 /**
- * 共享 fixture（不许改）：document.json 是 version 3 的整份 v2 文档（active page.ideas）；
+ * 共享 fixture（不许改）：document.json 是 version 3 的整份 Slot 文档（active page.ideas）；
  * route.json 是 base 3 → document 4、仅一条 route page.ideas 的 ops 批量。
  */
 const DOCUMENT_FIXTURE_PATH = fileURLToPath(

@@ -129,12 +129,12 @@ describe("SourceHost：注册与注册表", () => {
       owner: "ideas",
       mountAt: "dendro.window.page",
       order: 10,
-      root: slotNode({ id: "page.ideas.v2", kind: "dendro:page", owner: "ideas" }),
+      root: slotNode({ id: "page.ideas.next", kind: "dendro:page", owner: "ideas" }),
     });
 
     succeed(host.register("ideas", [replacement]));
 
-    expect(childrenOf(host.tree, "dendro.window.page")).toEqual(["page.ideas.v2"]);
+    expect(childrenOf(host.tree, "dendro.window.page")).toEqual(["page.ideas.next"]);
     expect(idsOf(host.tree)).not.toContain("page.ideas");
     expect(host.size).toBe(1);
   });

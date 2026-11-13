@@ -3,7 +3,7 @@
  *
  * EngineRuntime 本身是「一份会话 + 账本 + 指标」的编排；SourceHost 是「注册表 → 链接」
  * 的编排。两者组合成 SourceEngine：
- * - 初始：local-trees payload → host.load → 用链接结果建一份 v2 文档 → EngineRuntime；
+ * - 初始：local-trees payload → host.load → 用链接结果建一份 Slot 文档 → EngineRuntime；
  * - registerSource / removeSource / applyLocalTrees：先让 host 重算权威根树，再把 host
  *   当前注册表拼成 payload 交给 EngineRuntime.applyLocalTrees（引擎负责版本/水合/指标/
  *   审计/通知）。host 与 engine 的链接各做一次（正确性优先），语义仍由链接器唯一判据。
@@ -196,7 +196,7 @@ function disposedDiagnostic(): Diagnostic {
 
 /**
  * 从 local-trees payload 建来源模式引擎：校验 payload → host.load → 用链接结果建
- * 初始 v2 文档（version 1，页面侧表 / data 由调用方给）→ EngineRuntime。
+ * 初始 Slot 文档（version 1，页面侧表 / data 由调用方给）→ EngineRuntime。
  * 任何一步失败都只回诊断、不建引擎；权限检查走链接期（options.requester）。
  */
 export function createEngineFromLocalTrees(

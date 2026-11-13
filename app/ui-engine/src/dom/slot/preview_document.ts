@@ -1,7 +1,7 @@
 /**
- * `?engine=v2` 预览入口的内置示例文档（S3-e）：手写在 TS 里，不 import 测试 fixture。
+ * `?engine=slot` 预览入口的内置示例文档（S3-e）：手写在 TS 里，不 import 测试 fixture。
  *
- * 只为演示「session → 水合 → v2 桥 → DOM」这条路径，形状如下：
+ * 只为演示「session → 水合 → Slot 桥 → DOM」这条路径，形状如下：
  *
  *   dendro.window（row）
  *   ├─ dendro.window.nav（column，56px）
@@ -225,7 +225,7 @@ function pageFor(active: string): SlotNode {
 }
 
 /**
- * 构造某个活动页的完整 v2 文档。
+ * 构造某个活动页的完整 Slot 文档。
  *
  * 每次返回全新对象（页面子树、data 条目都重新建），调用方可以直接交给
  * `createSession` / `applyFull`，不会与上一份文档共享可变状态。

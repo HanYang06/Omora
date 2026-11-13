@@ -11,7 +11,7 @@ import { createSlotRenderer } from "./registry";
 import { DOCUMENT_FIXTURE_PATH } from "./test_fixtures";
 
 /**
- * S3-d 集成 spike：共享 v2 文档 fixture → session → 数据水合 → v2 桥 → 现有 DOM renderer。
+ * S3-d 集成 spike：共享 Slot 文档 fixture → session → 数据水合 → Slot 桥 → 现有 DOM renderer。
  *
  * 证明两件事：
  * 1. 运行时产出的 SlotNode 能直接由现有 renderer 渲染（不迁移 38 个 kind）；
@@ -67,7 +67,7 @@ function cards(container: HTMLElement): HTMLElement[] {
   return [...container.querySelectorAll<HTMLElement>(".omora-card")];
 }
 
-describe("S3-d spike：v2 文档 → DOM", () => {
+describe("S3-d spike：Slot 文档 → DOM", () => {
   it("共享 fixture 经 session + 水合 + 桥渲染出母页面、导航与卡片", () => {
     const session = boot();
     const { container, events } = render(session.document.root);

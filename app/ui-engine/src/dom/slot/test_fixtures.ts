@@ -34,7 +34,7 @@ export interface MountedSlot {
   destroy(): void;
 }
 
-/** jsdom 里用 v2 注册表挂一棵已桥接的树，记录发出去的事件。 */
+/** jsdom 里用 Slot 注册表挂一棵已桥接的树，记录发出去的事件。 */
 export function mountNode(root: Node): MountedSlot {
   const events: RecordedSlotEvent[] = [];
   const context: RenderContext = {

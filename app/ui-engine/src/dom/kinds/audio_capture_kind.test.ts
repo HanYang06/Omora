@@ -11,7 +11,7 @@ import {
   installMediaTestEnv,
 } from "./media_test_support";
 
-/** v1 的实时波形来自 wavesurfer + record 插件；测试里用替身钉住接线与生命周期。 */
+/** legacy 的实时波形来自 wavesurfer + record 插件；测试里用替身钉住接线与生命周期。 */
 const micMock = vi.hoisted(() => {
   type Listener = (payload?: unknown) => void;
 
@@ -172,7 +172,7 @@ describe("audio_capture", () => {
     expect(mounted.root.querySelector<HTMLSelectElement>(".omora-device")?.hidden).toBe(true);
   });
 
-  it("用 v1 同款 wavesurfer record 插件画实时波形，参数对齐", async () => {
+  it("用 legacy 同款 wavesurfer record 插件画实时波形，参数对齐", async () => {
     stubMediaDevices([{ deviceId: "mic-1", kind: "audioinput", label: "麦克风" }]);
     const mounted = trackMount(
       mount(mediaNode("audio_capture", { on_submit: "h", upload_url: "/upload" })),
@@ -309,7 +309,7 @@ describe("audio_capture", () => {
     expect(mounted.events[0]?.payload?.media).toBe("m-auto");
   });
 
-  it("还在录时卸载：停录并把这段提交出去（v1 的卸载即提交）", async () => {
+  it("还在录时卸载：停录并把这段提交出去（legacy 的卸载即提交）", async () => {
     stubMediaDevices([{ deviceId: "mic-1", kind: "audioinput", label: "麦克风" }]);
     stubUpload("m-unload");
     const mounted = trackMount(

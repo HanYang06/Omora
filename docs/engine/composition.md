@@ -81,12 +81,12 @@
 
 ## 9. S2 实现（已落）
 
-- **代码**：`app/ui-engine/src/link/` —— `parse.ts` 第一遍（复用 `core/document.ts` 的 v2 Slot 校验）、`link.ts` 第二遍（多轮挂载 + 排序 + 容量 + replace）、`scaffold.ts`（窗口骨架）、`vite-plugin.ts`（构建期门禁）。
+- **代码**：`app/ui-engine/src/link/` —— `parse.ts` 第一遍（复用 `core/document.ts` 的 Slot 校验）、`link.ts` 第二遍（多轮挂载 + 排序 + 容量 + replace）、`scaffold.ts`（窗口骨架）、`vite-plugin.ts`（构建期门禁）。
 - **输入**：`{kind: "local-trees", seq, trees: [{owner, root, mountAt, order, seq, replace?}]}`；Python 序列化在 `app/sdk/omora/sdk/local_tree.py`，两侧共用 `app/sdk/tests/fixtures/local-trees.json`。
 - **输出**：`{ok: true, tree, ids}` 或 `{ok: false, diagnostics}`。有 error 不产树（原子）；不改入参；诊断按 `(code, owner, slot, path, message)` 排序，与到达顺序无关。
 - **多轮**：落点可以由另一棵局部树引入；骨架只给 `dendro.window.nav` / `dendro.window.page`，其余槽位由来源补齐。
 - **门禁**：`vite build` / dev server 的 `buildStart` 用共享 fixture 跑一遍 `link`，冲突让构建失败；链接器与门禁不进客户端 bundle。共享 fixture 的序列化由 Python 测试逐字段钉住。
-- **未接**：运行时仍是 v1 贡献模型（`render/compose.ts`）；按 kind 的 props/events schema、权限、`before/after`、`E-TEMPLATE`、孤儿绑定/死规则警告、`static_ui.py` 的编译门禁升级都还没做。
+- **未接**：运行时仍是 legacy 贡献模型（`render/compose.ts`）；按 kind 的 props/events schema、权限、`before/after`、`E-TEMPLATE`、孤儿绑定/死规则警告、`static_ui.py` 的编译门禁升级都还没做。
 - **测试**：每个已落诊断码至少一条失败路径；乱序不变、重复到达幂等、失败不产树、入参不变、`ids` 覆盖 `collection.templates`、replace/容量行为；`vite buildStart` 对合法 fixture 通过、对冲突 fixture 抛错。
 
 ## 10. S4 来源宿主与链接期权限（已落）

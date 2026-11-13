@@ -65,8 +65,8 @@ describe("共享 document.json：渲染接入", () => {
   });
 });
 
-describe("v1 词表别名", () => {
-  it("dendro:text / dendro:button 走 v1 实现，事件同样回传", () => {
+describe("legacy 词表别名", () => {
+  it("dendro:text / dendro:button 走 legacy 实现，事件同样回传", () => {
     const root = slotToNode(
       slot({
         id: "alias.root",
@@ -92,7 +92,7 @@ describe("v1 词表别名", () => {
     mounted.destroy();
   });
 
-  it("ideas:card 别名渲染成 v1 card", () => {
+  it("ideas:card 别名渲染成 legacy card", () => {
     const root = slotToNode(
       slot({
         id: "alias.root",

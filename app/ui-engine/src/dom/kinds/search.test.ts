@@ -309,7 +309,7 @@ describe("suggestion", () => {
     mounted.destroy();
   });
 
-  it("v1.5 events.pick 优先于 props.on_pick", () => {
+  it("legacy events.pick 优先于 props.on_pick", () => {
     const mounted = mountSearch({
       type: "suggestion",
       props: { value: "买牛奶", title: "买牛奶", on_pick: "h-props" },

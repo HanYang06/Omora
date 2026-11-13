@@ -8,12 +8,12 @@ import { waveformKind } from "./waveform_kind";
 /**
  * 音频组 kind：recorder（简单录音条）与 audio（播放按钮）。
  *
- * 行为对齐 v1：recorder 录完把 base64 交给 on_submit，卸载时停录但不提交；
+ * 行为对齐 legacy：recorder 录完把 base64 交给 on_submit，卸载时停录但不提交；
  * audio 按需从 media 服务取字节，全局只留一路播放。waveform 在 waveform_kind.ts，
  * 这里只在注册表里带上。
  */
 
-/** 全局只留一路音频：点第二条时把上一条停掉（v1 行为）。 */
+/** 全局只留一路音频：点第二条时把上一条停掉（legacy 行为）。 */
 let currentAudio: HTMLAudioElement | null = null;
 
 /* ------------------------------------------------------------------ recorder */
@@ -78,7 +78,7 @@ class RecorderController {
     this.stopTimer();
     const active = this.recorder;
     if (active !== null && active.state !== "inactive") {
-      // 卸载时按 v1 行为：停掉这段，不提交（Recorder 不是"录了即存"的捕捉条）。
+      // 卸载时按 legacy 行为：停掉这段，不提交（Recorder 不是"录了即存"的捕捉条）。
       active.stop();
       return;
     }

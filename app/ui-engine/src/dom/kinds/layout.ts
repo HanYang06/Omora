@@ -21,7 +21,7 @@ function flag(node: Node, name: string): boolean {
   return node.props[name] === true;
 }
 
-/** v1.5 事件入口：events.click 优先，回退 props.on_click；空串不算。 */
+/** legacy 事件入口：events.click 优先，回退 props.on_click；空串不算。 */
 function clickHandler(node: Node): string | undefined {
   const handler = handlerOf(node, "click");
   return handler !== undefined && handler.length > 0 ? handler : undefined;

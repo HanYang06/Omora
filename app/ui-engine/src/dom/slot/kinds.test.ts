@@ -50,7 +50,7 @@ function expectNoLayoutStyles(el: HTMLElement): void {
   }
 }
 
-describe("v2 容器 kind：layout.flow → 现有布局 class", () => {
+describe("Slot 容器 kind：layout.flow → 现有布局 class", () => {
   it("window 按 flow=row 画 .omora-row，data-type / marker 记完整身份", () => {
     const mounted = mountNode(
       node("dendro:window", {
@@ -97,13 +97,13 @@ describe("v2 容器 kind：layout.flow → 现有布局 class", () => {
     const pageEl = byType(mounted, "dendro:page");
     expect(pageEl.className).toBe("");
     expect(pageEl.hasAttribute("data-flow")).toBe(false);
-    // marker 不依赖 layout：没有 layout 的 v2 容器也标出来，样式段才有统一钩子。
+    // marker 不依赖 layout：没有 layout 的 Slot 容器也标出来，样式段才有统一钩子。
     expect(pageEl.dataset.dendroLayout).toBe("slot");
     mounted.destroy();
   });
 });
 
-describe("v2 容器 kind：layout → data 属性 / CSS 变量", () => {
+describe("Slot 容器 kind：layout → data 属性 / CSS 变量", () => {
   it("没有 layout 的容器不写布局变量与扩展属性，capacity 不进样式", () => {
     const page = mountNode(node("dendro:page", { id: "page.bare" }));
     expectNoLayoutStyles(byType(page, "dendro:page"));
@@ -209,7 +209,7 @@ describe("v2 容器 kind：layout → data 属性 / CSS 变量", () => {
   });
 });
 
-describe("v2 容器 kind：update 清理与原地更新", () => {
+describe("Slot 容器 kind：update 清理与原地更新", () => {
   it("update 换 flow 时 class / data-flow 跟着变，删掉的字段清掉变量与 data 属性", () => {
     const mounted = mountNode(
       layoutNode({
@@ -266,13 +266,13 @@ describe("v2 容器 kind：update 清理与原地更新", () => {
   });
 });
 
-describe("v1 kind 不受影响", () => {
-  it("dendro:column 仍走 v1 实现：只有 v1 class，没有 v2 marker 与布局变量", () => {
-    const mounted = mountNode(node("dendro:column", { id: "v1.column" }));
+describe("legacy kind 不受影响", () => {
+  it("dendro:column 仍走 legacy 实现：只有 legacy class，没有 Slot marker 与布局变量", () => {
+    const mounted = mountNode(node("dendro:column", { id: "legacy.column" }));
 
     const el = mounted.container.querySelector<HTMLElement>(".omora-column");
     if (el === null) {
-      throw new Error("v1 column 应该渲染出 .omora-column");
+      throw new Error("legacy column 应该渲染出 .omora-column");
     }
     expect(el.dataset.type).toBe("column");
     expect(el.hasAttribute("data-dendro-layout")).toBe(false);

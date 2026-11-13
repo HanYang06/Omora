@@ -1,7 +1,7 @@
 /**
- * Dendrolink v2 文档契约（S1.1）。
+ * Dendrolink 文档契约（Slot，S1.1）。
  *
- * 只定义线上形状与校验，不接入现有 v1 渲染；与 Python 的 `omora.sdk.document`
+ * 只定义线上形状与校验，不接入 legacy 渲染；与 Python 的 `omora.sdk.document`
  * 共用 `app/sdk/tests/fixtures/document.json`。
  */
 
@@ -335,7 +335,7 @@ function parsePage(value: unknown, path: string): PageEntry {
   return page;
 }
 
-/** 校验一份 v2 文档；不合法抛 DocumentError，合法返回规范化对象。 */
+/** 校验一份 Slot 文档；不合法抛 DocumentError，合法返回规范化对象。 */
 export function parseDocument(value: unknown): SlotDocument {
   const record = requireRecord(value, "bad_document", "$");
   const schema = requireString(record.schema, "bad_schema", "$.schema");

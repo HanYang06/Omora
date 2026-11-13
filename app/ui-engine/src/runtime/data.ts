@@ -1,5 +1,5 @@
 /**
- * Dendrolink v2 纯数据更新路由（S3-b / S3-c）。
+ * Dendrolink 纯数据更新路由（S3-b / S3-c）。
  *
  * 输入是一条 `{kind:"data", owner, source, revision, value | items | changes}` 负载；
  * 路由按 `source` 找到消费它的 slot，并把结果替换回根树：

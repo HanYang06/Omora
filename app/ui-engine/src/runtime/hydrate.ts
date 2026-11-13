@@ -1,7 +1,7 @@
 /**
- * Dendrolink v2 会话水合（S3-d）：全量文档数据 → 集合实例子树。
+ * Dendrolink 会话水合（S3-d）：全量文档数据 → 集合实例子树。
  *
- * 会话从整份 v2 文档建出来时（`createSession`），`data` 还是线上投影
+ * 会话从整份 Slot 文档建出来时（`createSession`），`data` 还是线上投影
  * （`source → { revision, value | items }`），集合 slot 的 `children` 还是空的；
  * 渲染层需要的是已经按模板物化好的实例。`hydrateSession` 补的就是这一步：
  *

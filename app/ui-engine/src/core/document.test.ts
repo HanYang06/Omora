@@ -56,7 +56,7 @@ const invalid: Array<[string, Record<string, unknown>, string]> = [
   ],
 ];
 
-describe("v2 文档契约：与 Python 共用同一份 fixture", () => {
+describe("Slot 文档契约：与 Python 共用同一份 fixture", () => {
   it("解析共享 fixture", () => {
     const document = parseDocument(fixture);
 
