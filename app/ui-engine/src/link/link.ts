@@ -25,12 +25,7 @@ import {
   normalizeRoot,
 } from "./tree_index";
 import type { Diagnostic } from "../contract/diagnostics";
-import type {
-  LinkOptions,
-  LinkResult,
-  LocalTree,
-  LocalTreesPayload,
-} from "./types";
+import type { LinkOptions, LinkResult, LocalTree, LocalTreesPayload } from "./types";
 
 interface Mount {
   tree: LocalTree;

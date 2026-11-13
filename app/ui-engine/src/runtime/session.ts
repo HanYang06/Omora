@@ -24,7 +24,12 @@
  * `applySessionOps` 的 pages / data 未变时直接复用引用（结构共享）。
  */
 
-import { DocumentError, parseDocument, type SlotDocument, type PageEntry } from "../contract/document";
+import {
+  DocumentError,
+  parseDocument,
+  type SlotDocument,
+  type PageEntry,
+} from "../contract/document";
 import type { Diagnostic, DiagnosticCode } from "../contract/diagnostics";
 import type { DocumentState } from "./document";
 import { makeDiagnostic } from "../contract/diagnostics";
