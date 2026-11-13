@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Plugin } from "vite";
 import { afterAll, describe, expect, it } from "vitest";
-import { defaultFixturePath, linkerGatePlugin, runFixtureGate } from "./vite-plugin";
-import { fixturePayload } from "./test_fixtures";
+import { defaultFixturePath, linkerGatePlugin, runFixtureGate } from "./vite-linker";
+import { fixturePayload } from "../link/test_fixtures";
 
 const tempDirs: string[] = [];
 

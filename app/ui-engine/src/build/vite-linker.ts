@@ -1,17 +1,17 @@
 /**
  * 构建期门禁：vite build 时编译共享 fixture，冲突直接让构建失败。
  *
- * 路径相对本文件（`app/ui-engine/src/link/` → `app/sdk/tests/fixtures/`），
+ * 路径相对本文件（`app/ui-engine/src/build/` → `app/sdk/tests/fixtures/`），
  * 与 Python 侧共用同一份 fixture。纯函数 `runFixtureGate` 单独导出供测试。
  */
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
-import { link } from "./link";
-import { WINDOW_SCAFFOLD } from "./scaffold";
+import { link } from "../link/link";
+import { WINDOW_SCAFFOLD } from "../link/scaffold";
 import type { Diagnostic } from "../contract/diagnostics";
-import type { LinkResult } from "./types";
+import type { LinkResult } from "../link/types";
 
 const FIXTURE_URL = new URL("../../../sdk/tests/fixtures/local-trees.json", import.meta.url);
 

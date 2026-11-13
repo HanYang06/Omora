@@ -1,6 +1,6 @@
 import type { ConnectionStatus } from "../contract/protocol";
 import type { Snapshot } from "../legacy/types";
-import { DomShell } from "../app/shell";
+import { DomShell } from "../legacy/shell";
 
 /**
  * 构建期编译器：把一份快照编译成首帧 HTML。

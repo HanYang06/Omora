@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ConnectionStatus } from "../contract/protocol";
-import { DEVICE_METHOD, DEVICE_TARGET, reportClientDevices, reportDevices } from "./device-report";
+import { DEVICE_METHOD, DEVICE_TARGET, reportClientDevices, reportDevices } from "./device_report";
 
-vi.mock("../capture/devices", () => ({
+vi.mock("../platform/capture/devices", () => ({
   detectDevices: vi.fn(async () => ["audioinput"]),
 }));
 

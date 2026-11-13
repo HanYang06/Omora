@@ -1,5 +1,5 @@
 import type { Node } from "../renderer/types";
-import { highlightParts, keyAction } from "../search/searchText";
+import { highlightParts, keyAction } from "../platform/search";
 import { handlerOf } from "../renderer/events";
 import { iconGlyph } from "./icons";
 import type { KindRegistry, RenderContext } from "../renderer/types";

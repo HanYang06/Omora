@@ -8,7 +8,7 @@ import {
   type DeviceState,
   type DeviceTracker,
   type Gate,
-} from "../capture/devices";
+} from "../platform/capture/devices";
 import type WaveSurfer from "wavesurfer.js";
 import type { Node } from "../renderer/types";
 

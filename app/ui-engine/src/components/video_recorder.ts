@@ -4,9 +4,9 @@ import {
   resumeClock,
   startClock,
   type RecordClock,
-} from "../capture/capture-rules";
-import { defaultDeviceSource, openMediaStream } from "../capture/devices";
-import { WARMUP_MS, videoBitrate, videoConstraints } from "../capture/video/video-quality";
+} from "../platform/capture/capture-rules";
+import { defaultDeviceSource, openMediaStream } from "../platform/capture/devices";
+import { WARMUP_MS, videoBitrate, videoConstraints } from "../platform/capture/video/video-quality";
 import { delay, makeObjectUrl, revokeObjectUrl, stopTracks } from "./media_shared";
 
 /**
