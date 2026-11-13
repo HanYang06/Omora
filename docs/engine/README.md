@@ -63,6 +63,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 | [updates.md](updates.md)                  | 三种更新、事务、版本、兜底、重同步                       | 已写   |
 | [permissions.md](permissions.md)          | 能力 × 主体、默认分层、检查点、非安全边界                | 已写   |
 | [runtime.md](runtime.md)                  | 引擎分层、生命周期账本、失败隔离、诊断面板               | 已写   |
+| [layering.md](layering.md)                | 组件/渲染/链接/算法/宿主分层与依赖方向                   | 已写   |
 | [renderer.md](renderer.md)                | 渲染层：Kind 接口、DOM 协调、测试约定                    | 已写   |
 | [components.md](components.md)            | 组件词表、schema 单一来源、authoring API 与 wire 形态    | 已写   |
 | [wire.md](wire.md)                        | 引擎 payload 形状；帧/传输仍归 `docs/design/protocol.md` | 已写   |
