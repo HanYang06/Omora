@@ -19,6 +19,7 @@ from omora.sdk.realtime import emit
 from omora.sdk.ui import Handler, Node, Page, serialize
 
 from ._diff import diff_snapshot
+from ._handle import PageHandle
 
 Builder = Callable[[], Page]
 Counter = Callable[[], int]
@@ -67,26 +68,6 @@ class _Page:
         self.version = 0
         # sent 是上一次交给客户端的那份（补丁的基准）。
         self.sent: dict[str, Any] | None = None
-
-
-class PageHandle:
-    """页面对象：插件自己交树（推送式），不再把 build 回调交给 ui。"""
-
-    def __init__(self, ui: Ui, name: str) -> None:
-        self._ui = ui
-        self.name = name
-
-    def set(self, page: Page) -> None:
-        """交这一页当前的树；客户端正在看它就直接推过去。"""
-        self._ui.set_page(self.name, page)
-
-    def refresh(self) -> None:
-        """把这一页当前那棵树再交一次（数据变了、树也重建过时用）。"""
-        self._ui.refresh_page(self.name)
-
-    def rebuild(self, builder: Builder) -> None:
-        """登记重建回调：客户端明确要这一页时由 ui 调一次，吸收插件装卸这类外部变化。"""
-        self._ui.bind_rebuild(self.name, builder)
 
 
 class Ui:
