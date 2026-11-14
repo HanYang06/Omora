@@ -173,7 +173,13 @@ class SlotMode:
         register = self._register()
         pages = [self._info(item) for item in self._names()]
         links = [
-            NavLink(item.name, item.label, item.icon, self._nav_handler(item.name))
+            NavLink(
+                item.name,
+                item.label,
+                item.icon,
+                self._nav_handler(item.name),
+                active=item.name == name,
+            )
             for item in pages
         ]
         return build_view(
