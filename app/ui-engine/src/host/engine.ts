@@ -16,8 +16,9 @@
  * 集合实例；链接 / 水合失败都走同一套 reject，会话不变。payload 里没有页面侧表，
  * 所以 pages / active 原样保留（页面侧表的上线形状后续再补）；data 也不动，只当水合输入。
  * 权限不在 engine：EngineRuntime 构造时把 requester 编译成 ops / data 两个 guard，
- * 注入 engine 的 apply 方法；不传 requester = 不传 guard（全放行）。链接期权限仍用
- * requesterFor 每棵树都返回它（越权在链接期 E-PERMISSION），不带就是链接器默认。
+ * 注入 engine 的 apply 方法；不传 requester = 不传 guard（全放行）。全量替换没有逐槽
+ * op，requester 存在时另走 host/engine_full 的根级 replace 闸门（形状 / 版本优先）。
+ * 链接期权限仍用 requesterFor 每棵树都返回它（越权在链接期 E-PERMISSION）。
  *
  * 通知语义：每次成功 apply 派发一次通知（包括幂等重放这种 changed 为空的成功）；
  * 监听者拿到当前会话与这次 apply 的 changed。监听者集合在派发开始时快照，派发期间的
@@ -62,12 +63,8 @@ import { RuntimeMetrics, type MetricsCounts, type RuntimeMetricsSnapshot } from 
 import { checkPermission, type Requester } from "../contract/policy";
 import { parseOps, type OpGuard } from "../engine/document/ops";
 import { checkOpPermission } from "./permissions";
-import {
-  applyFull as applyFullDocument,
-  applySessionOps,
-  createSession,
-  type SessionState,
-} from "../engine/document/session";
+import { applyFullWithPermission } from "./engine_full";
+import { applySessionOps, createSession, type SessionState } from "../engine/document/session";
 
 /** 建引擎时可选注入的运行时设施；默认各建一份。 */
 export interface EngineOptions {
@@ -244,13 +241,13 @@ export class EngineRuntime {
     );
   }
 
-  /** 全量替换整份会话并重新水合集合实例；旧版本全量被 applyFull 拒绝。 */
+  /** 全量替换整份会话并重新水合；requester 存在时按当前根 slot 检查 replace（见 engine_full）。 */
   applyFull(value: unknown): EngineApplyResult {
     if (this.isDisposed) {
       return this.disposedFailure();
     }
     const start = this.clock();
-    const replaced = applyFullDocument(this.current, value);
+    const replaced = applyFullWithPermission(this.current, value, this.requester);
     if (!replaced.ok) {
       return this.reject(replaced.diagnostics, this.elapsed(start));
     }

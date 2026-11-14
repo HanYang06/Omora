@@ -92,7 +92,7 @@ S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fu
 
 ## 8. S4 实现（已落）
 
-- **EngineRuntime**（`host/engine.ts`）：`createEngine` = createSession + hydrate；`applyOps` / `applyData` / `applyFull` / `applyLocalTrees` 成功后换会话、记指标、通知监听者，失败原子、记 rejections；`onChange` / `registerCleanup` / `dispose`（清监听 + 逆序账本，幂等）。`applyLocalTrees` = 链接全部局部树 → 替换树 → 版本 +1 → 当前 data 水合（全量更新闭环）。
+- **EngineRuntime**（`host/engine.ts`）：`createEngine` = createSession + hydrate；`applyOps` / `applyData` / `applyFull` / `applyLocalTrees` 成功后换会话、记指标、通知监听者，失败原子、记 rejections；`onChange` / `registerCleanup` / `dispose`（清监听 + 逆序账本，幂等）。`applyLocalTrees` = 链接全部局部树 → 替换树 → 版本 +1 → 当前 data 水合（全量更新闭环）。`applyFull` 在注入 requester 时只做一次当前根 slot 的 replace 检查（新文档内部 grant 不参与、形状 / 版本错误优先），拒绝走同一条 reject / deny 审计。
 - **指标**（`host/metrics.ts`）：计数器 + 最近诊断快照 + apply 耗时 + 渲染计数，挂在 EngineRuntime 上。
 - **审计**（`host/audit.ts`）：有界 `AuditLog`（apply/reject/deny/diagnostic + code/owner/slot/changed）；EngineRuntime 每次 apply 记录，权限拒绝逐条 deny。
 - **权限薄层**（`contract/policy.ts` 纯策略 + `host/permissions.ts` op 检查 + `link/link.ts`）：链接期挂载检查 + 运行期 ops/data 检查，越权 E-PERMISSION；运行期由 host 把 requester 编译成 guard 注入 engine（engine 层本身不懂权限），不传 guard = 全放行（见 [permissions.md](permissions.md) §8）。
