@@ -1,6 +1,6 @@
 # 线上形状：文档、更新与数据
 
-> 状态：**提案**；S1.1 契约类型、S2 `local-trees`、S3-a `ops`、S3-b `data`、S3-c `route` 的 Python/TS 线上形状已落（共享 fixture `local-trees.json` / `ops.json` / `data.json` / `route.json`），运行时渲染接入未做；S6 将定稿事件 / `dispatch` 与页面侧表（见 §8、[migration.md](migration.md) §6）。
+> 状态：**提案**；S1.1 契约类型、S2 `local-trees`、S3-a `ops`、S3-b `data`、S3-c `route`、S6.1 主会话 `view` 的 Python/TS 线上形状已落（共享 fixture `local-trees.json` / `ops.json` / `data.json` / `route.json` / `view.json`），运行时渲染接入未做；事件 / `dispatch` 帧形状仍是 §9 的未定项（见 [migration.md](migration.md) §6）。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[docs/design/protocol.md](../design/protocol.md)（帧、传输、订阅）
 
@@ -123,9 +123,42 @@ S3-c 已落 route op：Python `omora.sdk.update.RouteOp`、TS `src/engine/docume
 
 - 仍只有 `call / result / error / event` 四种帧。
 - legacy 的 `ui.render` / `ui.event` / `ui.snapshot` 语义保留：全量走 render，变化走 snapshot，事件走 event。
-- 变化只是 payload 从“页面快照 + 路径补丁”变成“文档 + 按 id 的更新”。
+- 变化只是 payload 从“页面快照 + 路径补丁”变成“主会话视图（§8）/ 文档 + 按 id 的更新”。
 
-## 8. 未定
+## 8. 主会话视图负载（S6）
+
+主会话的 `ui.render` / `ui.event` / `ui.snapshot` 交一份完整视图：局部树 + 页面侧表 +
+数据文档 + 版本；权威根树仍由 TS 链接器在本地链接，Python 不产出整棵根树。
+
+```jsonc
+{
+  "kind": "view",
+  "schema": "dendro.ui/1",
+  "version": 17,
+  "localTrees": { "kind": "local-trees", "seq": 3, "trees": [] },
+  "pages": [
+    { "id": "page.ideas", "label": "灵感", "route": "/ideas", "owner": "ideas", "icon": "ideas" },
+  ],
+  "active": "page.ideas",
+  "data": {},
+}
+```
+
+- `version` 从 1 单调递增；引擎按全量替换应用，旧版本拒绝（`E-VERSION`）。
+- `pages` / `active` 与全量文档同规则：id 唯一、字段非空，`active` 必须在 `pages` 里
+  （没有页面时为空串）。
+- `localTrees` 就是 §3 的 payload：同一套 Slot 校验、全局 id 唯一、
+  `E-PAYLOAD` / `E-ID-DUPLICATE`。
+- `data` 是数据文档投影；第一版可以为空对象。
+- 这是主会话的**全量兜底**：第一版每个事件都交整份视图（重链 + 全量替换），渲染层按 id
+  复用 DOM；增量（ops / data）作为后续优化，不改帧类型。
+- 跨语言契约：`app/sdk/tests/fixtures/view.json`，Python `serialize_view` 与 TS
+  `parseView` 必须得到同一结论。
+
+事件仍走 `ui.event` 的 `{handler, payload}`：Slot 的 `events` 把事件名映射到 handler id，
+渲染层原样回传；`dispatch` 效果与异步推送的增量形状留到实现时再定。
+
+## 9. 未定
 
 - 首次连接是否需要 schema 握手；
 - 大文档的分块传输；

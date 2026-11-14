@@ -136,7 +136,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 | S3   | 三张索引 + 三种更新 + 集合绑定                         | ✅ a–e（主会话渲染未接）                                  |
 | S4   | 权限薄层 + 生命周期账本 + 观测指标                     | ✅（applyFull 已收；observe/intercept 见 permissions §8） |
 | S5   | 来源宿主 + 渲染节点统计 + TS 宿主                      | ◐ 起步（SourceEngine + render stats；运行后来源示例未做） |
-| S6   | 主会话接入：Python 产 Slot → TS 主入口 → 删 legacy     | ⬜ 计划（见 [migration.md](migration.md) §6）             |
+| S6   | 主会话接入：Python 产 Slot → TS 主入口 → 删 legacy     | ◐ S6.1 视图负载已落（见 [migration.md](migration.md) §6） |
 
 各阶段的逐条进度记录在 [migration.md](migration.md) §1 的阶段注记里；本文只保留阶段表。
 
