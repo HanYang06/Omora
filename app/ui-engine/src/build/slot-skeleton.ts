@@ -27,14 +27,18 @@ export function compileSlotSkeleton(view: unknown): string {
   if (!parsed.ok) {
     throw new Error(
       "启动视图不合法：" +
-        parsed.diagnostics.map((diagnostic) => diagnostic.code + " " + diagnostic.message).join("；"),
+        parsed.diagnostics
+          .map((diagnostic) => diagnostic.code + " " + diagnostic.message)
+          .join("；"),
     );
   }
   const linked = link(WINDOW_SCAFFOLD, parsed.view.localTrees, {});
   if (!linked.ok) {
     throw new Error(
       "启动视图链接失败：" +
-        linked.diagnostics.map((diagnostic) => diagnostic.code + " " + diagnostic.message).join("；"),
+        linked.diagnostics
+          .map((diagnostic) => diagnostic.code + " " + diagnostic.message)
+          .join("；"),
     );
   }
   const container = document.createElement("div");
