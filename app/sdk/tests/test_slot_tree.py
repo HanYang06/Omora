@@ -1,4 +1,4 @@
-"""legacy Node / Page → Slot 局部树（S6.2）：id、kind、events 与页面根 header。"""
+"""legacy Node / Page → Slot 局部树（S6.2）：id、kind、events 与页面根。"""
 
 from __future__ import annotations
 
@@ -37,21 +37,20 @@ def _sequential() -> Callable[[Any], str]:
     return register
 
 
-def _page(content: Node | None = None, *, meta: str = "") -> Page:
-    return Page(content=content if content is not None else Column(Text("内容")), meta=meta)
+def _page(content: Node | None = None) -> Page:
+    return Page(content=content if content is not None else Column(Text("内容")))
 
 
 def _tree(
     content: Node | None = None,
     *,
-    meta: str = "",
     label: str = "灵感",
     icon: str | None = "ideas",
     owner: str = "ideas",
     name: str = "ideas",
 ) -> LocalTree:
     return serialize_page_slot(
-        _page(content, meta=meta),
+        _page(content),
         _sequential(),
         owner=owner,
         page_name=name,
@@ -167,30 +166,12 @@ def test_nested_children_ids_follow_the_index_path() -> None:
 
     assert _ids(tree) == [
         "page.ideas",
-        "page.ideas.header",
-        "page.ideas.header.title",
         "page.ideas.content",
         "page.ideas.content.0",
         "page.ideas.content.0.0",
         "page.ideas.content.0.1",
         "page.ideas.content.1",
     ]
-
-
-def test_page_header_keeps_the_label_with_an_optional_meta() -> None:
-    tree = _tree(Column(Text("内容")), label="灵感", meta="12 条")
-
-    header = tree.root.children[0]
-    assert (header.id, header.kind) == ("page.ideas.header", "dendro:row")
-    assert header.layout is not None
-    assert header.layout.flow == "row"
-    assert [child.props for child in header.children] == [
-        {"text": "灵感", "kind": "title"},
-        {"text": "12 条", "kind": "meta"},
-    ]
-
-    plain = _tree(Column(Text("内容")), label="灵感")
-    assert [child.id for child in plain.root.children[0].children] == ["page.ideas.header.title"]
 
 
 def test_nav_tree_carries_page_links_and_click_handlers() -> None:
