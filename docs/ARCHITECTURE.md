@@ -147,9 +147,14 @@ class Ideas:
 
 ## 6. 渲染引擎（Dendrolink）与 TS 插件
 
-渲染引擎在 `app/ui-engine/`。当前是 legacy 节点模型：组件注册表、键 + 贡献组合、事件回传、静态骨架。
-它正在升级为独立命名的 UI 文档运行时 **Dendrolink**（树链引擎），目标契约见
-[docs/engine/README.md](engine/README.md)；目标条目标"已定未实现"，实现前以代码为准。
+渲染引擎在 `app/ui-engine/`。契约层已升级为独立命名的 UI 文档运行时 **Dendrolink**
+（树链引擎）：Slot 契约、链接期组合、三级更新、权限薄层、EngineRuntime/SourceEngine、
+DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engine/README.md)，
+目录与依赖方向见 [layering.md](engine/layering.md)，实现状态与缺口见 README §6。
+
+**默认主会话仍走 legacy 快照路径**（Python 产页面快照 → 旧快照渲染），Slot 运行时只在
+`?engine=slot` 预览；规则执行（`reactions`）与 schema 单一来源也还没落。S6 的目标是让
+真实页面走 Slot，然后删除 legacy（见 [migration.md](engine/migration.md) §6）。
 
 - 唯一原语 Slot：窗口 / 页面 / 层 / 布局 / 组件都是 kind 不同的 Slot。
 - 局部树在链接期组合成权威根树，冲突是编译错误。

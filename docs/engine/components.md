@@ -1,6 +1,6 @@
 # 组件：词表、schema 与扩展
 
-> 状态：**已定未实现**；schema 生成方式是【建议】。
+> 状态：**已定，词表已落**；38 个 kind 已实现并有 jsdom 行为测试；schema 生成方式仍是【建议】（Python / TS 词表暂时两份手写）。
 > 依赖：[contract.md](contract.md)
 > 相关：[structure.md](structure.md) · [collection.md](collection.md) · [wire.md](wire.md)
 

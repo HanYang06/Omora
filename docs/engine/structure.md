@@ -1,6 +1,6 @@
 # 结构：窗口、页面、层、布局
 
-> 状态：**已定未实现**；layout 字段表是【建议】。S3-c 已落会话层的 pages/active 与 route 意图（active 切换）；渲染层按 id 的保留/移动/替换/取消协调仍未接。
+> 状态：**已定**；layout 字段表是【建议】。S3-c 已落会话层的 pages/active 与 route 意图（active 切换）；S3-d 已落渲染层按 id 的换页协调（`page_switch`）与跨父 move 复用；页面参数与主会话接入仍待。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md)
 > 相关：[rules.md](rules.md) · [updates.md](updates.md) · `runtime.md`（待写）
 

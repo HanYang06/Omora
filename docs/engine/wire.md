@@ -1,6 +1,6 @@
 # 线上形状：文档、更新与数据
 
-> 状态：**提案**；S1.1 契约类型、S2 `local-trees`、S3-a `ops`、S3-b `data`、S3-c `route` 的 Python/TS 线上形状已落（共享 fixture `local-trees.json` / `ops.json` / `data.json` / `route.json`），运行时渲染接入未做。
+> 状态：**提案**；S1.1 契约类型、S2 `local-trees`、S3-a `ops`、S3-b `data`、S3-c `route` 的 Python/TS 线上形状已落（共享 fixture `local-trees.json` / `ops.json` / `data.json` / `route.json`），运行时渲染接入未做；S6 将定稿事件 / `dispatch` 与页面侧表（见 §8、[migration.md](migration.md) §6）。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[docs/design/protocol.md](../design/protocol.md)（帧、传输、订阅）
 
@@ -129,4 +129,7 @@ S3-c 已落 route op：Python `omora.sdk.update.RouteOp`、TS `src/engine/docume
 
 - 首次连接是否需要 schema 握手；
 - 大文档的分块传输；
-- 多客户端会话标识是否进帧。
+- 多客户端会话标识是否进帧；
+- Slot 事件 → 来源处理（`dispatch`）的帧形状；
+- 页面侧表（pages / active）与 local-trees payload 的关系；
+- Slot 节点状态（`state`）是否上线。

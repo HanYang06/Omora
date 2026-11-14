@@ -1,6 +1,6 @@
 # 运行时：分层、生命周期与失败
 
-> 状态：**已定未实现**；分层名称是【建议】。S3-a–e 已落文档状态/三张索引、ops、data router、绑定/session、Slot 渲染桥/水合/换页分类、跨父 move 与预览；S4 已落 EngineRuntime（session + ledger + metrics + render stats）、DocumentView、权限薄层（链接期 + 运行期）、来源宿主（SourceHost + load/requesterFor）、来源模式引擎（SourceEngine）、审计与耗时指标；阶段 2 已把 `runtime/` 拆成 `engine/` 与 `host/`，权限检查改为 host 注入 guard。多客户端、来源热更新接线、Slot 路径替换主会话仍待。
+> 状态：**已定，S3–S4 已落**；分层名称是【建议】。S3-a–e 已落文档状态/三张索引、ops、data router、绑定/session、Slot 渲染桥/水合/换页分类、跨父 move 与预览；S4 已落 EngineRuntime（session + ledger + metrics + render stats）、DocumentView、权限薄层（链接期 + 运行期 + applyFull）、来源宿主（SourceHost + load/requesterFor）、来源模式引擎（SourceEngine）、审计与耗时指标；阶段 2 已把 `runtime/` 拆成 `engine/` 与 `host/`，权限检查改为 host 注入 guard，分层整改已完成。多客户端、来源热更新接线、Slot 路径替换主会话仍待。
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md) · [updates.md](updates.md)
 > 相关：[components.md](components.md) · [wire.md](wire.md) · [testing.md](testing.md)
 

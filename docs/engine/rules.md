@@ -1,6 +1,6 @@
 # 规则：事件、数据与反应
 
-> 状态：**已定与结构平级**；触发/效果闭集是【建议】。S3-c 已落数据输入的最小实现：标量 `in` / `bind` → props 绑定（语义见 §4）。
+> 状态：**已定与结构平级**；触发/效果闭集是【建议】。S3-c 已落数据输入的最小实现：标量 `in` / `bind` → props 绑定（语义见 §4）；`reactions` 已能解析，执行与 `dispatch` 回来源未落。
 > 依赖：[contract.md](contract.md)
 > 相关：[collection.md](collection.md) · [updates.md](updates.md) · `runtime.md`（待写）
 
