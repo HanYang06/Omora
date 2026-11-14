@@ -169,3 +169,18 @@ Python 出口只有 Slot 一种，`ui.render` / `ui.event` 不再需要迁移期
 - Slot 事件 → 来源处理（`dispatch`）的帧形状；
 - 页面侧表（pages / active）与 local-trees payload 的关系；
 - Slot 节点状态（`state`）是否上线。
+
+## 10. 运行后来源推送（S7）
+
+运行后来源走已有 `ui.snapshot` event（不新增帧类型）：
+
+```jsonc
+{ "kind": "source", "trees": [/* §3 的局部树 */], "removed": ["runtime.clock"] }
+```
+
+- 按 `owner` 整组替换该来源的局部树；不在 `trees` 里的 owner 不动；`removed` 撤来源并级联撤树。
+- 失败回诊断、保留上一棵好树（SourceHost 语义）；客户端用 `SourceEngine.registerSource` /
+  `removeSource`。
+- 客户端整体替换主视图时用 `keepOwners` 保留这些来源，不让 Python 的主视图把它们冲掉。
+- 示例：`app/ui-engine/src/app/runtime_sources/clock.ts`（自动发现 + 每秒热更新）——加一个文件
+  即加界面，不改引擎源码。
