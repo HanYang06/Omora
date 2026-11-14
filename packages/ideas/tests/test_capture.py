@@ -20,30 +20,25 @@ from omora.video import VideoPlugin
 
 CHANNEL = "http://127.0.0.1:8766/media"
 SAVED_AT = datetime(2026, 11, 11, 3, 41)
-
-
-_NETS: list[_Net] = []
+PAGE_MOUNT_AT = "dendro.window.page"
 
 
 class _Net:
-    """net 的替身：记下推出去的东西，不解释。"""
+    """net 的替身：提供媒体通道地址，吞掉推送。"""
 
     name = "net"
 
     def __init__(self, media_url: str = CHANNEL) -> None:
         self.media_url = media_url
-        self.sent: list[tuple[str, dict[str, Any]]] = []
-        _NETS.append(self)
 
     def apply(self, ctx: Any) -> None:
         ctx.provide("net", self)
 
     def emit(self, topic: str, payload: dict[str, Any], *, coalesce: bool = False) -> None:
-        self.sent.append((topic, payload))
+        pass
 
 
 def _kernel(tmp_path: Path, *, captures: bool = True) -> Kernel:
-    _NETS.clear()
     kernel = Kernel()
     kernel.install(StorePlugin(path=str(tmp_path / "omora.db")))
     kernel.install(MediaPlugin(root=str(tmp_path / "media")))
@@ -56,69 +51,60 @@ def _kernel(tmp_path: Path, *, captures: bool = True) -> Kernel:
     return kernel
 
 
-def _push() -> dict[str, Any]:
-    """最近一次推出去的 ui.snapshot。"""
-    assert _NETS, "用例没有装 net 替身"
-    assert _NETS[-1].sent, "这次事件没有推 ui.snapshot"
-    topic, payload = _NETS[-1].sent[-1]
-    assert topic == "ui.snapshot", f"推错了 topic: {topic}"
-    return payload
-
-
 def _fire(ui: Any, handler: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    """发一次事件：result 只有确认，视图走 ui.snapshot；再取全量快照给断言用。"""
-    assert ui.event(str(handler), payload or {}) == {}
-    _assert_pushed()
-    snapshot: dict[str, Any] = ui.render()
-    return snapshot
+    """发一次事件：result 直接就是派发之后的新 view。"""
+    view: dict[str, Any] = ui.event(str(handler), payload or {})
+    return view
 
 
-def _fire_raw(ui: Any, handler: Any, payload: dict[str, Any] | None = None) -> None:
-    """发事件但不再画：留给"陈旧 handler 只宽限一代"的用例，多画一次就把它作废了。"""
-    assert ui.event(str(handler), payload or {}) == {}
-    _assert_pushed()
-
-
-def _assert_pushed() -> None:
-    pushed = _push()
-    if "content" in pushed:
-        assert pushed["version"] >= 1
-        return
-    assert pushed["version"] > pushed["base"], "补丁的版本必须往上走"
-    assert pushed["ops"], "补丁不许是空的"
-
-
-def _nodes(node: dict[str, Any], node_type: str) -> list[dict[str, Any]]:
-    found = [node] if node["type"] == node_type else []
-    for child in node["children"]:
-        found.extend(_nodes(child, node_type))
+def _walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
+    found = [slot]
+    for child in slot["children"]:
+        found.extend(_walk(child))
     return found
 
 
-def _main(snapshot: dict[str, Any]) -> dict[str, Any]:
-    content = snapshot["content"]
-    assert content["type"] == "split", f"页面要是 Split，实际是 {content['type']}"
+def _page_root(view: dict[str, Any]) -> dict[str, Any]:
+    for tree in view["localTrees"]["trees"]:
+        if tree["mountAt"] == PAGE_MOUNT_AT:
+            return dict(tree["root"])
+    raise AssertionError("view 里没有页面局部树")
+
+
+def _content(view: dict[str, Any]) -> dict[str, Any]:
+    return dict(_page_root(view)["children"][0])
+
+
+def _kind(slot: dict[str, Any]) -> str:
+    return str(slot["kind"]).removeprefix("dendro:")
+
+
+def _nodes(node: dict[str, Any], node_type: str) -> list[dict[str, Any]]:
+    return [slot for slot in _walk(node) if _kind(slot) == node_type]
+
+
+def _main(view: dict[str, Any]) -> dict[str, Any]:
+    content = _content(view)
+    assert _kind(content) == "split", f"页面要是 Split，实际是 {_kind(content)}"
     main: dict[str, Any] = content["children"][1]
     return main
 
 
-def _rail_titles(snapshot: dict[str, Any]) -> list[str]:
-    return [
-        str(row["props"]["title"]) for row in _nodes(snapshot["content"]["children"][0], "item")
-    ]
+def _rail_titles(view: dict[str, Any]) -> list[str]:
+    return [str(row["props"]["title"]) for row in _nodes(_content(view)["children"][0], "item")]
 
 
-def _cards(snapshot: dict[str, Any]) -> list[str]:
-    return [str(card["props"]["title"]) for card in _nodes(_main(snapshot), "card")]
+def _cards(view: dict[str, Any]) -> list[str]:
+    return [str(card["props"]["title"]) for card in _nodes(_main(view), "card")]
 
 
-def _tiles(snapshot: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    return {str(node["props"]["title"]): node for node in _nodes(_main(snapshot), "tile")}
+def _tiles(view: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {str(node["props"]["title"]): node for node in _nodes(_main(view), "tile")}
 
 
-def _capture_region(snapshot: dict[str, Any]) -> dict[str, Any]:
+def _capture_region(view: dict[str, Any]) -> dict[str, Any]:
     """主区第二块：捕捉区（三个 Tile 或工作区）。"""
-    region: dict[str, Any] = _main(snapshot)["children"][1]
+    region: dict[str, Any] = _main(view)["children"][1]
     return region
 
 
@@ -136,27 +122,27 @@ def _pin_clock(monkeypatch: Any) -> None:
 
 
 def _click_tile(ui: Any, title: str) -> Any:
-    return _fire(ui, _tiles(ui.render())[title]["props"]["on_click"])
+    return _fire(ui, _tiles(ui.render())[title]["events"]["click"])
 
 
 def _click_rail(ui: Any, title: str) -> Any:
-    rail = ui.render()["content"]["children"][0]
+    rail = _content(ui.render())["children"][0]
     hits = [row for row in _nodes(rail, "item") if row["props"]["title"] == title]
     assert hits, f"索引栏里没有: {title}"
-    return _fire(ui, hits[0]["props"]["on_click"])
+    return _fire(ui, hits[0]["events"]["click"])
 
 
 def _click_button(ui: Any, text: str) -> Any:
     hits = [node for node in _nodes(_main(ui.render()), "button") if node["props"]["text"] == text]
     assert hits, f"主区里没有按钮: {text}"
-    return _fire(ui, hits[0]["props"]["on_click"])
+    return _fire(ui, hits[0]["events"]["click"])
 
 
 def _recording(ui: Any, tile: str, node_type: str) -> tuple[str, dict[str, Any]]:
     """点 Tile 进工作区，交出录制组件的提交 handler 与节点本身。"""
     _click_tile(ui, tile)
     node = _nodes(_main(ui.render()), node_type)[0]
-    return str(node["props"]["on_submit"]), node
+    return str(node["events"]["submit"]), node
 
 
 def _audio_take(media_id: str, seconds: float) -> dict[str, Any]:
@@ -174,11 +160,11 @@ def test_clicking_a_tile_turns_the_capture_region_into_a_workspace_in_place(
     ui = _kernel(tmp_path).resolve("ui")
     _click_tile(ui, "文字")
     field = _nodes(_main(ui.render()), "input")[0]
-    _fire(ui, field["props"]["on_submit"], {"value": "买牛奶"})
+    _fire(ui, field["events"]["submit"], {"value": "买牛奶"})
 
     workspace = _click_tile(ui, "录音")
 
-    assert [child["type"] for child in _main(workspace)["children"]] == [
+    assert [_kind(child) for child in _main(workspace)["children"]] == [
         "search",
         "panel",
         "panel",
@@ -200,10 +186,10 @@ def test_the_text_workspace_stores_on_enter_and_folds_back_to_the_tiles(tmp_path
     field = _nodes(_main(workspace), "input")[0]
     assert _texts(_capture_region(workspace)) == ["文字"]
 
-    home = _fire(ui, field["props"]["on_submit"], {"value": "  买牛奶  "})
+    home = _fire(ui, field["events"]["submit"], {"value": "  买牛奶  "})
 
     assert list(_tiles(home)) == ["录音", "视频", "文字"]
-    assert (_cards(home), home["meta"]) == (["买牛奶"], "1 条")
+    assert _cards(home) == ["买牛奶"]
 
 
 def test_a_blank_text_capture_is_not_stored(tmp_path: Path) -> None:
@@ -211,10 +197,10 @@ def test_a_blank_text_capture_is_not_stored(tmp_path: Path) -> None:
     workspace = _click_tile(ui, "文字")
 
     field = _nodes(_main(workspace), "input")[0]
-    after = _fire(ui, field["props"]["on_submit"], {"value": "   "})
+    after = _fire(ui, field["events"]["submit"], {"value": "   "})
 
     assert _nodes(_main(after), "input")
-    assert after["pages"][0]["count"] == 0
+    assert _rail_titles(after) == []
 
 
 def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(
@@ -230,7 +216,7 @@ def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(
     saved = _fire(ui, handler, _audio_take(uploaded, 12.4))
 
     bar = _capture_region(saved)
-    assert [child["type"] for child in bar["children"]] == ["row", "waveform"]
+    assert [_kind(child) for child in bar["children"]] == ["row", "waveform"]
     assert _nodes(bar, "audio_capture") == []
     assert _texts(bar) == ["已保存 · 0:12"]
     assert _button_texts(bar) == ["再录一条", "收起"]
@@ -240,7 +226,6 @@ def test_stopping_a_recording_stores_it_and_leaves_a_saved_bar(
     assert waveform["src"] == f"{CHANNEL}/{uploaded}"
     assert _cards(saved) == ["语音 11-11 03:41"]
     assert _rail_titles(saved) == ["语音 11-11 03:41"]
-    assert saved["pages"][0]["count"] == 1
 
     tiles = _click_button(ui, "收起")
 
@@ -283,7 +268,7 @@ def test_a_saved_video_offers_no_inline_player(tmp_path: Path, monkeypatch: Any)
     saved = _fire(ui, handler, _video_take(uploaded))
 
     bar = _capture_region(saved)
-    assert [child["type"] for child in bar["children"]] == ["row"]
+    assert [_kind(child) for child in bar["children"]] == ["row"]
     assert _nodes(bar, "video") == []
     assert _nodes(bar, "audio") == []
     assert _nodes(bar, "waveform") == []
@@ -312,7 +297,7 @@ def test_the_saved_bar_is_gone_after_a_page_change(tmp_path: Path, monkeypatch: 
     home = _click_button(ui, "← 返回")
 
     assert list(_tiles(home)) == ["录音", "视频", "文字"]
-    assert _nodes(home["content"], "audio") == []
+    assert _nodes(_content(home), "audio") == []
 
 
 def test_collapsing_while_recording_stores_the_take_without_reopening_the_bar(
@@ -324,19 +309,18 @@ def test_collapsing_while_recording_stores_the_take_without_reopening_the_bar(
     ui = kernel.resolve("ui")
     uploaded = str(kernel.resolve("media").save(b"hello", "audio/webm"))
     workspace = _click_tile(ui, "录音")
-    # 两个 id 来自同一份快照，就像引擎手里那份；收起之后录制组件才卸载并提交。
-    handler = str(_nodes(_main(workspace), "audio_capture")[0]["props"]["on_submit"])
-    collapse = str(_nodes(_capture_region(workspace), "button")[0]["props"]["on_click"])
+    # 两个 id 来自同一份视图，就像引擎手里那份；收起之后录制组件才卸载并提交。
+    handler = str(_nodes(_main(workspace), "audio_capture")[0]["events"]["submit"])
+    collapse = str(_nodes(_capture_region(workspace), "button")[0]["events"]["click"])
 
     # 宽限期只容一代：中间不能再画，否则那份旧 id 就作废了。
-    _fire_raw(ui, collapse)
-    _fire_raw(ui, handler, _audio_take(uploaded, 3))
+    _fire(ui, collapse)
+    _fire(ui, handler, _audio_take(uploaded, 3))
     settled = ui.render()
 
     assert _cards(settled) == ["语音 11-11 03:41"]
-    assert settled["pages"][0]["count"] == 1
     assert list(_tiles(settled)) == ["录音", "视频", "文字"]
-    assert _nodes(settled["content"], "audio") == []
+    assert _nodes(_content(settled), "audio") == []
     assert _nodes(_main(settled), "waveform") == []
     assert _nodes(_main(settled), "input") == []
 
@@ -364,7 +348,7 @@ def test_a_capture_the_media_plugins_reject_never_reaches_the_store(tmp_path: Pa
         after = _fire(ui, handler, payload)
 
         assert _nodes(_main(after), node_type), tile
-        assert after["pages"][0]["count"] == 0, tile
+        assert _cards(after) == [], tile
         _click_button(ui, "收起")
 
 
@@ -393,7 +377,7 @@ def test_naming_a_saved_take_renames_the_record(tmp_path: Path, monkeypatch: Any
     saved = _fire(ui, handler, _audio_take(uploaded, 3))
     field = _nodes(_capture_region(saved), "input")[0]
 
-    renamed = _fire(ui, field["props"]["on_submit"], {"value": "  买牛奶  "})
+    renamed = _fire(ui, field["events"]["submit"], {"value": "  买牛奶  "})
 
     assert _cards(renamed) == ["买牛奶"]
     assert _rail_titles(renamed) == ["买牛奶"]
@@ -412,13 +396,13 @@ def test_a_blank_rename_never_clears_the_title(tmp_path: Path, monkeypatch: Any)
     saved = _fire(ui, handler, _audio_take(uploaded, 3))
     field = _nodes(_capture_region(saved), "input")[0]
 
-    blank = _fire(ui, field["props"]["on_submit"], {"value": "   "})
+    blank = _fire(ui, field["events"]["submit"], {"value": "   "})
     assert _cards(blank) == ["语音 11-11 03:41"]
 
     field = _nodes(_capture_region(blank), "input")[0]
-    renamed = _fire(ui, field["props"]["on_submit"], {"value": "买牛奶"})
+    renamed = _fire(ui, field["events"]["submit"], {"value": "买牛奶"})
     field = _nodes(_capture_region(renamed), "input")[0]
-    cleared = _fire(ui, field["props"]["on_submit"], {"value": ""})
+    cleared = _fire(ui, field["events"]["submit"], {"value": ""})
 
     assert _cards(cleared) == ["买牛奶"]
     assert _nodes(_capture_region(cleared), "input")[0]["props"]["value"] == "买牛奶"
@@ -446,7 +430,6 @@ def test_a_take_shorter_than_the_minimum_never_reaches_the_store(
         assert _nodes(_main(after), node_type), tile
         assert _nodes(_main(after), "input") == [], tile
         assert _cards(after) == [], tile
-        assert after["pages"][0]["count"] == 0, tile
         # 字节已经传进媒体通道了：丢掉这条就不能留着文件。
         with pytest.raises(LookupError):
             kernel.resolve("media").info(media_id)

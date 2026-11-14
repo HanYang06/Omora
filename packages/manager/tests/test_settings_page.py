@@ -1,13 +1,12 @@
 """设置页：清单怎么读在 test_manager.py，这里只钉页面这一层的行为。
 
-页面把开关接到 manager，改完之后视图变化走 ui.snapshot（协议 §6.1）：
-event 的 result 只剩确认，客户端要么应用补丁、要么求一次全量。
+页面把开关接到 manager；事件的结果是新 view，异步变化（设备上报）走 ui.snapshot 推整份 view。
 """
 
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from omora._metadata import Metadata, PluginRecord
 from omora.core.context import Context
@@ -15,6 +14,8 @@ from omora.core.kernel import Kernel
 from omora.manager import ManagerPlugin
 from omora.store import StorePlugin
 from omora.ui import UiPlugin
+
+PAGE_MOUNT_AT = "dendro.window.page"
 
 
 class _Net:
@@ -118,30 +119,35 @@ def _scene() -> Kernel:
     return kernel
 
 
-def _items(node: dict[str, Any]) -> list[dict[str, Any]]:
-    found = [node] if node["type"] == "item" else []
-    for child in node["children"]:
-        found.extend(_items(child))
+def _walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
+    found = [slot]
+    for child in slot["children"]:
+        found.extend(_walk(child))
     return found
 
 
-def _find_item(node: dict[str, Any], title: str) -> dict[str, Any] | None:
-    if node["type"] == "item" and node["props"].get("title") == title:
-        return node
-    for child in node["children"]:
-        found = _find_item(child, title)
-        if found is not None:
-            return found
+def _content(view: dict[str, Any]) -> dict[str, Any]:
+    for tree in cast(list[dict[str, Any]], view["localTrees"]["trees"]):
+        if tree["mountAt"] == PAGE_MOUNT_AT:
+            return cast(dict[str, Any], tree["root"]["children"][0])
+    raise AssertionError("view 里没有页面局部树")
+
+
+def _items(view: dict[str, Any]) -> list[dict[str, Any]]:
+    return [slot for slot in _walk(_content(view)) if slot["kind"] == "dendro:item"]
+
+
+def _find_item(view: dict[str, Any], title: str) -> dict[str, Any] | None:
+    for item in _items(view):
+        if item["props"].get("title") == title:
+            return item
     return None
 
 
-def _find_action(node: dict[str, Any], label: str) -> str | None:
-    if node["type"] == "button" and node["props"].get("text") == label:
-        return str(node["props"]["on_click"])
-    for child in node["children"]:
-        handler = _find_action(child, label)
-        if handler is not None:
-            return handler
+def _find_action(view: dict[str, Any], node: dict[str, Any], label: str) -> str | None:
+    for slot in _walk(node):
+        if slot["kind"] == "dendro:button" and slot["props"].get("text") == label:
+            return str(slot["events"]["click"])
     return None
 
 
@@ -154,42 +160,41 @@ def _all_text(node: dict[str, Any]) -> str:
 def test_the_settings_page_lists_plugins_and_its_toggle_changes_one() -> None:
     kernel = _scene()
     ui = kernel.resolve("ui")
+    net: _Net = kernel.resolve("net")
 
-    snapshot = ui.render("plugins")
-    titles = [row["props"]["title"] for row in _items(snapshot["content"])]
-    assert titles == ["store", "manager", "ui", "audio", "notes"]
-    assert snapshot["meta"] == "5/5 运行中"
-    audio = _find_item(snapshot["content"], "audio")
+    view = ui.render("plugins")
+    assert [row["props"]["title"] for row in _items(view)] == [
+        "store",
+        "manager",
+        "ui",
+        "audio",
+        "notes",
+    ]
+    audio = _find_item(view, "audio")
     assert audio is not None
-    text = _all_text(audio)
-    assert "需要: microphone" in text
-    assert _find_action(audio, "禁用") is not None
+    assert "需要: microphone" in _all_text(audio)
+    assert _find_action(view, audio, "禁用") is not None
 
-    notes = _find_item(snapshot["content"], "notes")
+    notes = _find_item(view, "notes")
     assert notes is not None
-    disable = _find_action(notes, "禁用")
+    disable = _find_action(view, notes, "禁用")
     assert disable is not None
 
-    assert ui.event(disable, {}) == {}
+    after = ui.event(disable, {})
 
-    net: _Net = kernel.resolve("net")
-    topic, pushed = net.sent[-1]
-    assert topic == "ui.snapshot"
-    assert pushed["page"] == "plugins"
-    assert pushed["version"] > pushed["base"], "补丁的版本必须往上走"
-    assert pushed["ops"], "设置页的开关变化至少要有一个补丁 op"
-
-    after = ui.render("plugins")
-    notes_after = _find_item(after["content"], "notes")
+    assert net.sent == []
+    assert after["kind"] == "view"
+    assert after["version"] == view["version"] + 1
+    notes_after = _find_item(after, "notes")
     assert notes_after is not None
-    assert _find_action(notes_after, "启用") is not None
+    assert _find_action(after, notes_after, "启用") is not None
     assert kernel.running("notes") is False
 
 
 def test_a_device_report_pushes_the_settings_page_when_it_is_open() -> None:
     kernel = _scene()
     ui = kernel.resolve("ui")
-    net = kernel.resolve("net")
+    net: _Net = kernel.resolve("net")
 
     ui.render("plugins")
     before = len(net.sent)
@@ -197,4 +202,7 @@ def test_a_device_report_pushes_the_settings_page_when_it_is_open() -> None:
     kernel.resolve("manager").report_devices(["audioinput"])
 
     assert len(net.sent) == before + 1
-    assert "audioinput" in json.dumps(net.sent[-1], ensure_ascii=False)
+    topic, pushed = net.sent[-1]
+    assert topic == "ui.snapshot"
+    assert pushed["kind"] == "view"
+    assert "audioinput" in json.dumps(pushed, ensure_ascii=False)
