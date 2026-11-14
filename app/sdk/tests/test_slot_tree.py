@@ -182,7 +182,7 @@ def test_nav_tree_carries_page_links_and_click_handlers() -> None:
 
     tree = serialize_nav_slot(
         [
-            NavLink("ideas", "灵感", "ideas", pick),
+            NavLink("ideas", "灵感", "ideas", pick, active=True),
             NavLink("projects", "项目", None, _noop),
         ],
         _sequential(),
@@ -196,7 +196,7 @@ def test_nav_tree_carries_page_links_and_click_handlers() -> None:
     assert [link.id for link in root.children] == ["ui.nav.ideas", "ui.nav.projects"]
     first, second = root.children
     assert first.kind == "dendro:page-link"
-    assert first.props == {"label": "灵感", "icon": "ideas"}
+    assert first.props == {"label": "灵感", "icon": "ideas", "active": True}
     assert first.events == {"click": pick}
     assert second.props == {"label": "项目"}
 

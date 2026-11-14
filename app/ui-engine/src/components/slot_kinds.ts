@@ -204,6 +204,12 @@ function syncPageLink(el: HTMLElement, node: Node): void {
     button.removeAttribute("aria-disabled");
   }
 
+  if (node.props.active === true) {
+    button.setAttribute("aria-current", "page");
+  } else {
+    button.removeAttribute("aria-current");
+  }
+
   const label = stringProp(node, "label");
   if (label === undefined) {
     button.removeAttribute("aria-label");
@@ -223,6 +229,7 @@ function syncPageLink(el: HTMLElement, node: Node): void {
  * page-link：导航里的一个页面入口。按钮形状复用壳层 `.omora-shell-item` 样式，
  * 另带 `.omora-page-link` 作为语义钩子；label / icon 落到可访问性属性与图标，
  * click 一律经 handlerOf + ctx.event 回传 handler id——不做导航，那是运行时的事。
+ * props.active=true 时标 `aria-current="page"`（当前页高亮和旧壳同一套 CSS）。
  * 没有 handler 时按钮禁用（和 legacy 的「无 handler = 禁用态」一致）。
  */
 const pageLink: Kind = {

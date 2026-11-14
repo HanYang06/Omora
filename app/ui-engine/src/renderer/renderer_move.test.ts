@@ -8,7 +8,7 @@ import { registry } from "../components/registry";
 import { DomRenderer } from "./renderer";
 import type { Kind, KindRegistry, RenderContext } from "./types";
 import { slotToNode } from "./slot_bridge";
-import { createSlotRenderer } from "../app/slot_registry";
+import { createSlotRenderer } from "../components/slot_registry";
 import { findById, readDocumentFixture } from "../app/test_fixtures";
 
 /**

@@ -12,7 +12,7 @@ import type { Node } from "../renderer/types";
 import { instantiateCollection } from "../engine/collections/collection";
 import { DomRenderer } from "../renderer/renderer";
 import type { RenderContext } from "../renderer/types";
-import { slotRegistry } from "./slot_registry";
+import { slotRegistry } from "../components/slot_registry";
 
 /**
  * 共享 fixture 的绝对路径。用 node:path 而不是 `new URL(..., import.meta.url)`：

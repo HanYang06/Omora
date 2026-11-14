@@ -21,7 +21,7 @@ import type { Diagnostic } from "../contract/diagnostics";
 import type { RenderStats } from "../contract/render";
 import type { SessionState } from "../engine/document/session";
 import { slotToNode } from "../renderer/slot_bridge";
-import { createSlotRenderer } from "./slot_registry";
+import { createSlotRenderer } from "../components/slot_registry";
 import type { RenderContext } from "../renderer/types";
 
 /**

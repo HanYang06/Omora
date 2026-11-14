@@ -325,6 +325,17 @@ describe("dendro:page-link", () => {
     mounted.destroy();
   });
 
+  it("props.active 标 aria-current，update 时跟着改", () => {
+    const mounted = mountNode(link({ props: { label: "灵感", icon: "ideas", active: true } }));
+
+    const button = mounted.container.querySelector<HTMLButtonElement>(".omora-page-link");
+    expect(button?.getAttribute("aria-current")).toBe("page");
+
+    mounted.render(link({ props: { label: "项目", icon: "projects" } }));
+    expect(button?.hasAttribute("aria-current")).toBe(false);
+    mounted.destroy();
+  });
+
   it("update 换 label / icon / handler 并切换禁用态，元素复用", () => {
     const mounted = mountNode(link());
     const before = mounted.container.querySelector(".omora-page-link");

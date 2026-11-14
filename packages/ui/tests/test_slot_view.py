@@ -143,6 +143,8 @@ def test_render_slot_produces_two_local_trees_and_the_page_table() -> None:
         ("灵感", "ideas"),
         ("项目", "projects"),
     ]
+    assert links[0]["props"]["active"] is True
+    assert "active" not in links[1]["props"]
     assert all(link["events"]["click"] for link in links)
 
     page = _tree(view, "dendro.window.page")
@@ -191,6 +193,9 @@ def test_nav_click_switches_the_page_and_returns_the_new_view() -> None:
     assert after["active"] == "page.projects"
     assert _tree(after, "dendro.window.page")["root"]["id"] == "page.projects"
     assert [page["id"] for page in after["pages"]] == ["page.ideas", "page.projects"]
+    after_links = _tree(after, "dendro.window.nav")["root"]["children"]
+    assert "active" not in after_links[0]["props"]
+    assert after_links[1]["props"]["active"] is True
 
 
 def test_page_handler_dispatches_then_returns_a_fresh_view() -> None:

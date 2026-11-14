@@ -44,12 +44,21 @@ EVENT_PREFIX = "on_"
 
 @dataclass(frozen=True)
 class NavLink:
-    """导航里的一条页面入口：去哪个页、显示什么、点了干什么。"""
+    """导航里的一条页面入口：去哪个页、显示什么、点了干什么、是不是当前页。"""
 
     page: str
     label: str
     icon: str | None
     on_click: Handler
+    active: bool = False
+
+    def __post_init__(self) -> None:
+        _non_empty(self.page, "nav.page")
+        _non_empty(self.label, "nav.label")
+        if self.icon is not None:
+            _non_empty(self.icon, "nav.icon")
+        _require(callable(self.on_click), "nav.on_click 必须是可调用对象")
+        _require(isinstance(self.active, bool), "nav.active 必须是 bool")
 
 
 def page_id(page_name: str) -> str:
@@ -177,6 +186,8 @@ def serialize_nav_slot(
         props: JsonObject = {"label": _non_empty(link.label, f"nav.{page_name}.label")}
         if link.icon is not None:
             props["icon"] = _non_empty(link.icon, f"nav.{page_name}.icon")
+        if link.active:
+            props["active"] = True
         handler = link.on_click
         # 先在当前代次里登记；serialize_view 序列化时按同一对象取回同一个 id。
         register(handler)
