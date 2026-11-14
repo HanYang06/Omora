@@ -55,14 +55,14 @@
 
 ### 4.2 贡献界面
 
-插件产出一页的树（内容 + 标题旁那句话），用**页面对象**自己交上去；不产出界面的插件只登记服务。
+插件产出一页的 Node 树，用**页面对象**自己交上去；不产出界面的插件只登记服务。
 
 - **推送式**：`ui.page(...)` 返回页面对象；`handle.set(tree)` 交树，状态变了再交一次。
 - **重建钩子**：`handle.rebuild(build)` 登记重建回调——客户端明确要一页（导航 / 首次 render）时由 ui 调一次，
   用来吸收"插件后来才装上"这类外部变化。
-- **只填自己的**：不改别人的树；想让别人挂东西，就在自己树里放一个有键的节点（`Slot(key=...)`）。
-- **可介入**：别人按全限定键往那个位置挂（替换 / 前 / 后 / 进子节点），顺序是 `(order, owner, 声明序号)`。
-- legacy 的键/贡献模型以本节为准；目标契约见 [寻址](engine/addressing.md) 与 [组合](engine/composition.md)。
+- **只填自己的**：一页的树归登记它的插件；当前没有跨插件的键 / 贡献机制。多来源组合的目标模型是
+  链接期局部树（[composition](engine/composition.md)），随运行后来源一起做。
+- UI 出口是 Slot 视图：Python 把 Node 树升成 Slot 局部树，TS 链接成权威根树再渲染（S6）。
 
 写法（界面库是 Python 包，内核不 import 它）：
 
@@ -152,33 +152,23 @@ class Ideas:
 DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engine/README.md)，
 目录与依赖方向见 [layering.md](engine/layering.md)，实现状态与缺口见 README §6。
 
-**默认入口已走 Slot 主会话**（Python 产局部树 → TS 链接 → EngineRuntime/DocumentView）；
-`?engine=legacy` 是删 legacy 之前的回退开关，`?engine=slot` 是内置 fixture 预览；构建期
-首帧也已改成 Slot 链接编译。规则执行（`reactions`）与 schema 单一来源还没落；剩余收尾：
-删 legacy 回退路径与构建期 legacy adapter（见 [migration.md](engine/migration.md) §6）。
+**默认入口已走 Slot 主会话**（Python 产局部树 → TS 链接 → EngineRuntime/DocumentView），
+启动首帧也由 Slot 链接编译；`?engine=slot` 只是内置 fixture 预览。legacy 快照路径（旧壳、
+补丁、贡献组合、`_diff.py`）已在 S6.5 删除。规则执行（`reactions`）与 schema 单一来源还没落。
 
 - 唯一原语 Slot：窗口 / 页面 / 层 / 布局 / 组件都是 kind 不同的 Slot。
 - 局部树在链接期组合成权威根树，冲突是编译错误。
 - 支持全量 / 纯数据 / 局部树三种更新；稳定 id 寻址。
 - 结构与规则两张平级：事件/数据 → 反应；集合绑定用模板实例化。
 
-迁移期下面这些仍是当前 legacy 的事实：
+### 窗口、页面与 Slot（现状）
 
-- 组件注册表：节点类型 ↔ 组件。
-- **组合器**：把若干份贡献挂在若干把键上，合成一棵 root tree（纯函数；legacy 规则见本节，目标契约见 [组合](engine/composition.md)）。
-- 事件带 handler id 回传；id 里带归属，一页因此可以有多个 owner。
-- 自带一个 TS 插件宿主（未做）：管 TS 插件，也管母页面。
-
-### 窗口、页面与键（legacy）
-
-- **窗口**是引擎默认那层壳：它声明有哪些区域（现在两个：`om.window.nav` 图标栏、`om.window.page` 主区）。
-- **页面**是一个可导航的根，挂在窗口的某个区域上；页面自己决定哪些节点有键。
-- **贡献**是任意插件交来的一份树 + 落点键 + 顺序；一个键可以被多份贡献挂。
-- **有键 = 可介入，没键 = 私有。** 这就是"固定组件 / 可替换组件"的唯一判据。
-- 键全限定、全局唯一，第一段是声明者；构建期生成，作者不手写字符串。
-- 顺序是全序 `(order, owner, 声明序号)`；同一个键上的 `replace` 走"后来者优先"。
-
-目标模型见 [寻址](engine/addressing.md) 与 [结构](engine/structure.md)；迁移完成后本节改写。
+- **窗口骨架**是链接基准：`dendro.window` 下两个区域——`dendro.window.nav`（56px 图标栏）与
+  `dendro.window.page`（主区）。
+- **页面**是一个可导航的 Slot 根（`page.<name>`），页面来源把局部树按 `mountAt` 挂到窗口区域；
+  页面侧表、当前页与数据文档随主会话 view 一起给。
+- **事件**带 handler id 回传；handler 由 Python ui 插件登记，事件处理完返回新 view。
+- 自带一个 TS 插件宿主（未做）：管运行后来源，也管母页面；见 [组合](engine/composition.md)。
 
 默认母页面是**三栏**：56px 图标栏（页面导航，每页一个图标）+ 主区。索引栏与主区由页面
 自己用 `Split` 排，页面内容铺满主区，不再走 720px 居中的一页纸。区域、模式与词表见

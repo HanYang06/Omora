@@ -56,31 +56,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 壳：左边图标栏，右边主区 */
-
-.omora-app {
-  display: grid;
-  grid-template-columns: 56px minmax(0, 1fr);
-  height: 100%;
-}
-
-.omora-shell-rail {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 0;
-  padding: var(--s3) 0;
-  border-right: 1px solid var(--line);
-  background: var(--desk);
-}
-
-.omora-shell-nav {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--s1);
-  width: 100%;
-}
+/* 导航按钮：Slot page-link 复用；壳布局（rail / page 两栏）由 Slot scaffold + 样式段负责 */
 
 .omora-shell-item {
   display: grid;
@@ -104,14 +80,6 @@ body {
   background: var(--paper);
   color: var(--accent);
   box-shadow: 0 1px 2px rgba(26, 29, 25, 0.08);
-}
-
-.omora-shell-foot {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  margin-top: auto;
-  padding-top: var(--s2);
 }
 
 .omora-conn {
@@ -165,20 +133,6 @@ body {
 
 .dendro-live-host {
   height: 100%;
-}
-
-/* 主区：铺满，不再 720px 居中 */
-
-.omora-page {
-  min-width: 0;
-  overflow: hidden;
-  background: var(--paper);
-}
-
-.omora-page-inner {
-  height: 100%;
-  padding: var(--s6);
-  overflow-y: auto;
 }
 
 /* split：索引栏 + 主区，撑满高度，各自滚动 */
@@ -1258,8 +1212,7 @@ mark {
   height: var(--dendro-height, auto);
 }
 
-/* Slot 主会话壳（S6.5）：window 根铺满；rail / page 两栏沿用 scaffold 的 size + layout。
-   旧壳（.omora-app / .omora-shell-*）只服务 ?engine=legacy 回退，删 legacy 时一起删。 */
+/* Slot 主会话壳（S6.5）：window 根铺满；rail / page 两栏沿用 scaffold 的 size + layout。 */
 
 #root > [data-type="dendro:window"],
 .dendro-live-host > [data-type="dendro:window"] {

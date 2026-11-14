@@ -1,6 +1,6 @@
 # 集合绑定：用数据实例化已声明的结构
 
-> 状态：**建议**（作者已认同方向，细节未定稿）；S3-a 已落实例化与 keyed reconcile 原语（`src/engine/collections/collection.ts`），数据路由与渲染接入未做。
+> 状态：**建议**（作者已认同方向，细节未定稿）；S3-a 已落实例化与 keyed reconcile 原语（`src/engine/collections/collection.ts`），数据路由与主会话渲染已接（S6）；嵌套集合 / 窗口化仍未做。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [rules.md](rules.md)
 > 相关：[updates.md](updates.md) · [composition.md](composition.md)
 

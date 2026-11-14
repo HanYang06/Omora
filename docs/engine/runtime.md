@@ -73,22 +73,22 @@
 
 S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fullUpdates / rejections / diagnostics / lastDiagnostics / notifications / renders / lastApplyMs / totalApplyMs / maxApplyMs + version）挂在 `EngineRuntime` 上，成功/失败都记账、每次 apply 计时；`AuditLog` 结构化记录 apply/reject/deny/diagnostic；`DocumentView` 每次渲染调 `noteRender()` 并上报 `RenderStats`（created/updated/reused/removed）到指标；`?engine=slot` 预览已改用 EngineRuntime + DocumentView（dogfood）。
 
-## 7. legacy 映射
+## 7. 分层映射（已落）
 
-| 现在的位置                                        | 目标层                                    |
-| ------------------------------------------------- | ----------------------------------------- |
-| `app/ui-engine/src/app.tsx`                       | Session + 容器                            |
-| `legacy/render/compose.ts`                        | Compiler/Linker（legacy 贡献模型）        |
-| `legacy/render/patch.ts` + `packages/ui/_diff.py` | Document + 更新管线（legacy，待替换）     |
-| `app/ui-engine/src/engine/`                       | Document / 索引 / ops / 集合 / session    |
-| `app/ui-engine/src/host/`                         | EngineRuntime / 权限 / 账本 / 审计 / 指标 |
-| `host/engine.ts` + `metrics.ts`                   | EngineRuntime（会话 + 账本 + 指标）       |
-| `app/view.ts`                                     | DocumentView（引擎 ↔ DOM）                |
-| `host/sources.ts`                                 | Producer Host（来源注册/级联）            |
-| `host/audit.ts`                                   | 审计日志                                  |
-| `renderer/` + `components/`                       | Renderer + 组件注册表（已落）             |
-| `packages/ui/ui.py`                               | 页面/文档注册（legacy）                   |
-| —                                                 | `contract/diagnostics`（已落）            |
+| 位置                  | 作用                                                          |
+| --------------------- | ------------------------------------------------------------- |
+| `contract/`           | Slot / Document 契约、诊断、权限策略、协议帧、渲染统计        |
+| `link/`               | 局部树 → 权威根树 + 诊断                                      |
+| `engine/document/`    | 文档状态、三张索引、ops、route / session                      |
+| `engine/collections/` | 模板实例化、keyed reconcile                                   |
+| `engine/updates/`     | data router、标量绑定、水合                                   |
+| `host/`               | EngineRuntime、SourceEngine、权限、账本、审计、指标、来源宿主 |
+| `renderer/`           | DOM 协调、Kind 契约、Slot 桥                                  |
+| `components/`         | 38 个 kind、Slot 原生 kind、Slot 注册表                       |
+| `app/`                | 入口、连接、live / preview、DocumentView                      |
+| `build/`              | Vite 插件、启动骨架编译、链接期门禁                           |
+| `platform/`           | media / capture / search                                      |
+| `generated/`          | 静态骨架视图、键索引                                          |
 
 ## 8. S4 实现（已落）
 

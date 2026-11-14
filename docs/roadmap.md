@@ -8,7 +8,7 @@
 - 仓库是 uv workspace：`omora-core` / `omora-sdk` / 每个 `omora-plugin-*` 都是 member；import 命名空间 `omora.*`。
 - 存储：SQLite（`.omora/omora.db`）；媒体文件（`.omora/media`）。
 - 测试：Python 490 条、TS 851 条，全绿。
-- 引擎文档与实现已落：Dendrolink（树链引擎）契约见 [docs/engine/README.md](engine/README.md)；S1–S6.5（视图契约 / Python 产出 / 主入口切换 / Slot 静态骨架）已落，**默认入口已走 Slot 主会话**，`?engine=legacy` 是回退开关；下一步删 legacy 回退路径与 `_diff.py`。
+- 引擎文档与实现已落：Dendrolink（树链引擎）契约见 [docs/engine/README.md](engine/README.md)；S0–S6 全部落（Slot 契约 / 链接 / 三级更新 / 运行时 / 主入口 / Slot 静态骨架 / legacy 删除），默认入口与全部系统插件页面都走 Slot；下一步运行后来源 / Host 网络接线（S7）。
 - 门禁：`.github/workflows/ci.yml` 全绿（ruff / mypy / pytest + 覆盖率 / eslint / prettier / tsc / vitest + 覆盖率 / 安全扫描 / 构建 / Windows）。
 - 灵感页有传统（非 AI）搜索：建议下拉、结果视图、详情与返回。
 - 插件管理器已落：清单、`[tool.omora]` 条件（平台 / 能力 / 依赖服务）、开关与设置页；
@@ -141,7 +141,7 @@ WebSocket 端到端都有行为测试。
 
 ## 接下来（顺序待定）
 
-- **Dendrolink 主会话接入（S6）**：Python 产出 Slot 文档 → TS 主入口切 EngineRuntime → 事件 / 更新回程 → 全页面迁移后删 legacy；详见 [引擎迁移](engine/migration.md) §6。
+- **Dendrolink 运行后来源（S7）**：SourceHost 接网络帧 / 热更新，做一个不改引擎源码就能加界面的示例来源；随后补规则执行与 schema 单一来源；详见 [引擎迁移](engine/migration.md) §6。
 - **手机当摄像头（Android 客户端）**：桌面自带的摄像头往往很差，手机的好得多。
   走网页这条路有硬限制——浏览器只给"安全上下文"开摄像头，实测同一个页面从
   `http://127.0.0.1` 打开 `navigator.mediaDevices` 正常，从 `http://192.168.x.x` 打开

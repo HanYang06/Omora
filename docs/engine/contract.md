@@ -1,6 +1,6 @@
 # 契约：Slot
 
-> 状态：**已定，S1–S3 已落**。本文定义 Dendrolink 唯一的节点原语；代码已有 Slot 信封与文档 / ops 运行时，默认主会话仍走 legacy 节点渲染。
+> 状态：**已定，已落**。本文定义 Dendrolink 唯一的节点原语；Slot 信封、文档 / ops 运行时与主会话都已接上（S6），legacy 快照路径已删。
 > 依赖：[README](README.md) · [ADR-0001](decisions/0001-name.md)
 > 相关：[addressing.md](addressing.md) · [structure.md](structure.md) · [rules.md](rules.md) · [composition.md](composition.md)
 

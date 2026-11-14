@@ -13,16 +13,16 @@
 app/main             挂载 + 连接 + 快照
 app/app              会话/快照 → renderer
 renderer/renderer    node ↔ element 协调、挂载/更新/卸载
-renderer/slot_bridge SlotNode → legacy Node 薄桥
+renderer/slot_bridge SlotNode → 渲染节点（Node）薄桥
 components/*         kind → DOM（38 个）
 components/registry  type → Kind 注册表
 components/icons     内联图标
 renderer/types       Kind / RenderContext
-renderer/events      事件名 → handler id 解析（legacy 事件入口）
+renderer/events      事件名 → handler id 解析（统一事件入口）
 components/testing   测试用的 mount helper
 ```
 
-`renderer/`、`components/` 与 `app/` 不依赖 React；`contract/`（协议）与 `legacy/render/`（patch / compose）保持框架无关。
+`renderer/`、`components/` 与 `app/` 不依赖 React；`contract/`（协议）保持框架无关。
 
 ## 2. Kind 接口
 
@@ -62,13 +62,13 @@ export interface Kind {
 
 ### 身份
 
-- 有 `node.id` 用 id；没有时用 **父路径 + 位置** 作为临时键（legacy 兼容）。
+- 有 `node.id` 用 id；没有时用 **父路径 + 位置** 作为临时键。
 - 同一个键、同一个 type：复用元素，调 `update`；
 - 同一个键、type 变了：`destroy` 旧元素，`create` 新元素；
 - 旧键消失：`destroy` + 移除；
 - 新键出现：`create` + 插入到正确位置。
 
-更新按 **引用** 短路：`node` 引用没变就整棵跳过（legacy patch 保留了未变子树的引用）。
+更新按 **引用** 短路：`node` 引用没变就整棵跳过。
 
 ### 跨父移动（S3-e）
 
@@ -108,7 +108,7 @@ renderer 递归协调 children，按子节点下标挂到 `childrenHosts(el, nod
 
 - 局部状态归渲染端：kind 可以在元素上存状态，或闭包持有；不要上升成全局。
 - 媒体、监听、定时器统一走 `ctx.cleanup`；节点卸载/换页/连接关闭时逆序执行。
-- 正在进行中的录制/上传：卸载时按现有 legacy 行为“停止并提交”，由 capture kind 自己实现。
+- 正在进行中的录制/上传：卸载时“停止并提交”，由 capture kind 自己实现。
 
 ### 隐藏 vs 卸载（v0 限制）
 
@@ -163,16 +163,16 @@ src/build/vite-plugin.ts     Vite adapter：只决定何时编译、注进哪里
 
 ## 10. Slot → DOM（S3-d spike，已落）
 
-Slot 文档/运行时产出的是 `SlotNode`，现有 DOM renderer 只认 legacy `Node` 词表。S3-d 先用**薄桥 + 命名空间别名**把 Slot 接上，不迁移 38 个 kind 的实现：
+Slot 文档/运行时产出的是 `SlotNode`，DOM renderer 只认渲染节点 `Node`。S3-d 用**薄桥 + 命名空间别名**把 Slot 接上，不复制 38 个 kind 的实现：
 
 - `src/renderer/slot_bridge.ts`：`slotToNode` 只做形状搬运——`type = slot.kind`（保留命名空间），复制 id/props/children/events/layout；不展开 `collection.templates`（模板不是挂载节点，实例化归运行时）。
-- `src/components/slot_registry.ts`：`slotRegistry` = 所有 legacy type 的 `dendro:<type>` 别名 + 宿主别名（`ideas:card` → legacy `card`）+ Slot 原生 kind；Slot 原生 kind 后合并，同名时 Slot 语义优先。放组件层是因为主入口与构建期骨架编译（build）都要用同一张表。
+- `src/components/slot_registry.ts`：`slotRegistry` = 组件词表 type 的 `dendro:<type>` 别名 + 宿主别名（`ideas:card` → `card`）+ Slot 原生 kind；Slot 原生 kind 后合并，同名时 Slot 语义优先。放组件层是因为主入口与构建期骨架编译（build）都要用同一张表。
 - `src/components/slot_kinds.ts`：Slot 原生结构 kind（`dendro:window/page/slot/layer` 按 `layout.flow` 映射到现有 `.omora-row`/`.omora-column` class；S4 起 size/gap/align/scroll 也映射到 `--dendro-*` CSS 变量与 `data-*` 属性，`[data-dendro-layout]` 样式段消费）与 `dendro:page-link`（复用壳层导航按钮样式，事件走 `handlerOf` + `ctx.event`）。
 - `Node` 增加可选 `layout` 字段；`kind` 语义由注册表决定，renderer 协调逻辑不变。
 
 **已证明**（`src/app/spike.test.ts`，共享 `document.json`）：session → 水合 → 桥 → DOM 渲染出母页面/导航/卡片；纯数据更新后同 id 卡片复用同一 DOM 元素、只改标题并新增一条；全量替换同 id 文档不重挂。换页用 `engine/document/page_switch.ts` 的 `diffPageTrees` 分类出 keep/move/replace/cancel/add。
 
-**已接主会话**（S6.4）：live 入口用链接后的 Slot 树渲染，`?engine=legacy` 只剩旧快照回退。**未接**：Slot 节点局部状态（`state`）与 reactions 执行；legacy 回退路径与 `_diff.py` 待删（S6.5）。
+**已接主会话**（S6.4）：默认入口用链接后的 Slot 树渲染，`?engine=slot` 是内置 fixture 预览；legacy 快照路径已在 S6.5 删除。**未接**：Slot 节点局部状态（`state`）与 reactions 执行。
 
 ## 11. 验收
 
@@ -182,5 +182,5 @@ Slot 文档/运行时产出的是 `SlotNode`，现有 DOM renderer 只认 legacy
 - [x] `tsc` / eslint / prettier / vitest / vite build 全绿；
 - [ ] 首帧 hydration（复用预渲染 DOM，不重建）；
 - [x] SlotNode 经薄桥 + 命名空间别名直接渲染；跨父 move 复用元素已接（`renderer_move.test.ts`）；
-- [x] `?engine=slot` 预览入口（独立 chunk，legacy 默认路径不变）；
+- [x] `?engine=slot` 预览入口（独立 chunk，不连 Python）；
 - [ ] 灵感页三栏、搜索、捕捉、设置页的人工/端到端走查（下一阶段随 e2e 一起补）。

@@ -3,7 +3,7 @@ import base64
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from websockets.asyncio.client import ClientConnection, connect
 
@@ -12,57 +12,47 @@ from boot import Config, build
 
 MANIFEST = ("store", "manager", "media", "ui", "audio", "video", "ideas", "net")
 SAVED_AT = datetime(2026, 11, 11, 3, 41)
+PAGE_MOUNT_AT = "dendro.window.page"
+NAV_MOUNT_AT = "dendro.window.nav"
 
 
-def _nodes(node: dict[str, Any], node_type: str) -> list[dict[str, Any]]:
-    found = [node] if node["type"] == node_type else []
-    for child in node["children"]:
-        found.extend(_nodes(child, node_type))
+def _walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
+    found = [slot]
+    for child in slot["children"]:
+        found.extend(_walk(child))
     return found
 
 
-def _titles(snapshot: dict[str, Any]) -> list[str]:
-    return [str(item["props"]["title"]) for item in _nodes(snapshot["content"], "item")]
+def _page_root(view: dict[str, Any]) -> dict[str, Any]:
+    for tree in cast(list[dict[str, Any]], view["localTrees"]["trees"]):
+        if tree["mountAt"] == PAGE_MOUNT_AT:
+            return cast(dict[str, Any], tree["root"])
+    raise AssertionError(f"view 里没有页面局部树: {view!r}")
 
 
-def _find_capture(node: dict[str, Any], node_type: str) -> str | None:
-    if node["type"] == node_type:
-        return str(node["props"]["on_submit"])
-    for child in node["children"]:
-        nested = _find_capture(child, node_type)
-        if nested is not None:
-            return nested
+def _slots(view: dict[str, Any], kind: str) -> list[dict[str, Any]]:
+    return [slot for slot in _walk(_page_root(view)) if slot["kind"] == f"dendro:{kind}"]
+
+
+def _find(view: dict[str, Any], kind: str, event: str, **props: Any) -> str | None:
+    for slot in _slots(view, kind):
+        if all(slot["props"].get(key) == value for key, value in props.items()):
+            return str(slot["events"][event])
     return None
 
 
-def _find_tile(node: dict[str, Any], title: str) -> str | None:
-    if node["type"] == "tile" and node["props"].get("title") == title:
-        return str(node["props"]["on_click"])
-    for child in node["children"]:
-        nested = _find_tile(child, title)
-        if nested is not None:
-            return nested
-    return None
+def _titles(view: dict[str, Any]) -> list[str]:
+    return [str(slot["props"]["title"]) for slot in _slots(view, "item")]
 
 
-def _find_item(node: dict[str, Any], title: str) -> str | None:
-    if node["type"] == "item" and node["props"].get("title") == title:
-        return str(node["props"]["on_click"])
-    for child in node["children"]:
-        nested = _find_item(child, title)
-        if nested is not None:
-            return nested
-    return None
-
-
-def _find_button(node: dict[str, Any], label: str) -> str | None:
-    if node["type"] == "button" and node["props"].get("text") == label:
-        return str(node["props"]["on_click"])
-    for child in node["children"]:
-        nested = _find_button(child, label)
-        if nested is not None:
-            return nested
-    return None
+def _nav_handler(view: dict[str, Any], label: str) -> str:
+    for tree in cast(list[dict[str, Any]], view["localTrees"]["trees"]):
+        if tree["mountAt"] != NAV_MOUNT_AT:
+            continue
+        for link in _walk(tree["root"]):
+            if link["kind"] == "dendro:page-link" and link["props"].get("label") == label:
+                return str(link["events"]["click"])
+    raise AssertionError(f"导航里没有 {label!r}")
 
 
 async def _request(
@@ -78,54 +68,19 @@ async def _request(
     return reply["value"]
 
 
-async def _subscribe(ws: ClientConnection, frame_id: str) -> None:
-    """连接后先订阅：没订阅的连接收不到 event（net 侧过滤，不靠客户端忽略）。"""
-
-    result = await _request(ws, frame_id, "net", "subscribe", {"topics": ["ui.snapshot"]})
-    assert result == {"topics": ["ui.snapshot"]}, result
-
-
 async def _event(
     ws: ClientConnection,
     frame_id: str,
     handler: str,
     payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """发一次 ui.event：先收到 result（确认，值为 {}），再收到它触发的 ui.snapshot。
-
-    顺序是协议 §4 的保证：一次 call 处理期间 emit 的 event 排在 result 之后，
-    客户端不会先拿到一份自己还没有版本的视图。
-    """
+    """发一次 ui.event：result 直接就是派发之后的新 view（不再有 patch 帧）。"""
 
     value = await _request(
         ws, frame_id, "ui", "event", {"handler": handler, "payload": payload or {}}
     )
-    assert value == {}, f"ui.event 的 result 只剩确认，实际 {value!r}"
-    frame: dict[str, Any] = json.loads(await ws.recv())
-    assert frame["type"] == "event", f"result 之后应该先到 ui.snapshot，实际是 {frame!r}"
-    assert frame["topic"] == "ui.snapshot", frame
-    pushed = frame["payload"]
-    assert isinstance(pushed, dict), pushed
-    return pushed
-
-
-def _assert_patch(payload: dict[str, Any], *, base: int) -> None:
-    """同一页的变化是一条补丁：page / version / base / ops 都要对得上上一份快照。"""
-
-    assert "content" not in payload, f"这一条应该是补丁，不是全量: {payload!r}"
-    assert payload["page"], payload
-    assert payload["base"] == base, payload
-    assert payload["version"] == base + 1, payload
-    assert payload["ops"], "补丁不许是空的"
-
-
-def _assert_full(payload: dict[str, Any], *, page: str) -> None:
-    """补不了就推全量：带整棵 content 与版本，没有 ops / base。"""
-
-    assert "ops" not in payload, f"全量不该带 ops: {payload!r}"
-    assert payload["page"] == page, payload
-    assert payload["content"]["type"], payload
-    assert isinstance(payload["version"], int), payload
+    assert value["kind"] == "view", value
+    return cast(dict[str, Any], value)
 
 
 def _media_port(net: Any) -> int:
@@ -182,102 +137,86 @@ async def _get(url: str) -> bytes:
     return body
 
 
+def _config(tmp_path: Path) -> Config:
+    return Config(
+        {
+            "net": {"port": 0},
+            "store": {"path": str(tmp_path / "omora.db")},
+            "media": {"root": str(tmp_path / "media")},
+        }
+    )
+
+
 def test_clicking_archive_over_the_socket_updates_the_page(tmp_path: Path) -> None:
     async def scenario() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-        config = Config(
-            {
-                "net": {"port": 0},
-                "store": {"path": str(tmp_path / "omora.db")},
-                "media": {"root": str(tmp_path / "media")},
-            }
-        )
-        kernel = build(config, MANIFEST)
+        kernel = build(_config(tmp_path), MANIFEST)
         net = kernel.resolve("net")
         port = await net.serve()
         try:
             async with connect(f"ws://127.0.0.1:{port}") as ws:
-                await _subscribe(ws, "1")
-                empty = await _request(ws, "2", "ui", "render", {})
-                tile = _find_tile(empty["content"], "文字")
+                empty = await _request(ws, "1", "ui", "render", {})
+                tile = _find(empty, "tile", "click", title="文字")
                 assert tile is not None
 
-                pushed = await _event(ws, "3", tile)
-                _assert_patch(pushed, base=empty["version"])
+                pushed = await _event(ws, "2", tile)
+                assert pushed["version"] == empty["version"] + 1
 
-                capture_page = await _request(ws, "4", "ui", "render", {})
-                capture = _find_capture(capture_page["content"], "input")
+                capture_page = await _request(ws, "3", "ui", "render", {})
+                capture = _find(capture_page, "input", "submit")
                 assert capture is not None
 
-                pushed = await _event(ws, "5", capture, {"value": "买牛奶"})
-                _assert_patch(pushed, base=capture_page["version"])
+                pushed = await _event(ws, "4", capture, {"value": "买牛奶"})
+                assert "买牛奶" in json.dumps(pushed, ensure_ascii=False)
 
-                before = await _request(ws, "6", "ui", "render", {})
-                opened = _find_item(before["content"], "买牛奶")
+                before = await _request(ws, "5", "ui", "render", {})
+                opened = _find(before, "item", "click", title="买牛奶")
                 assert opened is not None
 
-                pushed = await _event(ws, "7", opened)
-                _assert_patch(pushed, base=before["version"])
+                await _event(ws, "6", opened)
 
-                detail = await _request(ws, "8", "ui", "render", {})
-                handler = _find_button(detail["content"], "归档")
+                detail = await _request(ws, "7", "ui", "render", {})
+                handler = _find(detail, "button", "click", text="归档")
                 assert handler is not None
 
-                pushed = await _event(ws, "9", handler)
-                _assert_patch(pushed, base=detail["version"])
+                await _event(ws, "8", handler)
 
-                after = await _request(ws, "10", "ui", "render", {})
+                after = await _request(ws, "9", "ui", "render", {})
                 return empty, before, after
         finally:
             await net.stop()
 
     empty, before, after = asyncio.run(scenario())
 
-    assert empty["meta"] == "0 条"
-    assert before["page"] == "ideas"
-    assert before["pages"][0]["label"] == "灵感"
-    assert before["pages"][0]["count"] == 1
+    assert empty["active"] == "page.ideas"
     assert _titles(before) == ["买牛奶"]
     assert _titles(after) == []
-    assert after["pages"][0]["count"] == 0
-    assert _nodes(after["content"], "empty")[0]["props"]["title"] == "还没有灵感。"
+    assert _slots(after, "empty")[0]["props"]["title"] == "还没有灵感。"
 
 
-def test_a_snapshot_for_another_page_arrives_as_a_full_snapshot(tmp_path: Path) -> None:
-    """客户端在看别的页时，服务端补不了那一页的差额，只能推全量（协议 §6.1）。"""
-
-    async def scenario() -> tuple[dict[str, Any], dict[str, Any]]:
-        config = Config(
-            {
-                "net": {"port": 0},
-                "store": {"path": str(tmp_path / "omora.db")},
-                "media": {"root": str(tmp_path / "media")},
-            }
-        )
-        kernel = build(config, MANIFEST)
-        # 上报能力这一步会让 manager 把设置页挂到 ui 上（boot 里 ui 是 manager 后装的）。
-        kernel.resolve("manager").report_devices([])
+def test_switching_pages_over_the_socket_keeps_the_current_page(tmp_path: Path) -> None:
+    async def scenario() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+        kernel = build(_config(tmp_path), MANIFEST)
         net = kernel.resolve("net")
         port = await net.serve()
         try:
             async with connect(f"ws://127.0.0.1:{port}") as ws:
-                await _subscribe(ws, "1")
-                ideas = await _request(ws, "2", "ui", "render", {})
-                tile = _find_tile(ideas["content"], "文字")
-                assert tile is not None
-
-                plugins = await _request(ws, "3", "ui", "render", {"page": "plugins"})
-                assert plugins["page"] == "plugins"
-
-                pushed = await _event(ws, "4", tile)
-                return ideas, pushed
+                ideas = await _request(ws, "1", "ui", "render", {})
+                plugins = await _request(ws, "2", "ui", "render", {"page": "plugins"})
+                again = await _request(ws, "3", "ui", "render", {})
+                back = await _event(ws, "4", _nav_handler(plugins, "灵感"))
+                return ideas, plugins, again, back
         finally:
             await net.stop()
 
-    ideas, pushed = asyncio.run(scenario())
+    ideas, plugins, again, back = asyncio.run(scenario())
 
-    _assert_full(pushed, page=ideas["page"])
-    assert pushed["version"] == ideas["version"] + 1
-    assert pushed["content"]["type"] == ideas["content"]["type"]
+    assert ideas["active"] == "page.ideas"
+    assert plugins["active"] == "page.plugins"
+    assert _page_root(plugins)["id"] == "page.plugins"
+    assert "page.plugins" in [page["id"] for page in plugins["pages"]]
+    assert again["active"] == "page.plugins"
+    assert [ideas["version"], plugins["version"], again["version"], back["version"]] == [1, 2, 3, 4]
+    assert back["active"] == "page.ideas"
 
 
 def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path, monkeypatch: Any) -> None:
@@ -285,14 +224,7 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path, monkeypatc
     monkeypatch.setattr(ideas_capture, "now", lambda: SAVED_AT)
 
     async def scenario() -> dict[str, Any]:
-        config = Config(
-            {
-                "net": {"port": 0},
-                "store": {"path": str(tmp_path / "omora.db")},
-                "media": {"root": str(tmp_path / "media")},
-            }
-        )
-        kernel = build(config, MANIFEST)
+        kernel = build(_config(tmp_path), MANIFEST)
         net = kernel.resolve("net")
         port = await net.serve()
         try:
@@ -302,38 +234,34 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path, monkeypatc
             assert status == 201, payload
             audio_id = str(json.loads(payload)["media_id"])
             async with connect(f"ws://127.0.0.1:{port}") as ws:
-                await _subscribe(ws, "1")
-                before = await _request(ws, "2", "ui", "render", {})
-                tile = _find_tile(before["content"], "录音")
+                before = await _request(ws, "1", "ui", "render", {})
+                tile = _find(before, "tile", "click", title="录音")
                 assert tile is not None
 
-                pushed = await _event(ws, "3", tile)
-                _assert_patch(pushed, base=before["version"])
+                await _event(ws, "2", tile)
 
-                capture_page = await _request(ws, "4", "ui", "render", {})
-                handler = _find_capture(capture_page["content"], "audio_capture")
+                capture_page = await _request(ws, "3", "ui", "render", {})
+                handler = _find(capture_page, "audio_capture", "submit")
                 assert handler is not None
 
-                pushed = await _event(
+                await _event(
                     ws,
-                    "5",
+                    "4",
                     handler,
                     {"media": audio_id, "mime": "audio/webm", "seconds": 2.0},
                 )
-                _assert_patch(pushed, base=capture_page["version"])
 
-                after = await _request(ws, "6", "ui", "render", {})
-                opened = _find_item(after["content"], "语音 11-11 03:41")
+                after = await _request(ws, "5", "ui", "render", {})
+                opened = _find(after, "item", "click", title="语音 11-11 03:41")
                 assert opened is not None
 
-                pushed = await _event(ws, "7", opened)
-                _assert_patch(pushed, base=after["version"])
+                await _event(ws, "6", opened)
 
-                detail = await _request(ws, "8", "ui", "render", {})
-                media_id = str(_nodes(detail["content"], "audio")[0]["props"]["media"])
-                loaded = await _request(ws, "9", "media", "load", {"media_id": media_id})
+                detail = await _request(ws, "7", "ui", "render", {})
+                media_id = str(_slots(detail, "audio")[0]["props"]["media"])
+                loaded = await _request(ws, "8", "media", "load", {"media_id": media_id})
                 assert isinstance(loaded, dict)
-                return loaded
+                return cast(dict[str, Any], loaded)
         finally:
             await net.stop()
 
@@ -347,14 +275,7 @@ def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path, monkeypa
     monkeypatch.setattr(ideas_capture, "now", lambda: SAVED_AT)
 
     async def scenario() -> tuple[dict[str, Any], bytes]:
-        config = Config(
-            {
-                "net": {"port": 0},
-                "store": {"path": str(tmp_path / "omora.db")},
-                "media": {"root": str(tmp_path / "media")},
-            }
-        )
-        kernel = build(config, MANIFEST)
+        kernel = build(_config(tmp_path), MANIFEST)
         net = kernel.resolve("net")
         port = await net.serve()
         try:
@@ -363,35 +284,31 @@ def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path, monkeypa
             assert status == 201, payload
             media_id = str(json.loads(payload)["media_id"])
             async with connect(f"ws://127.0.0.1:{port}") as ws:
-                await _subscribe(ws, "1")
-                before = await _request(ws, "2", "ui", "render", {})
-                tile = _find_tile(before["content"], "视频")
+                before = await _request(ws, "1", "ui", "render", {})
+                tile = _find(before, "tile", "click", title="视频")
                 assert tile is not None
 
-                pushed = await _event(ws, "3", tile)
-                _assert_patch(pushed, base=before["version"])
+                await _event(ws, "2", tile)
 
-                capture_page = await _request(ws, "4", "ui", "render", {})
-                handler = _find_capture(capture_page["content"], "video_capture")
+                capture_page = await _request(ws, "3", "ui", "render", {})
+                handler = _find(capture_page, "video_capture", "submit")
                 assert handler is not None
 
-                pushed = await _event(
+                await _event(
                     ws,
-                    "5",
+                    "4",
                     handler,
                     {"media": media_id, "mime": "video/webm", "seconds": 4},
                 )
-                _assert_patch(pushed, base=capture_page["version"])
 
-                after = await _request(ws, "6", "ui", "render", {})
-                opened = _find_item(after["content"], "视频 11-11 03:41")
+                after = await _request(ws, "5", "ui", "render", {})
+                opened = _find(after, "item", "click", title="视频 11-11 03:41")
                 assert opened is not None
 
-                pushed = await _event(ws, "7", opened)
-                _assert_patch(pushed, base=after["version"])
+                await _event(ws, "6", opened)
 
-                detail = await _request(ws, "8", "ui", "render", {})
-                src = str(_nodes(detail["content"], "video")[0]["props"]["src"])
+                detail = await _request(ws, "7", "ui", "render", {})
+                src = str(_slots(detail, "video")[0]["props"]["src"])
                 fetched = await _get(src)
                 return after, fetched
         finally:
@@ -405,14 +322,7 @@ def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path, monkeypa
 
 def test_plugin_inventory_and_toggle_over_the_socket(tmp_path: Path) -> None:
     async def scenario() -> tuple[Any, dict[str, Any], dict[str, Any], dict[str, Any]]:
-        config = Config(
-            {
-                "net": {"port": 0},
-                "store": {"path": str(tmp_path / "omora.db")},
-                "media": {"root": str(tmp_path / "media")},
-            }
-        )
-        kernel = build(config, MANIFEST)
+        kernel = build(_config(tmp_path), MANIFEST)
         net = kernel.resolve("net")
         port = await net.serve()
         try:

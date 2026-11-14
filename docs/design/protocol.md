@@ -116,47 +116,20 @@ manager 是普通服务，不新增帧类型：
   SDK 给一层薄封装 `omora.sdk.realtime.emit(ctx, topic, payload)` —— 内核不新增概念，插件仍只靠服务名。
 - `emit(..., coalesce=True)`：队列里同 topic 的旧消息被这条替换。给"只关心最新值"的流用（进度、光标）。
 
-## 6. 快照、版本与增量
+## 6. 视图负载、版本与增量
 
-全量快照仍然是 `result.value`，只多一个 `version`：
+视图 payload 是 **主会话 view**（形状见 [docs/engine/wire.md](../engine/wire.md) §8）：局部树 +
+页面侧表 + 数据文档 + 单调 `version`。net 不解释 payload，只负责运。
 
-```json
-{
-  "pages": [{ "name": "ideas", "label": "灵感", "icon": "ideas", "glyph": "M2 2h16", "count": 3 }],
-  "page": "ideas",
-  "meta": "3 条",
-  "content": { "type": "column", "props": {}, "children": [] },
-  "contributions": [],
-  "topics": ["ui.snapshot", "audio.peaks"],
-  "version": 12
-}
-```
-
-- `version` 是页面自己的单调计数，由 ui 插件给；net 不解释它，只负责运。
-- `topics` 是这一页要订的推送 topic（可选，缺省只订 `ui.snapshot`）；客户端按它订阅与退订。
-- `contributions` 是别的插件交来的视图块（可选）；引擎组合后才画。
-- 增量走 event：`{"topic": "ui.snapshot", "payload": {"page": "ideas", "version": 13, "base": 12, "ops": [...]}}`。
-- 客户端只在 `base` 等于自己当前版本时应用；不匹配、或遇到不认识的 op，就发一次 `ui.render` 求全量。
-  **永远有全量兜底**，补丁是加速不是唯一路径。
-- op 最小集，路径从快照根算：
-
-| op       | 形状                                                                                 | 做什么                |
-| -------- | ------------------------------------------------------------------------------------ | --------------------- |
-| `set`    | `{"op": "set", "path": ["content", "children", 0, "props", "text"], "value": "..."}` | 改一个字段            |
-| `insert` | `{"op": "insert", "path": ["content", "children", 1], "index": 0, "value": {节点}}`  | children 里插一个节点 |
-| `remove` | `{"op": "remove", "path": ["content", "children", 1], "index": 0}`                   | children 里删一个节点 |
-
-- 值得做的理由在 §0：500 条页面全量 124 KiB / 3ms，增量 127 字节。
-- **补丁只省解析，不自动省渲染**：渲染端必须按节点 memo（同一份节点数据引用相等就跳过重画），
-  否则解析省了、重画没省。两件事一起做，少一件都不算做完。
+- `version` 单调递增；引擎拒绝更旧的全量视图（`E-VERSION`）。
+- `ui.event` 的 result 直接是新 view；异步变化走 `ui.snapshot`，payload 同样带 `kind:"view"`。
+- **永远有全量兜底**：客户端收到 view 就整份应用；当前主会话每个事件交整份 view，渲染层按 id
+  复用 DOM。增量 ops / data 是后续优化（形状见 wire.md），不改变帧类型与"单一更新路径"。
 
 ### 6.1 视图只有一个出口
 
-- `ui.render` 的 result 是**全量快照**（首屏 / 客户端主动要）。这是唯一一处"快照搭 result 的车"。
-- 除此之外，视图变化一律走 `ui.snapshot` event：能 diff 就带补丁，不能 diff（换页、版本对不上）
-  就带全量。用户事件（`ui.event`）的 result 只有确认（`{}`），不带视图。
-- 客户端因此只有一条更新路径：收到 `payload.content` 就整棵替换，收到 `payload.ops` 就按补丁改。
-  不存在"result 里也可能是视图"的分支。
+- 视图变化只走两条：调用结果（`ui.render` / `ui.event` 的 result）与 `ui.snapshot` event；
+  两条携带的都是同一份 view 形状。
 - 顺序由 §4 保证：同一次调用触发的 event 排在它的 result 之后，客户端不会在确认之前处理视图。
 
 ## 7. HTTP 媒体通道（音频与视频）
@@ -216,8 +189,7 @@ manager 是普通服务，不新增帧类型：
 
 - `calls`：call 帧，合法与非法都要有（含 `net.subscribe`）；
 - `events`：event 帧，合法与非法都要有（含未知 topic 的合法帧）；
-- `snapshots`：页面快照，钉字段（`pages` / `page` / `meta` / `content` / `version`）与节点形状；
-- 补丁不是封套：op 的形状由 `legacy/render/patch.ts` 与 ui 插件的测试钉住，不进协议 fixture。
+- `calls` / `events`：帧本身的形状；视图 payload 的跨语言 fixture 在
+  [docs/engine/wire.md](../engine/wire.md)（`view.json` 等），不重复放进协议 fixture。
 
-Python 用 SDK 的 `serialize` 输出和 `snapshots` 里的 `content` 逐字段比对；TS 检查同一份快照与补丁的形状。
 两边都不自己造样例。

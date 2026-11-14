@@ -1,6 +1,11 @@
+"""页面登记与 handler 派发：Ui 的生命周期行为（对 Slot 视图断言）。"""
+
+from __future__ import annotations
+
+import inspect
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -10,25 +15,25 @@ from omora.core.log import Log
 from omora.sdk.ui import Button, Column, Empty, Input, Item, List, Page, Text
 from omora.ui import Ui, UiPlugin
 
+PAGE_MOUNT_AT = "dendro.window.page"
+
 
 class _PagePlugin:
     def __init__(
         self,
-        build: Callable[[], Page],
+        build: Callable[[], Page] | None,
         page: str = "main",
         label: str = "首页",
         name: str = "viewer",
-        count: Callable[[], int] | None = None,
     ) -> None:
         self.name = name
         self._build = build
         self._page = page
         self._label = label
-        self._count = count
 
     def apply(self, ctx: Context) -> None:
         ui: Ui = ctx.resolve("ui")
-        ui.page(ctx, self._page, self._label, self._build, self._count)
+        ui.page(ctx, self._page, self._label, self._build)
 
 
 def _simple() -> Page:
@@ -55,33 +60,55 @@ def _page() -> Page:
                 )
             ),
         ),
-        meta="1 条",
     )
 
 
-def test_render_returns_the_page_snapshot() -> None:
+def _page_root(view: dict[str, Any]) -> dict[str, Any]:
+    for tree in cast(list[dict[str, Any]], view["localTrees"]["trees"]):
+        if tree["mountAt"] == PAGE_MOUNT_AT:
+            return cast(dict[str, Any], tree["root"])
+    raise AssertionError("view 里没有页面局部树")
+
+
+def _content(view: dict[str, Any]) -> dict[str, Any]:
+    return cast(dict[str, Any], _page_root(view)["children"][0])
+
+
+def _walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
+    found = [slot]
+    for child in slot["children"]:
+        found.extend(_walk(child))
+    return found
+
+
+def _slots(view: dict[str, Any], kind: str) -> list[dict[str, Any]]:
+    return [slot for slot in _walk(_page_root(view)) if slot["kind"] == f"dendro:{kind}"]
+
+
+def _handler(view: dict[str, Any], node_kind: str, event: str) -> str:
+    return str(_slots(view, node_kind)[0]["events"][event])
+
+
+def test_render_returns_the_page_view_content_tree() -> None:
     kernel = Kernel()
     kernel.install(UiPlugin())
     kernel.install(_PagePlugin(_page, label="灵感"))
 
-    snapshot: dict[str, Any] = kernel.resolve("ui").render()
+    view: dict[str, Any] = kernel.resolve("ui").render()
 
-    assert snapshot["pages"] == [{"name": "main", "label": "灵感"}]
-    assert snapshot["page"] == "main"
-    assert snapshot["meta"] == "1 条"
-    assert snapshot["version"] == 1
-    node = snapshot["content"]
-    assert node["type"] == "column"
-    text, input_node, list_node = node["children"]
+    assert (view["kind"], view["version"], view["active"]) == ("view", 1, "page.main")
+    content = _content(view)
+    assert content["kind"] == "dendro:column"
+    text, input_node, list_node = content["children"]
     assert text["props"] == {"text": "灵感", "kind": "title"}
-    assert input_node["type"] == "input"
+    assert input_node["kind"] == "dendro:input"
     assert input_node["props"]["placeholder"] == "记一笔"
-    assert list_node["type"] == "list"
+    assert list_node["kind"] == "dendro:list"
     item = list_node["children"][0]
     assert item["props"] == {"meta": "昨天", "title": "买牛奶"}
     action = item["children"][0]
-    assert action["props"]["text"] == "归档"
-    assert action["props"]["variant"] == "ghost"
+    assert action["props"] == {"text": "归档", "variant": "ghost"}
+    assert action["events"]["click"]
 
 
 def test_a_handler_receives_the_payload() -> None:
@@ -94,9 +121,9 @@ def test_a_handler_receives_the_payload() -> None:
     kernel.install(UiPlugin())
     kernel.install(_PagePlugin(build))
     ui: Ui = kernel.resolve("ui")
+    view = ui.render()
 
-    handler = ui.render()["content"]["children"][0]["props"]["on_submit"]
-    ui.event(handler, {"value": "买牛奶"})
+    ui.event(_handler(view, "input", "submit"), {"value": "买牛奶"})
 
     assert seen == [{"value": "买牛奶"}]
 
@@ -104,7 +131,7 @@ def test_a_handler_receives_the_payload() -> None:
 def test_event_redraws_the_page_it_belongs_to() -> None:
     state = {"n": 0}
 
-    def bump(payload: dict[str, Any]) -> None:
+    def bump(_payload: dict[str, Any]) -> None:
         state["n"] += 1
 
     def build() -> Page:
@@ -116,27 +143,25 @@ def test_event_redraws_the_page_it_belongs_to() -> None:
     ui: Ui = kernel.resolve("ui")
 
     before = ui.render()
-    handler = before["content"]["children"][0]["props"]["on_click"]
+    after = ui.event(_handler(before, "button", "click"), {})
 
-    assert ui.event(handler, {}) == {}
-    after = ui.render()
-
-    assert before["content"]["children"][0]["props"]["text"] == "0"
-    assert after["content"]["children"][0]["props"]["text"] == "1"
+    assert _slots(before, "button")[0]["props"]["text"] == "0"
+    assert _slots(after, "button")[0]["props"]["text"] == "1"
 
 
-def test_pages_keep_registration_order_and_counts() -> None:
+def test_pages_keep_registration_order_and_routes() -> None:
     kernel = Kernel()
     kernel.install(UiPlugin())
-    kernel.install(_PagePlugin(_simple, page="a", label="甲", name="pa", count=lambda: 3))
+    kernel.install(_PagePlugin(_simple, page="a", label="甲", name="pa"))
     kernel.install(_PagePlugin(_simple, page="b", label="乙", name="pb"))
 
-    snapshot = kernel.resolve("ui").render()
+    pages = kernel.resolve("ui").render()["pages"]
 
-    assert [page["name"] for page in snapshot["pages"]] == ["a", "b"]
-    assert snapshot["pages"][0]["count"] == 3
-    assert "count" not in snapshot["pages"][1]
-    assert snapshot["page"] == "a"
+    assert [page["id"] for page in pages] == ["page.a", "page.b"]
+    assert [(page["label"], page["route"], page["owner"]) for page in pages] == [
+        ("甲", "/a", "pa"),
+        ("乙", "/b", "pb"),
+    ]
 
 
 def test_rendering_an_unknown_page_says_so() -> None:
@@ -144,14 +169,6 @@ def test_rendering_an_unknown_page_says_so() -> None:
 
     with pytest.raises(LookupError, match="未知页面: missing"):
         kernel.resolve("ui").render("missing")
-
-
-def test_rendering_with_no_pages_is_an_error() -> None:
-    kernel = Kernel()
-    kernel.install(UiPlugin())
-
-    with pytest.raises(LookupError, match="没有登记任何页面"):
-        kernel.resolve("ui").render()
 
 
 def test_uninstalling_takes_the_page_away() -> None:
@@ -192,12 +209,16 @@ def _input_kernel(seen: list[dict[str, Any]]) -> Kernel:
     return kernel
 
 
+def _input_handler(view: dict[str, Any]) -> str:
+    return str(_content(view)["children"][0]["events"]["submit"])
+
+
 def test_a_handler_from_the_previous_render_still_fires_once() -> None:
     """组件卸载时提交带的 id 属于上一代：重画之后还得能触发一次，不然那条就丢了。"""
     seen: list[dict[str, Any]] = []
     ui: Ui = _input_kernel(seen).resolve("ui")
 
-    old = ui.render()["content"]["children"][0]["props"]["on_submit"]
+    old = _input_handler(ui.render())
     ui.render()
     ui.event(old, {"value": "买牛奶"})
 
@@ -205,11 +226,11 @@ def test_a_handler_from_the_previous_render_still_fires_once() -> None:
 
 
 def test_a_handler_stops_working_after_the_next_render() -> None:
-    """宽限只留一代：再画一次，上一代就被替换掉，陈旧 id 彻底作废。"""
+    """宽限只留一代：再画两次，上一代就被替换掉，陈旧 id 彻底作废。"""
     seen: list[dict[str, Any]] = []
     ui: Ui = _input_kernel(seen).resolve("ui")
 
-    old = ui.render()["content"]["children"][0]["props"]["on_submit"]
+    old = _input_handler(ui.render())
     ui.render()
     ui.render()
 
@@ -220,14 +241,14 @@ def test_a_handler_stops_working_after_the_next_render() -> None:
 
 
 def test_a_stale_id_never_runs_the_handler_that_took_its_index() -> None:
-    """回归：id 曾按 generation + 序号回收，重画后同序号的另一个回调会被陈旧 id 打到。"""
+    """回归：陈旧 id 不能被下一代同序号的另一个回调接住。"""
     seen: list[str] = []
     state = {"step": 0}
 
     def build() -> Page:
         label = "甲" if state["step"] == 0 else "乙"
 
-        def step(payload: dict[str, Any]) -> None:
+        def step(_payload: dict[str, Any]) -> None:
             seen.append(label)
             state["step"] = 1
 
@@ -238,7 +259,7 @@ def test_a_stale_id_never_runs_the_handler_that_took_its_index() -> None:
     kernel.install(_PagePlugin(build))
     ui: Ui = kernel.resolve("ui")
 
-    old = ui.render()["content"]["children"][0]["props"]["on_click"]
+    old = str(_content(ui.render())["children"][0]["events"]["click"])
     ui.event(old, {})
     ui.event(old, {})
 
@@ -255,7 +276,7 @@ def test_a_stale_event_is_logged(caplog: pytest.LogCaptureFixture) -> None:
     kernel.install(_PagePlugin(_input_page(seen)))
     ui: Ui = kernel.resolve("ui")
 
-    old = ui.render()["content"]["children"][0]["props"]["on_submit"]
+    old = _input_handler(ui.render())
     ui.render()
     ui.event(old, {"value": "买牛奶"})
 
@@ -264,15 +285,14 @@ def test_a_stale_event_is_logged(caplog: pytest.LogCaptureFixture) -> None:
     assert vars(stale[0])["data"] == {"handler": old, "page": "main"}
 
 
-def test_each_render_bumps_the_page_version() -> None:
-    """version 是页面自己的单调计数：客户端只认 base === 自己那份的 version。"""
+def test_each_render_bumps_the_view_version() -> None:
     ui: Ui = _simple_kernel().resolve("ui")
 
     assert ui.render()["version"] == 1
     assert ui.render()["version"] == 2
 
 
-def test_versions_are_counted_per_page() -> None:
+def test_versions_are_monotonic_across_pages() -> None:
     kernel = Kernel()
     kernel.install(UiPlugin())
     kernel.install(_PagePlugin(_simple, page="a", label="甲", name="pa"))
@@ -281,4 +301,37 @@ def test_versions_are_counted_per_page() -> None:
 
     assert ui.render("a")["version"] == 1
     assert ui.render("a")["version"] == 2
-    assert ui.render("b")["version"] == 1
+    assert ui.render("b")["version"] == 3
+
+
+def test_rendering_a_page_without_a_tree_is_an_error() -> None:
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(None, page="notes", label="笔记"))
+
+    with pytest.raises(LookupError, match="还没交树"):
+        kernel.resolve("ui").render("notes")
+
+
+def test_render_and_event_signatures_are_frozen() -> None:
+    """engine 参数彻底删除：两个出口只收冻结的这几个字段。"""
+    assert list(inspect.signature(Ui.render).parameters) == ["self", "page"]
+    assert list(inspect.signature(Ui.event).parameters) == ["self", "handler", "payload"]
+
+
+def test_event_returns_a_view_not_an_empty_confirmation() -> None:
+    def build() -> Page:
+        return Page(content=Column(Button("按一下", on_click=lambda payload: None)))
+
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(build))
+    ui: Ui = kernel.resolve("ui")
+    view = ui.render()
+    handler = str(_content(view)["children"][0]["events"]["click"])
+
+    after = ui.event(handler, {})
+
+    assert after["kind"] == "view"
+    assert after["active"] == "page.main"
+    assert after["version"] == view["version"] + 1

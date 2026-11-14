@@ -1,6 +1,6 @@
 # 迁移：旧实现（legacy）→ Dendrolink
 
-> 状态：**执行中**；S0–S5 起步已落，S6（主会话接入）计划见 §6。
+> 状态：**已完成**；S0–S6 全部落，legacy 快照路径已删除。后续多来源 / 运行后来源见 §6 的 S7。
 > 依赖：[README](README.md) · [runtime.md](runtime.md) · [wire.md](wire.md)
 > 相关：[docs/planning/change-program.md](../planning/change-program.md)（仓库结构迁移，已合并）
 
@@ -14,17 +14,20 @@
 
 ## 1. 阶段
 
-| 阶段 | 内容                                                    | 退出条件                          |
-| ---- | ------------------------------------------------------- | --------------------------------- |
-| S0   | 仓库结构迁移、引擎文档系列、旧文档退役                  | 工作区干净；CI 绿；文档链接通过   |
-| S1   | schema 单一来源；Python 序列化产出 Slot；跨语言 fixture | 同一 fixture 两侧结论一致         |
-| S2   | 编译/链接：诊断码、顺序模型、静态骨架编译门禁           | 冲突在 CI 可复现；死引用/歧义必报 |
-| S3   | 三张索引 + 三种更新 + 集合绑定；灵感页 spike            | 数据更新不重挂；换页协调正确      |
-| S4   | 权限薄层 + 生命周期账本 + 观测指标                      | 越权拒绝；卸载零残留；有指标      |
-| S5   | TS 宿主 / 组件命名空间 / 运行后来源                     | 示例来源不改引擎源码即可加界面    |
-| S6   | 主会话接入：Python 产 Slot → TS 主入口 → 删 legacy      | 默认路径吃真实数据；legacy 删除   |
+| 阶段 | 内容                                                    | 退出条件                           |
+| ---- | ------------------------------------------------------- | ---------------------------------- |
+| S0   | 仓库结构迁移、引擎文档系列、旧文档退役                  | 工作区干净；CI 绿；文档链接通过    |
+| S1   | schema 单一来源；Python 序列化产出 Slot；跨语言 fixture | 同一 fixture 两侧结论一致          |
+| S2   | 编译/链接：诊断码、顺序模型、静态骨架编译门禁           | 冲突在 CI 可复现；死引用/歧义必报  |
+| S3   | 三张索引 + 三种更新 + 集合绑定；灵感页 spike            | 数据更新不重挂；换页协调正确       |
+| S4   | 权限薄层 + 生命周期账本 + 观测指标                      | 越权拒绝；卸载零残留；有指标       |
+| S5   | TS 宿主 / 组件命名空间 / 运行后来源                     | 示例来源不改引擎源码即可加界面     |
+| S6   | 主会话接入：Python 产 Slot → TS 主入口 → 删 legacy      | ✅ 默认路径吃真实数据；legacy 已删 |
+| S7   | 运行后来源 / Host 网络接线；规则执行与 schema 单一来源  | 示例来源不改引擎源码加界面         |
 
 > S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/contract/document.ts` 的 Slot 文档契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
+
+> S6.5 续（2026-11-14）：legacy 快照路径整体删除 —— `packages/ui` 只保留 Slot 出口（`_diff.py`、贡献 / topics API 删除），TS `legacy/`、`DomApp`、`?engine=legacy` 与旧壳 CSS 删除；默认入口、构建期骨架、全部系统插件页面都走 Slot。
 
 > S6.5 进度（2026-11-14）：启动骨架已改成 Slot 链接编译 —— `scripts/static_ui.py` 产 `generated/static-view.ts`（每页一份 view；导航入口保留 handler、内容摘事件），build 用 `parseView` + `link` + Slot 渲染器编译首帧；`skeleton_html` 门禁改查 Slot 标记；`slot_registry` 从 app 移到 components（build 可用），`build/` 不再依赖 legacy。legacy 只剩 `?engine=legacy` 回退，删除放下一 PR。
 
@@ -65,19 +68,20 @@
 
 ## 3. 代码迁移映射
 
-| 现在                                       | 目标                           | 阶段                                |
-| ------------------------------------------ | ------------------------------ | ----------------------------------- |
-| `app/sdk/omora/sdk/ui.py` / `controls.py`  | Slot 词表 + schema 源          | S1                                  |
-| `packages/ui/omora/ui.py`                  | 文档/局部树注册 + 数据路由     | S6 已产 Slot（legacy 出口留回退）   |
-| `packages/ui/omora/_diff.py`               | 由 ops / data 取代后删除       | **S6**                              |
-| `app/ui-engine/src/app/main.ts` / `app.ts` | Session + 运行时容器           | S6 已切主入口（legacy 回退待删）    |
-| `legacy/render/compose.ts`                 | legacy 贡献组合（回退路径）    | S6.5 删除                           |
-| `app/ui-engine/src/link/`                  | Compiler/Linker（Slot 局部树） | S2 已落（S6 接主会话）              |
-| `app/ui-engine/src/engine/`                | Document / 索引 / ops / 集合   | S3 已落（S6 接主会话）              |
-| `legacy/render/patch.ts`                   | Document 更新管线（回退路径）  | S6.5 删除                           |
-| `renderer/` / `components/`                | Renderer + schema 生成注册表   | S1–S3 已落                          |
-| `scripts/static_ui.py`                     | 构建期编译门禁                 | S6.5 已升级（Slot 视图 + 链接编译） |
-| `scripts/keys.py` / generated              | slot id 生成器                 | S1 / S6                             |
+| 现在                                      | 目标                           | 阶段                                 |
+| ----------------------------------------- | ------------------------------ | ------------------------------------ |
+| `app/sdk/omora/sdk/ui.py` / `controls.py` | Slot 词表 + schema 源          | S1                                   |
+| `packages/ui/omora/ui.py`                 | 文档 / 局部树注册 + 数据路由   | S6 已产 Slot（唯一出口）             |
+| `packages/ui/omora/_diff.py`              | 由 ops / data 取代             | 已删除（S6.5）                       |
+| `app/ui-engine/src/app/main.ts`           | Session + 运行时容器           | S6 已切主入口（唯一路径）            |
+| `legacy/render/compose.ts`                | legacy 贡献组合                | 已删除（S6.5）                       |
+| `app/ui-engine/src/link/`                 | Compiler/Linker（Slot 局部树） | S2 已落（S6 已接主会话）             |
+| `app/ui-engine/src/engine/`               | Document / 索引 / ops / 集合   | S3 已落（S6 已接主会话）             |
+| `legacy/render/patch.ts`                  | Document 更新管线              | 已删除（S6.5）                       |
+| `renderer/` / `components/`               | Renderer + schema 生成注册表   | S1–S3 已落                           |
+| `scripts/static_ui.py`                    | 构建期编译门禁                 | S6.5 已升级（Slot 视图 + 链接编译）  |
+| `packages/ui/omora/contribute/topics`     | 跨插件贡献 / 额外 topic        | 已删除（S6.5；未来由局部树来源替代） |
+| `scripts/keys.py` / generated             | slot id 生成器                 | S1 / S6                              |
 
 ## 4. 旧文档去向
 
@@ -95,7 +99,7 @@
 - **性能退化**：S3 建立与 legacy 的对照基线；组合/补丁指标进 CI 报告。
 - **过渡期文档失真**：所有未实现条目保持“已定未实现”，不写成现状。
 
-## 6. S6：主会话接入（计划）
+## 6. S6：主会话接入（已完成记录）／S7 计划
 
 目标：让真实页面走 Slot 文档，而不是只在 `?engine=slot` 里看 fixture；完成后删除 legacy。
 
@@ -103,9 +107,9 @@
 | ---- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | S6.1 | 线上形状定稿：Slot 事件 / `dispatch` 帧、页面侧表、data / ops 回程、首连 schema 握手                                                    | 文档 + 跨语言 fixture；两侧解析一致                  |
 | S6.2 | Python 产 Slot：SDK UI 节点升 Slot 信封（id 生成、owner、events 映射），`packages/ui` 出口从页面快照切文档 / 局部树；插件调用面保持不变 | 灵感首页经 Python 产出 Slot 文档；fixture 只用于测试 |
-| S6.3 | TS 主入口：`app/main.ts` 默认 EngineRuntime + DocumentView，legacy 留 flag 兜底；事件回 Python、ops / data 回 TS                        | 默认路径跑真实数据；断线重连全量兜底                 |
-| S6.4 | 其余页面迁移：projects / requirements / plugins / 设置逐个切；媒体与订阅接线                                                            | 每页行为与 legacy 等价                               |
-| S6.5 | 收尾：默认切换、删 legacy 与 build adapter、`static_ui` 改 Slot 编译、eslint legacy 例外收回                                            | `legacy/` 删除；全量门禁绿                           |
+| S6.3 | TS 主入口：`app/main.ts` 默认 EngineRuntime + DocumentView；事件回 Python、ops / data 回 TS（legacy 回退已在 S6.5 删除）                | ✅ 默认路径跑真实数据；断线重连全量兜底              |
+| S6.4 | 其余页面迁移：projects / requirements / plugins / 设置逐个切；媒体与订阅接线                                                            | ✅ 每页行为与旧实现等价                              |
+| S6.5 | 收尾：默认切换、删 legacy、`static_ui` 改 Slot 编译、eslint legacy 例外收回                                                             | ✅ `legacy/` 删除；全量门禁绿                        |
 
 要当场定的点 / 风险：
 
@@ -117,6 +121,5 @@
 ## 7. 未决
 
 - S1 的 schema 描述语言；
-- legacy 双读窗口要持续几个 PR；
-- 何时允许删除旧序列化路径；
-- 运行后来源与 TS 宿主是否放在同一轮。
+- 运行后来源与 TS 宿主是否放在同一轮；
+- 页面侧表 / 来源热更新的线上形状（S7）。

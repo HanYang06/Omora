@@ -1,6 +1,6 @@
 # 线上形状：文档、更新与数据
 
-> 状态：**提案**；S1.1 契约类型、S2 `local-trees`、S3-a `ops`、S3-b `data`、S3-c `route`、S6.1 主会话 `view` 的 Python/TS 线上形状已落（共享 fixture `local-trees.json` / `ops.json` / `data.json` / `route.json` / `view.json`），运行时渲染接入未做；事件 / `dispatch` 帧形状仍是 §9 的未定项（见 [migration.md](migration.md) §6）。
+> 状态：**已落**；S1.1 契约类型、S2 `local-trees`、S3-a `ops`、S3-b `data`、S3-c `route`、S6.1 主会话 `view` 的 Python/TS 线上形状已落且已接主会话（共享 fixture `local-trees.json` / `ops.json` / `data.json` / `route.json` / `view.json`）；事件 / `dispatch` 的增量帧形状仍是 §9 的未定项。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[docs/design/protocol.md](../design/protocol.md)（帧、传输、订阅）
 
@@ -122,8 +122,8 @@ S3-c 已落 route op：Python `omora.sdk.update.RouteOp`、TS `src/engine/docume
 ## 7. 与现有协议的关系
 
 - 仍只有 `call / result / error / event` 四种帧。
-- legacy 的 `ui.render` / `ui.event` / `ui.snapshot` 语义保留：全量走 render，变化走 snapshot，事件走 event。
-- 变化只是 payload 从“页面快照 + 路径补丁”变成“主会话视图（§8）/ 文档 + 按 id 的更新”。
+- `ui.render` / `ui.event` / `ui.snapshot` 语义：全量走 render，变化走 snapshot，事件走 event；
+  payload 是主会话视图（§8）或文档 / ops / data。旧“页面快照 + 路径补丁”已随 legacy 删除。
 
 ## 8. 主会话视图负载（S6）
 
@@ -158,9 +158,8 @@ S3-c 已落 route op：Python `omora.sdk.update.RouteOp`、TS `src/engine/docume
 事件仍走 `ui.event` 的 `{handler, payload}`：Slot 的 `events` 把事件名映射到 handler id，
 渲染层原样回传；`dispatch` 效果与异步推送的增量形状留到实现时再定。
 
-默认入口已经走 Slot；迁移期仍用 **call args 的 `engine: "slot"`** 选择出口（`ui.render` /
-`ui.event` 的入参，不是 payload 字段），`?engine=legacy` 回退时同一实例改走旧快照。删掉
-legacy 出口时这个标记一起删。
+Python 出口只有 Slot 一种，`ui.render` / `ui.event` 不再需要迁移期标记；`?engine=slot` 只是
+前端内置 fixture 预览（不经过 Python），与线上形状无关。
 
 ## 9. 未定
 

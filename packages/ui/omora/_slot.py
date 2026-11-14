@@ -1,14 +1,13 @@
-"""主会话 Slot 出口（S6.2）：view 的构造、handler 代次与异步推送。
+"""主会话 Slot 视图：view 的构造、handler 代次与异步推送。
 
-ui.py 只做接线：页面登记与 legacy 快照还留在那里。这里管 `engine="slot"` 的三件事：
+ui.py 只做接线：页面登记、set_page / refresh_page 走这里。这里管三件事：
 
 1. 页面列表 + 当前页 → 一份 view：nav 局部树 + page 局部树 + 页面侧表 +
    active + data + 单调 version（权威根树仍由 TS 链接器链接）；
-2. handler 代次登记：树里的事件写 id，上一代留一次宽限（同 legacy 语义）；
-3. set_page / refresh_page 的整份 view 推送。
+2. handler 代次登记：树里的事件写 id，上一代留一次宽限；
+3. set_page / refresh_page 时推整份 view 到 ui.snapshot。
 
-页面信息与页面树都经构造参数回调拿，不 import ui.py：legacy 状态
-（`_current` / per-page version）与 slot 状态彼此不混。
+页面信息与页面树都经构造参数回调拿，不 import ui.py。
 """
 
 from __future__ import annotations
@@ -77,8 +76,8 @@ def build_view(  # noqa: PLR0913 —— view 信封的声明式参数
     )
 
 
-class SlotMode:
-    """`engine="slot"` 的状态机：当前页、view 版本、handler 代次。"""
+class SlotView:
+    """Slot 视图的状态机：当前页、view 版本、handler 代次。"""
 
     def __init__(  # noqa: PLR0913 —— 接线回调
         self,
@@ -119,7 +118,6 @@ class SlotMode:
         self._log.debug(
             "ui.render",
             page=name,
-            engine="slot",
             ms=(time.perf_counter() - started) * 1000,
         )
         return view
@@ -147,16 +145,15 @@ class SlotMode:
             "ui.event",
             handler=handler,
             page=self._active,
-            engine="slot",
             ms=(time.perf_counter() - started) * 1000,
         )
         return view
 
-    def page_changed(self, name: str) -> None:
-        """页面树换了 / 手动 refresh：只有当前页在客户端手里才推整份 view。"""
-        if self._active != name:
+    def push(self) -> None:
+        """页面树换了 / 手动 refresh：客户端已经有一份视图就推一份新的整份 view。"""
+        if self._active is None:
             return
-        self._emit(self._view(name))
+        self._emit(self._view(self._active))
 
     def page_removed(self, name: str) -> None:
         """页面被卸载：它恰好是当前页时清掉，下一次 render 回到第一页。"""
@@ -219,4 +216,4 @@ class SlotMode:
         return register
 
 
-__all__ = ["PageInfo", "SlotMode", "build_view"]
+__all__ = ["PageInfo", "SlotView", "build_view"]

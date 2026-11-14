@@ -36,7 +36,7 @@ export const WINDOW_SCAFFOLD: SlotNode = deepFreeze<SlotNode>({
       kind: "dendro:slot",
       owner: "dendro",
       props: {},
-      layout: { flow: "column", capacity: "many", size: { width: 56 } },
+      layout: { flow: "column", capacity: "many", size: { width: 56 }, gap: "xs" },
       children: [],
     },
     {

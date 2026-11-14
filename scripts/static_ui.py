@@ -64,11 +64,11 @@ def skeleton_view(view: dict[str, Any]) -> dict[str, Any]:
 def collect(kernel: Any) -> dict[str, dict[str, Any]]:
     """把每一页画一遍（slot 出口），收成 name → 首帧视图。"""
     ui = kernel.resolve("ui")
-    first = ui.render(engine="slot")
+    first = ui.render()
     names = [str(page["id"]).removeprefix("page.") for page in first["pages"]]
     views: dict[str, dict[str, Any]] = {}
     for name in names:
-        views[name] = skeleton_view(ui.render(name, engine="slot"))
+        views[name] = skeleton_view(ui.render(name))
     return {name: views[name] for name in names}
 
 
