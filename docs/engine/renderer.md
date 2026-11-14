@@ -145,20 +145,20 @@ React 渲染层已删除；剩下的是框架无关的纯模块与 DOM 实现：
 
 ## 9. 静态骨架编译（构建期）
 
-构建期编译器和运行时共用同一套 kind 与 `DomShell`（`DomShell` 随旧快照壳在 `legacy/shell.ts`，`build/` 只依赖 legacy）：不复制静态模板，也不给 kind 加第二套实现。
+构建期编译器和运行时共用同一套 view 校验（`link/view.parseView`）、链接器（`link/`）与 Slot 注册表（`components/slot_registry`）：不复制静态模板，也不给 kind 加第二套实现。
 
 ```text
-scripts/static_ui.py            空数据跑系统插件 → src/generated/static-tree.ts（结构数据）
-src/build/skeleton.ts        快照 → HTML（需要 DOM；kind 直接写 DOM）
-src/build/boot-skeleton.ts   启动快照 + 贡献组合 → 首帧
+scripts/static_ui.py          空数据跑系统插件 → src/generated/static-view.ts（每页一份 view）
+src/build/slot-skeleton.ts   view → 链接 → DOM → HTML（需要 DOM；kind 直接写 DOM）
+src/build/boot-skeleton.ts   取默认页视图 → 编译首帧
 src/build/node.ts            Node 宿主：jsdom 临时立 window/document，跑完还原
 src/build/vite-plugin.ts     Vite adapter：只决定何时编译、注进哪里
 ```
 
 - `vite.config.ts` 的插件把编译结果注入 `<div id="root">`；`vite build` 的 `dist/index.html` 和 dev server 都带首帧 HTML，浏览器不必等 JS 解释整棵树。
-- 编译只产出结构，不注册事件：HTML 里的按钮是禁用态（运行时拿到静态快照时也如此），真快照到了由运行时接手。
-- 运行时挂载（`DomApp.mount`）先清掉预渲染 HTML，再用同一份快照重建；v0 只保证"首帧不等 JS"，还没做 hydration——首帧 DOM 会被替换一次。
-- 两道门禁：`static_ui.py --check` 查骨架数据是否最新；`skeleton_html.py` 查构建产物确实带编译后的 HTML（CI build job）。
+- 骨架里导航入口保留 handler（外观和旧壳一样可用），内容按钮没有 handler、画成禁用态；真视图到了由运行时接手。
+- 运行时挂载（live 入口）先清掉预渲染 HTML，再用链接后的 Slot 树重建；只保证"首帧不等 JS"，还没做 hydration——首帧 DOM 会被替换一次。
+- 两道门禁：`static_ui.py --check` 查骨架视图是否最新；`skeleton_html.py` 查构建产物确实带 Slot 首帧（CI build job）。
 - `vite.config.ts` import 了引擎源码，所以 `dev/build/test/preview` 统一带 `--configLoader runner`（`omora dev` 同步）；bundle loader 会把整张引擎模块图打进配置并报无扩展名 import 警告。
 
 ## 10. Slot → DOM（S3-d spike，已落）
@@ -166,19 +166,19 @@ src/build/vite-plugin.ts     Vite adapter：只决定何时编译、注进哪里
 Slot 文档/运行时产出的是 `SlotNode`，现有 DOM renderer 只认 legacy `Node` 词表。S3-d 先用**薄桥 + 命名空间别名**把 Slot 接上，不迁移 38 个 kind 的实现：
 
 - `src/renderer/slot_bridge.ts`：`slotToNode` 只做形状搬运——`type = slot.kind`（保留命名空间），复制 id/props/children/events/layout；不展开 `collection.templates`（模板不是挂载节点，实例化归运行时）。
-- `src/app/slot_registry.ts`：`slotRegistry` = 所有 legacy type 的 `dendro:<type>` 别名 + 宿主别名（`ideas:card` → legacy `card`）+ Slot 原生 kind；Slot 原生 kind 后合并，同名时 Slot 语义优先。
+- `src/components/slot_registry.ts`：`slotRegistry` = 所有 legacy type 的 `dendro:<type>` 别名 + 宿主别名（`ideas:card` → legacy `card`）+ Slot 原生 kind；Slot 原生 kind 后合并，同名时 Slot 语义优先。放组件层是因为主入口与构建期骨架编译（build）都要用同一张表。
 - `src/components/slot_kinds.ts`：Slot 原生结构 kind（`dendro:window/page/slot/layer` 按 `layout.flow` 映射到现有 `.omora-row`/`.omora-column` class；S4 起 size/gap/align/scroll 也映射到 `--dendro-*` CSS 变量与 `data-*` 属性，`[data-dendro-layout]` 样式段消费）与 `dendro:page-link`（复用壳层导航按钮样式，事件走 `handlerOf` + `ctx.event`）。
 - `Node` 增加可选 `layout` 字段；`kind` 语义由注册表决定，renderer 协调逻辑不变。
 
 **已证明**（`src/app/spike.test.ts`，共享 `document.json`）：session → 水合 → 桥 → DOM 渲染出母页面/导航/卡片；纯数据更新后同 id 卡片复用同一 DOM 元素、只改标题并新增一条；全量替换同 id 文档不重挂。换页用 `engine/document/page_switch.ts` 的 `diffPageTrees` 分类出 keep/move/replace/cancel/add。
 
-**未接**：renderer 目前只在同一个父节点下按 id 协调，跨父的 `move` 会重建元素（换页移动的身份保留待补）；Slot 桥还没有接进 `app/app.ts` / 主入口，legacy 页面仍走 legacy 路径；`layout` 的 size/gap/align 还没落到样式。
+**已接主会话**（S6.4）：live 入口用链接后的 Slot 树渲染，`?engine=legacy` 只剩旧快照回退。**未接**：Slot 节点局部状态（`state`）与 reactions 执行；legacy 回退路径与 `_diff.py` 待删（S6.5）。
 
 ## 11. 验收
 
 - [x] 38 个 kind 全部有 DOM 实现与测试（`registry.test.ts` 钉住覆盖）；
 - [x] React 依赖与 React 文件删除；`index.html` 入口切到 DOM；
-- [x] 启动骨架由 Vite 在构建期编译进 `index.html`，产物门禁 `scripts/skeleton_html.py` 通过；
+- [x] 启动骨架由 Vite 在构建期编译进 `index.html`，产物门禁 `scripts/skeleton_html.py` 通过；S6.5 起骨架来自 Slot 视图链接编译；
 - [x] `tsc` / eslint / prettier / vitest / vite build 全绿；
 - [ ] 首帧 hydration（复用预渲染 DOM，不重建）；
 - [x] SlotNode 经薄桥 + 命名空间别名直接渲染；跨父 move 复用元素已接（`renderer_move.test.ts`）；

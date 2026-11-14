@@ -26,6 +26,8 @@
 
 > S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/contract/document.ts` 的 Slot 文档契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
 
+> S6.5 进度（2026-11-14）：启动骨架已改成 Slot 链接编译 —— `scripts/static_ui.py` 产 `generated/static-view.ts`（每页一份 view；导航入口保留 handler、内容摘事件），build 用 `parseView` + `link` + Slot 渲染器编译首帧；`skeleton_html` 门禁改查 Slot 标记；`slot_registry` 从 app 移到 components（build 可用），`build/` 不再依赖 legacy。legacy 只剩 `?engine=legacy` 回退，删除放下一 PR。
+
 > S6.4 进度（2026-11-14）：默认入口已切 —— `main.ts` 默认走主会话 Slot（`engine=slot` 只留给内置 fixture 预览，`engine=legacy` 是回退开关）；slot view 不再由 Python 生成页面 header（旧壳本来不画标题 / meta，两条路径渲染等价），连接状态点浮在左下角。boot 层 e2e 覆盖 render / 导航 / legacy 回归。
 
 > S6.2 / S6.3 进度（2026-11-14）：跨端最小闭环已接 —— Python `sdk/slot_tree.py` 把 legacy Page / Node 树升成 Slot 局部树（确定性 id、events、`page.<name>` 页面根），`packages/ui` 的 `render` / `event` 支持 `engine="slot"` 交 view（legacy 出口不变）；TS 新增 `?engine=live` 入口（`createEngineFromView` + `SourceEngine.applyView` + DocumentView），boot 层 WebSocket e2e 已走通「render → view → 点导航 → ui.event → 新 view」。
@@ -63,19 +65,19 @@
 
 ## 3. 代码迁移映射
 
-| 现在                                       | 目标                           | 阶段                                   |
-| ------------------------------------------ | ------------------------------ | -------------------------------------- |
-| `app/sdk/omora/sdk/ui.py` / `controls.py`  | Slot 词表 + schema 源          | S1                                     |
-| `packages/ui/omora/ui.py`                  | 文档/局部树注册 + 数据路由     | **S6 产 Slot**（当前仍产 legacy 快照） |
-| `packages/ui/omora/_diff.py`               | 由 ops / data 取代后删除       | **S6**                                 |
-| `app/ui-engine/src/app/main.ts` / `app.ts` | Session + 运行时容器           | **S6 主入口**（当前是 legacy DomApp）  |
-| `legacy/render/compose.ts`                 | legacy 贡献组合（运行时）      | S6 删除                                |
-| `app/ui-engine/src/link/`                  | Compiler/Linker（Slot 局部树） | S2 已落（S6 接主会话）                 |
-| `app/ui-engine/src/engine/`                | Document / 索引 / ops / 集合   | S3 已落（S6 接主会话）                 |
-| `legacy/render/patch.ts`                   | Document 更新管线（legacy）    | S6 删除                                |
-| `renderer/` / `components/`                | Renderer + schema 生成注册表   | S1–S3 已落                             |
-| `scripts/static_ui.py`                     | 构建期编译门禁                 | **S6** 升级（改成 Slot 链接编译）      |
-| `scripts/keys.py` / generated              | slot id 生成器                 | S1 / S6                                |
+| 现在                                       | 目标                           | 阶段                                |
+| ------------------------------------------ | ------------------------------ | ----------------------------------- |
+| `app/sdk/omora/sdk/ui.py` / `controls.py`  | Slot 词表 + schema 源          | S1                                  |
+| `packages/ui/omora/ui.py`                  | 文档/局部树注册 + 数据路由     | S6 已产 Slot（legacy 出口留回退）   |
+| `packages/ui/omora/_diff.py`               | 由 ops / data 取代后删除       | **S6**                              |
+| `app/ui-engine/src/app/main.ts` / `app.ts` | Session + 运行时容器           | S6 已切主入口（legacy 回退待删）    |
+| `legacy/render/compose.ts`                 | legacy 贡献组合（回退路径）    | S6.5 删除                           |
+| `app/ui-engine/src/link/`                  | Compiler/Linker（Slot 局部树） | S2 已落（S6 接主会话）              |
+| `app/ui-engine/src/engine/`                | Document / 索引 / ops / 集合   | S3 已落（S6 接主会话）              |
+| `legacy/render/patch.ts`                   | Document 更新管线（回退路径）  | S6.5 删除                           |
+| `renderer/` / `components/`                | Renderer + schema 生成注册表   | S1–S3 已落                          |
+| `scripts/static_ui.py`                     | 构建期编译门禁                 | S6.5 已升级（Slot 视图 + 链接编译） |
+| `scripts/keys.py` / generated              | slot id 生成器                 | S1 / S6                             |
 
 ## 4. 旧文档去向
 
@@ -109,7 +111,7 @@
 
 - **handler id 代次**：legacy 的 `owner:serial:index` 随重画递增；Slot 要稳定 id + events 映射，Python 侧事件注册语义要跟着改。
 - **`_diff.py` 退出**：页面补丁由 ops / data 取代，Python 不再算整页 diff。
-- **静态骨架**：构建期现在用 legacy 组合，要改成 Slot 链接编译。
+- ~~**静态骨架**：构建期现在用 legacy 组合~~：已解（S6.5 改成 Slot 链接编译）。
 - **行为等价**：搜索防抖、音频 / 视频 / 波形这些渲染层状态，要有对应的 Slot 局部状态路径。
 
 ## 7. 未决

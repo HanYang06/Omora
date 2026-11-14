@@ -8,7 +8,7 @@
 - 仓库是 uv workspace：`omora-core` / `omora-sdk` / 每个 `omora-plugin-*` 都是 member；import 命名空间 `omora.*`。
 - 存储：SQLite（`.omora/omora.db`）；媒体文件（`.omora/media`）。
 - 测试：Python 490 条、TS 851 条，全绿。
-- 引擎文档与实现已落：Dendrolink（树链引擎）契约见 [docs/engine/README.md](engine/README.md)；S1–S5 起步与 S6.1–S6.4（视图契约 / Python 产出 / 主入口切换）已落，**默认入口已走 Slot 主会话**，`?engine=legacy` 是回退开关；下一步删 legacy 与升级静态骨架。
+- 引擎文档与实现已落：Dendrolink（树链引擎）契约见 [docs/engine/README.md](engine/README.md)；S1–S6.5（视图契约 / Python 产出 / 主入口切换 / Slot 静态骨架）已落，**默认入口已走 Slot 主会话**，`?engine=legacy` 是回退开关；下一步删 legacy 回退路径与 `_diff.py`。
 - 门禁：`.github/workflows/ci.yml` 全绿（ruff / mypy / pytest + 覆盖率 / eslint / prettier / tsc / vitest + 覆盖率 / 安全扫描 / 构建 / Windows）。
 - 灵感页有传统（非 AI）搜索：建议下拉、结果视图、详情与返回。
 - 插件管理器已落：清单、`[tool.omora]` 条件（平台 / 能力 / 依赖服务）、开关与设置页；
