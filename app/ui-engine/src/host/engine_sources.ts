@@ -15,9 +15,10 @@
  * “增量重链”。
  */
 
-import type { PageEntry } from "../contract/document";
+import { DOCUMENT_SCHEMA, type PageEntry } from "../contract/document";
 import type { RenderStats } from "../contract/render";
 import { parseLocalTrees } from "../link/parse";
+import { parseView } from "../link/view";
 import type { Diagnostic } from "../contract/diagnostics";
 import type { LocalTree, LocalTreesPayload } from "../link/types";
 import type { EngineApplyResult, EngineOptions, EngineRuntime } from "./engine";
@@ -29,11 +30,13 @@ import type { Requester } from "../contract/policy";
 import { SourceHost, type SourceHostResult } from "./sources";
 import type { SessionState } from "../engine/document/session";
 
-/** createEngineFromLocalTrees 的可选输入：页面侧表 / 数据文档 / 引擎设施。 */
+/** createEngineFromLocalTrees 的可选输入：页面侧表 / 数据文档 / 文档版本 / 引擎设施。 */
 export interface SourceEngineOptions extends EngineOptions {
   pages?: readonly PageEntry[];
   active?: string;
   data?: Record<string, unknown>;
+  /** 初始文档版本；缺省 1（S6 主会话视图按自己单调的 version 给）。 */
+  version?: number;
 }
 
 export type SourceEngineResult =
@@ -138,6 +141,44 @@ export class SourceEngine {
     return this.applyHostTree(result);
   }
 
+  /**
+   * 应用一份主会话视图（S6）：整组局部树重链 → 「链接结果 + 页面侧表 + 数据 + 版本」
+   * 按全量替换提交。失败时把 host 注册表恢复到上一份，会话与注册表不会各走一半。
+   */
+  applyView(value: unknown): SourceApplyResult {
+    if (this.isDisposed) {
+      return failure([disposedDiagnostic()]);
+    }
+    const parsed = parseView(value);
+    if (!parsed.ok) {
+      return failure(parsed.diagnostics);
+    }
+    const previous = payloadOf(this.host);
+    const loaded = this.host.load(parsed.view.localTrees.trees);
+    if (!loaded.ok) {
+      return failure(loaded.diagnostics);
+    }
+    const applied = this.inner.applyFull({
+      schema: DOCUMENT_SCHEMA,
+      document: this.host.tree,
+      pages: parsed.view.pages,
+      active: parsed.view.active,
+      data: parsed.view.data,
+      version: parsed.view.version,
+    });
+    if (!applied.ok) {
+      // 落败的视图不能把注册表留在新状态：回到上一份局部树，诊断一起回。
+      const restored = this.host.load(previous.trees);
+      return failure([...applied.diagnostics, ...restored.diagnostics]);
+    }
+    return {
+      ok: true,
+      changed: applied.changed,
+      session: applied.session,
+      diagnostics: loaded.diagnostics,
+    };
+  }
+
   /** 线上 local-trees 全量负载：整组替换注册表后经引擎提交新树。 */
   applyLocalTrees(payload: unknown): SourceApplyResult {
     if (this.isDisposed) {
@@ -222,7 +263,7 @@ export function createEngineFromLocalTrees(
       pages: [...(options.pages ?? [])],
       active: options.active ?? "",
       data: { ...(options.data ?? {}) },
-      version: 1,
+      version: options.version ?? 1,
     },
     options,
   );
@@ -231,4 +272,25 @@ export function createEngineFromLocalTrees(
     return created;
   }
   return { ok: true, engine: new SourceEngine(host, created.engine) };
+}
+
+/**
+ * 从主会话视图建来源模式引擎（S6）：局部树走链接器，页面侧表 / 数据 / 版本随视图给。
+ * 校验失败只回诊断、不建引擎；之后每次视图更新用 `SourceEngine.applyView`。
+ */
+export function createEngineFromView(
+  value: unknown,
+  options: SourceEngineOptions = {},
+): SourceEngineResult {
+  const parsed = parseView(value);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  return createEngineFromLocalTrees(parsed.view.localTrees, {
+    ...options,
+    pages: parsed.view.pages,
+    active: parsed.view.active,
+    data: parsed.view.data,
+    version: parsed.view.version,
+  });
 }
