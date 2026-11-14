@@ -58,28 +58,28 @@ def run() -> int:
         kernel = build(config, SYSTEM_PLUGINS)
         try:
             ui: Any = kernel.resolve("ui")
-            first = ui.render(engine="slot")
+            first = ui.render()
             names = [str(page["id"]).removeprefix("page.") for page in first["pages"]]
             assert names, "一页都没登记"
             print(f"PASS pages {names}")
 
-            views = {name: ui.render(name, engine="slot") for name in names}
+            views = {name: ui.render(name) for name in names}
             assert all(view["kind"] == "view" for view in views.values())
             print("PASS every page has a view")
 
             # 事件只在最近一代 handler 里有效：先重画当前页再取 handler。
-            current = ui.render("ideas", engine="slot")
+            current = ui.render("ideas")
             tile = find_slot(current, "dendro:tile", title="文字")
             assert tile is not None, "首页应该有文字捕捉块"
             handler = str(tile["events"]["click"])
-            ui.event(handler, {}, engine="slot")
+            ui.event(handler, {})
 
-            opened = ui.render("ideas", engine="slot")
+            opened = ui.render("ideas")
             box = find_slot(opened, "dendro:input")
             assert box is not None, "点开文字块之后应该有输入框"
             submit = str(box["events"]["submit"])
 
-            after = ui.event(submit, {"value": "买牛奶"}, engine="slot")
+            after = ui.event(submit, {"value": "买牛奶"})
             assert "买牛奶" in json.dumps(after, ensure_ascii=False)
             assert after["version"] > views["ideas"]["version"]
             print("PASS capture flow", submit)
