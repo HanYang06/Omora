@@ -158,8 +158,9 @@ S3-c 已落 route op：Python `omora.sdk.update.RouteOp`、TS `src/engine/docume
 事件仍走 `ui.event` 的 `{handler, payload}`：Slot 的 `events` 把事件名映射到 handler id，
 渲染层原样回传；`dispatch` 效果与异步推送的增量形状留到实现时再定。
 
-迁移期用 **call args 的 `engine: "slot"`** 选择出口（`ui.render` / `ui.event` 的入参，
-不是 payload 字段）；默认入口切到 Slot 后这个标记与 legacy 出口一起删除。
+默认入口已经走 Slot；迁移期仍用 **call args 的 `engine: "slot"`** 选择出口（`ui.render` /
+`ui.event` 的入参，不是 payload 字段），`?engine=legacy` 回退时同一实例改走旧快照。删掉
+legacy 出口时这个标记一起删。
 
 ## 9. 未定
 

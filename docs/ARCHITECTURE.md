@@ -152,9 +152,10 @@ class Ideas:
 DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engine/README.md)，
 目录与依赖方向见 [layering.md](engine/layering.md)，实现状态与缺口见 README §6。
 
-**默认主会话仍走 legacy 快照路径**（Python 产页面快照 → 旧快照渲染），Slot 运行时只在
-`?engine=slot` 预览；规则执行（`reactions`）与 schema 单一来源也还没落。S6 的目标是让
-真实页面走 Slot，然后删除 legacy（见 [migration.md](engine/migration.md) §6）。
+**默认入口已走 Slot 主会话**（Python 产局部树 → TS 链接 → EngineRuntime/DocumentView）；
+`?engine=legacy` 是删 legacy 之前的回退开关，`?engine=slot` 是内置 fixture 预览。规则执行
+（`reactions`）与 schema 单一来源还没落；S6.5 待做：删 legacy 路径与构建期 adapter、把静态
+骨架改成 Slot 链接编译（见 [migration.md](engine/migration.md) §6）。
 
 - 唯一原语 Slot：窗口 / 页面 / 层 / 布局 / 组件都是 kind 不同的 Slot。
 - 局部树在链接期组合成权威根树，冲突是编译错误。

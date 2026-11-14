@@ -5,19 +5,32 @@ import { LiveSlotApp } from "./live";
 import "../styles/styles.css";
 import "../styles/media.css";
 
+/** 入口模式：默认主会话 Slot；`?engine=legacy` 回退旧快照，`?engine=slot` 看内置 fixture 预览。 */
+export type EngineMode = "legacy" | "preview" | "live";
+
 /**
- * `?engine=slot` → Slot 文档预览入口（S3-e）。
- *
- * 解析可单独测试：只有查询串里的 `engine` 恰好是 `slot` 才走预览；
- * 其它（含 `?engine=legacy`、空查询）继续走 legacy 主路径。
+ * 解析入口模式（可单独测试）：
+ * - `engine=legacy` → 旧快照渲染（回退开关，删 legacy 时一起消失）；
+ * - `engine=slot` → 内置 Slot 文档预览（不连 Python）；
+ * - 其它（含空查询、`engine=live`）→ 主会话 Slot 运行时（S6.4 起默认）。
  */
-export function wantsPreview(search: string): boolean {
-  return new URLSearchParams(search).get("engine") === "slot";
+export function engineMode(search: string): EngineMode {
+  const engine = new URLSearchParams(search).get("engine");
+  if (engine === "legacy") {
+    return "legacy";
+  }
+  if (engine === "slot") {
+    return "preview";
+  }
+  return "live";
 }
 
-/** `?engine=live` → 主会话 Slot 运行时（S6 迁移期入口；默认仍是 legacy）。 */
+export function wantsPreview(search: string): boolean {
+  return engineMode(search) === "preview";
+}
+
 export function wantsLive(search: string): boolean {
-  return new URLSearchParams(search).get("engine") === "live";
+  return engineMode(search) === "live";
 }
 
 function startLegacy(container: HTMLElement): void {
@@ -49,21 +62,22 @@ function startPreview(container: HTMLElement): void {
 }
 
 /**
- * 启动入口：`?engine=slot` 走 Slot 预览（不建 Connection、不调 Python），
- * `?engine=live` 走主会话 Slot 运行时（连 Python），否则 legacy。
+ * 启动入口：默认走主会话 Slot 运行时（连 Python）；`?engine=slot` 看内置预览、
+ * `?engine=legacy` 回退旧快照路径。
  *
  * 单独导出便于以后补入口级测试；HTML 加载本模块时 `#root` 一定在。
  */
 export function bootstrap(container: HTMLElement, search: string): void {
-  if (wantsPreview(search)) {
+  const mode = engineMode(search);
+  if (mode === "preview") {
     startPreview(container);
     return;
   }
-  if (wantsLive(search)) {
-    startLive(container);
+  if (mode === "legacy") {
+    startLegacy(container);
     return;
   }
-  startLegacy(container);
+  startLive(container);
 }
 
 // 被测试 / 工具 import 时没有 #root，不能起副作用；真正入口（index.html）一定有。

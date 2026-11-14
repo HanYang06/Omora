@@ -7,8 +7,8 @@
 - 非 callable、非 children 的字段进 props，None 省略；
 - callable 字段进 events，事件名去掉 `on_` 前缀，值经 `register` 换成 handler id；
 - id 是确定性的（`page.<name>.content.<index path>`），同一棵树重建得到同一批 id；
-- 页面根是 flow=column / capacity=many 的 `dendro:page`，最前面一行 header
-  （标题 + meta）保持旧壳视觉等价。
+- 页面根是 flow=column / capacity=many 的 `dendro:page`，children 就是页面内容
+  （旧壳不画标题 / meta，这里也不额外加，保持两条路径渲染等价）。
 
 nav 与 page 两棵局部树用不同前缀（`ui.nav.*` / `page.*`），跨树 id 不会撞。
 本模块不产出整棵根树：把局部树链接成权威文档在 TS 侧。
@@ -35,13 +35,11 @@ from .ui import Node, Page
 NAMESPACE = "dendro"
 PAGE_KIND = "dendro:page"
 PAGE_MOUNT_AT = "dendro.window.page"
-PAGE_HEADER_KIND = "dendro:row"
 NAV_KIND = "dendro:slot"
 NAV_MOUNT_AT = "dendro.window.nav"
 NAV_OWNER = "ui"
 NAV_ROOT_ID = "ui.nav"
 EVENT_PREFIX = "on_"
-TEXT_KIND = "dendro:text"
 
 
 @dataclass(frozen=True)
@@ -115,35 +113,6 @@ def serialize_node_slot(
     )
 
 
-def _header_slot(*, owner: str, root_id: str, label: str, meta: str) -> Slot:
-    """旧壳标题区：一行标题文本 + 可选 meta。"""
-    header_id = f"{root_id}.header"
-    children = [
-        Slot(
-            f"{header_id}.title",
-            TEXT_KIND,
-            owner=owner,
-            props={"text": label, "kind": "title"},
-        )
-    ]
-    if meta.strip():
-        children.append(
-            Slot(
-                f"{header_id}.meta",
-                TEXT_KIND,
-                owner=owner,
-                props={"text": meta, "kind": "meta"},
-            )
-        )
-    return Slot(
-        header_id,
-        PAGE_HEADER_KIND,
-        owner=owner,
-        layout=Layout(flow="row", capacity="many"),
-        children=children,
-    )
-
-
 def serialize_page_slot(  # noqa: PLR0913 —— 页面根的声明式参数
     page: Page,
     register: Register,
@@ -168,7 +137,6 @@ def serialize_page_slot(  # noqa: PLR0913 —— 页面根的声明式参数
     props: JsonObject = {"label": label}
     if icon is not None:
         props["icon"] = icon
-    header = _header_slot(owner=owner, root_id=root_id, label=label, meta=page.meta)
     content = serialize_node_slot(
         page.content,
         register,
@@ -181,7 +149,7 @@ def serialize_page_slot(  # noqa: PLR0913 —— 页面根的声明式参数
         owner=owner,
         props=props,
         layout=Layout(flow="column", capacity="many"),
-        children=[header, content],
+        children=[content],
     )
     return LocalTree(owner=owner, root=root, mount_at=PAGE_MOUNT_AT)
 
@@ -237,7 +205,6 @@ __all__ = [
     "NAV_MOUNT_AT",
     "NAV_OWNER",
     "NAV_ROOT_ID",
-    "PAGE_HEADER_KIND",
     "PAGE_KIND",
     "PAGE_MOUNT_AT",
     "NavLink",

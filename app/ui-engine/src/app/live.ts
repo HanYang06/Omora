@@ -20,6 +20,15 @@ import { DocumentView } from "./view";
 
 const SNAPSHOT_TOPIC = "ui.snapshot";
 
+/** 与 legacy 壳同一套状态文案：槽位主会话没有旧壳，状态点单独浮在左下角。 */
+const STATUS_TEXT: Record<ConnectionStatus, string> = {
+  idle: "未连接",
+  connecting: "连接中…",
+  open: "已连接",
+  closed: "连接已断开",
+  failed: "连接失败",
+};
+
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -35,6 +44,9 @@ function isViewPayload(value: unknown): boolean {
 /** 主会话 Slot 运行时的宿主壳：连接、视图、事件与推送都在这里收口。 */
 export class LiveSlotApp {
   private container: HTMLElement | null = null;
+  private host: HTMLElement | null = null;
+  private statusEl: HTMLElement | null = null;
+  private statusLabel: HTMLElement | null = null;
   private view: DocumentView<SourceEngine> | null = null;
   private status: ConnectionStatus = "idle";
   private replayed = false;
@@ -52,10 +64,18 @@ export class LiveSlotApp {
     };
   }
 
-  /** 挂到容器：清掉构建期静态骨架，订阅状态 / 推送，然后连接。 */
+  /**
+   * 挂到容器：清掉构建期静态骨架 → 铺两层（左下角连接状态 + 视图宿主）→ 订阅 → 连接。
+   * 视图宿主单独一层，渲染器替换子节点时不会把状态点一起清掉。
+   */
   mount(container: HTMLElement): void {
     this.container = container;
     container.replaceChildren();
+    this.mountStatus(container);
+    this.host = document.createElement("div");
+    this.host.className = "dendro-live-host";
+    container.append(this.host);
+    this.paintStatus("idle");
     this.connection.subscribeStatus((status) => this.onStatus(status));
     this.connection.onEvent(SNAPSHOT_TOPIC, (payload) => this.onSnapshot(payload));
     this.connection.connect();
@@ -65,14 +85,44 @@ export class LiveSlotApp {
   dispose(): void {
     this.view?.dispose();
     this.view = null;
+    this.container?.replaceChildren();
     this.container = null;
+    this.host = null;
+    this.statusEl = null;
+    this.statusLabel = null;
   }
 
-  private containerOf(): HTMLElement {
-    if (this.container === null) {
+  private mountStatus(container: HTMLElement): void {
+    const status = document.createElement("div");
+    status.className = "omora-conn dendro-live-status";
+    status.setAttribute("role", "status");
+    const dot = document.createElement("span");
+    dot.className = "omora-conn-dot";
+    dot.setAttribute("aria-hidden", "true");
+    const label = document.createElement("span");
+    label.className = "omora-conn-label";
+    status.append(dot, label);
+    container.append(status);
+    this.statusEl = status;
+    this.statusLabel = label;
+  }
+
+  /** 状态点 / 读屏文字与 legacy 壳一致；endpoint 进 title，悬停能看到连的哪儿。 */
+  private paintStatus(status: ConnectionStatus): void {
+    if (this.statusEl === null || this.statusLabel === null) {
+      return;
+    }
+    this.statusEl.dataset.status = status;
+    this.statusEl.setAttribute("aria-label", STATUS_TEXT[status]);
+    this.statusEl.title = this.connection.endpoint;
+    this.statusLabel.textContent = STATUS_TEXT[status];
+  }
+
+  private hostOf(): HTMLElement {
+    if (this.host === null) {
       throw new Error("LiveSlotApp 还没 mount");
     }
-    return this.container;
+    return this.host;
   }
 
   private onStatus(status: ConnectionStatus): void {
@@ -86,6 +136,7 @@ export class LiveSlotApp {
       }
     }
     this.status = status;
+    this.paintStatus(status);
     if (status !== "open") {
       this.replayed = false;
       return;
@@ -134,7 +185,7 @@ export class LiveSlotApp {
         });
         return;
       }
-      this.view = new DocumentView(this.containerOf(), created.engine, {
+      this.view = new DocumentView(this.hostOf(), created.engine, {
         onEvent: (handler, eventPayload) => this.sendEvent(handler, eventPayload),
         loadMedia: (media) => this.loadMedia(media),
       });
