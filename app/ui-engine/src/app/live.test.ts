@@ -80,7 +80,24 @@ function appOf(fake: FakeConnection): LiveSlotApp {
   return new LiveSlotApp(
     fake.connection as unknown as Connection,
     createLogger({ call: () => Promise.resolve({}) }),
+    // 关掉自动发现（clock 会起定时器），测试需要的来源用 source 帧推。
+    { sources: [] },
   );
+}
+
+function runtimeSourcePayload(text: string, owner = "runtime.test"): JsonObject {
+  return {
+    kind: "source",
+    trees: [
+      {
+        owner,
+        mountAt: "dendro.window.nav",
+        order: 99,
+        seq: 0,
+        root: { id: owner, kind: "dendro:text", owner, props: { text }, children: [] },
+      },
+    ],
+  };
 }
 
 function mountInto(): HTMLElement {
@@ -165,6 +182,34 @@ describe("LiveSlotApp：主会话 Slot 运行时", () => {
     listener?.(viewOf(2, "page.ideas", "推送的标题"));
     await vi.waitFor(() => {
       expect(container.textContent).toContain("推送的标题");
+    });
+  });
+
+  it("ui.snapshot 推来的运行后来源会挂上，主视图替换后仍保留", async () => {
+    const fake = fakeConnection({ render: fixture(), event: viewOf(2, "page.projects", "项目页") });
+    const container = mountInto();
+    appOf(fake).mount(container);
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("灵感");
+    });
+    const listener = fake.snapshots[0];
+    expect(listener).toBeDefined();
+
+    listener?.(runtimeSourcePayload("RUNTIME"));
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("RUNTIME");
+    });
+
+    // 主视图全量替换（事件 result v2）：来源靠 keepOwners 留下来。
+    container.querySelectorAll<HTMLButtonElement>(".omora-page-link")[1]?.click();
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("项目页");
+      expect(container.textContent).toContain("RUNTIME");
+    });
+
+    listener?.({ kind: "source", trees: [], removed: ["runtime.test"] });
+    await vi.waitFor(() => {
+      expect(container.textContent).not.toContain("RUNTIME");
     });
   });
 
