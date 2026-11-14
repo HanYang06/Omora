@@ -5,6 +5,7 @@
 
 视图只有一个出口（协议 §6.1）：`render` 的 result 是全量快照，`event` 的 result 只有确认；
 事件引起的视图变化走 `ui.snapshot`——能 diff 就带补丁，不能（换页 / 首次 / 算不出）就带全量。
+S6.2 的 `engine="slot"` 出口（主会话 view）在 `_slot.py`，这里只做接线；legacy 出口不变。
 """
 
 from __future__ import annotations
@@ -19,6 +20,8 @@ from omora.sdk.realtime import emit
 from omora.sdk.ui import Handler, Node, Page, serialize
 
 from ._diff import diff_snapshot
+from ._handle import PageHandle
+from ._slot import PageInfo, SlotMode
 
 Builder = Callable[[], Page]
 Counter = Callable[[], int]
@@ -42,14 +45,16 @@ SNAPSHOT_TOPIC = "ui.snapshot"
 
 
 class _Page:
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917 —— 页面登记字段
         self,
+        owner: str,
         label: str,
         build: Builder | None,
         count: Counter | None,
         icon: str | None,
         glyph: str | None = None,
     ) -> None:
+        self.owner = owner
         self.label = label
         self.glyph = glyph
         # 三种：build 回调（拉取式，旧写法）、插件 set 上来的树（推送式）、
@@ -69,26 +74,6 @@ class _Page:
         self.sent: dict[str, Any] | None = None
 
 
-class PageHandle:
-    """页面对象：插件自己交树（推送式），不再把 build 回调交给 ui。"""
-
-    def __init__(self, ui: Ui, name: str) -> None:
-        self._ui = ui
-        self.name = name
-
-    def set(self, page: Page) -> None:
-        """交这一页当前的树；客户端正在看它就直接推过去。"""
-        self._ui.set_page(self.name, page)
-
-    def refresh(self) -> None:
-        """把这一页当前那棵树再交一次（数据变了、树也重建过时用）。"""
-        self._ui.refresh_page(self.name)
-
-    def rebuild(self, builder: Builder) -> None:
-        """登记重建回调：客户端明确要这一页时由 ui 调一次，吸收插件装卸这类外部变化。"""
-        self._ui.bind_rebuild(self.name, builder)
-
-
 class Ui:
     def __init__(self, log: Log | None = None, ctx: Context | None = None) -> None:
         self._pages: dict[str, _Page] = {}
@@ -103,6 +88,16 @@ class Ui:
         self._in_event = False
         # 这一页还要订哪些推送 topic：写进快照，客户端按它订阅。
         self._topics: list[str] = []
+        # 最近一次调用的 engine 决定异步推送（set_page / refresh_page）交哪种形状。
+        self._engine: str | None = None
+        self._slots = SlotMode(
+            names=lambda: list(self._pages),
+            info=self._page_info,
+            body=lambda name: self._page_body(name, self._entry(name)),
+            rebuild=self._rebuild,
+            emit=self._emit,
+            log=self._log,
+        )
 
     def page(  # noqa: PLR0913, PLR0917 —— 页面登记的声明式参数
         self,
@@ -120,10 +115,11 @@ class Ui:
         """
         if name in self._pages:
             raise ValueError(f"页面重复登记: {name}")
-        self._pages[name] = _Page(label, build, count, icon, glyph)
+        self._pages[name] = _Page(ctx.name, label, build, count, icon, glyph)
 
         def remove() -> None:
             self._pages.pop(name, None)
+            self._slots.page_removed(name)
 
         ctx.effect(remove)
         return PageHandle(self, name)
@@ -167,7 +163,12 @@ class Ui:
         """插件交来一页当前的树；客户端正在看它就直接推一次，不等下一次事件。"""
         entry = self._entry(name)
         entry.tree = page
-        if self._in_event or self._current is None or self._current.get("page") != name:
+        if self._in_event:
+            return
+        if self._engine == "slot":
+            self._slots.page_changed(name)
+            return
+        if self._current is None or self._current.get("page") != name:
             return
         self._push(name, entry, self._draw(name, entry))
 
@@ -175,14 +176,27 @@ class Ui:
         self._entry(name).rebuild = builder
 
     def refresh_page(self, name: str) -> None:
-        """把这一页当前那棵树重交给客户端一次（全量兜底）。"""
+        """把这一页当前那棵树重交给客户端一次（全量兜底）。
+
+        slot 模式下推整份 view（kind=view），不再推 legacy 补丁。
+        """
         entry = self._entry(name)
+        if self._engine == "slot":
+            self._slots.page_changed(name)
+            return
         if self._current is None or self._current.get("page") != name:
             return
         self._emit(self._deliver(entry, self._draw(name, entry)))
 
-    def render(self, page: str | None = None) -> dict[str, Any]:
-        """画一页；不指定就画第一个登记的。result 是全量快照（带 version）。"""
+    def render(self, page: str | None = None, engine: str | None = None) -> dict[str, Any]:
+        """画一页；不指定就画第一个登记的。result 是全量快照（带 version）。
+
+        `engine == "slot"` 时交主会话 view；其余情况保持 legacy 快照不变。
+        engine 也决定异步推送的形状：slot 模式下 set_page / refresh_page 推 view。
+        """
+        self._engine = engine
+        if engine == "slot":
+            return self._slots.render(page)
         name = page if page is not None else next(iter(self._pages), None)
         if name is None:
             raise LookupError("没有登记任何页面")
@@ -195,14 +209,24 @@ class Ui:
         self._log.debug("ui.render", page=name, ms=(time.perf_counter() - started) * 1000)
         return snapshot
 
-    def event(self, handler: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def event(
+        self, handler: str, payload: dict[str, Any], engine: str | None = None
+    ) -> dict[str, Any]:
         """把载荷交给 handler，重画它所属的那一页；result 只有确认（{}）。
 
-        视图不搭 result 的车：变化走 `ui.snapshot`（协议 §6.1）。
+        视图不搭 result 的车：变化走 `ui.snapshot`（协议 §6.1）。slot 模式下先派发
+        （含上一代 id 的宽限），再把当前页的整份 view 作为 result 交回去。
 
         上一代的 handler 还留着一次宽限：组件卸载时提交的事件（例如录制中点
         「收起」，引擎在卸载时停止并提交）带的 id 属于上一代，不能静默丢掉。
         """
+        self._engine = engine
+        if engine == "slot":
+            self._in_event = True
+            try:
+                return self._slots.event(handler, payload)
+            finally:
+                self._in_event = False
         for name, entry in self._pages.items():
             callback = entry.handlers.get(handler)
             late = callback is None
@@ -235,6 +259,15 @@ class Ui:
         if entry is None:
             raise LookupError(f"未知页面: {page}")
         return entry
+
+    def _page_info(self, name: str) -> PageInfo:
+        entry = self._entry(name)
+        return PageInfo(name, entry.label, entry.owner, entry.icon)
+
+    def _rebuild(self, name: str) -> None:
+        entry = self._entry(name)
+        if entry.rebuild is not None:
+            entry.tree = entry.rebuild()
 
     def _draw(self, name: str, entry: _Page) -> dict[str, Any]:
         counters: dict[str, int] = {}
