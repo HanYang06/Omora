@@ -155,6 +155,18 @@ body {
   border: 0;
 }
 
+/* S6.4：主会话 Slot 入口没有旧壳，连接状态点单独浮在左下角；宿主层铺满 */
+.dendro-live-status {
+  position: fixed;
+  left: var(--s3);
+  bottom: var(--s2);
+  z-index: 20;
+}
+
+.dendro-live-host {
+  height: 100%;
+}
+
 /* 主区：铺满，不再 720px 居中 */
 
 .omora-page {

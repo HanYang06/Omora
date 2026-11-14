@@ -7,7 +7,7 @@ import type { Connection } from "./connection";
 import type { JsonObject } from "../contract/protocol";
 import { createLogger } from "./log";
 import { LiveSlotApp } from "./live";
-import { wantsLive } from "./main";
+import { engineMode, wantsLive } from "./main";
 
 /** jsdom 下不要用 new URL(..., import.meta.url)：Vite 会改写成 dev server 地址。 */
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -93,13 +93,15 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe("wantsLive", () => {
-  it("只有 ?engine=live 走主会话 Slot 入口", () => {
-    expect(wantsLive("?engine=live")).toBe(true);
-    expect(wantsLive("?engine=live&debug=1")).toBe(true);
-    expect(wantsLive("?engine=slot")).toBe(false);
+describe("入口模式", () => {
+  it("默认走主会话 Slot；legacy / preview 是显式回退", () => {
+    expect(engineMode("")).toBe("live");
+    expect(engineMode("?engine=live")).toBe("live");
+    expect(engineMode("?engine=live&debug=1")).toBe("live");
+    expect(engineMode("?engine=legacy")).toBe("legacy");
+    expect(engineMode("?engine=slot")).toBe("preview");
+    expect(wantsLive("")).toBe(true);
     expect(wantsLive("?engine=legacy")).toBe(false);
-    expect(wantsLive("")).toBe(false);
   });
 });
 
@@ -120,6 +122,9 @@ describe("LiveSlotApp：主会话 Slot 运行时", () => {
       expect(container.querySelectorAll(".omora-page-link")).toHaveLength(2);
     });
     expect(fake.connection.subscribe).toHaveBeenCalledWith(["ui.snapshot"]);
+    const status = container.querySelector<HTMLElement>(".dendro-live-status");
+    expect(status?.dataset.status).toBe("open");
+    expect(status?.getAttribute("aria-label")).toBe("已连接");
   });
 
   it("点导航：事件带 engine=slot 回传，返回的新视图换 active 与页面内容", async () => {
@@ -172,7 +177,8 @@ describe("LiveSlotApp：主会话 Slot 运行时", () => {
     await vi.waitFor(() => {
       expect(fake.calls.some((call) => call.method === "render")).toBe(true);
     });
-    expect(container.textContent).toBe("");
+    // 状态层还在（"已连接"），但视图宿主里没有渲染任何 Slot 树。
     expect(container.querySelector("[data-dendro-layout]")).toBeNull();
+    expect(container.querySelector(".dendro-live-host")?.childElementCount).toBe(0);
   });
 });

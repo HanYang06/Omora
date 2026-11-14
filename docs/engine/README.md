@@ -102,7 +102,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 | 组件词表 | 38 个 kind + Slot 原生结构 kind + registry 已落                                         | schema 单一来源与代码生成未做                                     |
 | 渲染层   | DOM renderer + 38 kind + 跨父 move + 节点统计                                           | —                                                                 |
 | 启动骨架 | Vite 构建期把 legacy 首帧编译进 HTML                                                    | Slot 链接编译未接（build adapter 依赖 legacy）                    |
-| 主会话   | 默认仍走 legacy 快照路径                                                                | **S6：Python 产 Slot + 主入口切换**；`?engine=slot` 仅预览        |
+| 主会话   | 默认走 Slot（Python 产局部树 → TS 链接 → EngineRuntime）；`?engine=legacy` 回退         | S6.5：删 legacy / 构建期 adapter、静态骨架改 Slot 编译            |
 
 ## 7. 术语
 
@@ -128,15 +128,15 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 ## 9. 落地阶段
 
-| 阶段 | 内容                                                   | 状态                                                                      |
-| ---- | ------------------------------------------------------ | ------------------------------------------------------------------------- |
-| S0   | 收尾：仓库结构迁移单独 PR；提案文档入 docs；修过期数字 | ✅                                                                        |
-| S1   | 契约：Slot 序列化 + 跨语言 fixture                     | ✅ S1.1（schema 单一来源未做）                                            |
-| S2   | 链接期组合：诊断码、顺序模型、构建期编译门禁           | ✅ 第一版（按 kind schema、static_ui 升级未做）                           |
-| S3   | 三张索引 + 三种更新 + 集合绑定                         | ✅ a–e（主会话渲染未接）                                                  |
-| S4   | 权限薄层 + 生命周期账本 + 观测指标                     | ✅（applyFull 已收；observe/intercept 见 permissions §8）                 |
-| S5   | 来源宿主 + 渲染节点统计 + TS 宿主                      | ◐ 起步（SourceEngine + render stats；运行后来源示例未做）                 |
-| S6   | 主会话接入：Python 产 Slot → TS 主入口 → 删 legacy     | ◐ S6.1–S6.3 已落（视图负载 / Python 产出 / `?engine=live`）；默认切换待做 |
+| 阶段 | 内容                                                   | 状态                                                                       |
+| ---- | ------------------------------------------------------ | -------------------------------------------------------------------------- |
+| S0   | 收尾：仓库结构迁移单独 PR；提案文档入 docs；修过期数字 | ✅                                                                         |
+| S1   | 契约：Slot 序列化 + 跨语言 fixture                     | ✅ S1.1（schema 单一来源未做）                                             |
+| S2   | 链接期组合：诊断码、顺序模型、构建期编译门禁           | ✅ 第一版（按 kind schema、static_ui 升级未做）                            |
+| S3   | 三张索引 + 三种更新 + 集合绑定                         | ✅ a–e（主会话渲染未接）                                                   |
+| S4   | 权限薄层 + 生命周期账本 + 观测指标                     | ✅（applyFull 已收；observe/intercept 见 permissions §8）                  |
+| S5   | 来源宿主 + 渲染节点统计 + TS 宿主                      | ◐ 起步（SourceEngine + render stats；运行后来源示例未做）                  |
+| S6   | 主会话接入：Python 产 Slot → TS 主入口 → 删 legacy     | ◐ S6.1–S6.4 已落（契约 / Python 产出 / 默认入口切换）；S6.5 删 legacy 待做 |
 
 各阶段的逐条进度记录在 [migration.md](migration.md) §1 的阶段注记里；本文只保留阶段表。
 
