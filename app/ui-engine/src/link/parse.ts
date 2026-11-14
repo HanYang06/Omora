@@ -257,3 +257,52 @@ export function parseLocalTrees(value: unknown): ParseLocalTreesResult {
   }
   return { ok: true, payload: { kind: "local-trees", seq, trees: unique } };
 }
+
+/** 运行后来源推送（S7）：按 owner 整组替换局部树 + 可选撤来源。 */
+export interface SourcePush {
+  trees: LocalTree[];
+  removed: string[];
+}
+
+export type ParseSourcePushResult =
+  { ok: true; push: SourcePush } | { ok: false; diagnostics: Diagnostic[] };
+
+/**
+ * 校验 `source` payload：`{kind:"source", trees:[...], removed?:["owner"]}`。
+ *
+ * trees 复用 local-trees 的整套校验（Slot 形状 / 全局 id 唯一）；removed 里的 owner
+ * 由调用方撤来源（级联撤树）。失败返回诊断，不抛。
+ */
+export function parseSourcePush(value: unknown): ParseSourcePushResult {
+  const diagnostics: Diagnostic[] = [];
+  if (!isRecord(value)) {
+    return {
+      ok: false,
+      diagnostics: [makeDiagnostic(PAYLOAD_CODE, "payload 必须是对象", { path: "$" })],
+    };
+  }
+  if (value.kind !== "source") {
+    diagnostics.push(makeDiagnostic(PAYLOAD_CODE, "kind 必须是 source", { path: "$.kind" }));
+  }
+  const local = parseLocalTrees({ kind: "local-trees", seq: 0, trees: value.trees });
+  if (!local.ok) {
+    diagnostics.push(...local.diagnostics);
+  }
+  const removed: string[] = [];
+  if (value.removed !== undefined) {
+    if (!Array.isArray(value.removed)) {
+      diagnostics.push(makeDiagnostic(PAYLOAD_CODE, "removed 必须是数组", { path: "$.removed" }));
+    } else {
+      value.removed.forEach((item, index) => {
+        const owner = readString(item, `$.removed[${String(index)}]`, diagnostics);
+        if (owner !== undefined) {
+          removed.push(owner);
+        }
+      });
+    }
+  }
+  if (diagnostics.length > 0 || !local.ok) {
+    return { ok: false, diagnostics: sortDiagnostics(diagnostics) };
+  }
+  return { ok: true, push: { trees: local.payload.trees, removed } };
+}

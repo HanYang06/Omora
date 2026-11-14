@@ -14,7 +14,15 @@ import type { Logger } from "./log";
 import { reportDevicesOnce } from "./device_report";
 import { fetchMedia } from "../platform/media";
 import { createEngineFromView, type SourceEngine } from "../host/engine_sources";
+import { parseSourcePush } from "../link/parse";
+import type { LocalTree } from "../link/types";
 import { DocumentView } from "./view";
+import {
+  mountRuntimeSources,
+  runtimeSources,
+  type RuntimeMount,
+  type RuntimeSource,
+} from "./runtime_sources";
 
 const SNAPSHOT_TOPIC = "ui.snapshot";
 
@@ -39,13 +47,20 @@ function isViewPayload(value: unknown): boolean {
   return (value as Record<string, unknown>).kind === "view";
 }
 
-/** 主会话 Slot 运行时的宿主壳：连接、视图、事件与推送都在这里收口。 */
+/** 主会话 Slot 运行时的宿主壳：连接、视图、事件、运行后来源与推送都在这里收口。 */
+export interface LiveSlotOptions {
+  /** 运行后来源；缺省自动发现 src/app/runtime_sources/。测试传空数组关掉时钟。 */
+  sources?: readonly RuntimeSource[];
+}
 export class LiveSlotApp {
   private container: HTMLElement | null = null;
   private host: HTMLElement | null = null;
   private statusEl: HTMLElement | null = null;
   private statusLabel: HTMLElement | null = null;
   private view: DocumentView<SourceEngine> | null = null;
+  private runtime: RuntimeMount | null = null;
+  /** 网络推来的运行后来源 owner：applyView 时要一起保留。 */
+  private readonly pushedOwners = new Set<string>();
   private status: ConnectionStatus = "idle";
   private replayed = false;
   private readonly logs: Record<"conn" | "render" | "event" | "media", Logger>;
@@ -53,6 +68,7 @@ export class LiveSlotApp {
   constructor(
     private readonly connection: Connection,
     logger: Logger,
+    private readonly options: LiveSlotOptions = {},
   ) {
     this.logs = {
       conn: logger.child("conn"),
@@ -79,8 +95,11 @@ export class LiveSlotApp {
     this.connection.connect();
   }
 
-  /** 卸载视图（引擎账本一并收口）；不关连接，连接由入口自己管。 */
+  /** 卸载视图与运行后来源（引擎账本一并收口）；不关连接，连接由入口自己管。 */
   dispose(): void {
+    this.runtime?.dispose();
+    this.runtime = null;
+    this.pushedOwners.clear();
     this.view?.dispose();
     this.view = null;
     this.container?.replaceChildren();
@@ -187,12 +206,27 @@ export class LiveSlotApp {
         onEvent: (handler, eventPayload) => this.sendEvent(handler, eventPayload),
         loadMedia: (media) => this.loadMedia(media),
       });
+      this.runtime = mountRuntimeSources(
+        created.engine,
+        this.options.sources ?? runtimeSources(),
+        this.logs.render,
+      );
       this.logs.render.info("view.mounted", {
         version: created.engine.session.document.version,
       });
       return;
     }
-    const applied = this.view.engine.applyView(payload);
+    // 运行后来源会推进文档版本；主视图是权威全量，按引擎当前版本 +1 应用，
+    // 不被来源热更新卡住（view.version 只用于 Python 侧的产出顺序）。
+    const current = this.view.engine.session.document.version;
+    const record = payload as Record<string, unknown>;
+    const rawVersion = record.version;
+    const version = typeof rawVersion === "number" ? rawVersion : 0;
+    const versioned: Record<string, unknown> =
+      version > current ? record : { ...record, version: current + 1 };
+    const applied = this.view.engine.applyView(versioned, {
+      keepOwners: this.keepOwners(),
+    });
     if (!applied.ok) {
       this.logs.render.error("view.apply_failed", {
         codes: applied.diagnostics.map((diagnostic) => diagnostic.code).join(","),
@@ -217,7 +251,59 @@ export class LiveSlotApp {
   }
 
   private onSnapshot(payload: unknown): void {
+    if (
+      typeof payload === "object" &&
+      payload !== null &&
+      !Array.isArray(payload) &&
+      (payload as Record<string, unknown>).kind === "source"
+    ) {
+      this.applySource(payload);
+      return;
+    }
     this.applyView(payload);
+  }
+
+  /** 运行后来源的保留名单：宿主挂的 + 网络推来的。 */
+  private keepOwners(): string[] {
+    const mounted = this.runtime?.owners() ?? [];
+    return [...mounted, ...this.pushedOwners];
+  }
+
+  /** 网络推来的来源：按 owner 整组替换，removed 撤来源（级联撤树）。 */
+  private applySource(payload: unknown): void {
+    if (this.view === null) {
+      this.logs.render.warning("source.before_view", {});
+      return;
+    }
+    const parsed = parseSourcePush(payload);
+    if (!parsed.ok) {
+      this.logs.render.error("source.bad_payload", {
+        codes: parsed.diagnostics.map((diagnostic) => diagnostic.code).join(","),
+      });
+      return;
+    }
+    for (const owner of parsed.push.removed) {
+      const result = this.view.engine.removeSource(owner);
+      if (!result.ok) {
+        this.logs.render.error("source.remove_failed", { owner });
+        continue;
+      }
+      this.pushedOwners.delete(owner);
+    }
+    const byOwner = new Map<string, LocalTree[]>();
+    for (const tree of parsed.push.trees) {
+      const trees = byOwner.get(tree.owner) ?? [];
+      trees.push(tree);
+      byOwner.set(tree.owner, trees);
+    }
+    for (const [owner, trees] of byOwner) {
+      const result = this.view.engine.registerSource(owner, trees);
+      if (!result.ok) {
+        this.logs.render.error("source.register_failed", { owner });
+        continue;
+      }
+      this.pushedOwners.add(owner);
+    }
   }
 
   private loadMedia(media: string): Promise<MediaData> {

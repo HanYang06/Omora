@@ -198,7 +198,7 @@ class Ui:
 
 - 旧的 `contribute` / `topics` API 与快照 contributions 字段已随 legacy 组合器在 S6.5 删除。
 - 多来源组合的目标模型是链接期局部树（[composition](../engine/composition.md)）：每个来源交自己的
-  局部树，引擎链接成权威根树；运行后来源在 S7 接。
+  局部树，引擎链接成权威根树；运行后来源已接示例（`app/runtime_sources/` 自动发现 + 热更新）。
 
 ### 7.1 页面登记
 

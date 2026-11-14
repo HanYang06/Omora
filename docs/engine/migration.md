@@ -27,6 +27,8 @@
 
 > S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/contract/document.ts` 的 Slot 文档契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
 
+> S7 起步进度（2026-11-15）：运行后来源落地 —— `source` payload（wire §10）、`SourceEngine.applyView(keepOwners)`、`app/runtime_sources.ts`（自动发现 + 热更新 + 单来源失败隔离）与示例 `runtime_sources/clock.ts`；live 收 `ui.snapshot` 的 source 帧并保留来源。未接：远程 / worker 来源的网络帧、来源账本、订阅 / 媒体登记。
+
 > S6.5 续（2026-11-14）：legacy 快照路径整体删除 —— `packages/ui` 只保留 Slot 出口（`_diff.py`、贡献 / topics API 删除），TS `legacy/`、`DomApp`、`?engine=legacy` 与旧壳 CSS 删除；默认入口、构建期骨架、全部系统插件页面都走 Slot。
 
 > S6.5 进度（2026-11-14）：启动骨架已改成 Slot 链接编译 —— `scripts/static_ui.py` 产 `generated/static-view.ts`（每页一份 view；导航入口保留 handler、内容摘事件），build 用 `parseView` + `link` + Slot 渲染器编译首帧；`skeleton_html` 门禁改查 Slot 标记；`slot_registry` 从 app 移到 components（build 可用），`build/` 不再依赖 legacy。legacy 只剩 `?engine=legacy` 回退，删除放下一 PR。
@@ -117,6 +119,14 @@
 - **`_diff.py` 退出**：页面补丁由 ops / data 取代，Python 不再算整页 diff。
 - ~~**静态骨架**：构建期现在用 legacy 组合~~：已解（S6.5 改成 Slot 链接编译）。
 - **行为等价**：搜索防抖、音频 / 视频 / 波形这些渲染层状态，要有对应的 Slot 局部状态路径。
+
+### S7 计划（进行中）
+
+| 步骤 | 内容                                                                      | 退出条件                                            |
+| ---- | ------------------------------------------------------------------------- | --------------------------------------------------- |
+| S7.1 | 运行后来源：注册 / 热更新 / `applyView(keepOwners)`；示例来源自动发现     | ✅ clock 示例不改引擎源码加界面并热更新             |
+| S7.2 | 来源网络接线：SourceHost 接 net 帧（远程 / worker 来源）、订阅 / 媒体登记 | 远程来源可注册，断线级联撤来源                      |
+| S7.3 | 规则执行（reactions）与 schema 单一来源                                   | 触发 × 效果闭集跑通；组件词表由 Python 单一来源导出 |
 
 ## 7. 未决
 
