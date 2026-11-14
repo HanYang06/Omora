@@ -9,14 +9,34 @@
  * （`noteRender`）；两个计数互不代替，见 host/metrics.ts 文件头。
  */
 
-import type { JsonObject } from "../contract/protocol";
-import type { MediaData } from "../contract/protocol";
-import { createEngine, type EngineRuntime, type EngineApplyResult } from "../host/engine";
+import type { JsonObject, MediaData } from "../contract/protocol";
+import {
+  createEngine,
+  type EngineApplyResult,
+  type EngineChangeListener,
+  type EngineRuntime,
+} from "../host/engine";
 import type { Requester } from "../contract/policy";
 import type { Diagnostic } from "../contract/diagnostics";
+import type { RenderStats } from "../contract/render";
+import type { SessionState } from "../engine/document/session";
 import { slotToNode } from "../renderer/slot_bridge";
 import { createSlotRenderer } from "./slot_registry";
 import type { RenderContext } from "../renderer/types";
+
+/**
+ * 视图需要的引擎能力：`EngineRuntime` 与 `SourceEngine`（来源模式组合壳）都满足。
+ * 用接口而不是具体类，是因为 SourceEngine 有私有字段、与 EngineRuntime 名义不兼容；
+ * 视图只读会话 + 订阅变更 + 记指标 + 收口，不关心引擎内部怎么实现。
+ */
+export interface DocumentEngine {
+  readonly session: SessionState;
+  onChange(listener: EngineChangeListener): () => void;
+  noteRender(): void;
+  recordRenderStats(stats: RenderStats): void;
+  applyData(payload: unknown): EngineApplyResult;
+  dispose(): { disposed: number; errors: unknown[] };
+}
 
 export interface DocumentViewOptions {
   /** 运行期变更主体；缺省 = 系统来源（全放行）。 */
@@ -30,13 +50,13 @@ export interface DocumentViewOptions {
 export type MountDocumentViewResult =
   { ok: true; view: DocumentView } | { ok: false; diagnostics: Diagnostic[] };
 
-export class DocumentView {
-  private readonly engineRuntime: EngineRuntime;
+export class DocumentView<T extends DocumentEngine = EngineRuntime> {
+  private readonly engineRuntime: T;
   private readonly renderer: ReturnType<typeof createSlotRenderer>;
   private readonly container: HTMLElement;
   private readonly unsubscribe: () => void;
 
-  constructor(container: HTMLElement, engine: EngineRuntime, options: DocumentViewOptions = {}) {
+  constructor(container: HTMLElement, engine: T, options: DocumentViewOptions = {}) {
     this.engineRuntime = engine;
     this.container = container;
     const context: RenderContext = {
@@ -55,8 +75,8 @@ export class DocumentView {
     });
   }
 
-  /** 当前引擎（宿主用它提交 ops / 数据 / 全量，视图会自动重画）。 */
-  get engine(): EngineRuntime {
+  /** 当前引擎（宿主用它提交 ops / 数据 / 全量 / 视图，视图会自动重画）。 */
+  get engine(): T {
     return this.engineRuntime;
   }
 

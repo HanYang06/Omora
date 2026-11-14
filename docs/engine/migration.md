@@ -26,6 +26,8 @@
 
 > S1.1 进度（2026-11-13）：已落 `app/sdk/omora/sdk/document.py`（类型）+ `document_io.py`（校验/序列化）与 `app/ui-engine/src/contract/document.ts` 的 Slot 文档契约，以及共享 fixture `app/sdk/tests/fixtures/document.json`；尚未接入运行时。
 
+> S6.2 / S6.3 进度（2026-11-14）：跨端最小闭环已接 —— Python `sdk/slot_tree.py` 把 legacy Page / Node 树升成 Slot 局部树（确定性 id、events、`page.<name>` 页面根 + header），`packages/ui` 的 `render` / `event` 支持 `engine="slot"` 交 view（legacy 出口不变）；TS 新增 `?engine=live` 入口（`createEngineFromView` + `SourceEngine.applyView` + DocumentView），boot 层 WebSocket e2e 已走通「render → view → 点导航 → ui.event → 新 view」。默认入口仍是 legacy；下一步 S6.4 / S6.5：其余页面迁移、默认切换与删 legacy。
+
 > S6.1 进度（2026-11-14）：主会话视图负载已定 —— `view` = 局部树 + 页面侧表 + 数据 + 版本（[wire.md](wire.md) §8），Python `sdk/view.py` 与 TS `link/view.ts` 共用 `app/sdk/tests/fixtures/view.json`；`SourceEngine.applyView` / `createEngineFromView` 已落，失败回滚注册表。下一步 S6.2：Python 产 Slot 视图接 `ui.render` / `ui.event`。
 
 > S5 起步进度（2026-11-14）：`SourceEngine`（SourceHost + EngineRuntime 组合，createEngineFromLocalTrees / registerSource / removeSource / applyLocalTrees）与 renderer 节点统计（created/updated/reused/removed → 指标）已落。schema 已重置为 `dendro.ui/1`、legacy/Slot 术语已收口；下一步拆组件目录与分层。
