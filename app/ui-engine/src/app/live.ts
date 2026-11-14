@@ -1,13 +1,11 @@
 /**
- * `?engine=live`：主会话 Slot 运行时入口（S6 迁移期；默认仍是 legacy）。
+ * 主会话 Slot 运行时入口（默认入口）。
  *
- * 连接 → `ui.render {engine:"slot"}` → view payload → `createEngineFromView` → DocumentView；
- * 交互经渲染层 `ctx.event` 回传 handler id → `ui.event {engine:"slot"}` → 新 view →
- * `SourceEngine.applyView` → 引擎通知视图按 id 重画。异步推送 `ui.snapshot` 若带 view
- * 同样走 applyView。
+ * 连接 → `ui.render` → view payload → `createEngineFromView` → DocumentView；交互经渲染层
+ * `ctx.event` 回传 handler id → `ui.event` → 新 view → `SourceEngine.applyView` → 引擎通知
+ * 视图按 id 重画。异步推送 `ui.snapshot` 若带 view 同样走 applyView。
  *
- * 迁移期约定：`engine:"slot"` 参数只用来让 Python 端切产出模式；legacy 入口不带这个参数，
- * 两条路径互不影响。默认入口切到 Slot 后（S6.3）这个标记和 legacy 路径一起删除。
+ * `?engine=slot` 的内置 fixture 预览也复用同一套引擎/视图，只是不连 Python（app/preview.ts）。
  */
 
 import type { ConnectionStatus, JsonObject, MediaData } from "../contract/protocol";
@@ -20,7 +18,7 @@ import { DocumentView } from "./view";
 
 const SNAPSHOT_TOPIC = "ui.snapshot";
 
-/** 与 legacy 壳同一套状态文案：槽位主会话没有旧壳，状态点单独浮在左下角。 */
+/** 连接状态文案：状态点单独浮在左下角（与读屏 aria-label 同源）。 */
 const STATUS_TEXT: Record<ConnectionStatus, string> = {
   idle: "未连接",
   connecting: "连接中…",
@@ -33,7 +31,7 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** 只认 `view` payload；legacy 快照（没有 kind 或别的 kind）一律忽略。 */
+/** 只认 `view` payload；没有 kind 或别的 kind 一律忽略。 */
 function isViewPayload(value: unknown): boolean {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
@@ -164,7 +162,7 @@ export class LiveSlotApp {
 
   private async requestView(): Promise<void> {
     try {
-      const payload = await this.connection.call("ui", "render", { engine: "slot" });
+      const payload = await this.connection.call("ui", "render", {});
       this.applyView(payload);
     } catch (error) {
       this.logs.render.error("view.render_failed", { err: errorText(error) });
@@ -211,7 +209,7 @@ export class LiveSlotApp {
   private sendEvent(handler: string, payload?: JsonObject): void {
     this.logs.event.debug("event.sent", { handler });
     void this.connection
-      .call("ui", "event", { handler, payload: payload ?? {}, engine: "slot" })
+      .call("ui", "event", { handler, payload: payload ?? {} })
       .then((value) => this.applyView(value))
       .catch((error: unknown) => {
         this.logs.event.error("event.failed", { handler, err: errorText(error) });

@@ -94,14 +94,14 @@ afterEach(() => {
 });
 
 describe("入口模式", () => {
-  it("默认走主会话 Slot；legacy / preview 是显式回退", () => {
+  it("默认走主会话 Slot；只有 engine=slot 走内置预览", () => {
     expect(engineMode("")).toBe("live");
     expect(engineMode("?engine=live")).toBe("live");
     expect(engineMode("?engine=live&debug=1")).toBe("live");
-    expect(engineMode("?engine=legacy")).toBe("legacy");
     expect(engineMode("?engine=slot")).toBe("preview");
+    expect(engineMode("?engine=something")).toBe("live");
     expect(wantsLive("")).toBe(true);
-    expect(wantsLive("?engine=legacy")).toBe(false);
+    expect(wantsLive("?engine=slot")).toBe(false);
   });
 });
 
@@ -116,7 +116,7 @@ describe("LiveSlotApp：主会话 Slot 运行时", () => {
       expect(fake.calls).toContainEqual({
         target: "ui",
         method: "render",
-        args: { engine: "slot" },
+        args: {},
       });
       expect(container.textContent).toContain("灵感");
       expect(container.querySelectorAll(".omora-page-link")).toHaveLength(2);
@@ -142,7 +142,7 @@ describe("LiveSlotApp：主会话 Slot 运行时", () => {
       expect(fake.calls).toContainEqual({
         target: "ui",
         method: "event",
-        args: { handler: "h1", payload: {}, engine: "slot" },
+        args: { handler: "h1", payload: {} },
       });
       expect(container.textContent).toContain("项目页");
       expect(container.textContent).not.toContain("灵感");
