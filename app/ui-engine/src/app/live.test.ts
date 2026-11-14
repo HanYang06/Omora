@@ -1,0 +1,178 @@
+// @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Connection } from "./connection";
+import type { JsonObject } from "../contract/protocol";
+import { createLogger } from "./log";
+import { LiveSlotApp } from "./live";
+import { wantsLive } from "./main";
+
+/** jsdom 下不要用 new URL(..., import.meta.url)：Vite 会改写成 dev server 地址。 */
+const HERE = dirname(fileURLToPath(import.meta.url));
+const VIEW_FIXTURE_PATH = resolve(HERE, "../../../sdk/tests/fixtures/view.json");
+
+function fixture(): Record<string, unknown> {
+  const value: unknown = JSON.parse(readFileSync(VIEW_FIXTURE_PATH, "utf8"));
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("fixture 必须是对象");
+  }
+  return value as Record<string, unknown>;
+}
+
+/** 在 fixture 上改版本 / active / 页面标题，模拟 Python 交来的下一份视图。 */
+function viewOf(version: number, active: string, title: string): Record<string, unknown> {
+  const value = structuredClone(fixture());
+  value.version = version;
+  value.active = active;
+  const trees = (value.localTrees as Record<string, unknown>).trees as Record<string, unknown>[];
+  const root = trees[1]?.root as Record<string, unknown>;
+  const children = root.children as Record<string, unknown>[];
+  const first = children[0] as Record<string, unknown>;
+  first.props = { ...(first.props as Record<string, unknown>), text: title };
+  return value;
+}
+
+interface FakeConnection {
+  connection: {
+    call: ReturnType<typeof vi.fn>;
+    subscribe: ReturnType<typeof vi.fn>;
+    subscribeStatus: (listener: (status: string) => void) => () => void;
+    onEvent: (topic: string, listener: (payload: JsonObject) => void) => () => void;
+    connect: ReturnType<typeof vi.fn>;
+    endpoint: string;
+  };
+  calls: Array<{ target: string; method: string; args: Record<string, unknown> }>;
+  snapshots: Array<(payload: JsonObject) => void>;
+}
+
+function fakeConnection(options: { render: unknown; event?: unknown }): FakeConnection {
+  const calls: FakeConnection["calls"] = [];
+  const snapshots: Array<(payload: JsonObject) => void> = [];
+  const connection = {
+    call: vi.fn((target: string, method: string, args: Record<string, unknown> = {}) => {
+      calls.push({ target, method, args });
+      if (target === "ui" && method === "render") {
+        return Promise.resolve(options.render);
+      }
+      if (target === "ui" && method === "event") {
+        return Promise.resolve(options.event ?? options.render);
+      }
+      return Promise.resolve({});
+    }),
+    subscribe: vi.fn(() => Promise.resolve({ topics: ["ui.snapshot"] })),
+    subscribeStatus: (listener: (status: string) => void) => {
+      listener("open");
+      return () => undefined;
+    },
+    onEvent: (_topic: string, listener: (payload: JsonObject) => void) => {
+      snapshots.push(listener);
+      return () => undefined;
+    },
+    connect: vi.fn(),
+    endpoint: "ws://test",
+  };
+  return { connection, calls, snapshots };
+}
+
+function appOf(fake: FakeConnection): LiveSlotApp {
+  return new LiveSlotApp(
+    fake.connection as unknown as Connection,
+    createLogger({ call: () => Promise.resolve({}) }),
+  );
+}
+
+function mountInto(): HTMLElement {
+  const container = document.createElement("div");
+  document.body.append(container);
+  return container;
+}
+
+afterEach(() => {
+  document.body.replaceChildren();
+});
+
+describe("wantsLive", () => {
+  it("只有 ?engine=live 走主会话 Slot 入口", () => {
+    expect(wantsLive("?engine=live")).toBe(true);
+    expect(wantsLive("?engine=live&debug=1")).toBe(true);
+    expect(wantsLive("?engine=slot")).toBe(false);
+    expect(wantsLive("?engine=legacy")).toBe(false);
+    expect(wantsLive("")).toBe(false);
+  });
+});
+
+describe("LiveSlotApp：主会话 Slot 运行时", () => {
+  it("连上后请求 ui.render(engine=slot)，用视图建引擎并渲染", async () => {
+    const fake = fakeConnection({ render: fixture() });
+    const container = mountInto();
+
+    appOf(fake).mount(container);
+
+    await vi.waitFor(() => {
+      expect(fake.calls).toContainEqual({
+        target: "ui",
+        method: "render",
+        args: { engine: "slot" },
+      });
+      expect(container.textContent).toContain("灵感");
+      expect(container.querySelectorAll(".omora-page-link")).toHaveLength(2);
+    });
+    expect(fake.connection.subscribe).toHaveBeenCalledWith(["ui.snapshot"]);
+  });
+
+  it("点导航：事件带 engine=slot 回传，返回的新视图换 active 与页面内容", async () => {
+    const next = viewOf(2, "page.projects", "项目页");
+    const fake = fakeConnection({ render: fixture(), event: next });
+    const container = mountInto();
+    appOf(fake).mount(container);
+    await vi.waitFor(() => {
+      expect(container.querySelectorAll(".omora-page-link")).toHaveLength(2);
+    });
+
+    container.querySelectorAll<HTMLButtonElement>(".omora-page-link")[1]?.click();
+
+    await vi.waitFor(() => {
+      expect(fake.calls).toContainEqual({
+        target: "ui",
+        method: "event",
+        args: { handler: "h1", payload: {}, engine: "slot" },
+      });
+      expect(container.textContent).toContain("项目页");
+      expect(container.textContent).not.toContain("灵感");
+    });
+  });
+
+  it("ui.snapshot 推送 view 时同样更新；推送 legacy 快照则忽略", async () => {
+    const fake = fakeConnection({ render: fixture() });
+    const container = mountInto();
+    appOf(fake).mount(container);
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("灵感");
+    });
+    const listener = fake.snapshots[0];
+    expect(listener).toBeDefined();
+
+    listener?.({ kind: "snapshot", pages: [] });
+    expect(container.textContent).toContain("灵感");
+
+    listener?.(viewOf(2, "page.ideas", "推送的标题"));
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("推送的标题");
+    });
+  });
+
+  it("第一份 payload 不是 view：不建视图、不抛", async () => {
+    const fake = fakeConnection({ render: { kind: "snapshot", pages: [] } });
+    const container = mountInto();
+
+    expect(() => appOf(fake).mount(container)).not.toThrow();
+
+    await vi.waitFor(() => {
+      expect(fake.calls.some((call) => call.method === "render")).toBe(true);
+    });
+    expect(container.textContent).toBe("");
+    expect(container.querySelector("[data-dendro-layout]")).toBeNull();
+  });
+});
