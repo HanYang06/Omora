@@ -1,4 +1,4 @@
-"""主会话 Slot 视图出口（S6.2）：ui.render / ui.event 在 engine="slot" 时交 view。"""
+"""主会话 Slot 视图：ui.render / ui.event 交 view，set_page / refresh_page 推 view。"""
 
 from __future__ import annotations
 
@@ -9,8 +9,10 @@ import pytest
 
 from omora.core.context import Context
 from omora.core.kernel import Kernel
-from omora.sdk.ui import Button, Column, Page, Text
+from omora.sdk.ui import Button, Column, Input, Page, Text
 from omora.ui import PageHandle, Ui, UiPlugin
+
+PAGE_MOUNT_AT = "dendro.window.page"
 
 
 class _Net:
@@ -97,9 +99,9 @@ def _ui(
     return ui
 
 
-def _walk(node: dict[str, Any]) -> list[dict[str, Any]]:
-    found = [node]
-    for child in node["children"]:
+def _walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
+    found = [slot]
+    for child in slot["children"]:
         found.extend(_walk(child))
     return found
 
@@ -111,15 +113,28 @@ def _tree(view: dict[str, Any], mount_at: str) -> dict[str, Any]:
     raise AssertionError(f"view 里没有挂在 {mount_at} 的局部树")
 
 
-def _by_kind(view: dict[str, Any], mount_at: str, kind: str) -> dict[str, Any]:
-    for node in _walk(_tree(view, mount_at)["root"]):
-        if node["kind"] == kind:
-            return node
-    raise AssertionError(f"{mount_at} 下没有 {kind}")
+def _page_root(view: dict[str, Any]) -> dict[str, Any]:
+    return cast(dict[str, Any], _tree(view, PAGE_MOUNT_AT)["root"])
 
 
-def test_render_slot_produces_two_local_trees_and_the_page_table() -> None:
-    view = _ui().render(engine="slot")
+def _content(view: dict[str, Any]) -> dict[str, Any]:
+    return cast(dict[str, Any], _page_root(view)["children"][0])
+
+
+def _kind(slot: dict[str, Any]) -> str:
+    return str(slot["kind"]).removeprefix("dendro:")
+
+
+def _slots(node: dict[str, Any], kind: str) -> list[dict[str, Any]]:
+    return [slot for slot in _walk(node) if _kind(slot) == kind]
+
+
+def _texts(view: dict[str, Any]) -> list[str]:
+    return [str(slot["props"]["text"]) for slot in _walk(_page_root(view)) if _kind(slot) == "text"]
+
+
+def test_render_produces_two_local_trees_and_the_page_table() -> None:
+    view = _ui().render()
 
     assert (view["kind"], view["schema"], view["version"]) == ("view", "dendro.ui/1", 1)
     assert view["data"] == {}
@@ -143,8 +158,6 @@ def test_render_slot_produces_two_local_trees_and_the_page_table() -> None:
         ("灵感", "ideas"),
         ("项目", "projects"),
     ]
-    assert links[0]["props"]["active"] is True
-    assert "active" not in links[1]["props"]
     assert all(link["events"]["click"] for link in links)
 
     page = _tree(view, "dendro.window.page")
@@ -153,7 +166,8 @@ def test_render_slot_produces_two_local_trees_and_the_page_table() -> None:
         "page.ideas",
         "dendro:page",
     )
-    assert _by_kind(view, "dendro.window.page", "dendro:button")["props"]["text"] == "刷新"
+    assert page["root"]["props"] == {"label": "灵感", "icon": "ideas"}
+    assert _slots(_page_root(view), "button")[0]["props"]["text"] == "刷新"
 
     assert view["pages"] == [
         {"id": "page.ideas", "label": "灵感", "route": "/ideas", "owner": "ideas", "icon": "ideas"},
@@ -168,34 +182,34 @@ def test_render_slot_produces_two_local_trees_and_the_page_table() -> None:
     assert view["localTrees"]["seq"] == 1
 
 
-def test_render_slot_bumps_version_and_remembers_the_current_page() -> None:
+def test_render_bumps_version_and_remembers_the_current_page() -> None:
     ui = _ui()
 
-    assert ui.render(engine="slot")["version"] == 1
-    assert ui.render(engine="slot")["version"] == 2
+    assert ui.render()["version"] == 1
+    assert ui.render()["version"] == 2
 
-    switched = ui.render("projects", engine="slot")
+    switched = ui.render("projects")
     assert switched["version"] == 3
     assert switched["active"] == "page.projects"
-    assert _tree(switched, "dendro.window.page")["root"]["id"] == "page.projects"
+    assert _page_root(switched)["id"] == "page.projects"
 
-    assert ui.render(engine="slot")["active"] == "page.projects"
+    assert ui.render()["active"] == "page.projects"
+    assert ui.render()["localTrees"]["seq"] == 5
 
 
-def test_nav_click_switches_the_page_and_returns_the_new_view() -> None:
+def test_nav_click_switches_the_page_and_marks_the_active_link() -> None:
     ui = _ui()
-    view = ui.render(engine="slot")
+    view = ui.render()
     click = _tree(view, "dendro.window.nav")["root"]["children"][1]["events"]["click"]
 
-    after = ui.event(click, {}, engine="slot")
+    after = ui.event(click, {})
 
     assert after["version"] == 2
     assert after["active"] == "page.projects"
-    assert _tree(after, "dendro.window.page")["root"]["id"] == "page.projects"
-    assert [page["id"] for page in after["pages"]] == ["page.ideas", "page.projects"]
-    after_links = _tree(after, "dendro.window.nav")["root"]["children"]
-    assert "active" not in after_links[0]["props"]
-    assert after_links[1]["props"]["active"] is True
+    assert _page_root(after)["id"] == "page.projects"
+    links = _tree(after, "dendro.window.nav")["root"]["children"]
+    assert "active" not in links[0]["props"]
+    assert links[1]["props"]["active"] is True
 
 
 def test_page_handler_dispatches_then_returns_a_fresh_view() -> None:
@@ -208,38 +222,37 @@ def test_page_handler_dispatches_then_returns_a_fresh_view() -> None:
         return Page(content=Column(Button(f"刷新 {state['n']}", on_click=bump)))
 
     ui = _ui(ideas=_PagePlugin("ideas", "ideas", "灵感", build, icon="ideas"))
-    before = ui.render(engine="slot")
-    handler = _by_kind(before, "dendro.window.page", "dendro:button")["events"]["click"]
+    before = ui.render()
+    handler = _slots(_page_root(before), "button")[0]["events"]["click"]
 
-    after = ui.event(handler, {"value": "x"}, engine="slot")
+    after = ui.event(handler, {"value": "x"})
 
     assert state["n"] == 1
     assert after["version"] == 2
-    assert _by_kind(after, "dendro.window.page", "dendro:button")["props"]["text"] == "刷新 1"
+    assert _slots(_page_root(after), "button")[0]["props"]["text"] == "刷新 1"
 
 
-def test_the_previous_view_handler_still_fires_once() -> None:
-    """组件卸载时提交的事件带上一代 id：slot 出口也要留一次宽限。"""
+def test_a_handler_from_the_previous_view_still_fires_once() -> None:
     seen: list[dict[str, Any]] = []
 
     def build() -> Page:
         return Page(content=Column(Button("归档", on_click=seen.append)))
 
     ui = _ui(ideas=_PagePlugin("ideas", "ideas", "灵感", build, icon="ideas"))
-    first = ui.render(engine="slot")
-    old = _by_kind(first, "dendro.window.page", "dendro:button")["events"]["click"]
-    ui.render(engine="slot")
+    first = ui.render()
+    old = _slots(_page_root(first), "button")[0]["events"]["click"]
+    ui.render()
 
-    after = ui.event(old, {"value": "买牛奶"}, engine="slot")
+    after = ui.event(old, {"value": "买牛奶"})
 
     assert seen == [{"value": "买牛奶"}]
     assert after["version"] == 3
 
 
-def test_slot_refresh_pushes_the_whole_view_instead_of_a_patch() -> None:
+def test_refresh_pushes_the_current_view() -> None:
     net = _Net()
     ui = _ui(net=net)
-    ui.render(engine="slot")
+    ui.render()
 
     ui.refresh_page("ideas")
 
@@ -248,19 +261,15 @@ def test_slot_refresh_pushes_the_whole_view_instead_of_a_patch() -> None:
     assert payload["kind"] == "view"
     assert payload["version"] == 2
     assert payload["active"] == "page.ideas"
-    assert "ops" not in payload
 
 
-def test_set_page_pushes_a_view_only_while_that_page_is_active() -> None:
+def test_set_page_pushes_the_current_view() -> None:
     net = _Net()
     ideas = _PagePlugin("ideas", "ideas", "灵感", None, icon="ideas")
-    projects = _PagePlugin("projects", "projects", "项目", None, icon="projects")
-    ui = _ui(net=net, ideas=ideas, projects=projects)
+    ui = _ui(net=net, ideas=ideas)
     assert ideas.handle is not None
-    assert projects.handle is not None
     ideas.handle.set(Page(content=Column(Text("初始内容"))))
-    projects.handle.set(Page(content=Column(Text("项目内容"))))
-    ui.render(engine="slot")
+    ui.render()
     assert net.sent == []
 
     ideas.handle.set(Page(content=Column(Text("新内容"))))
@@ -269,56 +278,214 @@ def test_set_page_pushes_a_view_only_while_that_page_is_active() -> None:
     assert topic == "ui.snapshot"
     assert pushed["kind"] == "view"
     assert pushed["version"] == 2
-    page = _tree(pushed, "dendro.window.page")
-    texts = [node["props"]["text"] for node in _walk(page["root"]) if node["kind"] == "dendro:text"]
-    assert "新内容" in texts
+    assert "新内容" in _texts(pushed)
+
+
+def test_set_page_for_another_page_pushes_the_current_view() -> None:
+    """set_page 一律推当前视图：客户端手里的版本总会被推着往前走。"""
+    net = _Net()
+    projects = _PagePlugin("projects", "projects", "项目", None, icon="projects")
+    ui = _ui(net=net, projects=projects)
+    assert projects.handle is not None
+    projects.handle.set(Page(content=Column(Text("项目内容"))))
+    ui.render()
+    assert net.sent == []
 
     projects.handle.set(Page(content=Column(Text("后台更新"))))
 
-    assert len(net.sent) == 1
+    topic, pushed = net.sent[-1]
+    assert topic == "ui.snapshot"
+    assert pushed["kind"] == "view"
+    assert pushed["active"] == "page.ideas"
+    assert pushed["version"] == 2
 
 
-def test_unknown_slot_handler_is_looked_up() -> None:
+def test_set_page_inside_an_event_does_not_push_twice() -> None:
+    net = _Net()
+    ideas = _PagePlugin("ideas", "ideas", "灵感", None, icon="ideas")
+    ui = _ui(net=net, ideas=ideas)
+    assert ideas.handle is not None
+    handle = ideas.handle
+
+    def click(_payload: dict[str, Any]) -> None:
+        handle.set(Page(content=Column(Text("点过了"))))
+
+    handle.set(Page(content=Column(Button("点", on_click=click))))
+    view = ui.render()
+    handler = _slots(_page_root(view), "button")[0]["events"]["click"]
+
+    after = ui.event(handler, {})
+
+    assert net.sent == []
+    assert after["kind"] == "view"
+    assert "点过了" in _texts(after)
+
+
+def test_set_page_before_the_first_render_does_not_push() -> None:
+    net = _Net()
+    ideas = _PagePlugin("ideas", "ideas", "灵感", None, icon="ideas")
+    _ui(net=net, ideas=ideas)
+    assert ideas.handle is not None
+
+    ideas.handle.set(Page(content=Column(Text("还没人看"))))
+
+    assert net.sent == []
+
+
+def test_event_returns_a_new_version_when_nothing_changes() -> None:
+    def build() -> Page:
+        return Page(content=Column(Button("按一下", on_click=_noop)))
+
+    ui = _ui(ideas=_PagePlugin("ideas", "ideas", "灵感", build, icon="ideas"))
+    view = ui.render()
+    handler = _slots(_page_root(view), "button")[0]["events"]["click"]
+
+    after = ui.event(handler, {})
+
+    assert after["kind"] == "view"
+    assert after["version"] == 2
+    assert _slots(_page_root(after), "button")[0]["props"]["text"] == "按一下"
+
+
+def test_unknown_handler_is_looked_up() -> None:
     ui = _ui()
-    ui.render(engine="slot")
+    ui.render()
 
     with pytest.raises(LookupError, match="未知 handler"):
-        ui.event("nope:1:0", {}, engine="slot")
+        ui.event("nope:1:0", {})
 
 
-def test_unknown_page_is_reported_in_slot_mode() -> None:
+def test_unknown_page_is_reported() -> None:
     with pytest.raises(LookupError, match="未知页面: missing"):
-        _ui().render("missing", engine="slot")
+        _ui().render("missing")
 
 
-def test_slot_render_without_pages_is_an_error() -> None:
+def test_render_without_pages_is_an_error() -> None:
     kernel = Kernel()
     kernel.install(UiPlugin())
 
     with pytest.raises(LookupError, match="没有登记任何页面"):
-        kernel.resolve("ui").render(engine="slot")
+        kernel.resolve("ui").render()
 
 
 def test_uninstalling_the_active_page_falls_back_to_the_first_page() -> None:
     ideas = _PagePlugin("ideas", "ideas", "灵感", _ideas_page, icon="ideas")
     kernel = _kernel(ideas=ideas)
     ui: Ui = kernel.resolve("ui")
-    assert ui.render(engine="slot")["active"] == "page.ideas"
+    assert ui.render()["active"] == "page.ideas"
 
     kernel.uninstall("ideas")
 
-    fallback = ui.render(engine="slot")
+    fallback = ui.render()
     assert fallback["active"] == "page.projects"
     assert [page["id"] for page in fallback["pages"]] == ["page.projects"]
 
 
-def test_without_engine_the_legacy_snapshot_is_still_served() -> None:
+def test_page_content_keeps_props_and_maps_callables_to_events() -> None:
+    submitted: list[dict[str, Any]] = []
+
+    def build() -> Page:
+        return Page(
+            content=Column(
+                Input(placeholder="记一笔", on_submit=submitted.append),
+                Button("归档", on_click=_noop, variant="ghost"),
+            )
+        )
+
+    ui = _ui(ideas=_PagePlugin("ideas", "ideas", "灵感", build, icon="ideas"))
+    view = ui.render()
+    content = _content(view)
+
+    assert [_kind(child) for child in content["children"]] == ["input", "button"]
+    field, action = content["children"]
+    assert field["props"] == {"placeholder": "记一笔"}
+    assert set(field["events"]) == {"submit"}
+    assert set(action["props"]) == {"text", "variant"}
+    assert set(action["events"]) == {"click"}
+
+    ui.event(field["events"]["submit"], {"value": "买牛奶"})
+    assert submitted == [{"value": "买牛奶"}]
+
+
+def test_pages_side_table_keeps_registration_order_owner_and_optional_icon() -> None:
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin("first", "a", "甲", _ideas_page, icon="star"))
+    kernel.install(_PagePlugin("second", "b", "乙", _ideas_page))
+
+    pages = kernel.resolve("ui").render()["pages"]
+
+    assert [page["id"] for page in pages] == ["page.a", "page.b"]
+    assert [(page["label"], page["route"], page["owner"]) for page in pages] == [
+        ("甲", "/a", "first"),
+        ("乙", "/b", "second"),
+    ]
+    assert pages[0]["icon"] == "star"
+    assert "icon" not in pages[1]
+
+
+def test_build_callback_is_used_for_every_view() -> None:
+    state = {"n": 0}
+
+    def build() -> Page:
+        state["n"] += 1
+        return Page(content=Column(Text(f"第 {state['n']} 次")))
+
+    ui = _ui(ideas=_PagePlugin("ideas", "ideas", "灵感", build, icon="ideas"))
+
+    assert "第 1 次" in _texts(ui.render())
+    assert "第 2 次" in _texts(ui.render())
+
+
+def test_rebuild_hook_runs_when_a_page_is_rendered() -> None:
+    state = {"n": 0}
+
+    def build() -> Page:
+        return Page(content=Column(Text(f"重画 {state['n']}")))
+
+    ideas = _PagePlugin("ideas", "ideas", "灵感", None, icon="ideas")
+    ui = _ui(ideas=ideas)
+    assert ideas.handle is not None
+    ideas.handle.set(Page(content=Column(Text("初始"))))
+    assert "初始" in _texts(ui.render())
+
+    def rebuild() -> Page:
+        state["n"] += 1
+        return build()
+
+    ideas.handle.rebuild(rebuild)
+
+    assert "重画 1" in _texts(ui.render())
+
+
+def test_engine_argument_is_gone() -> None:
+    ui = _ui()
+    render = cast(Any, ui.render)
+    event = cast(Any, ui.event)
+
+    with pytest.raises(TypeError, match="engine"):
+        render(engine="slot")
+    ui.render()
+    with pytest.raises(TypeError, match="engine"):
+        event("slot:1:0", {}, engine="slot")
+
+
+def test_contribute_topics_and_the_patch_module_are_gone() -> None:
     ui = _ui()
 
-    snapshot = ui.render()
+    assert not hasattr(ui, "contribute")
+    assert not hasattr(ui, "topics")
+    with pytest.raises(ModuleNotFoundError):
+        __import__("omora._diff")
 
-    assert "kind" not in snapshot
-    assert snapshot["page"] == "ideas"
-    assert snapshot["version"] == 1
-    handler = snapshot["content"]["children"][1]["props"]["on_click"]
-    assert ui.event(handler, {}) == {}
+
+def test_event_does_not_push_a_snapshot() -> None:
+    """事件的变化搭 result 的车；ui.snapshot 只留给异步推送。"""
+    net = _Net()
+    ui = _ui(net=net)
+    view = ui.render()
+    handler = _slots(_page_root(view), "button")[0]["events"]["click"]
+
+    ui.event(handler, {})
+
+    assert net.sent == []
