@@ -1,6 +1,6 @@
 # 权限：能力 × 主体
 
-> 状态：**概念已定**；S4 已落薄层：检查器 + 链接期挂载检查 + 运行期 ops/data 检查（E-PERMISSION）与权限拒绝审计；`observe`/`intercept`、source 级权限、applyFull 检查未做。形态是【建议】，具体角色/等级模型推迟。
+> 状态：**概念已定**；S4 已落薄层：检查器 + 链接期挂载检查 + 运行期 ops/data/全量替换检查（E-PERMISSION）与权限拒绝审计；`observe`/`intercept`、source 级权限未做。形态是【建议】，具体角色/等级模型推迟。
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md)
 > 相关：[addressing.md](addressing.md) · [rules.md](rules.md)
 
@@ -51,6 +51,7 @@
 
 - **组合/链接期**：claimant 静态已知时检查；越权 → `E-PERMISSION`。
 - **运行期**：动态请求再查一次；拒绝该次变更，根树不变。
+- **全量替换（`applyFull`）**：没有逐槽 op，等价于对**当前**根 slot 的 `replace`；只做一次根级判断，判定目标是当前根——新文档内部 slot 的 grant 不参与（否则越权方可以在自己提交的全量里写上 grant 来自我授权）。形状 / 版本错误优先于权限，拒绝时整份会话不变。
 - 数据：谁能发布到某个 source、谁能订阅，同样按能力检查。
 
 ## 5. 全寻址 ≠ 可介入
@@ -78,4 +79,4 @@
 - **会话/引擎**：`applySessionOps` 接受 `{guard}` 并透传给树 op（route 不查权限）；`EngineRuntime` 的 `EngineOptions.requester` 在 host 侧编译成 ops / data 两个 guard，不传 requester = 不传 guard。
 - **链接期**（`src/link/link.ts`）：挂载前按目标 slot 检查 `mount` / `replace`，越权 `E-PERMISSION` 不产树；base 先归一化，扁平 grant 可读。
 - **审计**（`host/audit.ts` + `EngineRuntime`）：apply/reject/deny/diagnostic 结构化记录，权限拒绝逐条记 deny（code/owner/slot）。
-- **未接**：`observe`/`intercept`、数据 source 级发布/订阅权限、`applyFull` 的权限检查、链接期 `read` 级可见性；本层不是安全边界（§6）。
+- **未接**：`observe`/`intercept`、数据 source 级发布/订阅权限、链接期 `read` 级可见性；本层不是安全边界（§6）。
