@@ -1,4 +1,4 @@
-"""整份 view 的更新：事件之后交回来的新视图反映树的变化（Slop 全量替换语义）。"""
+"""整份 view 的更新：事件之后交回来的新视图反映树的变化（Slot 全量替换语义）。"""
 
 from __future__ import annotations
 
