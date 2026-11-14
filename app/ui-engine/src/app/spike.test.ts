@@ -7,7 +7,7 @@ import { hydrateSession } from "../engine/updates/hydrate";
 import { diffPageTrees } from "../engine/document/page_switch";
 import { applyFull, createSession, type SessionState } from "../engine/document/session";
 import { slotToNode } from "../renderer/slot_bridge";
-import { createSlotRenderer } from "./slot_registry";
+import { createSlotRenderer } from "../components/slot_registry";
 import { DOCUMENT_FIXTURE_PATH } from "./test_fixtures";
 
 /**

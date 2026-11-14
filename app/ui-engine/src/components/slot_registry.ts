@@ -4,18 +4,21 @@
  * - `dendro:<legacy type>`：把现有 legacy kind 直接挂到 Slot 命名空间下
  *   （`dendro:text` → legacy `text`），不复制实现、不改 legacy registry；
  * - `ideas:card` → legacy `card`：宿主插件词表的别名；
- * - Slot 原生 kind（window / page / slot / layer / page-link）来自 kinds.ts。
+ * - Slot 原生 kind（window / page / slot / layer / page-link）来自 slot_kinds.ts。
  *
  * 合并顺序：Slot 原生 kind 放最后，所以 `dendro:slot` 走 layout 版的容器，
  * 而不是 legacy 的无 layout `slot`——同名时 Slot 语义优先。
+ *
+ * 放在 components 层：SPA 入口与构建期骨架编译（build）都要用同一张表；
+ * 构建期 adapter 不许 import app，所以注册表属于组件层而不是入口。
  */
 
 import type { SlotNode } from "../contract/document";
 import { DomRenderer } from "../renderer/renderer";
-import { registry as legacyRegistry } from "../components/registry";
+import { registry as legacyRegistry } from "./registry";
 import type { Kind, KindRegistry, RenderContext } from "../renderer/types";
 import { slotToNode } from "../renderer/slot_bridge";
-import { slotKinds } from "../components/slot_kinds";
+import { slotKinds } from "./slot_kinds";
 
 function namespacedLegacyKinds(): Record<string, Kind> {
   const aliases: Record<string, Kind> = {};

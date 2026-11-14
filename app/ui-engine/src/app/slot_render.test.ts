@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { SlotNode } from "../contract/document";
 import { slotToNode } from "../renderer/slot_bridge";
-import { mountSlot } from "./slot_registry";
+import { mountSlot } from "../components/slot_registry";
 import { fixtureWithInstantiatedFeed, mountNode, type RecordedSlotEvent } from "./test_fixtures";
 
 function slot(over: Partial<SlotNode> & { id: string }): SlotNode {
