@@ -1,8 +1,8 @@
-"""端到端冒烟：真内核、真插件、真静态骨架，一次跑通。
+"""端到端冒烟：真内核、真插件、真 Slot 通道，一次跑通。
 
 不起桌面壳（Electron 二进制不一定在），也不起浏览器：
 把系统插件真装一遍，走"首页 → 点文字块 → 输一条 → 画出来"这条链，
-再对一下静态骨架和运行时结构是不是同一份。CI 的 build job 会跑它。
+再对一下静态骨架和运行时视图是不是同一份。CI 的 build job 会跑它。
 """
 
 from __future__ import annotations
@@ -22,23 +22,26 @@ from boot import Config, build  # noqa: E402
 from main import SYSTEM_PLUGINS  # noqa: E402
 
 
-def find(node: dict[str, Any], node_type: str) -> dict[str, Any] | None:
-    if node.get("type") == node_type:
-        return node
-    for child in node.get("children") or []:
-        found = find(child, node_type)
-        if found is not None:
-            return found
-    return None
+def walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
+    found = [slot]
+    for child in slot.get("children") or []:
+        found.extend(walk(child))
+    return found
 
 
-def find_tile(node: dict[str, Any], title: str) -> dict[str, Any] | None:
-    if node.get("type") == "tile" and node.get("props", {}).get("title") == title:
-        return node
-    for child in node.get("children") or []:
-        found = find_tile(child, title)
-        if found is not None:
-            return found
+def page_slots(view: dict[str, Any]) -> list[dict[str, Any]]:
+    for tree in view["localTrees"]["trees"]:
+        if tree["mountAt"] == "dendro.window.page":
+            return walk(tree["root"])
+    raise AssertionError("view 里没有页面局部树")
+
+
+def find_slot(view: dict[str, Any], kind: str, **props: Any) -> dict[str, Any] | None:
+    for slot in page_slots(view):
+        if slot.get("kind") != kind:
+            continue
+        if all(slot.get("props", {}).get(key) == value for key, value in props.items()):
+            return slot
     return None
 
 
@@ -55,35 +58,37 @@ def run() -> int:
         kernel = build(config, SYSTEM_PLUGINS)
         try:
             ui: Any = kernel.resolve("ui")
-            first = ui.render()
-            pages = [str(page["name"]) for page in first["pages"]]
-            assert pages, "一页都没登记"
-            print(f"PASS pages {pages}")
+            first = ui.render(engine="slot")
+            names = [str(page["id"]).removeprefix("page.") for page in first["pages"]]
+            assert names, "一页都没登记"
+            print(f"PASS pages {names}")
 
-            snapshots = {name: ui.render(name) for name in pages}
-            assert all("content" in snapshot for snapshot in snapshots.values())
-            print("PASS every page has a tree")
+            views = {name: ui.render(name, engine="slot") for name in names}
+            assert all(view["kind"] == "view" for view in views.values())
+            print("PASS every page has a view")
 
-            tile = find_tile(snapshots["ideas"]["content"], "文字")
+            # 事件只在最近一代 handler 里有效：先重画当前页再取 handler。
+            current = ui.render("ideas", engine="slot")
+            tile = find_slot(current, "dendro:tile", title="文字")
             assert tile is not None, "首页应该有文字捕捉块"
-            ui.event(str(tile["props"]["on_click"]), {})
+            handler = str(tile["events"]["click"])
+            ui.event(handler, {}, engine="slot")
 
-            opened = ui.render("ideas")
-            box = find(opened["content"], "input")
+            opened = ui.render("ideas", engine="slot")
+            box = find_slot(opened, "dendro:input")
             assert box is not None, "点开文字块之后应该有输入框"
-            handler = str(box["props"]["on_submit"])
+            submit = str(box["events"]["submit"])
 
-            assert ui.event(handler, {"value": "买牛奶"}) == {}
-            after = ui.render("ideas")
+            after = ui.event(submit, {"value": "买牛奶"}, engine="slot")
             assert "买牛奶" in json.dumps(after, ensure_ascii=False)
-            assert after["version"] > snapshots["ideas"]["version"]
-            print("PASS capture flow", handler)
+            assert after["version"] > views["ideas"]["version"]
+            print("PASS capture flow", submit)
 
-            built = static_ui.build_snapshots()
-            assert list(built) == pages, "静态骨架的页与运行时不一致"
-            plain = {name: static_ui.plain(snapshots[name]) for name in pages}
-            assert static_ui.hash_of(built) == static_ui.hash_of(plain), (
-                "静态骨架与运行时结构不一致"
+            built = static_ui.build_views()
+            assert list(built) == names, "静态骨架的页与运行时不一致"
+            runtime = {name: static_ui.skeleton_view(views[name]) for name in names}
+            assert static_ui.hash_of(built) == static_ui.hash_of(runtime), (
+                "静态骨架与运行时视图不一致"
             )
             print(f"PASS static matches runtime {static_ui.hash_of(built)}")
         finally:

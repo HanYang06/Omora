@@ -6,8 +6,8 @@ from skeleton_html import check
 
 COMPILED = (
     '<body><div id="root">'
-    '<div class="omora-app" data-connection="idle">'
-    '<nav class="omora-shell-nav"></nav>'
+    '<div class="omora-row" data-type="dendro:window" data-dendro-layout="slot">'
+    '<div data-type="dendro:page-link"></div>'
     "</div></div></body>"
 )
 
@@ -22,10 +22,10 @@ def test_rejects_empty_root() -> None:
 
 
 def test_rejects_shell_without_nav() -> None:
-    html = COMPILED.replace('class="omora-shell-nav"', 'class="omora-shell-other"')
-    assert any("导航栏" in problem for problem in check(html))
+    html = COMPILED.replace('data-type="dendro:page-link"', 'data-type="dendro:link"')
+    assert any("导航" in problem for problem in check(html))
 
 
-def test_rejects_wrong_status() -> None:
-    html = COMPILED.replace('data-connection="idle"', 'data-connection="open"')
-    assert any("未连接" in problem for problem in check(html))
+def test_rejects_missing_layout_marker() -> None:
+    html = COMPILED.replace('data-dendro-layout="slot"', 'data-dendro-layout="legacy"')
+    assert any("布局标记" in problem for problem in check(html))

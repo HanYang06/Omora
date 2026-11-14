@@ -1257,3 +1257,27 @@ mark {
 [data-dendro-layout][data-size-height] {
   height: var(--dendro-height, auto);
 }
+
+/* Slot 主会话壳（S6.5）：window 根铺满；rail / page 两栏沿用 scaffold 的 size + layout。
+   旧壳（.omora-app / .omora-shell-*）只服务 ?engine=legacy 回退，删 legacy 时一起删。 */
+
+#root > [data-type="dendro:window"],
+.dendro-live-host > [data-type="dendro:window"] {
+  height: 100%;
+}
+
+#root > [data-type="dendro:window"] > [data-size-width="56"],
+.dendro-live-host > [data-type="dendro:window"] > [data-size-width="56"] {
+  align-items: center;
+  padding: var(--s3) 0;
+  border-right: 1px solid var(--line);
+  background: var(--desk);
+}
+
+#root > [data-type="dendro:window"] > :last-child,
+.dendro-live-host > [data-type="dendro:window"] > :last-child {
+  min-width: 0;
+  padding: var(--s6);
+  overflow-y: auto;
+  background: var(--paper);
+}

@@ -1,7 +1,7 @@
-"""构建产物门禁：确认 Vite 把启动骨架编译进了 index.html。
+"""构建产物门禁：确认 Vite 把 Slot 启动骨架编译进了 index.html。
 
-和 `static_ui.py --check` 分工：那边查源码里的骨架数据是否最新；这边查构建产物里
-确实有编译后的首帧 HTML——Vite adapter 真的接上了，而不是只生成了数据。
+和 `static_ui.py --check` 分工：那边查源码里的骨架视图是否最新；这边查构建产物里确实有
+编译后的首帧 HTML——Vite adapter 真的接上了，而不是只生成了数据。
 """
 
 from __future__ import annotations
@@ -12,18 +12,22 @@ ROOT = Path(__file__).resolve().parent.parent
 INDEX = ROOT / "app" / "ui-engine" / "dist" / "index.html"
 
 ROOT_OPEN = '<div id="root">'
-APP_OPEN = '<div class="omora-app"'
+WINDOW = 'data-type="dendro:window"'
+LAYOUT = 'data-dendro-layout="slot"'
+NAV_LINK = 'data-type="dendro:page-link"'
 
 
 def check(html: str) -> list[str]:
     """返回产物问题；空列表表示通过。"""
     problems: list[str] = []
-    if ROOT_OPEN + APP_OPEN not in html:
-        problems.append("#root 里没有编译出的 omora-app 骨架")
-    if 'class="omora-shell-nav"' not in html:
-        problems.append("骨架里没有导航栏（omora-shell-nav）")
-    if 'data-connection="idle"' not in html:
-        problems.append("骨架没有停在未连接状态（data-connection）")
+    if ROOT_OPEN + "<div" not in html:
+        problems.append("#root 里没有编译出的 Slot 首帧")
+    if WINDOW not in html:
+        problems.append("骨架里没有 window 根（data-type=dendro:window）")
+    if LAYOUT not in html:
+        problems.append("骨架没有 Slot 布局标记（data-dendro-layout=slot）")
+    if NAV_LINK not in html:
+        problems.append("骨架里没有导航入口（dendro:page-link）")
     return problems
 
 

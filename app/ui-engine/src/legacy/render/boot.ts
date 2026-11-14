@@ -1,5 +1,4 @@
 import type { PageEntry, Snapshot } from "../types";
-import { STATIC_ORDER, STATIC_SNAPSHOTS } from "../../generated/static-tree";
 
 /**
  * 启动骨架：不等后端先画第一页。
@@ -40,7 +39,10 @@ export function isStale(
   return !pagesMatch(staticPages, livePages);
 }
 
-/** 这一版构建产出的启动骨架。 */
+/**
+ * legacy 回退路径不再带构建期骨架：首帧骨架已改成 Slot 视图编译（build/slot-skeleton），
+ * 旧快照路径只在 `?engine=legacy` 下跑到一次真快照回来。删 legacy 时本函数一起删。
+ */
 export function initialSnapshot(): Snapshot | null {
-  return bootSnapshot(STATIC_SNAPSHOTS, STATIC_ORDER);
+  return null;
 }
