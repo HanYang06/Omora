@@ -42,6 +42,11 @@ export interface SourceEngineOptions extends EngineOptions {
 export type SourceEngineResult =
   { ok: true; engine: SourceEngine } | { ok: false; diagnostics: Diagnostic[] };
 
+/** `applyView` 的选项：运行后来源的 owner 不随主视图全量替换消失。 */
+export interface ApplyViewOptions {
+  keepOwners?: readonly string[];
+}
+
 /**
  * 来源模式的更新结果：与 EngineApplyResult 同形，但成功时额外带 host 级诊断
  * （例如 remove 级联撤树时记录的死引用），失败是 host 或 engine 的原子拒绝。
@@ -144,8 +149,11 @@ export class SourceEngine {
   /**
    * 应用一份主会话视图（S6）：整组局部树重链 → 「链接结果 + 页面侧表 + 数据 + 版本」
    * 按全量替换提交。失败时把 host 注册表恢复到上一份，会话与注册表不会各走一半。
+   *
+   * `keepOwners` 是运行后来源（S7）：主视图只对页面 / 导航这类主来源负责，宿主挂的
+   * 来源不随视图全量替换消失；传进来的 owner 会从当前注册表原样并进新链接。
    */
-  applyView(value: unknown): SourceApplyResult {
+  applyView(value: unknown, options: ApplyViewOptions = {}): SourceApplyResult {
     if (this.isDisposed) {
       return failure([disposedDiagnostic()]);
     }
@@ -154,7 +162,14 @@ export class SourceEngine {
       return failure(parsed.diagnostics);
     }
     const previous = payloadOf(this.host);
-    const loaded = this.host.load(parsed.view.localTrees.trees);
+    const keep = new Set(options.keepOwners ?? []);
+    const kept: LocalTree[] = [];
+    for (const [owner, trees] of this.host.sources) {
+      if (keep.has(owner)) {
+        kept.push(...trees);
+      }
+    }
+    const loaded = this.host.load([...kept, ...parsed.view.localTrees.trees]);
     if (!loaded.ok) {
       return failure(loaded.diagnostics);
     }

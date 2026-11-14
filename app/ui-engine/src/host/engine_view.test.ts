@@ -9,7 +9,9 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { createEngineFromView, type SourceEngine } from "./engine_sources";
+import type { SlotNode } from "../contract/document";
 import { DocumentIndex } from "../engine/document/document";
+import type { LocalTree } from "../link/types";
 
 const VIEW_FIXTURE_PATH = fileURLToPath(
   new URL("../../../sdk/tests/fixtures/view.json", import.meta.url),
@@ -146,5 +148,76 @@ describe("applyView：整份视图替换", () => {
     const diagnostics = failed(engine.applyView(fixture()));
 
     expect(diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["E-PAYLOAD"]);
+  });
+});
+
+function runtimeTree(text: string): LocalTree {
+  const root: SlotNode = {
+    id: "runtime.test",
+    kind: "dendro:text",
+    owner: "runtime.test",
+    props: { text },
+    children: [],
+  };
+  return {
+    owner: "runtime.test",
+    root,
+    mountAt: "dendro.window.nav",
+    order: 99,
+    seq: 0,
+    replace: false,
+  };
+}
+
+describe("applyView：运行后来源的保留", () => {
+  it("keepOwners 里的来源不随主视图全量替换消失", () => {
+    const engine = engineOf(fixture());
+    applied(engine.applyView(viewOf((value) => (value.version = 2))));
+    const registered = engine.registerSource("runtime.test", [runtimeTree("RUNTIME")]);
+    if (!registered.ok) {
+      throw new Error("来源应注册成功: " + JSON.stringify(registered.diagnostics));
+    }
+
+    applied(
+      engine.applyView(
+        viewOf((value) => {
+          value.version = engine.session.document.version + 1;
+          value.active = "page.projects";
+        }),
+        { keepOwners: ["runtime.test"] },
+      ),
+    );
+
+    const index = DocumentIndex.build(engine.session.document.root);
+    expect(index.get("runtime.test")?.props.text).toBe("RUNTIME");
+    expect(engine.sources.has("runtime.test")).toBe(true);
+    expect(engine.session.active).toBe("page.projects");
+  });
+
+  it("不传 keepOwners 时来源随全量替换消失", () => {
+    const engine = engineOf(fixture());
+    engine.registerSource("runtime.test", [runtimeTree("RUNTIME")]);
+
+    applied(engine.applyView(viewOf((value) => (value.version = 2))));
+
+    expect(DocumentIndex.build(engine.session.document.root).get("runtime.test")).toBeUndefined();
+    expect(engine.sources.has("runtime.test")).toBe(false);
+  });
+
+  it("旧版本被拒回滚时，运行后来源仍在", () => {
+    const engine = engineOf(fixture());
+    applied(engine.applyView(viewOf((value) => (value.version = 2))));
+    engine.registerSource("runtime.test", [runtimeTree("RUNTIME")]);
+
+    const diagnostics = failed(
+      engine.applyView(
+        viewOf((value) => (value.version = 1)),
+        { keepOwners: ["runtime.test"] },
+      ),
+    );
+
+    expect(diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["E-VERSION"]);
+    expect(engine.sources.has("runtime.test")).toBe(true);
+    expect(DocumentIndex.build(engine.session.document.root).get("runtime.test")).toBeDefined();
   });
 });
