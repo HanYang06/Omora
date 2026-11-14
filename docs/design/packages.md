@@ -190,24 +190,15 @@ class Ui:
         count: Callable[[], int] | None = None,
         icon: str | None = None,
     ) -> PageHandle: ...
-    def contribute(
-        self,
-        ctx: Context,
-        target: str,
-        build: Callable[[], Node],
-        *,
-        order: int = 0,
-    ) -> None: ...
-    def topics(self, ctx: Context, *names: str) -> None: ...
     def render(self, page: str | None = None) -> dict[str, object]: ...
     def event(self, handler: str, payload: dict[str, object]) -> dict[str, object]: ...
 ```
 
-### 7.0 贡献
+### 7.0 多来源组合（已删旧模型）
 
-- `contribute(ctx, target, build, order=0)` 往一个键挂一棵树；归属取 `ctx.name`（插件名）。
-- 快照里多一个 `contributions` 列表；页面主树仍是 `content`，引擎组合前会给它的根打上 `om.window.page`。
-- 落点键存不存在由引擎判断：键不在，引擎丢弃并记日志，不算错。
+- 旧的 `contribute` / `topics` API 与快照 contributions 字段已随 legacy 组合器在 S6.5 删除。
+- 多来源组合的目标模型是链接期局部树（[composition](../engine/composition.md)）：每个来源交自己的
+  局部树，引擎链接成权威根树；运行后来源在 S7 接。
 
 ### 7.1 页面登记
 

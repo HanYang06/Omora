@@ -42,9 +42,9 @@
 
 Python 侧可以保留好用的构造器（`Row / Column / Split` 等），它们编译成规范的 Slot + layout；线上只有一种规范形态。作者手感与契约形状解耦。
 
-## 4. 当前 legacy 词表
+## 4. 当前词表
 
-legacy 有 38 个 kind，分两处手写：`app/sdk/omora/sdk/ui.py`、`controls.py` 与 `app/ui-engine/src/components/`。目标是把它们收成一份 schema 后自动生成；迁移期先保留现状，新增组件必须回答“schema 在哪、另一侧怎么生成”。
+当前有 38 个 kind，作者 API 是 `omora.sdk.ui` 的 Node 树，分两处手写：`app/sdk/omora/sdk/ui.py`、`controls.py` 与 `app/ui-engine/src/components/`。目标是把它们收成一份 schema 后自动生成；迁移期先保留现状，新增组件必须回答“schema 在哪、另一侧怎么生成”。
 
 ## 5. 事件与数据契约
 

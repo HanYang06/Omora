@@ -8,18 +8,18 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 本地优先的灵感与项目管理工具：灵感、项目、需求互相可追溯；默认本地跑，也能部署成网页。
 
-当前状态：闭环已通，母 UI（浅色，三栏：图标栏 + 索引栏 + 主区）+ 界面库 + 灵感页 + 传统搜索 + 音频 / 视频捕获（两个独立插件、客户端设备门禁）+ uv workspace 已落——`omora-core` / `omora-sdk` / `omora-plugin-*`、boot / 配置、store（SQLite）/ manager / media / ui / audio / video / ideas / projects / requirements / net 插件、渲染引擎（`app/ui-engine/`）。React 已移除，渲染层直写 DOM；启动骨架由 Vite 在构建期编译进 HTML；链接期编译器（Slot 局部树 + 诊断 + 构建门禁）已落；文档运行时核心（三张索引 + 原子 ops + 集合绑定原语 + data router + 标量绑定/session/route）已落；Slot 文档已能经薄桥直接渲染 DOM（spike），跨父 move 复用元素，`?engine=slot` 可预览；S4 第一版与续作（EngineRuntime/DocumentView/权限薄层/来源宿主/审计/local-trees 全量更新/Slot 布局样式）已落，S4 尾巴 applyFull 权限已收；S5 起步（SourceEngine 来源模式 + renderer 节点统计、schema 重置为 dendro.ui/1、组件目录拆出 src/components）已落；分层完成：`src/` 只剩 app / build / components / contract / engine / generated / host / legacy / link / platform / renderer / styles 十二个目录；旧快照渲染隔离在 `src/legacy/`（只允许 app 与构建期 adapter 过渡期引用，之后删除），core/ 已删除；分层规则与迁移记录见 docs/engine/layering.md。默认入口已切到 Slot 主会话（连 Python），启动骨架也改成 Slot 链接编译；`?engine=slot` 是内置 fixture 预览、`?engine=legacy` 是回退开关；下一步删 legacy 回退路径与构建期旧 adapter（见 docs/engine/migration.md §6）。UI 插件体系（键 / 贡献 / 组合器 / 静态骨架 / 键索引）已落，深色主题、转写、AI 待做。
+当前状态：闭环已通，母 UI（浅色，三栏：图标栏 + 索引栏 + 主区）+ 界面库 + 灵感页 + 传统搜索 + 音频 / 视频捕获（两个独立插件、客户端设备门禁）+ uv workspace 已落——`omora-core` / `omora-sdk` / `omora-plugin-*`、boot / 配置、store（SQLite）/ manager / media / ui / audio / video / ideas / projects / requirements / net 插件、渲染引擎（`app/ui-engine/`）。React 已移除，渲染层直写 DOM；启动骨架由 Vite 在构建期编译进 HTML；链接期编译器（Slot 局部树 + 诊断 + 构建门禁）已落；文档运行时核心（三张索引 + 原子 ops + 集合绑定原语 + data router + 标量绑定/session/route）已落；Slot 文档已能经薄桥直接渲染 DOM（spike），跨父 move 复用元素，`?engine=slot` 可预览；S4 第一版与续作（EngineRuntime/DocumentView/权限薄层/来源宿主/审计/local-trees 全量更新/Slot 布局样式）已落，S4 尾巴 applyFull 权限已收；S5 起步（SourceEngine 来源模式 + renderer 节点统计、schema 重置为 dendro.ui/1、组件目录拆出 src/components）已落；分层完成：`src/` 只剩 app / build / components / contract / engine / generated / host / link / platform / renderer / styles 十一个目录；旧快照路径（legacy 壳、`_diff.py`、贡献组合）已在 S6.5 删除，core/ 也已删除；分层规则与迁移记录见 docs/engine/layering.md。默认入口是 Slot 主会话（连 Python），启动骨架由 Slot 链接编译；`?engine=slot` 是内置 fixture 预览。下一步 S7：运行后来源 / Host 网络接线、规则执行与 schema 单一来源（见 docs/engine/migration.md §6）。组件库、Slot 运行时、静态骨架已落；深色主题、转写、AI 待做。
 
 ## 结构
 
-| 位置             | 是什么                                                                                    | 语言    |
-| ---------------- | ----------------------------------------------------------------------------------------- | ------- |
-| `app/core/`      | 内核：插件宿主；package `omora-core`                                                      | Python  |
-| `app/sdk/`       | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk`                           | Python  |
-| `packages/`      | 系统插件：`omora-plugin-*`，uv workspace 的 member                                        | Python  |
-| `app/ui-engine/` | 渲染引擎 + 桌面壳：组件目录与注册表、贡献组合、事件、静态骨架；Electron 主进程在 `shell/` | TS / JS |
-| 运行后插件目录   | 生态插件，单独装；现在为空                                                                | 待定    |
-| `docs/`          | 架构与事实来源                                                                            | —       |
+| 位置             | 是什么                                                                           | 语言    |
+| ---------------- | -------------------------------------------------------------------------------- | ------- |
+| `app/core/`      | 内核：插件宿主；package `omora-core`                                             | Python  |
+| `app/sdk/`       | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk`                  | Python  |
+| `packages/`      | 系统插件：`omora-plugin-*`，uv workspace 的 member                               | Python  |
+| `app/ui-engine/` | 渲染引擎 + 桌面壳：Dendrolink 运行时、组件、静态骨架；Electron 主进程在 `shell/` | TS / JS |
+| 运行后插件目录   | 生态插件，单独装；现在为空                                                       | 待定    |
+| `docs/`          | 架构与事实来源                                                                   | —       |
 
 两个进程、两个 runtime：Python（内核 + 插件）与 TS（渲染引擎）。中间只有一条消息协议，由 net 插件（系统插件）持有。
 

@@ -1,6 +1,6 @@
 # 分层与依赖方向
 
-> 状态：**决定已定**；六个阶段全部完成（contract / link / engine / host / renderer / components / app / legacy / build / platform）。
+> 状态：**决定已定**；分层与目录整改完成（contract / link / engine / host / renderer / components / app / build / platform），legacy 已删。
 > 相关：[README](README.md) · [renderer.md](renderer.md) · [components.md](components.md) · [migration.md](migration.md)
 
 ## 0. 一句话
@@ -15,7 +15,7 @@
 - `runtime/` 曾同时有文档/集合算法、宿主设施（权限/账本/审计/指标/来源）、编排（EngineRuntime）——已拆成 `engine/` 与 `host/`；
 - `core/` 曾同时有契约（Slot/Document）与连接/日志/设备上报（已全部归位：契约 → contract、连接/日志/topic → app、device-report → app，core/ 删除）；
 - `link/` 曾反向依赖权限模块（已移到 `contract/policy`）；`host/engine` 曾依赖 `renderer/renderer` 的统计类型（已移到 `contract/render`）；
-- 旧快照渲染已隔离到 `legacy/render/`：现在只有 app 的 `?engine=legacy` 回退入口引用它；构建期骨架已改成 Slot 链接编译，`build/` 不再依赖 legacy。
+- 旧快照路径（壳、补丁、贡献组合、`_diff.py`）已在 S6.5 整体删除；首帧骨架也走 Slot 链接编译。
 
 ## 2. 目标结构
 
@@ -30,8 +30,7 @@ app/ui-engine/src/
   host/          来源宿主、EngineRuntime/SourceEngine、权限、生命周期账本、审计、指标
   renderer/      DOM renderer、Kind 契约、Slot → 渲染节点桥；不含组件
   components/    38+ 个 kind 实现、注册表、图标；只依赖 contract + renderer 类型
-  app/           入口、连接、日志、topic、会话装配、device-report
-  legacy/        旧快照渲染路径（隔离：只给 app 的回退入口引用，删除中）
+  app/           入口、连接、日志、会话装配、device-report、live/preview
   build/         Vite 插件、启动骨架编译、链接期门禁（构建期 adapter）
   platform/      media / capture / search 等宿主工具
   generated/  styles/
@@ -44,37 +43,36 @@ app/ui-engine/src/
 - [x] 契约层 `src/contract/` 抽取（document / diagnostics / policy / render），修掉倒置 1、2
 - [x] `runtime/` 拆成 `engine/`（document / collections / updates）与 `host/` 设施
 - [x] `dom/` 拆成 `renderer/`（renderer + Kind 契约 + Slot 桥）、`components/`（Slot 原生 kind + 测试 helper）、`app/`（入口 / 壳 / 视图 / 预览 / 注册表）
-- [x] 旧快照渲染（`render/`）隔离成 `legacy/render/`；启动骨架改成 Slot 链接编译后，只有 app 的回退入口引用它
-- [x] core 契约与工具归位（protocol / media 类型 → contract，Node → renderer，快照模型 → legacy，connection / log / topics → app）
+- [x] 旧快照渲染隔离成 `legacy/render/`，随后在 S6.5 随 `?engine=legacy`、旧壳与补丁一起删除
+- [x] core 契约与工具归位（protocol / media 类型 → contract，Node → renderer，connection / log → app，core/ 删除）
 - [x] build / platform 归位（compiler → build，capture / media / search → platform，device-report → app，core/ 删除）
 - [ ] `app/ui-engine` 包根再评估 engine / desktop 拆分（非目录阶段，后续）
 
 ## 3. 依赖规则
 
-只允许箭头方向：`contract → link → engine.* → host → renderer → components → app`；`platform` 是宿主工具旁支（只依赖 contract）；`build` 是构建期 adapter（可依赖 contract / link / renderer / components / host / legacy，不被运行时依赖）；`legacy` 只允许 app 的回退入口引用（删 legacy 时消失）。
+只允许箭头方向：`contract → link → engine.* → host → renderer → components → app`；`platform` 是宿主工具旁支（只依赖 contract）；`build` 是构建期 adapter（可依赖 contract / link / renderer / components / host，不被运行时依赖）。
 
-| 层            | 可以依赖                                       | 禁止                                                         |
-| ------------- | ---------------------------------------------- | ------------------------------------------------------------ |
-| `contract/`   | 无（纯类型/纯函数）                            | DOM、renderer、engine、host、app                             |
-| `link/`       | contract                                       | engine/host、DOM、app                                        |
-| `engine/*`    | contract、link 的输出                          | renderer、host、platform、app                                |
-| `host/`       | contract、link、engine                         | renderer/DOM、app                                            |
-| `renderer/`   | contract                                       | engine、link、host、platform、app                            |
-| `components/` | contract、renderer 类型、platform 工具（只读） | engine、link、host、app、DOM 状态                            |
-| `app/`        | 全部（组合根）                                 | 被下层反向 import                                            |
-| `legacy/`     | contract、renderer、components                 | engine、host、app（只给 app 回退入口）                       |
-| `build/`      | contract、link、renderer、components、host     | app、engine、platform、legacy；被运行时 import               |
-| `platform/`   | contract、platform 内部                        | renderer、components、engine、host、link、legacy、app、build |
+| 层            | 可以依赖                                       | 禁止                                                 |
+| ------------- | ---------------------------------------------- | ---------------------------------------------------- |
+| `contract/`   | 无（纯类型/纯函数）                            | DOM、renderer、engine、host、app                     |
+| `link/`       | contract                                       | engine/host、DOM、app                                |
+| `engine/*`    | contract、link 的输出                          | renderer、host、platform、app                        |
+| `host/`       | contract、link、engine                         | renderer/DOM、app                                    |
+| `renderer/`   | contract                                       | engine、link、host、platform、app                    |
+| `components/` | contract、renderer 类型、platform 工具（只读） | engine、link、host、app、DOM 状态                    |
+| `app/`        | 全部（组合根）                                 | 被下层反向 import                                    |
+| `build/`      | contract、link、renderer、components、host     | app、engine、platform；被运行时 import               |
+| `platform/`   | contract、platform 内部                        | renderer、components、engine、host、link、app、build |
 
 已知要修的倒置（全部已解）：
 
 1. ~~`link/link.ts` → 权限模块~~：能力匹配已移到 `contract/policy`，link 与 host 都依赖它；
 2. ~~`host/engine.ts` → `renderer/renderer`（`RenderStats`）~~：统计类型已移到 `contract/render`，engine 不依赖渲染实现；
-3. ~~构建期编译器 → `app/shell`~~：已解——DomShell 随旧快照壳移到 `legacy/shell`，`build/` 只依赖 legacy，不碰 app；
+3. ~~构建期编译器 → `app/shell`~~：已解——旧壳随 legacy 在 S6.5 删除，`build/` 直接走 Slot 链接编译，不碰 app；
 4. ~~device-report → 设备检测~~：已解——device-report 移到 `app/device_report`，
    platform/capture 只被 app 与 components 使用，platform 不 import 上层；
 5. ~~`build/` → `legacy/render/`~~：已解——启动骨架改成 Slot 链接编译（视图来自
-   `generated/static-view`，链路是 parseView → link → Slot 渲染器），build 不再依赖 legacy。
+   `generated/static-view`，链路是 parseView → link → Slot 渲染器），legacy 已删除。
 
 本轮另把 `runtime/` 拆成 `engine/`（document / collections / updates）与 `host/`，并把权限检查从
 ops / data / session 改成 host 注入的 guard：engine 层只认 guard，不再 import host。
@@ -82,7 +80,7 @@ ops / data / session 改成 host 注入的 guard：engine 层只认 guard，不�
 ## 4. 迁移方式
 
 - **一个 PR 只搬一层**，不改行为、不改 schema、不调预算；测试数与行为测试保持。
-- 先抽契约与策略（收益最大、冲突最小），再拆 runtime，再拆渲染 / 入口，最后 build/platform 与 legacy。
+- 先抽契约与策略（收益最大、冲突最小），再拆 runtime，再拆渲染 / 入口，最后 build/platform；legacy 最后整体删除。
 - 过渡期可以用 re-export shim，但一个层搬完后 shim 必须删。
 - 每步加 eslint `no-restricted-imports` 边界规则，让倒置在 CI 里直接红，而不是靠 review 记性。
 - 目录搬动后同步 renderer.md / components.md / AGENTS 结构表；预算与链接检查照常跑。
