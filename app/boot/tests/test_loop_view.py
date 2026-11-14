@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from websockets.asyncio.client import connect
 
@@ -44,7 +44,7 @@ def _slots(node: dict[str, Any], kind: str) -> list[dict[str, Any]]:
 def _tree(view: dict[str, Any], mount_at: str) -> dict[str, Any]:
     for tree in view["localTrees"]["trees"]:
         if tree["mountAt"] == mount_at:
-            return tree
+            return cast(dict[str, Any], tree)
     raise AssertionError(f"view 里没有挂在 {mount_at} 的局部树: {view!r}")
 
 
