@@ -2,7 +2,7 @@
 
 > **Dendrolink：把局部树链接成权威根树的链接期引擎。**
 >
-> 状态：**设计已定；S0–S6 已落，S7 起步**；身份（`code` / `addr`）与根树结构文件起步：契约字段与 `root-tree.json` 已落，加载器 / 派生同 PR 实现。本文是引擎文档集的索引与总纲；主会话、构建期首帧与全部系统插件页面都走 Slot（局部树 → 链接 → EngineRuntime/DocumentView），运行后来源示例已接（自动发现 + 热更新），`?engine=slot` 只是内置 fixture 预览。剩余大项：Host 网络帧 / 订阅 / 媒体登记、规则执行（`reactions`）、schema 单一来源。
+> 状态：**设计已定；S0–S6 已落，S7 起步**；身份（`code` / `addr`）与根树结构文件起步：契约字段与 `root-tree.json` 已落，加载器已接；生产端 `code` / `addr` 派生仍待。本文是引擎文档集的索引与总纲；主会话、构建期首帧与全部系统插件页面都走 Slot（局部树 → 链接 → EngineRuntime/DocumentView），运行后来源示例已接（自动发现 + 热更新），`?engine=slot` 只是内置 fixture 预览。剩余大项：Host 网络帧 / 订阅 / 媒体登记、规则执行（`reactions`）、schema 单一来源。
 > 基线：`main@3910928`（S6.5 骨架编译后），工作区干净。
 > 命名决定见 [ADR-0001](decisions/0001-name.md)。
 
@@ -94,7 +94,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 | 文档契约   | `dendro.ui/1` + 跨语言 fixture + `parseDocument` 校验                                               | schema 单一来源（Python 词表导出 TS）未做                         |
 | 寻址       | 三张索引 + 全寻址                                                                                   | 路径级索引与增量维护未做（当前每步重建）                          |
 | 身份       | Slot 可选 `code` / `addr` 契约字段；`addr = H(parent.addr, code)`，`chain` 由祖先 code 算出         | 生产端尚未全部派生；引擎仍按 `id` 索引；redirect / 墓碑未做       |
-| 根树结构   | 窗口 / 导航 / 页面骨架单一来源 `app/sdk/omora/sdk/root-tree.json`（`anchors` 映射语义名 → slot id） | 结构文件已落，加载器同 PR 实现                                    |
+| 根树结构   | 窗口 / 导航 / 页面骨架单一来源 `app/sdk/omora/sdk/root-tree.json`（`anchors` 映射语义名 → slot id） | 结构文件与加载器已落；生产端身份派生仍待                          |
 | 组合       | 链接器：形状校验 / 多轮挂载 / 顺序 / 容量 / replace / 诊断码 / 构建门禁                             | 按 kind 的 props/events schema、`before/after`、`E-TEMPLATE` 未做 |
 | 更新       | 全量 / 纯数据 / 局部树三级更新均落；主会话已接                                                      | 页面侧表尚未进 local-trees payload（S7 来源热更新一起定）         |
 | 规则       | 标量 `in` / `bind` → props 已落                                                                     | 触发 × 效果闭集、dispatch 回来源、规则索引/诊断未做               |

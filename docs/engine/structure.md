@@ -1,6 +1,6 @@
 # 结构：窗口、页面、层、布局
 
-> 状态：**已定**；layout 字段表是【建议】。S3-c 已落会话层的 pages/active 与 route 意图（active 切换）；S3-d 已落渲染层按 id 的换页协调（`page_switch`）与跨父 move 复用；S6.4 已接主会话；窗口骨架收进结构文件（结构文件已落，加载器同 PR 实现）；页面参数仍待。
+> 状态：**已定**；layout 字段表是【建议】。S3-c 已落会话层的 pages/active 与 route 意图（active 切换）；S3-d 已落渲染层按 id 的换页协调（`page_switch`）与跨父 move 复用；S6.4 已接主会话；窗口骨架收进结构文件（结构文件与加载器已落）；页面参数仍待。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md)
 > 相关：[rules.md](rules.md) · [updates.md](updates.md) · `runtime.md`（待写）
 
@@ -38,7 +38,7 @@
 }
 ```
 
-- 状态：**结构文件已落，加载器同 PR 实现**；此前 TS 侧的窗口骨架是 `link/scaffold.ts` 的 `WINDOW_SCAFFOLD` 常量。
+- 状态：**结构文件与加载器已落**；此前 TS 侧的窗口骨架是 `link/scaffold.ts` 的 `WINDOW_SCAFFOLD` 常量。
 - 运行时把局部树按 `mountAt`（如 `dendro.window.page`）挂进骨架；骨架是链接基准，链接器只深拷不改。
 
 ## 2. 页面：侧表 + 活动页
