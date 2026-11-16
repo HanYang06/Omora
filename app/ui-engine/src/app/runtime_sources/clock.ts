@@ -1,4 +1,5 @@
 import type { SlotNode } from "../../contract/document";
+import { WINDOW_ANCHORS } from "../../link/scaffold";
 import type { RuntimeSource } from "../runtime_sources";
 
 /**
@@ -27,7 +28,7 @@ function clockRoot(): SlotNode {
 
 const clock: RuntimeSource = {
   owner: OWNER,
-  mountAt: "dendro.window.nav",
+  mountAt: WINDOW_ANCHORS.nav,
   order: 100,
   build: clockRoot,
   start(push) {

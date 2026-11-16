@@ -1,0 +1,43 @@
+{
+  "schema": "dendro.ui/1",
+  "version": 1,
+  "root": {
+    "id": "dendro.window",
+    "kind": "dendro:window",
+    "owner": "dendro",
+    "props": {},
+    "layout": { "flow": "row", "capacity": "many" },
+    "children": [
+      {
+        "id": "dendro.window.nav",
+        "kind": "dendro:slot",
+        "owner": "dendro",
+        "props": {},
+        "layout": {
+          "flow": "column",
+          "capacity": "many",
+          "size": { "width": 56 },
+          "gap": "xs"
+        },
+        "children": []
+      },
+      {
+        "id": "dendro.window.page",
+        "kind": "dendro:slot",
+        "owner": "dendro",
+        "props": {},
+        "layout": {
+          "flow": "column",
+          "capacity": "one",
+          "size": { "width": "fill" }
+        },
+        "children": []
+      }
+    ]
+  },
+  "anchors": {
+    "window": "dendro.window",
+    "nav": "dendro.window.nav",
+    "page": "dendro.window.page"
+  }
+}

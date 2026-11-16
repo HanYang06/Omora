@@ -1,6 +1,6 @@
 # 契约：Slot
 
-> 状态：**已定，已落**。本文定义 Dendrolink 唯一的节点原语；Slot 信封、文档 / ops 运行时与主会话都已接上（S6），legacy 快照路径已删。
+> 状态：**已定，已落**。本文定义 Dendrolink 唯一的节点原语；Slot 信封、文档 / ops 运行时与主会话都已接上（S6），legacy 快照路径已删。身份字段 `code` / `addr` 已进契约（可选），生产端尚未全部派生，见 [addressing.md](addressing.md) §2。
 > 依赖：[README](README.md) · [ADR-0001](decisions/0001-name.md)
 > 相关：[addressing.md](addressing.md) · [structure.md](structure.md) · [rules.md](rules.md) · [composition.md](composition.md)
 
@@ -14,7 +14,9 @@ Slot 是 Dendrolink 唯一的节点类型：一个带稳定 id、布局规则、
 
 | 块        | 字段        | 必填     | 说明                                                            |
 | --------- | ----------- | -------- | --------------------------------------------------------------- |
-| 身份      | `id`        | 是       | 全局唯一、跨更新/换页稳定；寻址主键                             |
+| 身份      | `id`        | 是       | 全局唯一、跨更新/换页稳定；树内寻址主键                         |
+| 身份      | `code`      | 否       | 本地身份编码：兄弟级唯一，内容变化不改；见 addressing §2        |
+| 身份      | `addr`      | 否       | 全链查找键 `H(parent.addr, code)`，父链变则变；见 addressing §2 |
 | 归属      | `owner`     | 是       | 提供这棵局部树的来源；事件归属与生命周期                        |
 | 作用域    | `scope`     | 否       | 数据/动作/局部状态的命名空间                                    |
 | 外观/行为 | `kind`      | 是       | `dendro:slot` / `dendro:page` / `ideas:card` / `omora:button`…… |
@@ -27,6 +29,8 @@ Slot 是 Dendrolink 唯一的节点类型：一个带稳定 id、布局规则、
 | 权限      | `grant`     | 否       | 能力 × 主体，见 [permissions.md](permissions.md)                |
 
 叶子节点就是 `capacity: none` 的 Slot；布局容器是带 `layout` 的 Slot；层是根部 `flow: stack` 的 Slot；页面是带路由语义、`capacity: one` 的 Slot。**节点类型只有一种，区别全在 kind 与 layout。**
+
+`id` 与 `code` / `addr` 并存：`id` 是当前树内寻址键，`code` / `addr` 是可选的结构身份字段。字段进了契约与序列化通道（写了就原样发出），但生产端（Python UI 升 Slot、静态骨架、集合条目）还没逐个派生，引擎索引目前仍按 `id`；派生、redirect 与墓碑的落地见 [addressing.md](addressing.md) §2。
 
 ## 2. kind 与 schema
 

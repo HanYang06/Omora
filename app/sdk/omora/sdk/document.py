@@ -176,6 +176,8 @@ class Slot:
     reactions: tuple[Reaction, ...]
     collection: Collection | None
     grant: Grant | None
+    code: str | None
+    addr: str | None
 
     def __init__(  # noqa: PLR0913 —— 通用 Slot 信封的声明式参数
         self,
@@ -193,6 +195,8 @@ class Slot:
         reactions: Sequence[Reaction] = (),
         collection: Collection | None = None,
         grant: Grant | None = None,
+        code: str | None = None,
+        addr: str | None = None,
     ) -> None:
         object.__setattr__(self, "id", id)
         object.__setattr__(self, "kind", kind)
@@ -207,6 +211,12 @@ class Slot:
         object.__setattr__(self, "reactions", tuple(reactions))
         object.__setattr__(self, "collection", collection)
         object.__setattr__(self, "grant", grant)
+        if code is not None:
+            _non_empty(code, "slot.code")
+        if addr is not None:
+            _non_empty(addr, "slot.addr")
+        object.__setattr__(self, "code", code)
+        object.__setattr__(self, "addr", addr)
 
 
 @dataclass(frozen=True, init=False)

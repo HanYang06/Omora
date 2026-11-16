@@ -20,6 +20,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, fields
 from typing import Any
 
+from . import root_tree
 from .document import (
     Handler,
     JsonObject,
@@ -34,12 +35,15 @@ from .ui import Node, Page
 
 NAMESPACE = "dendro"
 PAGE_KIND = "dendro:page"
-PAGE_MOUNT_AT = "dendro.window.page"
 NAV_KIND = "dendro:slot"
-NAV_MOUNT_AT = "dendro.window.nav"
 NAV_OWNER = "ui"
-NAV_ROOT_ID = "ui.nav"
 EVENT_PREFIX = "on_"
+
+# 挂载目标来自根树结构文件的锚点，不在这里重复写 slot id。
+PAGE_MOUNT_AT = root_tree.anchor(root_tree.PAGE_ANCHOR)
+NAV_MOUNT_AT = root_tree.anchor(root_tree.NAV_ANCHOR)
+# 局部树根 id = owner + 锚点名（ui.nav）：与挂载目标（dendro.window.nav）不同层。
+NAV_ROOT_ID = f"{NAV_OWNER}.{root_tree.NAV_ANCHOR}"
 
 
 @dataclass(frozen=True)
@@ -131,7 +135,7 @@ def serialize_page_slot(  # noqa: PLR0913 —— 页面根的声明式参数
     label: str,
     icon: str | None = None,
 ) -> LocalTree:
-    """一页 legacy Page → 挂在 dendro.window.page 上的局部树。
+    """一页 legacy Page → 挂在根树页面锚点上的局部树。
 
     页面根 id 是 `page.<page_name>`，owner 是页面注册者；children 是
     [header, content 转换结果]。label / icon 进根 props（页面侧表同源）。
@@ -169,7 +173,7 @@ def serialize_nav_slot(
     *,
     owner: str = NAV_OWNER,
 ) -> LocalTree:
-    """页面登记 → 挂在 dendro.window.nav 上的导航局部树。
+    """页面登记 → 挂在根树导航锚点上的导航局部树。
 
     每个页面一个 `dendro:page-link`，click 事件交给 register；id 用
     `ui.nav.<page>`，与页面树的 `page.<name>.*` 前缀不同，跨树不撞。

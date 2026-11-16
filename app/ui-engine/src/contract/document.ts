@@ -56,6 +56,10 @@ export interface SlotNode {
   reactions?: Reaction[];
   collection?: Collection;
   grant?: Grant;
+  /** 本地身份编码：兄弟级唯一，内容变化不改。 */
+  code?: string;
+  /** 全链查找键：H(parent.addr, code)，内容变化不改。 */
+  addr?: string;
 }
 
 export interface PageEntry {
@@ -317,6 +321,12 @@ function parseSlot(value: unknown, seen: Set<string>, path: string): SlotNode {
   }
   if (record.grant !== undefined) {
     slot.grant = parseGrant(record.grant, path + ".grant");
+  }
+  if (record.code !== undefined) {
+    slot.code = requireString(record.code, "bad_code", path + ".code");
+  }
+  if (record.addr !== undefined) {
+    slot.addr = requireString(record.addr, "bad_addr", path + ".addr");
   }
   return slot;
 }
