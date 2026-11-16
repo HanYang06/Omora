@@ -43,6 +43,18 @@ describe("WINDOW_SCAFFOLD", () => {
     ]);
   });
 
+  it("静态身份字段从结构文件带出", () => {
+    const nav = WINDOW_SCAFFOLD.children[0];
+    const page = WINDOW_SCAFFOLD.children[1];
+
+    expect(WINDOW_SCAFFOLD.code).toBe("y5niyg3vxmzx2354");
+    expect(WINDOW_SCAFFOLD.addr).toBe("zgufckla2amnbrel");
+    expect(nav?.code).toBe("my23caccuzblvnuk");
+    expect(nav?.addr).toBe("ltc2ts3nj6d6opzp");
+    expect(page?.code).toBe("xf3r7l2wtky5yjmg");
+    expect(page?.addr).toBe("3grkievpkvp5owlw");
+  });
+
   it("锚点全部指向骨架里真实存在的 Slot", () => {
     const ids = idsOf(WINDOW_SCAFFOLD);
 

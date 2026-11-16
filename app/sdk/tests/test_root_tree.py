@@ -10,6 +10,7 @@ import pytest
 
 from omora.sdk import root_tree, slot_tree
 from omora.sdk.document import SCHEMA, DocumentError, JsonObject
+from omora.sdk.identity import chain_addr
 from omora.sdk.root_tree import (
     NAV_MOUNT_AT,
     PAGE_MOUNT_AT,
@@ -96,6 +97,33 @@ def test_the_package_file_is_a_three_slot_window_root() -> None:
     assert (ROOT_TREE.schema, ROOT_TREE.version) == (SCHEMA, 1)
     assert ROOT_TREE.root.kind == ROOT_KIND
     assert ids() == ("dendro.window", "dendro.window.nav", "dendro.window.page")
+
+
+def test_package_scaffold_has_a_static_identity_chain() -> None:
+    root = ROOT_TREE.root
+    nav, page = root.children
+
+    assert (root.code, root.addr) == ("y5niyg3vxmzx2354", "zgufckla2amnbrel")
+    assert nav.code is not None
+    assert nav.addr == chain_addr(root.addr, nav.code)
+    assert page.code is not None
+    assert page.addr == chain_addr(root.addr, page.code)
+
+
+def test_a_tampered_static_addr_is_rejected() -> None:
+    raw = json.loads(root_tree.DEFAULT_PATH.read_text(encoding="utf-8"))
+    raw["root"]["children"][0]["addr"] = "0" * 16
+
+    with pytest.raises(DocumentError, match="不一致"):
+        parse_root_tree(raw)
+
+
+def test_code_without_addr_is_rejected() -> None:
+    raw = json.loads(root_tree.DEFAULT_PATH.read_text(encoding="utf-8"))
+    del raw["root"]["children"][0]["addr"]
+
+    with pytest.raises(DocumentError, match="成对"):
+        parse_root_tree(raw)
 
 
 def test_slot_tree_mount_targets_are_derived_from_the_anchors() -> None:

@@ -31,6 +31,7 @@ from .document import (
     _require,
 )
 from .document_io import _validate_slot
+from .identity import chain_addr
 
 VERSION = 1
 ROOT_KIND = "dendro:window"
@@ -152,6 +153,23 @@ def _parse_anchors(
     return MappingProxyType(anchors)
 
 
+def _validate_identity(slot: Slot, parent_addr: str | None, where: str) -> None:
+    """静态 code/addr 必须成对，且 addr 能由父 addr + 本地 code 重新算出来。"""
+    _require(
+        (slot.code is None) == (slot.addr is None),
+        f"{where} 的 code/addr 必须成对出现",
+    )
+    if slot.code is not None and slot.addr is not None:
+        expected = chain_addr(parent_addr, slot.code)
+        _require(
+            slot.addr == expected,
+            f"{where}.addr 与 code / 父 addr 不一致: 期望 {expected}，实际 {slot.addr}",
+        )
+    child_parent = slot.addr if slot.addr is not None else parent_addr
+    for index, child in enumerate(slot.children):
+        _validate_identity(child, child_parent, f"{where}.children[{index}]")
+
+
 def parse_root_tree(value: object, *, source: str = "$") -> RootTree:
     """校验一份根树结构（已解析的 JSON 值），返回只读视图。"""
     record = _mapping(value, source)
@@ -170,6 +188,7 @@ def parse_root_tree(value: object, *, source: str = "$") -> RootTree:
         f"{source}.root.kind 必须是 {ROOT_KIND}，实际是 {root.kind!r}",
     )
     _validate_slot(root, set())
+    _validate_identity(root, None, f"{source}.root")
     found: list[str] = []
     _collect_ids(root, found)
     anchors = _parse_anchors(record.get("anchors"), frozenset(found), root.id, f"{source}.anchors")

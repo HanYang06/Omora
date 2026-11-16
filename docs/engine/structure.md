@@ -38,7 +38,7 @@
 }
 ```
 
-- 状态：**结构文件与加载器已落**；此前 TS 侧的窗口骨架是 `link/scaffold.ts` 的 `WINDOW_SCAFFOLD` 常量。
+- 状态：**结构文件与加载器已落**；窗口骨架的 `code` / `addr` 是构建期常量，加载器校验链（`addr = H(parent.addr, code)`）；此前 TS 侧的窗口骨架是 `link/scaffold.ts` 的 `WINDOW_SCAFFOLD` 常量。
 - 运行时把局部树按 `mountAt`（如 `dendro.window.page`）挂进骨架；骨架是链接基准，链接器只深拷不改。
 
 ## 2. 页面：侧表 + 活动页
