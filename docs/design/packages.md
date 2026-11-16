@@ -207,27 +207,43 @@ class Ui:
   `handle.rebuild(build)` 登记重建回调（客户端明确要这一页时重建，吸收插件装卸这类变化）；
   给了 `build` 回调的还是拉取式。四个页面插件（ideas / projects / requirements / manager）都已用推送式。
 - 同名页面重复登记 → `ValueError`（v0 不允许覆盖）。
-- `render()` 不指定页面名时画第一个登记的。
+- `render()` 不指定页面名时画当前页；还没有当前页（首次）时画第一个登记的。
 
-### 7.2 渲染
+### 7.2 渲染：整份 view
 
-1. 该页面的 `serial` += 1（只增不减），这一次画出来的 handler id 用这个 serial；
-2. 把上一代的 handler 表挪进 `previous`，开一张新的；
-3. 调 `build()` 得到 `Page(meta, content)`；
-4. 序列化 content：字段名 → `props`；可调用字段 → 分配 `{page}:{serial}:{n}` 并记进 handler 表
-   （记住所属页面）；`None` 字段不写；`children` 递归；
-5. 返回页面快照：`{pages, page, meta, content}`。`pages` 按登记顺序，`count` 每次现算。
+一次渲染产出**整份主会话视图**，不是页面快照：
 
-**handler id 永不复用。** serial 只增不减，因为每次画都会把同一类位置重新编号；如果 id 回收，
-一个「重画之前出发、重画之后才回来」的事件就会打到新树里同序号、却完全不相干的回调上。
-典型场景：组件卸载时提交录制的那一段（见 [捕捉工作区](ui-capture.md) §5）。
+1. `render(page)` 定目标页：显式给了就用，否则当前页，首次取第一个登记的；先跑该页的
+   `rebuild` 钩子（吸收插件装卸这类外部变化），再设为 active；
+2. 开一代新 handler 表：上一代挪进 `previous`（只留一次宽限，见 §7.3），`version` /
+   `generation` 各 +1；
+3. 取该页的 `Page`，序列化 content：字段名 → `props`；可调用字段 → `events`
+   （按对象身份在当前代次里分配 id，同一个回调对象在同一份 view 里取回同一个 id）；
+   `None` 字段不写；`children` 递归；
+4. 组 view 的输入：两棵局部树 + 页面侧表 + `active` + `data` + 单调 `version`：
+   - 导航局部树 `ui.nav`：每页一条 `dendro:page-link`，带 label / icon / active；
+   - 当前页局部树 `page.<name>`：owner 是注册者，挂在根树页面锚点；
+   - 页面侧表、`active`、`data`（当前为空对象）、单调 `version`。
+5. `serialize_view` 出整份 view：
+   `{kind: "view", schema: "dendro.ui/1", version, localTrees, pages, active, data}`。
+   `pages` 按登记顺序，每项带 id / label / route（`/<name>`）/ owner / icon，与页面根 props 同源。
 
-### 7.3 派发
+**handler id 按视图代次分配、永不复用**：`slot:<generation>:<index>`，generation 只增不减。
+如果 id 回收，一个「视图换掉之前出发、换掉之后才回来」的事件就会打到新树里同序号、却完全
+不相干的回调上。典型场景：组件卸载时提交录制的那一段（见 [捕捉工作区](ui-capture.md) §5）。
+权威根树仍由 TS 链接器在本地链接，Python 不产出整棵根树。
 
-- 找 handler：先查当代，再查上一代（`previous`）；上一代只留一次宽限，下一次画就被替换掉；
-- 命中上一代说明有个事件比它的树慢了一拍：写一条 `ui.event.stale`（带 handler 与 page），不静默；
-- 把 payload 交给它 → 重画它所属的页面 → 返回新快照；
-- 两代都找不到 → `LookupError`，由 net 插件包成错误帧。
+### 7.3 派发：跑回调，交新 view
+
+- `render` / `event` 的 result 都是整份 view；异步变化（`set_page` / `refresh_page`）
+  走 `ui.snapshot` 推整份 view。三处形状相同。
+- 找 handler：先查当前代，再查上一代（`previous`）。命中上一代说明事件比它的树慢了一拍：
+  记一条 `ui.event.stale`（带 handler 与 page），不静默；两代都没有 → 记 `ui.event.unknown`，
+  抛 `LookupError`，由 net 插件包成错误帧。
+- 跑回调（回调里改插件状态、可能切页），然后按当前页造一份新 view 返回。回调运行期间由 ui
+  负责交新 view，`set_page()` 不另推一份，避免一次事件推两份。
+- 当前主会话**每个事件交整份 view**（重链 + 全量替换），渲染层按 id 复用 DOM；增量
+  ops / data 是后续优化，不改帧类型。
 
 ### 7.4 页面与节点
 
