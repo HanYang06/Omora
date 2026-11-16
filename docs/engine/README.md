@@ -92,7 +92,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 | ---------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | 节点契约   | Slot 信封（id / owner / kind / layout / props / children / events / reactions / grant）             | `reactions` 只解析，执行未做                                      |
 | 文档契约   | `dendro.ui/1` + 跨语言 fixture + `parseDocument` 校验                                               | schema 单一来源（Python 词表导出 TS）未做                         |
-| 寻址       | 三张索引 + 全寻址                                                                                   | 路径级索引与增量维护未做（当前每步重建）                          |
+| 寻址       | 三张索引 + 全寻址；列表项可用 `id_key` 稳定                                                         | 路径级索引与增量维护未做（当前每步重建）；通用 `Node.key` 未做    |
 | 身份       | Slot 可选 `code` / `addr` 契约字段；`addr = H(parent.addr, code)`，`chain` 由祖先 code 算出         | 生产端尚未全部派生；引擎仍按 `id` 索引；redirect / 墓碑未做       |
 | 根树结构   | 窗口 / 导航 / 页面骨架单一来源 `app/sdk/omora/sdk/root-tree.json`（`anchors` 映射语义名 → slot id） | 结构文件与加载器已落；生产端身份派生仍待                          |
 | 组合       | 链接器：形状校验 / 多轮挂载 / 顺序 / 容量 / replace / 诊断码 / 构建门禁                             | 按 kind 的 props/events schema、`before/after`、`E-TEMPLATE` 未做 |

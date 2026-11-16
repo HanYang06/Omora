@@ -6,7 +6,8 @@
 - kind = `dendro:<type>`（已经带命名空间的原样保留）；
 - 非 callable、非 children 的字段进 props，None 省略；
 - callable 字段进 events，事件名去掉 `on_` 前缀，值经 `register` 换成 handler id；
-- id 是确定性的（`page.<name>.content.<index path>`），同一棵树重建得到同一批 id；
+- id 是确定性的（`page.<name>.content.<index path>`；带 `id_key` 的节点用 key 代替
+  index，列表插入/重排不会让后面的 id 漂），同一棵树重建得到同一批 id；
 - 页面根是 flow=column / capacity=many 的 `dendro:page`，children 就是页面内容
   （旧壳不画标题 / meta，这里也不额外加，保持两条路径渲染等价）。
 
@@ -19,6 +20,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, fields
 from typing import Any
+from urllib.parse import quote
 
 from . import root_tree
 from .document import (
@@ -84,6 +86,11 @@ def kind_of(node: Node) -> str:
     return kind if ":" in kind else f"{NAMESPACE}:{kind}"
 
 
+def id_segment(value: str) -> str:
+    """身份 key → id 段；点、方括号、百分号转义，避免破坏面包屑。"""
+    return quote(value, safe="-_:~").replace(".", "%2E")
+
+
 def serialize_node_slot(
     node: Node,
     register: Register,
@@ -107,7 +114,7 @@ def serialize_node_slot(
                     child,
                     register,
                     owner=owner,
-                    node_id=f"{node_id}.{index}",
+                    node_id=f"{node_id}.{id_segment(getattr(child, 'id_key', '') or str(index))}",
                 )
                 for index, child in enumerate(value)
             ]
