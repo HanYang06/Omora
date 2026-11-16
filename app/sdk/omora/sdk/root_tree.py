@@ -227,6 +227,25 @@ def anchor(name: str) -> str:
     return ROOT_TREE.anchor(name)
 
 
+def _find_slot(slot: Slot, target: str) -> Slot | None:
+    if slot.id == target:
+        return slot
+    for child in slot.children:
+        found = _find_slot(child, target)
+        if found is not None:
+            return found
+    return None
+
+
+def anchor_slot(name: str) -> Slot:
+    """默认根树的语义锚点 → 根树里的 Slot；找不到就抛 DocumentError。"""
+    target = ROOT_TREE.anchor(name)
+    found = _find_slot(ROOT_TREE.root, target)
+    if found is None:
+        raise DocumentError(f"根树锚点 {name!r} 指向的 Slot 不存在: {target}")
+    return found
+
+
 def ids() -> tuple[str, ...]:
     """默认根树里所有 Slot id（文档顺序）。"""
     return ROOT_TREE.ids()
@@ -253,6 +272,7 @@ __all__ = [
     "WINDOW_ANCHOR",
     "RootTree",
     "anchor",
+    "anchor_slot",
     "ids",
     "load_root_tree",
     "parse_root_tree",
