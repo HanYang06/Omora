@@ -9,7 +9,9 @@ from typing import Any, ClassVar
 
 import pytest
 
+from omora.sdk import root_tree
 from omora.sdk.document import DocumentError, Slot
+from omora.sdk.identity import chain_addr
 from omora.sdk.local_tree import LocalTree, serialize_local_trees
 from omora.sdk.node_key import keyed
 from omora.sdk.slot_tree import (
@@ -192,6 +194,32 @@ def test_keyed_children_ids_survive_sibling_insertion() -> None:
     ]
     assert _by_id(after, f"{page_id('ideas')}.content.0.a").props["title"] == "A"
     assert "id_key" not in _by_id(after, f"{page_id('ideas')}.content.0.a").props
+
+
+def test_page_tree_carries_identity_chain_from_the_page_anchor() -> None:
+    tree = _tree(Column(Text("x")))
+    region = root_tree.anchor_slot(root_tree.PAGE_ANCHOR)
+    root = tree.root
+
+    assert root.code is not None
+    assert root.addr == chain_addr(region.addr, root.code)
+    assert root.children[0].code is not None
+    assert root.children[0].addr == chain_addr(root.addr, root.children[0].code)
+
+
+def test_keyed_identity_is_stable_when_a_sibling_is_inserted() -> None:
+    def tree_of(*titles: tuple[str, str]) -> LocalTree:
+        return _tree(Column(List(*(keyed(Item(title), key) for title, key in titles))))
+
+    before = _by_id(tree_of(("A", "a"), ("B", "b")), f"{page_id('ideas')}.content.0.a")
+    after = _by_id(
+        tree_of(("Z", "z"), ("A", "a"), ("B", "b")),
+        f"{page_id('ideas')}.content.0.a",
+    )
+
+    assert before.code is not None
+    assert before.code == after.code
+    assert before.addr == after.addr
 
 
 def test_keyed_ids_escape_path_separators() -> None:

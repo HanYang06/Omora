@@ -32,6 +32,7 @@ from .document import (
     _non_empty,
     _require,
 )
+from .identity import chain_addr, short_code
 from .local_tree import LocalTree
 from .ui import Node, Page
 
@@ -91,12 +92,19 @@ def id_segment(value: str) -> str:
     return quote(value, safe="-_:~").replace(".", "%2E")
 
 
+def _identity(kind: str, segment: str, parent_addr: str) -> tuple[str, str]:
+    """本地 code + 父 addr → (code, addr)；segment 已由 id 段归一。"""
+    code = short_code(f"{kind}:{segment}")
+    return code, chain_addr(parent_addr, code)
+
+
 def serialize_node_slot(
     node: Node,
     register: Register,
     *,
     owner: str,
     node_id: str,
+    parent_addr: str | None = None,
 ) -> Slot:
     """legacy Node → Slot：children 递归，callable 进 events，其余进 props。"""
     _require(isinstance(node, Node), "页面内容必须是 Node")
@@ -105,6 +113,12 @@ def serialize_node_slot(
     props: JsonObject = {}
     events: dict[str, Handler] = {}
     children: list[Slot] = []
+    kind = kind_of(node)
+    segment = node_id.rsplit(".", 1)[-1]
+    code: str | None = None
+    addr: str | None = None
+    if parent_addr is not None:
+        code, addr = _identity(kind, segment, parent_addr)
 
     for field in fields(node):
         value: Any = getattr(node, field.name)
@@ -115,6 +129,7 @@ def serialize_node_slot(
                     register,
                     owner=owner,
                     node_id=f"{node_id}.{id_segment(getattr(child, 'id_key', '') or str(index))}",
+                    parent_addr=addr,
                 )
                 for index, child in enumerate(value)
             ]
@@ -125,11 +140,13 @@ def serialize_node_slot(
 
     return Slot(
         node_id,
-        kind_of(node),
+        kind,
         owner=owner,
         props=props,
         events=events,
         children=children,
+        code=code,
+        addr=addr,
     )
 
 
@@ -157,11 +174,16 @@ def serialize_page_slot(  # noqa: PLR0913 —— 页面根的声明式参数
     props: JsonObject = {"label": label}
     if icon is not None:
         props["icon"] = icon
+    region_addr = _non_empty(
+        root_tree.anchor_slot(root_tree.PAGE_ANCHOR).addr, "root-tree.page.addr"
+    )
+    page_code, page_addr = _identity(PAGE_KIND, page_name, region_addr)
     content = serialize_node_slot(
         page.content,
         register,
         owner=owner,
         node_id=f"{root_id}.content",
+        parent_addr=page_addr,
     )
     root = Slot(
         root_id,
@@ -170,6 +192,8 @@ def serialize_page_slot(  # noqa: PLR0913 —— 页面根的声明式参数
         props=props,
         layout=Layout(flow="column", capacity="many"),
         children=[content],
+        code=page_code,
+        addr=page_addr,
     )
     return LocalTree(owner=owner, root=root, mount_at=PAGE_MOUNT_AT)
 
@@ -186,6 +210,8 @@ def serialize_nav_slot(
     `ui.nav.<page>`，与页面树的 `page.<name>.*` 前缀不同，跨树不撞。
     """
     _non_empty(owner, "nav.owner")
+    region_addr = _non_empty(root_tree.anchor_slot(root_tree.NAV_ANCHOR).addr, "root-tree.nav.addr")
+    nav_code, nav_addr = _identity(NAV_KIND, "nav", region_addr)
     children: list[Slot] = []
     seen: set[str] = set()
     for link in links:
@@ -202,6 +228,7 @@ def serialize_nav_slot(
         handler = link.on_click
         # 先在当前代次里登记；serialize_view 序列化时按同一对象取回同一个 id。
         register(handler)
+        link_code, link_addr = _identity("dendro:page-link", page_name, nav_addr)
         children.append(
             Slot(
                 f"{NAV_ROOT_ID}.{page_name}",
@@ -209,6 +236,8 @@ def serialize_nav_slot(
                 owner=owner,
                 props=props,
                 events={"click": handler},
+                code=link_code,
+                addr=link_addr,
             )
         )
     root = Slot(
@@ -217,6 +246,8 @@ def serialize_nav_slot(
         owner=owner,
         layout=Layout(flow="column", capacity="many"),
         children=children,
+        code=nav_code,
+        addr=nav_addr,
     )
     return LocalTree(owner=owner, root=root, mount_at=NAV_MOUNT_AT)
 
