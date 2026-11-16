@@ -1,6 +1,6 @@
 # 组合：编译与链接
 
-> 状态：**决定报错**；机制【建议】。S2 已落第一版链接器（形状校验、多轮挂载、order/容量/replace 与诊断）和构建期门禁；`before/after`、权限、slot 排序策略、按 kind 的 props schema 未实现。
+> 状态：**决定报错**；机制【建议】。S2 已落第一版链接器（形状校验、多轮挂载、order/容量/replace 与诊断）和构建期门禁；S4 已落链接期权限（`E-PERMISSION`，见 §10）；`before/after`、slot 排序策略、按 kind 的 props schema 未实现。窗口骨架的基准来自结构文件 `root-tree.json` 单一来源（[structure.md](structure.md) §1.1）。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md)
 > 相关：[updates.md](updates.md) · [permissions.md](permissions.md) · `runtime.md`（待写）
 
@@ -40,18 +40,18 @@
 
 ## 4. 诊断
 
-| 码                 | 含义                             | 状态                               |
-| ------------------ | -------------------------------- | ---------------------------------- |
-| `E-PAYLOAD`        | payload / Slot 形状不合法        | S2 已落（文档原表没有，S2 补的码） |
-| `E-SLOT-AMBIGUOUS` | 同 slot 相对顺序未约定           | S2 已落                            |
-| `E-SLOT-CAPACITY`  | 单槽被多挂 / 超出 capacity       | S2 已落                            |
-| `E-ID-DUPLICATE`   | 全局 id 冲突                     | S2 已落                            |
-| `E-TARGET-MISSING` | 落点不存在                       | S2 已落                            |
-| `E-CYCLE`          | 组合成环                         | S2 已落                            |
-| `E-PERMISSION`     | 越权挂载/替换/更新               | 未实现                             |
-| `E-TEMPLATE`       | 模板/条目 schema 不匹配          | 未实现                             |
-| `W-BINDING-ORPHAN` | 绑定暂时没有生产者（允许，警告） | 未实现                             |
-| `W-RULE-DEAD`      | 规则永不触发（警告）             | 未实现                             |
+| 码                 | 含义                             | 状态                                       |
+| ------------------ | -------------------------------- | ------------------------------------------ |
+| `E-PAYLOAD`        | payload / Slot 形状不合法        | S2 已落（文档原表没有，S2 补的码）         |
+| `E-SLOT-AMBIGUOUS` | 同 slot 相对顺序未约定           | S2 已落                                    |
+| `E-SLOT-CAPACITY`  | 单槽被多挂 / 超出 capacity       | S2 已落                                    |
+| `E-ID-DUPLICATE`   | 全局 id 冲突                     | S2 已落                                    |
+| `E-TARGET-MISSING` | 落点不存在                       | S2 已落                                    |
+| `E-CYCLE`          | 组合成环                         | S2 已落                                    |
+| `E-PERMISSION`     | 越权挂载/替换/更新               | S4 已落（链接期；运行期见 permissions §8） |
+| `E-TEMPLATE`       | 模板/条目 schema 不匹配          | 未实现                                     |
+| `W-BINDING-ORPHAN` | 绑定暂时没有生产者（允许，警告） | 未实现                                     |
+| `W-RULE-DEAD`      | 规则永不触发（警告）             | 未实现                                     |
 
 诊断要带现场：注册贡献时记录声明来源（文件/行），诊断里给出 owner、slot、两个冲突声明的位置与 help。
 
@@ -63,6 +63,7 @@
 ## 6. 根树归属
 
 - 根树是引擎的；引擎拥有、引擎可派生修改（实例化列表、派生 id、规范化布局、按 id 协调）。
+- 根树的基准（窗口 / 导航 / 页面骨架）来自 `app/sdk/omora/sdk/root-tree.json` 单一来源，链接器以它为 base；见 [structure.md](structure.md) §1.1。
 - 来源发来的是**变更请求**；引擎校验后应用，不合法就拒绝并诊断。
 - 根树任何时刻都合法、可导出、可审计。
 

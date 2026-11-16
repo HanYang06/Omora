@@ -1,6 +1,6 @@
 # 更新：三种输入粒度
 
-> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed）；S3-b 已落纯数据更新（data router：revision 幂等 + 集合全量/增量 + changed）；S3-c 已落标量绑定（in/bind → props）、会话层 route 执行与全量文档替换；S4 已落 EngineRuntime.applyLocalTrees（全部局部树重新链接 → 替换树 → 水合），全量更新在引擎内闭环。渲染接入、页面协商与灵感页 spike 仍未做（Slot 路径目前只作预览）。
+> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed）；S3-b 已落纯数据更新（data router：revision 幂等 + 集合全量/增量 + changed）；S3-c 已落标量绑定（in/bind → props）、会话层 route 执行与全量文档替换；S4 已落 EngineRuntime.applyLocalTrees（全部局部树重新链接 → 替换树 → 水合），全量更新在引擎内闭环；S3-d/S3-e 已接渲染（Slot 桥 / 换页协调 / 跨父 move），S6.4 起主会话默认走 Slot（Slot 路径不再是预览）。未接：主会话的增量 ops / data 接线（当前每个事件交整份 view）、页面参数消费。
 > 依赖：[addressing.md](addressing.md) · [composition.md](composition.md)
 > 相关：[collection.md](collection.md) · `runtime.md`（待写） · `testing.md`（待写）
 
