@@ -1,6 +1,6 @@
 # 寻址：id、身份、索引与更新集合
 
-> 状态：**已定**。S3-a 已落三张索引（`DocumentIndex`）；S4–S6 起运行时更新管线已接主会话；`code` / `addr` 身份字段已进 Slot 契约（可选，校验与序列化通道支持），但生产端尚未逐个派生、引擎索引仍按 `id`；`source/path` 路径级索引仍未落。
+> 状态：**已定**。S3-a 已落三张索引（`DocumentIndex`）；S4–S6 起运行时更新管线已接主会话；`code` / `addr` 身份字段已进 Slot 契约（可选）；Python UI 升 Slot 与静态骨架已派生，集合模板 / 通用 Node key、引擎索引与 redirect 仍待；`source/path` 路径级索引仍未落。
 > 依赖：[contract.md](contract.md)
 > 相关：[structure.md](structure.md) · [updates.md](updates.md) · [permissions.md](permissions.md)
 
@@ -36,7 +36,7 @@
 | `addr`  | 全链查找键：`addr = H(parent.addr, code)`；`H` 是确定性短摘要，与节点内容无关     | 全局查找、结构变化后仍能对上 | 父 `addr` 或自身 `code` 变才变 |
 | `path`  | 人类可读显示路径，如 `dendro.window.page/ideas.feed`                              | 显示、日志、诊断             | **可漂移**，不参与查找         |
 
-- `code` / `addr` 都是**可选**字段：没写 = 还没派生。字段已进契约与序列化通道（写了就原样发出），但生产端（Python UI 升 Slot、静态骨架、集合条目）还没全部派生；运行时索引目前仍以 `id` 为键。
+- `code` / `addr` 都是**可选**字段：没写 = 还没派生。字段已进契约与序列化通道；Python UI 升 Slot 与静态骨架已派生，集合模板 / 通用 Node key 仍待；运行时索引目前仍以 `id` 为键。
 - 判定两个节点是不是同一逻辑位置要看 `chain`，不能只看 `addr`（摘要可能撞）。
 - 禁止从 `path` 反解身份：`path` 给人看，位置与序号随时会漂。
 - `H` 是纯函数、版本化；改算法属于契约变更。
@@ -66,7 +66,7 @@
 
 ### 2.3 静态常量折叠
 
-- **静态节点**（窗口 / 导航 / 页面骨架这类构建期就定死的结构）：code / addr 是**构建期常量**，运行期不重算全链。窗口骨架的 code / addr 已写进 `root-tree.json`，加载器会按 `addr = H(parent.addr, code)` 校验链；页面 / 动态节点仍待。
+- **静态节点**（窗口 / 导航 / 页面骨架这类构建期就定死的结构）：code / addr 是**构建期常量**，运行期不重算全链。窗口骨架的 code / addr 已写进 `root-tree.json`，加载器按 `addr = H(parent.addr, code)` 校验链；页面 / 导航局部树从锚点 addr 继续派生，动态条目用 `id_key`。
 - **动态节点**（集合条目这类运行期才出现的节点）：只算自己的**尾码**，`addr = H(父 addr, code)`；父 addr 是静态常量时，这一步就是一次常量加一次摘要。
 - 窗口骨架的单一来源是 [structure.md](structure.md) §1.1 的根树结构文件；静态身份跟着结构文件走，不在代码里另写一份。
 
@@ -163,4 +163,4 @@
 
 - `omora.sdk.node_key.keyed(node, key)` 给列表项挂 `id_key`；`serialize_node_slot` 用它替代兄弟下标，点号 / 方括号 / 百分号转义。
 - ideas 的 feed 卡片与索引栏行传 `record.id`；头部插入 / 重排不会让已有条目的 id 漂。
-- 未接：通用 `Node.key`、collection 模板 key、`code` / `addr` 派生与索引。
+- `code` / `addr` 已随页面 / 导航局部树派生；未接：通用 `Node.key`、collection 模板 key、`code` / `addr` 索引与 redirect。
