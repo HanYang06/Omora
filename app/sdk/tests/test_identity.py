@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -8,8 +9,8 @@ from omora.sdk.identity import chain_addr, node_identity, short_code
 FIXTURE = Path(__file__).parent / "fixtures" / "identity.json"
 
 
-def _fixture() -> dict:
-    return json.loads(FIXTURE.read_text(encoding="utf-8"))
+def _fixture() -> dict[str, Any]:
+    return cast(dict[str, Any], json.loads(FIXTURE.read_text(encoding="utf-8")))
 
 
 def test_short_code_matches_golden_fixture() -> None:
