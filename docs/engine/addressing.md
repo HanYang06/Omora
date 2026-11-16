@@ -21,6 +21,8 @@
 1. **全局唯一**：同 id 出现两次是 `E-ID-DUPLICATE`，不静默取第一个。
 2. **稳定优先于简短**：同一个逻辑组件跨重画、跨换页必须保持同一 id，否则局部状态与补丁都会错位。
 3. **列表项必须来自数据 key**，不能用数组下标；下标一插入就漂移。
+   `Item` / `Card` 的 `id_key` 是这条规则的第一个落地点（`keyed(...)` 挂 key，
+   ideas 的 feed / 索引栏传 `record.id`）；通用 `Node.key` 与 collection 模板 key 仍待。
 4. 派生 id 的算法版本化；改算法属于契约变更。
 
 `id` 是**树内寻址键**；`code` / `addr` 是新增的可选**结构身份**字段，把“本地身份”和“全链查找键”分开表达，见 §2。
@@ -156,3 +158,9 @@
 - 索引三项：`get(id)`、`parentOf(id) → {parentId, order}`、`slotsFor(source) → [id]`（`in[].source` 与 `collection.source` 都算消费）。
 - 全寻址包含 `collection.templates` 里的模板子树：可 `get`、可 update 内容；模板根 `parentOf.order = -1`（命名表位置，不是 children 序号），`childrenOf(集合 slot)` 不含模板根。
 - 已接：三张索引、全量 / 纯数据 / 局部树更新管线与主会话（S4–S6）。未接：`source/path` 的路径级细分、反查索引驱动渲染 / 事件、跨更新增量维护（当前每步重建，先保证正确性）；`code` / `addr` 尚未参与索引。
+
+## 10. 列表 key 的最小落地（已落）
+
+- `omora.sdk.node_key.keyed(node, key)` 给列表项挂 `id_key`；`serialize_node_slot` 用它替代兄弟下标，点号 / 方括号 / 百分号转义。
+- ideas 的 feed 卡片与索引栏行传 `record.id`；头部插入 / 重排不会让已有条目的 id 漂。
+- 未接：通用 `Node.key`、collection 模板 key、`code` / `addr` 派生与索引。
