@@ -1,6 +1,6 @@
 # 结构：窗口、页面、层、布局
 
-> 状态：**已定**；layout 字段表是【建议】。S3-c 已落会话层的 pages/active 与 route 意图（active 切换）；S3-d 已落渲染层按 id 的换页协调（`page_switch`）与跨父 move 复用；页面参数与主会话接入仍待。
+> 状态：**已定**；layout 字段表是【建议】。S3-c 已落会话层的 pages/active 与 route 意图（active 切换）；S3-d 已落渲染层按 id 的换页协调（`page_switch`）与跨父 move 复用；S6.4 已接主会话；窗口骨架收进结构文件（结构文件已落，加载器同 PR 实现）；页面参数仍待。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md)
 > 相关：[rules.md](rules.md) · [updates.md](updates.md) · `runtime.md`（待写）
 
@@ -17,6 +17,29 @@
 | 页面     | `dendro:page`          | 带路由语义；`capacity: one`    |
 | 层       | `dendro:layer`         | 根部 `flow: stack` 下的子 Slot |
 | 布局容器 | `dendro:slot` + layout | 三栏、分栏等由 layout 表达     |
+
+### 1.1 窗口骨架：结构文件单一来源
+
+| 项       | 说明                                                                                                                                 |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 文件     | [`app/sdk/omora/sdk/root-tree.json`](../../app/sdk/omora/sdk/root-tree.json)                                                         |
+| 内容     | `schema` / `version` / `root`（`dendro.window` 根 + `nav` 图标栏 + `page` 主区）/ `anchors`                                          |
+| 依赖方向 | Python 与 TS 的加载器**只读**它；结构文件不依赖任何一侧代码，单向                                                                    |
+| 改法     | 只改这一份文件，不在两侧各写一份常量；加载器校验 schema / version、根节点形状与 `dendro:window` kind、id 唯一、`anchors` 指向真实 id |
+| anchors  | 语义名 → slot id（`window` / `nav` / `page`）；代码按名字取挂载点，不散落硬编码 id                                                   |
+
+```jsonc
+{
+  "anchors": {
+    "window": "dendro.window",
+    "nav": "dendro.window.nav",
+    "page": "dendro.window.page",
+  },
+}
+```
+
+- 状态：**结构文件已落，加载器同 PR 实现**；此前 TS 侧的窗口骨架是 `link/scaffold.ts` 的 `WINDOW_SCAFFOLD` 常量。
+- 运行时把局部树按 `mountAt`（如 `dendro.window.page`）挂进骨架；骨架是链接基准，链接器只深拷不改。
 
 ## 2. 页面：侧表 + 活动页
 
