@@ -6,7 +6,12 @@
     "kind": "dendro:window",
     "owner": "dendro",
     "props": {},
-    "layout": { "flow": "row", "capacity": "many" },
+    "layout": {
+      "flow": "row",
+      "capacity": "many"
+    },
+    "code": "y5niyg3vxmzx2354",
+    "addr": "zgufckla2amnbrel",
     "children": [
       {
         "id": "dendro.window.nav",
@@ -16,9 +21,13 @@
         "layout": {
           "flow": "column",
           "capacity": "many",
-          "size": { "width": 56 },
+          "size": {
+            "width": 56
+          },
           "gap": "xs"
         },
+        "code": "my23caccuzblvnuk",
+        "addr": "ltc2ts3nj6d6opzp",
         "children": []
       },
       {
@@ -29,8 +38,12 @@
         "layout": {
           "flow": "column",
           "capacity": "one",
-          "size": { "width": "fill" }
+          "size": {
+            "width": "fill"
+          }
         },
+        "code": "xf3r7l2wtky5yjmg",
+        "addr": "3grkievpkvp5owlw",
         "children": []
       }
     ]
