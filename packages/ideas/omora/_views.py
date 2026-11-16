@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from omora.sdk.node_key import keyed
 from omora.sdk.ui import (
     Audio,
     Button,
@@ -28,7 +29,9 @@ from ._format import snippet, when
 
 def rail_item(record: Any, on_click: Handler) -> Item:
     """索引栏的一行：时间 + 标题，整行可点；置顶 / 归档只在详情里做。"""
-    return Item(record.title, meta=when(record.created_at), on_click=on_click)
+    return keyed(
+        Item(record.title, meta=when(record.created_at), on_click=on_click), str(record.id)
+    )
 
 
 def back_bar(handler: Handler) -> Node:
@@ -74,7 +77,7 @@ def saved(  # noqa: PLR0913 —— 面板装配的命名参数
 
 def card(record: Any, media: Any, on_click: Handler) -> Card:
     """feed 里的一张卡：标题 + 时间（含语音 / 视频标记），点整张进详情。"""
-    return Card(record.title, meta=meta(record, media), on_click=on_click)
+    return keyed(Card(record.title, meta=meta(record, media), on_click=on_click), str(record.id))
 
 
 def result(record: Any, query: str, media: Any, on_click: Handler) -> Result:

@@ -11,6 +11,7 @@ import pytest
 
 from omora.sdk.document import DocumentError, Slot
 from omora.sdk.local_tree import LocalTree, serialize_local_trees
+from omora.sdk.node_key import keyed
 from omora.sdk.slot_tree import (
     NAV_MOUNT_AT,
     PAGE_MOUNT_AT,
@@ -172,6 +173,31 @@ def test_nested_children_ids_follow_the_index_path() -> None:
         "page.ideas.content.0.1",
         "page.ideas.content.1",
     ]
+
+
+def test_keyed_children_ids_survive_sibling_insertion() -> None:
+    def tree_of(*titles: tuple[str, str]) -> LocalTree:
+        return _tree(Column(List(*(keyed(Item(title), key) for title, key in titles))))
+
+    before = tree_of(("A", "a"), ("B", "b"))
+    after = tree_of(("Z", "z"), ("A", "a"), ("B", "b"))
+
+    assert [node_id for node_id in _ids(before) if node_id.endswith((".a", ".b"))] == [
+        f"{page_id('ideas')}.content.0.a",
+        f"{page_id('ideas')}.content.0.b",
+    ]
+    assert [node_id for node_id in _ids(after) if node_id.endswith((".a", ".b"))] == [
+        f"{page_id('ideas')}.content.0.a",
+        f"{page_id('ideas')}.content.0.b",
+    ]
+    assert _by_id(after, f"{page_id('ideas')}.content.0.a").props["title"] == "A"
+    assert "id_key" not in _by_id(after, f"{page_id('ideas')}.content.0.a").props
+
+
+def test_keyed_ids_escape_path_separators() -> None:
+    tree = _tree(Column(keyed(Item("A"), "a.b")))
+
+    assert f"{page_id('ideas')}.content.a%2Eb" in _ids(tree)
 
 
 def test_nav_tree_carries_page_links_and_click_handlers() -> None:
