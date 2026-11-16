@@ -45,6 +45,10 @@ def _validate_slot(slot: Slot, seen: set[str]) -> None:
         f"{slot_id}.kind 必须是 命名空间:名字，实际是 {kind!r}",
     )
     _non_empty(slot.owner, f"{slot_id}.owner")
+    if slot.code is not None:
+        _non_empty(slot.code, f"{slot_id}.code")
+    if slot.addr is not None:
+        _non_empty(slot.addr, f"{slot_id}.addr")
     if slot.scope is not None:
         _non_empty(slot.scope, f"{slot_id}.scope")
     if slot.binding is not None:
@@ -76,6 +80,10 @@ def _serialize_slot(slot: Slot, register: Register) -> JsonObject:
         "owner": slot.owner,
         "props": dict(slot.props),
     }
+    if slot.code is not None:
+        out["code"] = slot.code
+    if slot.addr is not None:
+        out["addr"] = slot.addr
     if slot.scope is not None:
         out["scope"] = slot.scope
     if slot.binding is not None:
