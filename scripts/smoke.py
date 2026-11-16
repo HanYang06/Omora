@@ -20,6 +20,7 @@ import static_ui  # noqa: E402
 
 from boot import Config, build  # noqa: E402
 from main import SYSTEM_PLUGINS  # noqa: E402
+from omora.sdk.root_tree import PAGE_MOUNT_AT  # noqa: E402
 
 
 def walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
@@ -31,7 +32,7 @@ def walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
 
 def page_slots(view: dict[str, Any]) -> list[dict[str, Any]]:
     for tree in view["localTrees"]["trees"]:
-        if tree["mountAt"] == "dendro.window.page":
+        if tree["mountAt"] == PAGE_MOUNT_AT:
             return walk(tree["root"])
     raise AssertionError("view 里没有页面局部树")
 

@@ -1,12 +1,13 @@
 /**
  * `?engine=slot` 预览入口的内置示例文档（S3-e）：手写在 TS 里，不 import 测试 fixture。
  *
- * 只为演示「session → 水合 → Slot 桥 → DOM」这条路径，形状如下：
+ * 只为演示「session → 水合 → Slot 桥 → DOM」这条路径。窗口骨架（window / nav / page
+ * 三个 Slot 的 id 与布局）直接克隆 `WINDOW_SCAFFOLD`、按 `WINDOW_ANCHORS` 定位；
+ * 预览只往 nav / page 上挂自己的子节点：
  *
- *   dendro.window（row）
- *   ├─ dendro.window.nav（column，56px）
- *   │  两个 dendro:page-link：灵感（nav:ideas）/ 项目（nav:projects）
- *   └─ dendro.window.page（column，capacity one）
+ *   window（锚点 window）
+ *   ├─ nav（锚点 nav）：两个 dendro:page-link：灵感（nav:ideas）/ 项目（nav:projects）
+ *   └─ page（锚点 page）
  *      ├─ page.ideas：toolbar（row：标题 text + 「加一张」button + search）+ feed slot
  *      └─ page.projects：一条标题 text
  *
@@ -26,6 +27,7 @@ import {
   type SlotNode,
 } from "../contract/document";
 import type { CollectionItem } from "../engine/collections/collection";
+import { WINDOW_ANCHORS, WINDOW_SCAFFOLD } from "../link/scaffold";
 
 /** 页面 id（与 pages / active 对齐）。 */
 export const PAGE_IDEAS = "page.ideas";
@@ -39,9 +41,6 @@ export const HANDLER_NAV_IDEAS = "nav:ideas";
 export const HANDLER_NAV_PROJECTS = "nav:projects";
 export const HANDLER_ADD_CARD = "ideas:add";
 
-const WINDOW_ID = "dendro.window";
-const NAV_SLOT_ID = "dendro.window.nav";
-const PAGE_SLOT_ID = "dendro.window.page";
 const TEMPLATE_ID = "tpl.ideas.item";
 
 /** 预览用的页面侧表（导航两个入口）。 */
@@ -110,18 +109,34 @@ function pageLink(id: string, label: string, icon: string, handler: string): Slo
   });
 }
 
-/** 图标栏：两个页面入口，纵向排列。 */
-function navSlot(): SlotNode {
-  return slotOf({
-    id: NAV_SLOT_ID,
-    kind: "dendro:slot",
-    owner: "dendro",
-    layout: { flow: "column", capacity: "many", size: { width: 56 } },
-    children: [
-      pageLink("nav.ideas", "灵感", "ideas", HANDLER_NAV_IDEAS),
-      pageLink("nav.projects", "项目", "projects", HANDLER_NAV_PROJECTS),
-    ],
-  });
+/** 图标栏内容：两个页面入口，纵向排列（容器布局来自窗口骨架）。 */
+function navContent(): SlotNode[] {
+  return [
+    pageLink("nav.ideas", "灵感", "ideas", HANDLER_NAV_IDEAS),
+    pageLink("nav.projects", "项目", "projects", HANDLER_NAV_PROJECTS),
+  ];
+}
+
+/** 窗口骨架里按锚点找 Slot；找不到说明骨架与锚点漂移，预览直接报错。 */
+function anchoredSlot(root: SlotNode, named: string, anchorId: string): SlotNode {
+  const found = findSlot(root, anchorId);
+  if (found === undefined) {
+    throw new Error(`窗口骨架里没有 ${named} 锚点指向的 Slot: ${anchorId}`);
+  }
+  return found;
+}
+
+function findSlot(node: SlotNode, id: string): SlotNode | undefined {
+  if (node.id === id) {
+    return node;
+  }
+  for (const child of node.children) {
+    const found = findSlot(child, id);
+    if (found !== undefined) {
+      return found;
+    }
+  }
+  return undefined;
 }
 
 /** 灵感页工具条：标题 + 「加一张」 + 搜索。 */
@@ -231,24 +246,12 @@ function pageFor(active: string): SlotNode {
  * `createSession` / `applyFull`，不会与上一份文档共享可变状态。
  */
 export function previewDocument(active: string, feed: PreviewFeed, version: number): SlotDocument {
+  const root = structuredClone(WINDOW_SCAFFOLD);
+  anchoredSlot(root, "nav", WINDOW_ANCHORS.nav).children = navContent();
+  anchoredSlot(root, "page", WINDOW_ANCHORS.page).children = [pageFor(active)];
   return {
     schema: DOCUMENT_SCHEMA,
-    document: slotOf({
-      id: WINDOW_ID,
-      kind: "dendro:window",
-      owner: "dendro",
-      layout: { flow: "row", capacity: "many" },
-      children: [
-        navSlot(),
-        slotOf({
-          id: PAGE_SLOT_ID,
-          kind: "dendro:slot",
-          owner: "dendro",
-          layout: { flow: "column", capacity: "one", size: { width: "fill" } },
-          children: [pageFor(active)],
-        }),
-      ],
-    }),
+    document: root,
     pages: PREVIEW_PAGES.map((page) => ({ ...page })),
     active,
     data: {
