@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from omora.sdk.identity import chain_addr, node_identity, short_code
 
 FIXTURE = Path(__file__).parent / "fixtures" / "identity.json"
@@ -47,9 +49,5 @@ def test_move_keeps_code_and_changes_addr() -> None:
 
 
 def test_empty_seed_is_rejected() -> None:
-    try:
+    with pytest.raises(ValueError, match="seed"):
         short_code("")
-    except ValueError as error:
-        assert "seed" in str(error)
-    else:
-        raise AssertionError("空种子必须被拒绝")
