@@ -1,6 +1,6 @@
 # 运行时：分层、生命周期与失败
 
-> 状态：**已定，S3–S4 已落**；分层名称是【建议】。S3-a–e 已落文档状态/三张索引、ops、data router、绑定/session、Slot 渲染桥/水合/换页分类、跨父 move 与预览；S4 已落 EngineRuntime（session + ledger + metrics + render stats）、DocumentView、权限薄层（链接期 + 运行期 + applyFull）、来源宿主（SourceHost + load/requesterFor）、来源模式引擎（SourceEngine）、审计与耗时指标；阶段 2 已把 `runtime/` 拆成 `engine/` 与 `host/`，权限检查改为 host 注入 guard，分层整改已完成。多客户端、来源热更新接线、Slot 路径替换主会话仍待。
+> 状态：**已定，S3–S4 已落**；分层名称是【建议】。S3-a–e 已落文档状态/三张索引、ops、data router、绑定/session、Slot 渲染桥/水合/换页分类、跨父 move 与预览；S4 已落 EngineRuntime（session + ledger + metrics + render stats）、DocumentView、权限薄层（链接期 + 运行期 + applyFull）、来源宿主（SourceHost + load/requesterFor）、来源模式引擎（SourceEngine）、审计与耗时指标；阶段 2 已把 `runtime/` 拆成 `engine/` 与 `host/`，权限检查改为 host 注入 guard，分层整改已完成；S7.1 运行后来源示例（自动发现 + 热更新）已落，S6.4 起主会话已走 Slot。仍待：多客户端、来源 activate / 回滚账本与网络帧接线。
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md) · [updates.md](updates.md)
 > 相关：[components.md](components.md) · [wire.md](wire.md) · [testing.md](testing.md)
 
@@ -99,7 +99,7 @@ S4 已落第一版：`RuntimeMetrics`（opsBatches / opsCount / dataUpdates / fu
 - **来源宿主**（`host/sources.ts`）：owner → 局部树注册表；支持 `load` 整组替换与 `requesterFor` 权限透传；登记/移除后重新链接，死引用级联撤掉，其他失败回滚保留上一棵好树；dispose 走账本。
 - **来源模式引擎**（`host/engine_sources.ts`）：`SourceEngine` = SourceHost + EngineRuntime 组合；`createEngineFromLocalTrees(payload)` 从 local-trees 直接建引擎；`registerSource` / `removeSource` / `applyLocalTrees` 先由 host 重算权威树，再交引擎提交版本/水合/指标/审计/通知。
 - **DocumentView**（`app/view.ts`）：createEngine → 桥接根树 → DomRenderer；引擎通知后按 id 重画；`dispose` 取消监听/渲染器/账本三件套。
-- **未接**：来源热更新/activate 账本与网络帧接线、订阅与媒体登记点、跨连接会话、`observe`/`intercept`、重渲染节点数指标、Slot 路径替换主会话。
+- **未接**：来源 activate / 回滚账本与网络帧接线、订阅与媒体登记点、跨连接会话、`observe`/`intercept`、重渲染节点数指标。
 
 ## 9. 未定
 

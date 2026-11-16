@@ -44,7 +44,7 @@
 
 每个诊断码至少：**能触发、消息含现场、不产出半成品文档**。
 
-S2 已落：`app/ui-engine/src/link/*.test.ts` 覆盖 `E-PAYLOAD` / `E-ID-DUPLICATE` / `E-SLOT-AMBIGUOUS` / `E-SLOT-CAPACITY` / `E-TARGET-MISSING` / `E-CYCLE`；`vite build` 的 `buildStart` 门禁拿共享 fixture 复现冲突（冲突时构建失败）。`static_ui.py --check` 仍只查骨架数据是否最新，还没升级成编译门禁。
+S2 已落：`app/ui-engine/src/link/*.test.ts` 覆盖 `E-PAYLOAD` / `E-ID-DUPLICATE` / `E-SLOT-AMBIGUOUS` / `E-SLOT-CAPACITY` / `E-TARGET-MISSING` / `E-CYCLE`；`vite build` 的 `buildStart` 门禁拿共享 fixture 复现冲突（冲突时构建失败）。`static_ui.py --check` 仍只查骨架数据是否最新；S6.5 起启动骨架也在构建期编译，编译门禁在 TS 构建（`parseView` + `link`，`src/build/slot-skeleton.ts`）与 `skeleton_html.py` 的产物检查。
 
 S3-a 已落：`src/engine/**/*.test.ts` 覆盖三张索引（id / parent+order / source）、共享 `ops.json` 的原子应用与版本（`E-VERSION`）、每个 op 诊断失败路径、入参不变与终态收敛；`collection.test.ts` 覆盖实例化、增量与全量等价、同 key 身份稳定、坏条目隔离。
 

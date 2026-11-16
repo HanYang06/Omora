@@ -164,7 +164,8 @@ DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engi
 ### 窗口、页面与 Slot（现状）
 
 - **窗口骨架**是链接基准：`dendro.window` 下两个区域——`dendro.window.nav`（56px 图标栏）与
-  `dendro.window.page`（主区）。
+  `dendro.window.page`（主区）。结构只在
+  [`app/sdk/omora/sdk/root-tree.json`](../app/sdk/omora/sdk/root-tree.json) 定义（结构文件已落，加载器同 PR 实现），代码不各写一份。
 - **页面**是一个可导航的 Slot 根（`page.<name>`），页面来源把局部树按 `mountAt` 挂到窗口区域；
   页面侧表、当前页与数据文档随主会话 view 一起给。
 - **事件**带 handler id 回传；handler 由 Python ui 插件登记，事件处理完返回新 view。
@@ -187,8 +188,8 @@ DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engi
 - 下行：视图树（`result`）与主动推送（`event`）。
 - 事件回传：handler id + 载荷。
 - 订阅：客户端声明关心哪些 topic，net 只把订阅过的 `event` 发给它；断线即清空，重连由客户端重放。
-- 增量：快照带版本号，变化走 `ui.snapshot` 补丁；对不上版本就重新要全量。
-- 快照字段：`pages` / `page` / `meta` / `content` / `contributions`（可选）/ `topics`（可选）/ `version`。
+- 增量：每次视图带版本号；变化走 `ui.snapshot`，与调用结果携带同一份视图形状；版本对不上就重新要全量。
+- 视图负载：`view` = `localTrees`（局部树）+ `pages` + `active` + `data` + `version`，权威根树由 TS 链接器本地链接（[wire §8](engine/wire.md)）。旧快照字段 `pages` / `page` / `meta` / `content` / `contributions` / `topics` 已随 legacy 在 S6.5 删除。
 
 规矩：
 
