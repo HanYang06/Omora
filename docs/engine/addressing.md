@@ -1,6 +1,6 @@
 # 寻址：id、身份、索引与更新集合
 
-> 状态：**已定**。S3-a 已落三张索引（`DocumentIndex`）；S4–S6 起运行时更新管线已接主会话；`code` / `addr` 身份字段已进 Slot 契约（可选）；Python UI 升 Slot 与静态骨架已派生，集合模板 / 通用 Node key、引擎索引与 redirect 仍待；`source/path` 路径级索引仍未落。
+> 状态：**已定**。S3-a 已落三张索引（`DocumentIndex`）；S4–S6 起运行时更新管线已接主会话；`code` / `addr` 身份字段已进 Slot 契约（可选）；Python UI 升 Slot 与静态骨架已派生，集合模板 / 通用 Node key 仍待；`addr` 已进 `DocumentIndex`，ops / 渲染与 redirect 仍待；`source/path` 路径级索引仍未落。
 > 依赖：[contract.md](contract.md)
 > 相关：[structure.md](structure.md) · [updates.md](updates.md) · [permissions.md](permissions.md)
 
@@ -36,7 +36,7 @@
 | `addr`  | 全链查找键：`addr = H(parent.addr, code)`；`H` 是确定性短摘要，与节点内容无关     | 全局查找、结构变化后仍能对上 | 父 `addr` 或自身 `code` 变才变 |
 | `path`  | 人类可读显示路径，如 `dendro.window.page/ideas.feed`                              | 显示、日志、诊断             | **可漂移**，不参与查找         |
 
-- `code` / `addr` 都是**可选**字段：没写 = 还没派生。字段已进契约与序列化通道；Python UI 升 Slot 与静态骨架已派生，集合模板 / 通用 Node key 仍待；运行时索引目前仍以 `id` 为键。
+- `code` / `addr` 都是**可选**字段：没写 = 还没派生。字段已进契约与序列化通道；Python UI 升 Slot 与静态骨架已派生，集合模板 / 通用 Node key 仍待；`addr` 已进 `DocumentIndex`，ops / 渲染仍以 `id` 为键。
 - 判定两个节点是不是同一逻辑位置要看 `chain`，不能只看 `addr`（摘要可能撞）。
 - 禁止从 `path` 反解身份：`path` 给人看，位置与序号随时会漂。
 - `H` 是纯函数、版本化；改算法属于契约变更。
@@ -104,7 +104,7 @@
 
 索引由引擎维护，不落线上树；全量重建与增量更新都必须让三张索引保持一致。
 
-`addr → Slot` 的全链查找索引落地后与 `id` 索引并列；当前只有 `id` 索引。
+`addr → Slot` 的全链查找索引已落（`DocumentIndex.getByAddr` / `addrOf`），与 `id` 索引并列；ops / 渲染仍按 `id`。
 
 ## 4. 更新集合：寻址粒度
 
@@ -157,7 +157,7 @@
 - 代码：`app/ui-engine/src/engine/document/document.ts` 的 `DocumentIndex`，从根树独立重建；`ops.ts` 每次应用批量后重建（一致性是构造出来的，不做增量对齐）。
 - 索引三项：`get(id)`、`parentOf(id) → {parentId, order}`、`slotsFor(source) → [id]`（`in[].source` 与 `collection.source` 都算消费）。
 - 全寻址包含 `collection.templates` 里的模板子树：可 `get`、可 update 内容；模板根 `parentOf.order = -1`（命名表位置，不是 children 序号），`childrenOf(集合 slot)` 不含模板根。
-- 已接：三张索引、全量 / 纯数据 / 局部树更新管线与主会话（S4–S6）。未接：`source/path` 的路径级细分、反查索引驱动渲染 / 事件、跨更新增量维护（当前每步重建，先保证正确性）；`code` / `addr` 尚未参与索引。
+- 已接：三张索引、全量 / 纯数据 / 局部树更新管线与主会话（S4–S6）。未接：`source/path` 的路径级细分、反查索引驱动渲染 / 事件、跨更新增量维护（当前每步重建，先保证正确性）；`addr` 已进 `DocumentIndex`，ops / 渲染仍按 `id`。
 
 ## 10. 列表 key 的最小落地（已落）
 

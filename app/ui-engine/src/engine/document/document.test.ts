@@ -240,3 +240,38 @@ describe("DocumentIndex：独立重建", () => {
     });
   });
 });
+
+describe("DocumentIndex：addr 索引", () => {
+  it("带 addr 的节点可按 addr 反查，并给出 id 的 addr", () => {
+    const index = DocumentIndex.build(
+      node({
+        id: "root",
+        addr: "a0",
+        children: [node({ id: "child", addr: "a1" })],
+      }),
+    );
+
+    expect(index.getByAddr("a0")?.id).toBe("root");
+    expect(index.getByAddr("a1")?.id).toBe("child");
+    expect(index.addrOf("child")).toBe("a1");
+    expect(index.addrOf("root")).toBe("a0");
+    expect(index.getByAddr("nope")).toBeUndefined();
+  });
+
+  it("重复 addr 直接拒绝", () => {
+    const root = node({
+      id: "root",
+      addr: "same",
+      children: [node({ id: "child", addr: "same" })],
+    });
+
+    expect(() => DocumentIndex.build(root)).toThrow("重复 addr");
+  });
+
+  it("没有 addr 的树保持兼容", () => {
+    const index = indexOf();
+
+    expect(index.getByAddr("a0")).toBeUndefined();
+    expect(index.addrOf("dendro.window")).toBeUndefined();
+  });
+});

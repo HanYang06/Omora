@@ -106,6 +106,7 @@ export function createState(root: unknown, version = 1): CreateStateResult {
 
 interface IndexTables {
   byId: Map<string, SlotNode>;
+  byAddr: Map<string, SlotNode>;
   parents: Map<string, ParentRef>;
   ids: string[];
   sources: Map<string, string[]>;
@@ -127,6 +128,12 @@ function addSource(sources: Map<string, string[]>, source: string, id: string): 
 function collectIndex(node: SlotNode, parent: ParentRef | undefined, out: IndexTables): void {
   out.byId.set(node.id, node);
   out.ids.push(node.id);
+  if (node.addr !== undefined) {
+    if (out.byAddr.has(node.addr)) {
+      throw new Error("重复 addr: " + node.addr);
+    }
+    out.byAddr.set(node.addr, node);
+  }
   if (parent !== undefined) {
     out.parents.set(node.id, parent);
   }
@@ -149,23 +156,27 @@ function collectIndex(node: SlotNode, parent: ParentRef | undefined, out: IndexT
 /**
  * 从根树重建的寻址索引（纯推导，可随时丢弃重来）。
  *
- * 三张索引：id → Slot、id → (parent, order)、source → [slot id]。
+ * 三张索引：id → Slot、id → (parent, order)、source → [slot id]；另有可选
+ * addr → Slot（节点带 `addr` 时才建）。
  * 索引里保存的是树里的节点引用；根树换了以后请重新 `build`。
  */
 export class DocumentIndex {
   readonly size: number;
   private readonly byId: Map<string, SlotNode>;
+  private readonly byAddr: Map<string, SlotNode>;
   private readonly parents: Map<string, ParentRef>;
   private readonly sources: Map<string, string[]>;
   private readonly order: string[];
 
   private constructor(
     byId: Map<string, SlotNode>,
+    byAddr: Map<string, SlotNode>,
     parents: Map<string, ParentRef>,
     sources: Map<string, string[]>,
     order: string[],
   ) {
     this.byId = byId;
+    this.byAddr = byAddr;
     this.parents = parents;
     this.sources = sources;
     this.order = order;
@@ -176,17 +187,34 @@ export class DocumentIndex {
   static build(root: SlotNode): DocumentIndex {
     const tables: IndexTables = {
       byId: new Map(),
+      byAddr: new Map(),
       parents: new Map(),
       ids: [],
       sources: new Map(),
     };
     collectIndex(root, undefined, tables);
-    return new DocumentIndex(tables.byId, tables.parents, tables.sources, tables.ids);
+    return new DocumentIndex(
+      tables.byId,
+      tables.byAddr,
+      tables.parents,
+      tables.sources,
+      tables.ids,
+    );
   }
 
   /** id → 节点；未知 id 返回 undefined。 */
   get(id: string): SlotNode | undefined {
     return this.byId.get(id);
+  }
+
+  /** addr → 节点；没带 addr 的树返回 undefined。 */
+  getByAddr(addr: string): SlotNode | undefined {
+    return this.byAddr.get(addr);
+  }
+
+  /** 节点当前 addr；没带 addr 返回 undefined。 */
+  addrOf(id: string): string | undefined {
+    return this.byId.get(id)?.addr;
   }
 
   /** 反查父与序号；根返回 undefined，模板根见文件头规则。 */
