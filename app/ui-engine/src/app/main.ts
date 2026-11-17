@@ -4,16 +4,28 @@ import { LiveSlotApp } from "./live";
 import "../styles/styles.css";
 import "../styles/media.css";
 
-/** 入口模式：默认主会话 Slot；`?engine=slot` 看内置 fixture 预览。 */
-export type EngineMode = "preview" | "live";
+/** 入口模式：默认主会话 Slot；`?engine=slot` 看 Slot fixture 预览；`?engine=tree` 看 V1 产物。 */
+export type EngineMode = "preview" | "tree" | "live";
 
 /**
  * 解析入口模式（可单独测试）：
  * - `engine=slot` → 内置 Slot 文档预览（不连 Python，用打包进来的 fixture 视图）；
+ * - `engine=tree` → V1 构建产物预览（读 `/tree/`，挂 TreeRuntime）；
  * - 其它（含空查询）→ 主会话 Slot 运行时（连 Python，默认）。
  */
 export function engineMode(search: string): EngineMode {
-  return new URLSearchParams(search).get("engine") === "slot" ? "preview" : "live";
+  const engine = new URLSearchParams(search).get("engine");
+  if (engine === "slot") {
+    return "preview";
+  }
+  if (engine === "tree") {
+    return "tree";
+  }
+  return "live";
+}
+
+export function wantsTree(search: string): boolean {
+  return engineMode(search) === "tree";
 }
 
 export function wantsPreview(search: string): boolean {
@@ -44,14 +56,31 @@ function startPreview(container: HTMLElement): void {
     });
 }
 
+/** V1 产物预览也在独立 chunk：读 /tree/ 产物，失败直接把原因写在页面上。 */
+function startTree(container: HTMLElement): void {
+  void import("./tree/preview")
+    .then((preview) => preview.mountTreePreview(container))
+    .catch((error: unknown) => {
+      const text = error instanceof Error ? error.message : String(error);
+      container.textContent = "V1 预览加载失败：" + text;
+      console.error("[omora] V1 预览加载失败:", error);
+    });
+}
+
 /**
- * 启动入口：默认走主会话 Slot 运行时（连 Python）；`?engine=slot` 看内置预览。
+ * 启动入口：默认走主会话 Slot 运行时（连 Python）；`?engine=slot` / `?engine=tree`
+ * 分别是内置 Slot 预览与 V1 产物预览。
  *
  * 单独导出便于入口级测试；HTML 加载本模块时 `#root` 一定在。
  */
 export function bootstrap(container: HTMLElement, search: string): void {
-  if (engineMode(search) === "preview") {
+  const mode = engineMode(search);
+  if (mode === "preview") {
     startPreview(container);
+    return;
+  }
+  if (mode === "tree") {
+    startTree(container);
     return;
   }
   startLive(container);

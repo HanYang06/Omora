@@ -58,8 +58,11 @@ components/*（现有 38 个 kind，不改）
 - `app/tree/tree_document.test.ts`：真实 ideas 空态（`static-tree.json` → compose）挂出
   app / 4 条导航 / 页面文案。
 
-## 5. 还没接的
+## 5. 预览与还没接的
 
-- 默认入口与 `?engine=tree` 预览：还没读 `dist/tree`。
+- `?engine=tree` 已接：读 `/tree/manifest.json` + 页面文档 → `mountTreeDocument`；
+  dev 由 `build/vite-tree-dev.ts` 供文件，`vite preview` / 部署读 `dist/tree/`。
+  入口在 `app/tree/preview.ts`，失败会把原因写在页面上。
+- 默认入口还没切（仍走 Slot 主会话）。
+- 导航从 `settings.route` 出发的跳转没接：静态产物没有 handler，导航是禁用态。
 - `collection` 实例化、`data` op、最小节点更新（引擎内部下一段）。
-- 导航从 `settings.route` 出发的跳转（当前静态产物没有 handler，导航是禁用态）。
