@@ -109,6 +109,10 @@ class Ui:
         """画一页；不指定就画当前页（还没有就画第一个登记的）。result 是整份 view。"""
         return self._slots.render(page)
 
+    def page_tree(self, name: str) -> Page:
+        """这一页当前的节点树（拉取式 build 或插件交上来的树）；构建期工具用。"""
+        return self._page_body(name, self._entry(name))
+
     def event(self, handler: str, payload: dict[str, Any]) -> dict[str, Any]:
         """把载荷交给 handler；result 是派发之后当前页的新 view。"""
         self._in_event = True
