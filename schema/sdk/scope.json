@@ -123,7 +123,11 @@
         }
       }
     ],
-    "responses": ["handled", "denied", "unhandled", "host_gone", "host_moved"]
+    "responses": ["handled", "denied", "unhandled", "host_gone", "host_moved"],
+    "standardDefault": "E-SCOPE-REQUEST-UNHANDLED",
+    "noHost": "host_gone",
+    "closedHost": "host_gone",
+    "movedHost": "host_moved"
   },
   "capability": {
     "mode": "granted-port",
@@ -150,7 +154,11 @@
         "name": "data",
         "methods": ["get"]
       }
-    ]
+    ],
+    "notGranted": "null",
+    "revoked": "E-SCOPE-CAPABILITY-REVOKED",
+    "hostGone": "E-SCOPE-HOST-GONE",
+    "hostMoved": "E-SCOPE-HOST-MOVED"
   },
   "slot": {
     "isScope": true,
