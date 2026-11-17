@@ -42,12 +42,16 @@ DOM 复用省的是“创建元素”，不是“序列化、传输、链接、�
 | --------------------------------- | ---------------------------- | ------------------------------------------------------------------------------ |
 | 节点契约 + schema + 跨语言校验    | 已落                         | `schema/tree/`、`contract/tree.ts`、`sdk/tree.py`                              |
 | 构建期 compose + 诊断             | 已落                         | `build/tree/compose.ts`（E-COLLISION / E-PARENT-MISSING / E-TREE-CHAIN）       |
+| 真实页面构建期 compose            | 已落（四页）                 | `scripts/static_tree.py` → `dist/tree/pages/*.json`                            |
+| 构建门禁（compose / 语义 / kind） | 已落                         | `build/vite-tree.ts`、`scripts/tree_artifacts.py`、`E-TREE-KIND`               |
+| collection 声明字段               | 已落（运行期未接）           | schema `collection`、`sdk/tree.py`、`compose.ts`                               |
 | runtime mount / replace / dispose | 已落；DOM 宿主与组件适配已落 | `engine/tree/runtime.ts`、`app/tree/tree_host.ts`、`app/tree/tree_renderer.ts` |
 | Page / State / When / Bind        | 已落（SDK 层）               | `sdk/page.ts`、`authoring/page.py`                                             |
 | Node scope / 生命周期             | 已落                         | `sdk/scope.ts`、`authoring/scope.py`                                           |
-| 真实页面构建期 compose            | **未落**                     | `static_ui.py` 只编空态骨架                                                    |
+| 类型检查第一遍                    | 只落 kind 存在性             | `tree_kinds.ts`；settings schema / 引用未做                                    |
 | 最小节点 ops（Python → TS）       | **未落**                     | runtime 没有 applyOps                                                          |
 | ops 协议帧                        | **未落**                     | 主会话仍发整份 view                                                            |
+| 产物消费（预览 / 默认入口）       | **未落**                     | app 还没读 `dist/tree`                                                         |
 | 页面插件迁移                      | **未落**                     | 页面仍由 Slot 产出                                                             |
 
 结构层已经成立；**更新层和协议层还没接上**。这就是下一步的全部内容。
