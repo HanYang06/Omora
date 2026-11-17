@@ -6,18 +6,18 @@
 
 ## Now
 
-- [ ] **文档与队列定基** — owner: lead — next: 把 ADR-0004、路线图、现状、V1 树、TODO 的口径统一，跑 `scripts/todo.py` 与 `scripts/docs_links.py`。
 - [ ] **ops 形状与跨语言 fixture** — owner: sdk/engine — next: 定义 replace / setProps / mount / unmount / data 五种 ops、base 版本与失败兜底，Python / TS 共用一份 fixture。
-- [ ] **真实页面构建期 compose** — owner: build — next: 每页产物已落 `dist/tree/`（`scripts/static_tree.py` + Vite 插件）；下一步让默认入口读 manifest + 文档挂载，不再整树链接。
-- [ ] **ideas 一页端到端** — owner: ideas/ui — next: Python 只发变更节点，TS 按 id 原子应用，DOM 只 patch 变更子树；量复杂度斜率。
+- [ ] **产物消费（预览 + 默认入口）** — owner: app/engine — next: `?engine=tree` 读 `dist/tree/manifest.json` + 页面文档挂载；dev 下供这几份文件；再接默认入口。
+- [ ] **V1 类型检查后半** — owner: engine — next: per-kind `settings` schema、`on` / `bind` 引用、`E-TEMPLATE` 与 warning 码。
+- [ ] **ideas 一页端到端** — owner: ideas/ui — next: 先接 ops 帧（Python 只发变更节点），TS 按 id 原子应用，DOM 只 patch 变更子树；量复杂度斜率。
 - [ ] **插件迁移清单** — owner: lead — next: 标出哪些插件产出页面（ideas / projects / requirements / manager）、哪些只提供服务，给出迁移顺序。
 
 ## Next
 
-- [ ] **静态结构覆盖全部页面** — owner: build — next: 把构建期 compose 从 ideas 推到项目 / 需求 / 插件页。
 - [ ] **最小节点更新成为唯一主路径** — owner: engine — next: 主会话切 ops 帧，全量 view 只作版本不匹配时的兜底。
 - [ ] **页面插件迁移** — owner: ideas/projects/requirements/manager — next: 四页逐个迁到 V1 路径，旧 Slot 出口逐页删。
 - [ ] **删除 Slot 默认路径** — owner: lead — next: 四页迁完后删旧路径与 `dendro.ui/1` 默认入口，保留全量兜底。
+- [ ] **V1 运行时治理** — owner: engine — next: 权限 / 审计 / 指标接 V1；首帧 HTML 从 V1 文档编译，替换 Slot 骨架。
 - [ ] **复杂度护栏进 CI** — owner: engine — next: 加斜率测试，事件 → DOM 的工作量不得随总节点数增长。
 - [ ] **Idea 闭环** — owner: ideas — next: 补标签、灵感 ↔ 灵感 / 项目的关联、转写进搜索。
 - [ ] **Project 闭环** — owner: projects — next: 建项目、关联灵感 / 需求、状态推进、归档复盘。
