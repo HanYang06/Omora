@@ -1,0 +1,194 @@
+{
+  "schema": "omora.scope/1",
+  "version": 1,
+  "title": "Omora node scope / host contract",
+  "principles": [
+    "retained-mode object tree; not React-style function components",
+    "parent owns child; mutation authority flows downward",
+    "data and capabilities flow downward; events and requests flow upward",
+    "child never holds a mutable parent handle",
+    "every mount has an explicit call site"
+  ],
+  "scope": {
+    "unit": "node",
+    "owns": "subtree",
+    "parentRef": "read-only",
+    "host": "parent-granted",
+    "children": "ordered",
+    "lifecycle": "structured",
+    "authority": "downward-only"
+  },
+  "lifecycle": {
+    "events": ["created", "mounted", "updated", "reparented", "unmounted", "disposed"],
+    "parentUnmount": "cascade",
+    "childOutlivesParent": false,
+    "move": {
+      "preservesId": true,
+      "preservesState": true,
+      "rebindsHost": true,
+      "remountOption": true
+    },
+    "clone": {
+      "newIds": true,
+      "copiesState": true,
+      "host": null,
+      "mounted": false
+    },
+    "hooks": ["on_create", "on_mount", "on_update", "on_reparent", "on_unmount", "on_dispose"],
+    "order": {
+      "mount": "parent-before-children",
+      "unmount": "children-before-parent"
+    },
+    "selfRemove": "request-only"
+  },
+  "operations": {
+    "add": {
+      "by": "parent",
+      "index": "optional"
+    },
+    "remove": {
+      "by": "parent",
+      "cascade": "hosts",
+      "subtree": "retained"
+    },
+    "move": {
+      "by": "current-parent",
+      "target": "new-parent",
+      "preserves": ["id", "state"],
+      "rebindsHost": true,
+      "remount": "optional",
+      "capabilities": "revoked-on-rebind",
+      "state": "preserved"
+    },
+    "clone": {
+      "by": "holder",
+      "result": "detached",
+      "newIds": true
+    },
+    "patch": {
+      "scope": "self-subtree"
+    },
+    "request": {
+      "by": "child",
+      "to": "immediate-host"
+    },
+    "capability": {
+      "by": "parent",
+      "to": "child",
+      "revocable": true
+    },
+    "unmount": {
+      "by": "root",
+      "cascade": "hosts",
+      "subtree": "retained",
+      "childSelfRemove": "request-only"
+    },
+    "dispose": {
+      "by": "root",
+      "permanent": true,
+      "subtree": "retained"
+    }
+  },
+  "request": {
+    "route": "immediate-host",
+    "automaticBubble": false,
+    "explicitForward": true,
+    "responseRequired": true,
+    "parentObligation": "handle-or-deny-standard",
+    "unknown": "unhandled",
+    "standard": [
+      {
+        "name": "remove_self",
+        "fields": {}
+      },
+      {
+        "name": "navigate",
+        "fields": {
+          "route": "string"
+        }
+      },
+      {
+        "name": "focus",
+        "fields": {}
+      },
+      {
+        "name": "scroll_into_view",
+        "fields": {}
+      },
+      {
+        "name": "open_overlay",
+        "fields": {
+          "kind": "string",
+          "props": "object"
+        }
+      },
+      {
+        "name": "request_data",
+        "fields": {
+          "source": "string",
+          "key": "string"
+        }
+      }
+    ],
+    "responses": ["handled", "denied", "unhandled", "host_gone", "host_moved"],
+    "standardDefault": "E-SCOPE-REQUEST-UNHANDLED",
+    "noHost": "host_gone",
+    "closedHost": "host_gone",
+    "movedHost": "host_moved"
+  },
+  "capability": {
+    "mode": "granted-port",
+    "exposesParent": false,
+    "revocable": true,
+    "types": [
+      {
+        "name": "navigation",
+        "methods": ["navigate"]
+      },
+      {
+        "name": "overlay",
+        "methods": ["open"]
+      },
+      {
+        "name": "focus",
+        "methods": ["focus"]
+      },
+      {
+        "name": "scroll",
+        "methods": ["into_view"]
+      },
+      {
+        "name": "data",
+        "methods": ["get"]
+      }
+    ],
+    "notGranted": "null",
+    "revoked": "E-SCOPE-CAPABILITY-REVOKED",
+    "hostGone": "E-SCOPE-HOST-GONE",
+    "hostMoved": "E-SCOPE-HOST-MOVED"
+  },
+  "slot": {
+    "isScope": true,
+    "grant": "mount-only",
+    "exposesPageRoot": false,
+    "ownerControlsCapacity": true
+  },
+  "errors": {
+    "E-SCOPE-PARENT": "child attempted to mutate a parent or sibling",
+    "E-SCOPE-CYCLE": "add or move would create a cycle",
+    "E-SCOPE-DUP-MOUNT": "node already has a parent",
+    "E-SCOPE-NOT-CHILD": "remove or move target is not a child",
+    "E-SCOPE-MOVE-SELF": "move target is the node or one of its descendants",
+    "E-SCOPE-HOST-GONE": "request made after the host closed",
+    "E-SCOPE-HOST-MOVED": "in-flight request invalidated by move",
+    "E-SCOPE-REQUEST-UNHANDLED": "unknown request has no handler",
+    "E-SCOPE-CAPABILITY-REVOKED": "capability used after revoke"
+  },
+  "serialization": {
+    "treeSchema": "dendro.tree/1",
+    "id": "stable-at-birth",
+    "chain": "derived",
+    "order": "sibling-index",
+    "state": "not-serialized"
+  }
+}
