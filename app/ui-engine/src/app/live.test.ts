@@ -116,6 +116,8 @@ describe("入口模式", () => {
     expect(engineMode("?engine=live")).toBe("live");
     expect(engineMode("?engine=live&debug=1")).toBe("live");
     expect(engineMode("?engine=slot")).toBe("preview");
+    expect(engineMode("?engine=tree")).toBe("tree");
+    expect(engineMode("?engine=tree&page=ideas")).toBe("tree");
     expect(engineMode("?engine=something")).toBe("live");
     expect(wantsLive("")).toBe(true);
     expect(wantsLive("?engine=slot")).toBe(false);

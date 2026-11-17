@@ -38,6 +38,10 @@ vite build
 **为什么按页拆**：一棵树只有一份文档时，页数一多就是巨无霸。每页一份文档各自带骨架、导航
 与页面内容，按路由取用；单个文件的大小只跟单页结构有关，不跟页数有关。
 
+**dev 下也有同一批产物**：`vite dev` 没有 dist，`build/vite-tree-dev.ts` 在 `/tree/` 上按请求
+现算（输入的 mtime / size 变了才重算）。所以 `?engine=tree` 在 dev 与 `vite preview` 下看到的
+是同一份东西，产物形状不会两套。
+
 manifest 形状：
 
 ```json
