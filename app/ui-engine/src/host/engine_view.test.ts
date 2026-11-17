@@ -109,6 +109,25 @@ describe("applyView：整份视图替换", () => {
     expect(changes).toEqual([["dendro.window"]]);
   });
 
+  it("只改 props 的视图走 ops，不全量替换", () => {
+    const engine = engineOf(fixture());
+
+    const result = applied(
+      engine.applyView(
+        viewOf((value) => {
+          value.version = 2;
+          renameIdeasTitle(value);
+        }),
+      ),
+    );
+
+    expect(result.changed).toEqual(["page.ideas.title"]);
+    expect(engine.session.document.version).toBe(2);
+    expect(engine.metrics).toMatchObject({ version: 2, fullUpdates: 0, opsBatches: 1 });
+    const index = DocumentIndex.build(engine.session.document.root);
+    expect(index.get("page.ideas.title")?.props.text).toBe("改过的标题");
+  });
+
   it("旧版本：E-VERSION 拒绝，会话与注册表都回滚", () => {
     const engine = engineOf(fixture());
     applied(engine.applyView(viewOf((value) => (value.version = 2))));
@@ -127,7 +146,12 @@ describe("applyView：整份视图替换", () => {
     expect(diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["E-VERSION"]);
     expect(engine.session).toEqual(sessionBefore);
     expect(sourcesOf(engine)).toBe(sourcesBefore);
-    expect(engine.metrics).toMatchObject({ version: 2, fullUpdates: 1, rejections: 1 });
+    expect(engine.metrics).toMatchObject({
+      version: 2,
+      fullUpdates: 0,
+      opsBatches: 1,
+      rejections: 1,
+    });
   });
 
   it("非法视图：E-PAYLOAD 拒绝，会话与注册表不变", () => {

@@ -19,6 +19,7 @@ import { DOCUMENT_SCHEMA, type PageEntry } from "../contract/document";
 import type { RenderStats } from "../contract/render";
 import { parseLocalTrees } from "../link/parse";
 import { parseView } from "../link/view";
+import { propUpdates } from "./view_diff";
 import type { Diagnostic } from "../contract/diagnostics";
 import type { LocalTree, LocalTreesPayload } from "../link/types";
 import type { EngineApplyResult, EngineOptions, EngineRuntime } from "./engine";
@@ -147,8 +148,9 @@ export class SourceEngine {
   }
 
   /**
-   * 应用一份主会话视图（S6）：整组局部树重链 → 「链接结果 + 页面侧表 + 数据 + 版本」
-   * 按全量替换提交。失败时把 host 注册表恢复到上一份，会话与注册表不会各走一半。
+   * 应用一份主会话视图（S6）：整组局部树重链 → 「链接结果 + 页面侧表 + 数据 + 版本」。
+   * 页面 / active / data 与当前一致且树形状没变时，只提交 props update ops；
+   * 其余情况（结构 / 页面 / data 变化）仍走全量替换。失败时把 host 注册表恢复到上一份。
    *
    * `keepOwners` 是运行后来源（S7）：主视图只对页面 / 导航这类主来源负责，宿主挂的
    * 来源不随视图全量替换消失；传进来的 owner 会从当前注册表原样并进新链接。
@@ -172,6 +174,32 @@ export class SourceEngine {
     const loaded = this.host.load([...kept, ...parsed.view.localTrees.trees]);
     if (!loaded.ok) {
       return failure(loaded.diagnostics);
+    }
+    const current = this.inner.session;
+    const sameMeta =
+      parsed.view.version > current.document.version &&
+      JSON.stringify(parsed.view.pages) === JSON.stringify(current.pages) &&
+      parsed.view.active === current.active &&
+      JSON.stringify(parsed.view.data) === JSON.stringify(current.data);
+    if (sameMeta) {
+      const updates = propUpdates(current.document.root, this.host.tree);
+      if (updates !== undefined) {
+        const incremental = this.inner.applyOps({
+          kind: "ops",
+          document: current.document.version + 1,
+          base: current.document.version,
+          seq: parsed.view.version,
+          ops: updates,
+        });
+        if (incremental.ok) {
+          return {
+            ok: true,
+            changed: incremental.changed,
+            session: incremental.session,
+            diagnostics: loaded.diagnostics,
+          };
+        }
+      }
     }
     const applied = this.inner.applyFull({
       schema: DOCUMENT_SCHEMA,
