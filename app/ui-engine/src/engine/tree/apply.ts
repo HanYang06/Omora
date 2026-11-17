@@ -37,6 +37,9 @@ export type ApplyOpsResult =
   | { ok: true; document: Document; changed: string[]; byId: ReadonlyMap<string, Node> }
   | { ok: false; diagnostics: ApplyDiagnostic[] };
 
+/** 成功结果：新文档 + 被触碰的子树根 + id → 新节点。 */
+export type AppliedDocument = Extract<ApplyOpsResult, { ok: true }>;
+
 interface Location {
   node: Node;
   parent: Node | null;
