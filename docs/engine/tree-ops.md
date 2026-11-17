@@ -1,6 +1,6 @@
 # V1 更新操作（ops）
 
-> 状态：**形状与跨语言 fixture 已落**（2026-11-18）；应用端（`applyOps` + 原子回滚）还没做。
+> 状态：**形状 + 文档层应用已落**（2026-11-18）；运行时最小应用与 `data` 语义还没接。
 > 相关：[V1 树](../planning/v1-tree.md) · [V1 运行时](tree-runtime.md) · [updates.md](updates.md)
 
 ## 0. 一句话
@@ -55,9 +55,19 @@ ops 是“按 id 改一份已存在的 `dendro.tree/1` 文档”的批量：不�
 - Python `omora.sdk.tree_ops.serialize_ops` 的输出必须与 fixture 完全相等；
 - TS `engine/tree/ops.parseOps` 必须接受同一份 fixture，并给出相同的五个 op。
 
-## 4. 还没做
+## 4. 已落 / 还没做
 
-- `applyOps`（文档层）：版本判定、路径复制、原子回滚、`changed`。
-- 运行时最小应用：只动被触碰的子树根，不整树 walk。
+已落：
+
+- `applyOps`（文档层）：`base` 版本判定、目标预检、路径复制（未触碰兄弟保持原引用）、
+  原子回滚、`changed`（被触碰的子树根 id，按首次触碰去重）。
+- 结构校验：mount / replace 的 chain 必须由目标父链推出；id 不与现有节点冲突；
+  同级 order 唯一；replace 不能改 order、根不能做结构操作。
+- 模板边界：`collection.templates` 里的节点可以 `setProps`，但不能 mount / unmount / replace。
+- `data` 目前整批拒绝（`E-PAYLOAD`），不让“只应用一半”的更新溜过去。
+
+还没做：
+
+- 运行时最小应用：只对 `changed` 的子树根做 DOM patch，不整树 walk。
 - `data` 语义：collection 实例化、keyed reconcile、绑定。
 - 权限 / 审计接 V1。
