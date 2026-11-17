@@ -57,7 +57,7 @@ manifest 形状：
 }
 ```
 
-`hash` 是文档 JSON 的 sha256 前 16 位；`nodes` 是节点数（layout 递归）。
+`hash` 是文档 JSON 的 sha256 前 16 位；`nodes` 是节点数（layout 与 `collection.templates` 递归）。
 
 ## 3. 门禁
 

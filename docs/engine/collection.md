@@ -1,6 +1,6 @@
 # 集合绑定：用数据实例化已声明的结构
 
-> 状态：**建议**（作者已认同方向，细节未定稿）；S3-a 已落实例化与 keyed reconcile 原语（`src/engine/collections/collection.ts`），数据路由与主会话渲染已接（S6）；嵌套集合 / 窗口化仍未做。
+> 状态：**建议**（作者已认同方向，细节未定稿）；S3-a 已落实例化与 keyed reconcile 原语（`src/engine/collections/collection.ts`），数据路由与主会话渲染已接（S6）；嵌套集合 / 窗口化仍未做。V1 形状已进 `dendro.tree/1`（§10），运行期实例化未接。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [rules.md](rules.md)
 > 相关：[updates.md](updates.md) · [composition.md](composition.md)
 
@@ -115,3 +115,27 @@
 - 增量：insert / update / remove / move 维护条目列表后整槽重建；构造上保证「增量终态 == 全量实例化」。模板内嵌套 collection 不实例化（§8 未定）。
 - 已接 data router（`src/engine/updates/data.ts`）：按 source 找集合 slot，items 全量 / changes 增量，revision 幂等；坏条目诊断随更新返回。
 - 未接：标量→props 绑定、坏条目界面上报、窗口化。
+
+## 10. V1 形状（`dendro.tree/1`，已落）
+
+Slot 的 `collection` 原样进 V1 节点，字段同名同义：
+
+```jsonc
+{
+  "id": "…",
+  "kind": "column",
+  "collection": {
+    "source": "ideas.feed",
+    "key": "id",
+    "select": "template", // 可省，缺省 template
+    "templates": { "item": {/* 不挂载的节点子树 */} },
+  },
+}
+```
+
+- `templates` 是唯一允许在 `layout` 之外出现节点的地方：它是具名模板表，不是第二套嵌套。
+- 模板节点参与 id / chain 唯一性检查，但**不能**作为 partial 的 `mount.parent`——组合器报
+  `E-PARENT-MISSING`（模板不挂载）。
+- 组合器把模板子树一起索引：模板里的 id / chain 撞上已组合树 → `E-COLLISION`。
+- 已落：schema、Python / TS 形状校验、Python 语义（模板身份）、组合器。
+- 未落：运行期实例化、`data` op、keyed reconcile——引擎内部下一段。
