@@ -1,0 +1,13 @@
+{
+  "id": "bbbbbbbbbbbbbbbb",
+  "chain": "aaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbb",
+  "kind": "column",
+  "title": "child",
+  "order": 10,
+  "layout": [],
+  "settings": {},
+  "bind": {},
+  "on": {},
+  "emit": {},
+  "extra": true
+}

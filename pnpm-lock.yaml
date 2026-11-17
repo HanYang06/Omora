@@ -206,6 +206,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 5.1.0
         version: 5.1.0(vitest@5.1.0)
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
       electron:
         specifier: ^45.2.3
         version: 45.2.3
