@@ -8,6 +8,9 @@
   mount/invalidate 时更新，不反向写。
 - Action 由页面注册、显式 invoke：handler 改 page.state 后页面自动 invalidate；
   子节点拿不到 Page，不能直接改页面 state（只能通过 action/请求）。
+- 节点事件：`page.on(node, event, action)` 把事件绑到已注册 action，
+  `page.event(node, event, payload)` 触发 handler(page, payload) 并自动 invalidate；
+  等价于树里 tree.on 的 handler id。
 
 UI 组件与 tree 序列化不在这一层。
 """
@@ -104,6 +107,7 @@ class Page:
         self._whens: list[_WhenSlot] = []
         self._binds: list[Bind] = []
         self._actions: dict[str, Action] = {}
+        self._node_events: dict[Node, dict[str, str]] = {}
         self._mounted = False
         self._host: object | None = None
 
@@ -249,6 +253,30 @@ class Page:
             raise KeyError(f"未知页面 action: {name}")
         action.handler(self, *args, **kwargs)
         self.invalidate()
+
+    # ---- 节点事件绑定：等价于树里 tree.on 的 handler id ----
+    def on(self, node: Node, event: str, action: str) -> None:
+        """把节点事件绑到已注册 action；同一 (node, event) 重复绑定以后者为准。"""
+        if not isinstance(node, Node):
+            raise TypeError("on 的 node 必须是 Node")
+        self._require_in_page(node)
+        if not isinstance(event, str) or event == "":
+            raise ValueError("事件名必须是非空字符串")
+        if action not in self._actions:
+            raise KeyError(f"未知页面 action: {action}")
+        bindings = self._node_events.setdefault(node, {})
+        bindings[event] = action
+
+    def event(self, node: Node, event: str, payload: Any = None) -> None:
+        """触发节点事件：handler 收到 (page, payload)，结束后页面自动 invalidate。"""
+        if not isinstance(node, Node):
+            raise TypeError("event 的 node 必须是 Node")
+        self._require_in_page(node)
+        bindings = self._node_events.get(node)
+        action = None if bindings is None else bindings.get(event)
+        if action is None:
+            raise KeyError(f"节点上没有事件绑定: {event}")
+        self.invoke(action, payload)
 
     # ---- 内部：求值与范围校验 ----
     def _evaluate(self) -> None:

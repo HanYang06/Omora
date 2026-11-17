@@ -283,3 +283,91 @@ def test_page_cannot_mount_after_root_dispose() -> None:
 
     with pytest.raises(ValueError, match="已销毁"):
         page.mount()
+
+
+def test_page_on_binds_node_event_and_event_invalidates() -> None:
+    page, _, bindable = make_page(state={"clicks": 0})
+    button = Node("button")
+    page.root.add(button)
+    page.bind(bindable, "count", "state.clicks")
+    received: list[Any] = []
+
+    def on_click(page: Page, payload: Any) -> None:
+        page.update_state({"clicks": page.state["clicks"] + 1})
+        received.append(payload)
+
+    page.action("click", on_click)
+    page.on(button, "click", "click")
+    page.mount()
+
+    page.event(button, "click", {"x": 1})
+
+    assert page.state["clicks"] == 1
+    assert received == [{"x": 1}]
+    assert bindable.props["count"] == 1
+
+    page.event(button, "click")
+    assert received == [{"x": 1}, None]
+    assert page.state["clicks"] == 2
+
+
+def test_duplicate_event_binding_keeps_the_last_action() -> None:
+    page, _, _ = make_page()
+    button = Node("button")
+    page.root.add(button)
+
+    def first(page: Page, payload: Any) -> None:
+        page.update_state({"which": "first"})
+
+    def second(page: Page, payload: Any) -> None:
+        page.update_state({"which": "second"})
+
+    page.action("first", first)
+    page.action("second", second)
+    page.on(button, "click", "first")
+    page.on(button, "click", "second")
+    page.mount()
+
+    page.event(button, "click")
+
+    assert page.state["which"] == "second"
+
+
+def test_event_binding_errors_are_stable() -> None:
+    page, _, _ = make_page()
+    button = Node("button")
+    page.root.add(button)
+    foreign = Node("button")
+    page.action("click", lambda page, payload: None)
+
+    with pytest.raises(ValueError, match="root 子树"):
+        page.on(foreign, "click", "click")
+    with pytest.raises(ValueError, match="root 子树"):
+        page.event(foreign, "click")
+    with pytest.raises(TypeError, match="Node"):
+        page.on(cast(Any, "not-node"), "click", "click")
+    with pytest.raises(TypeError, match="Node"):
+        page.event(cast(Any, "not-node"), "click")
+    with pytest.raises(ValueError, match="事件名"):
+        page.on(button, "", "click")
+    with pytest.raises(KeyError, match="未知页面 action"):
+        page.on(button, "click", "missing")
+
+    page.mount()
+    with pytest.raises(KeyError, match="没有事件绑定"):
+        page.event(button, "click")
+
+
+def test_event_binding_survives_unmount_and_remount() -> None:
+    page, _, _ = make_page()
+    button = Node("button")
+    page.root.add(button)
+    page.action("click", lambda page, payload: page.update_state({"clicked": True}))
+    page.on(button, "click", "click")
+
+    page.mount()
+    page.unmount()
+    page.mount()
+    page.event(button, "click")
+
+    assert page.state["clicked"] is True
