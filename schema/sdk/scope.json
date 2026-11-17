@@ -48,7 +48,8 @@
     },
     "remove": {
       "by": "parent",
-      "cascade": true
+      "cascade": "hosts",
+      "subtree": "retained"
     },
     "move": {
       "by": "current-parent",
@@ -78,8 +79,14 @@
     },
     "unmount": {
       "by": "root",
-      "cascade": true,
+      "cascade": "hosts",
+      "subtree": "retained",
       "childSelfRemove": "request-only"
+    },
+    "dispose": {
+      "by": "root",
+      "permanent": true,
+      "subtree": "retained"
     }
   },
   "request": {
