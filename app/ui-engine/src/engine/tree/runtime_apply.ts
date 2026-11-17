@@ -30,7 +30,8 @@ export interface TreeApplyContext {
 
 /** runtime 内部的已挂载节点：渲染器实例 + 输出 + 子挂载点都是挂载期确定的。 */
 export interface MountedNode {
-  readonly node: TreeNode;
+  /** 当前文档里的节点对象；applyOps 成功后会被替换成新对象。 */
+  node: TreeNode;
   readonly renderer: NodeRenderer;
   readonly output: TreeOutput;
   readonly childHost: TreeHost | null;
@@ -38,7 +39,7 @@ export interface MountedNode {
   /** replace 时被复用的旧节点；mount / 新节点为 undefined。 */
   readonly reusedFrom: MountedNode | undefined;
   readonly path: string;
-  readonly handle: TreeChildHandle;
+  handle: TreeChildHandle;
   children: MountedNode[];
   /** 卸载只跑一次（失败回滚与正常清退可能都走到同一节点）。 */
   released: boolean;
@@ -97,6 +98,61 @@ export function applyDocument(
 export function unmountTree(context: TreeApplyContext, root: MountedNode): void {
   releaseSubtree(context, root);
   detachRoot(context, root);
+}
+
+/** 已建好、还没放进宿主的子树；放置失败时用 detachMountedSubtree 回滚。 */
+export interface DetachedSubtree {
+  root: MountedNode;
+  byId: Map<string, MountedNode>;
+}
+
+/**
+ * 建一棵**尚未放进宿主**的子树：渲染器都 mount 好、父子关系与子宿主就位，
+ * 但元素还不在 DOM 里。任何一步失败都会把已建的渲染器卸掉再抛。
+ */
+export function buildDetachedSubtree(
+  context: TreeApplyContext,
+  node: TreeNode,
+  parent: MountedNode | null,
+  path: string,
+): DetachedSubtree {
+  const byId = new Map<string, MountedNode>();
+  const fresh: MountedNode[] = [];
+  try {
+    const root = buildNode(context, node, path, parent, undefined, byId, fresh);
+    return { root, byId };
+  } catch (error) {
+    releaseFresh(context, fresh);
+    throw error;
+  }
+}
+
+/** 把已建好的子树放进宿主：根挂到 index，子节点按各自下标挂进子宿主。 */
+export function placeDetachedSubtree(
+  context: TreeApplyContext,
+  subtree: DetachedSubtree,
+  host: TreeHost,
+  index: number,
+): void {
+  placeSubtree(context, subtree.root, host, index);
+}
+
+/** 回滚一棵已建 / 已放的子树：后序卸渲染器，再从宿主摘根。 */
+export function detachMountedSubtree(
+  context: TreeApplyContext,
+  node: MountedNode,
+  host: TreeHost,
+): void {
+  releaseSubtree(context, node);
+  try {
+    host.unmount(node.handle);
+  } catch (error) {
+    context.cleanup.push({
+      code: "E-TREE-RENDER",
+      path: node.path,
+      message: "从父宿主摘下失败: " + messageOf(error),
+    });
+  }
 }
 
 /** 建一个节点及其子树：复用的旧实例只 update，新节点走工厂 + mount；父先子后。 */

@@ -67,7 +67,11 @@ export type TreeRuntimeDiagnosticCode =
   | "E-TREE-HOST" // 渲染器不接受子节点，但节点有 layout
   | "E-TREE-RENDER" // 渲染器 / 宿主抛错
   | "E-TREE-STATE" // 调用时机不对（例如重复 mount）
-  | "E-TREE-DISPOSED"; // runtime 已 dispose
+  | "E-TREE-DISPOSED" // runtime 已 dispose
+  | "E-PAYLOAD" // ops 形状 / 语义不合法
+  | "E-VERSION" // base 与当前文档版本不一致
+  | "E-TARGET-MISSING" // ops 的目标不在已挂载树里
+  | "E-TREE-ORDER"; // 同级 order 冲突
 
 /** 一条挂载诊断；path 是文档的 JSON Pointer（根为 ""），能带现场就带。 */
 export interface TreeRuntimeDiagnostic {

@@ -23,6 +23,8 @@
  */
 
 import type { Document as TreeDocument } from "../../contract/tree_generated";
+import { applyBatch, type ApplyDiagnostic } from "./apply";
+import { parseOps, type OpsDiagnostic } from "./ops";
 import type { RendererRegistry, TreeHost, TreeRuntimeDiagnostic } from "./types";
 import {
   applyDocument,
@@ -30,7 +32,12 @@ import {
   type MountedNode,
   type TreeApplyContext,
 } from "./runtime_apply";
+import { applyMountedUpdate } from "./runtime_update";
 import { validateDocument } from "./validate";
+
+function toRuntimeDiagnostic(diagnostic: ApplyDiagnostic | OpsDiagnostic): TreeRuntimeDiagnostic {
+  return { code: diagnostic.code, path: diagnostic.path, message: diagnostic.message };
+}
 
 /** 挂载配置：根宿主与 kind 注册表都由调用方注入。 */
 export interface TreeRuntimeOptions {
@@ -48,6 +55,9 @@ export interface TreeMountFailure {
 
 /** mount / replace 的结果；成功时诊断通过 `diagnostics` getter 读。 */
 export type TreeMountResult = { ok: true } | TreeMountFailure;
+
+/** applyOps 的结果：成功给被触碰的子树根 id。 */
+export type TreeUpdateResult = { ok: true; changed: string[] } | TreeMountFailure;
 
 export class TreeRuntime {
   private readonly host: TreeHost;
@@ -113,6 +123,66 @@ export class TreeRuntime {
       return this.fail(checked.diagnostics);
     }
     return this.attachDocument(checked.document, this.root, this.byId);
+  }
+
+  /**
+   * 应用一批 ops：文档层算新文档（版本 / 原子 / 路径复制），运行时只改被触碰的子树。
+   * 支持 setProps / mount / unmount；replace 与 data 下一步接。
+   */
+  applyOps(value: unknown): TreeUpdateResult {
+    const closed = this.rejectWhenDisposed();
+    if (closed !== null) {
+      return closed;
+    }
+    if (this.root === null || this.current === null) {
+      return this.fail([{ code: "E-TREE-STATE", path: "", message: "还没挂载；先 mount" }]);
+    }
+    const parsed = parseOps(value);
+    if (!parsed.ok) {
+      return this.fail(parsed.diagnostics.map(toRuntimeDiagnostic));
+    }
+    if (parsed.batch.ops.some((op) => op.op === "data")) {
+      return this.fail([
+        { code: "E-PAYLOAD", path: "/ops", message: "data op 还没接（下一步：collection / 绑定）" },
+      ]);
+    }
+    if (parsed.batch.ops.some((op) => op.op === "replace")) {
+      return this.fail([
+        { code: "E-PAYLOAD", path: "/ops", message: "运行时 replace 还没接；下一步" },
+      ]);
+    }
+    const mountedThisBatch = new Set<string>();
+    const unmountedThisBatch = new Set<string>();
+    for (const op of parsed.batch.ops) {
+      if (op.op === "mount") {
+        mountedThisBatch.add(op.node.id);
+      } else if (op.op === "unmount") {
+        unmountedThisBatch.add(op.id);
+      }
+    }
+    if ([...mountedThisBatch].some((id) => unmountedThisBatch.has(id))) {
+      return this.fail([
+        {
+          code: "E-PAYLOAD",
+          path: "/ops",
+          message: "同一批里不要摘了又挂同一个 id；分成两批",
+        },
+      ]);
+    }
+    const applied = applyBatch(this.current, parsed.batch);
+    if (!applied.ok) {
+      return this.fail(applied.diagnostics.map(toRuntimeDiagnostic));
+    }
+    const context = this.newContext();
+    const updated = applyMountedUpdate({ byId: this.byId, context }, applied);
+    if (!updated.ok) {
+      return this.fail([...updated.diagnostics, ...context.cleanup]);
+    }
+    // 只更新被触碰的目标节点；未触碰祖先的 MountedNode.node 仍是旧对象。
+    // 语义以 this.current（新文档）为准；祖先的 kind / chain 不变，不影响复用判断。
+    this.current = applied.document;
+    this.lastDiagnostics = context.cleanup;
+    return { ok: true, changed: updated.changed };
   }
 
   /** 卸掉整棵树（后序渲染器），runtime 保持可用。未挂载 / 已 dispose 时是空操作。 */

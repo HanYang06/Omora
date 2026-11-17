@@ -34,8 +34,11 @@ export interface ApplyDiagnostic {
 }
 
 export type ApplyOpsResult =
-  | { ok: true; document: Document; changed: string[] }
+  | { ok: true; document: Document; changed: string[]; byId: ReadonlyMap<string, Node> }
   | { ok: false; diagnostics: ApplyDiagnostic[] };
+
+/** 成功结果：新文档 + 被触碰的子树根 + id → 新节点。 */
+export type AppliedDocument = Extract<ApplyOpsResult, { ok: true }>;
 
 interface Location {
   node: Node;
@@ -325,7 +328,11 @@ export function applyOps(document: Document, value: unknown): ApplyOpsResult {
       })),
     };
   }
-  const batch = parsed.batch;
+  return applyBatch(document, parsed.batch);
+}
+
+/** 已解析批量 → 新文档；版本、原子、路径复制都在这里。 */
+export function applyBatch(document: Document, batch: OpsBatch): ApplyOpsResult {
   if (batch.base !== document.version) {
     return failure(
       "E-VERSION",
@@ -374,9 +381,14 @@ export function applyOps(document: Document, value: unknown): ApplyOpsResult {
       error instanceof Error ? error.message : "ops 应用失败",
     );
   }
+  const byId = new Map<string, Node>();
+  for (const location of workingIndex.values()) {
+    byId.set(location.node.id, location.node);
+  }
   return {
     ok: true,
     document: { ...document, version: batch.document, root: workingRoot },
     changed: [...new Set(changed)],
+    byId,
   };
 }
