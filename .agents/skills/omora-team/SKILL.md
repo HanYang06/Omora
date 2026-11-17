@@ -1,11 +1,12 @@
 ---
 name: omora-team
-description: Omora 的 Agent 团队开发流程与成本规则：Lead 拆任务/写域、teammate 复用与 worktree/分支、Lead 合进集成分支并只开一个 PR、review + merge commit、跨区整合。多区并行、开团队/复用 Agent、分工、worktree、PR 粒度、review/合并、成本控制时先读。
+description: Omora 的 Agent 团队开发流程与成本规则：Lead 拆任务/写域、teammate 复用与 worktree/分支、Lead 合进集成分支并只开一个 PR、review、交项目作者合并、跨区整合。多区并行、开团队/复用 Agent、分工、worktree、PR 粒度、review、合并权限、成本控制时先读。
 ---
 
 # Agent 团队开发流程
 
-> 多区任务：Lead 拆任务，teammate 各自 worktree/分支，Lead 合进集成分支、review、只开**一个** PR（merge commit）。
+> 多区任务：Lead 拆任务，teammate 各自 worktree/分支，Lead 合进集成分支、review、只开**一个** PR；
+> 合并由**项目作者**执行，agent 不点合并、也不等合并才能继续迭代。
 > 目标是对完成率负责，不是把任务发出去就结束。
 
 ## 1. 什么时候用
@@ -33,7 +34,7 @@ description: Omora 的 Agent 团队开发流程与成本规则：Lead 拆任务/
 ## 2. 角色
 
 - 用户：方向、产品决策；不参与日常 review。
-- Lead：拆任务、任务板、spawn、review、解决冲突、合并、整合；对完成率负责。
+- Lead：拆任务、任务板、spawn、review、解决冲突、整合；合并交给项目作者；对完成率负责。
 - teammate：在自己 worktree 里开发、测试、提交、推分支；**不开 PR**（PR 由 Lead 统一开）；
   不合并；产品问题回 Lead；对自己的分支/worktree 负责，Lead 不改。
 
@@ -104,7 +105,7 @@ description: Omora 的 Agent 团队开发流程与成本规则：Lead 拆任务/
 6. `send_message` Lead：分支名、提交列表、门禁输出、关键决定、冲突、阻塞。
 7. 卡住/需要产品决策：马上问，不猜。
 
-## 5. Lead 的 review / 合并
+## 5. Lead 的 review / 集成
 
 1. 每个 teammate 的分支看完，用 merge commit 合进**集成分支**（`git merge --no-ff feat/<slug>`）。
    有问题不自己改：把问题写在任务的 review 记录里（PR 还没开时先记在任务/消息里），
@@ -114,8 +115,8 @@ description: Omora 的 Agent 团队开发流程与成本规则：Lead 拆任务/
 4. 文档、规则、跨区整合由 Lead 在集成分支上提交（同一个功能 = 同一个 PR）。
 5. 集成分支跑一次全门禁（命令见 `docs/design/ci.md`），再做端到端（能跑就跑）。
 6. **只开一个 PR**：`gh pr create --base main --head feat/<integration>`；PR body 五段。
-7. CI 绿 → `gh pr merge <n> --merge`（merge commit；不 squash/rebase）；删分支。
-8. 给用户最终报告：PR、门禁、端到端结果、遗留、下一步。
+7. CI 绿 → 交**项目作者**合并（agent 不执行 `gh pr merge`）；作者合并后删分支。
+8. 给用户最终报告：PR、门禁、端到端结果、遗留、下一步；注明“等作者合并”。
 
 ## 5.1 PR 粒度：一个功能，一个故事
 
@@ -189,7 +190,7 @@ description: Omora 的 Agent 团队开发流程与成本规则：Lead 拆任务/
 - Lead 亲自改 teammate 的分支/worktree；review 问题回给 owner，PR 评论留档。
 - squash/rebase 合并；丢分支边界。
 - 产品决策自己拍；用户被绕过。
-- 把“发了任务”当完成；完成 = PR 合了 + 集成跑通。
+- 把“发了任务”当完成；完成 = PR 就绪（CI 绿、review 通过、可合并）+ 集成跑通，合并由作者点。
 - 一个任务 spawn 一个 agent；同类任务连续开新上下文，不复用、不合并 brief。
 - 一轮开 3+ 个 teammate 却不问用户；纯文档/改名也开 agent。
 
