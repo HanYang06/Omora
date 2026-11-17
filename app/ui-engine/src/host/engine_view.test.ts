@@ -226,6 +226,33 @@ describe("applyView：整份视图替换", () => {
     });
   });
 
+  it("多 source data 走多次 applyData + 一次升版本", () => {
+    const engine = engineOf(fixture());
+
+    applied(
+      engine.applyView(
+        viewOf((value) => {
+          value.version = 2;
+          value.data = {
+            a: { revision: 1, value: 1 },
+            b: { revision: 1, value: 2 },
+          };
+        }),
+      ),
+    );
+
+    expect(engine.session.data).toEqual({
+      a: { revision: 1, value: 1 },
+      b: { revision: 1, value: 2 },
+    });
+    expect(engine.metrics).toMatchObject({
+      version: 2,
+      fullUpdates: 0,
+      dataUpdates: 2,
+      opsBatches: 1,
+    });
+  });
+
   it("旧版本：E-VERSION 拒绝，会话与注册表都回滚", () => {
     const engine = engineOf(fixture());
     applied(engine.applyView(viewOf((value) => (value.version = 2))));
