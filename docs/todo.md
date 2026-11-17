@@ -6,8 +6,9 @@
 
 ## Now
 
-- [ ] **ops 形状与跨语言 fixture** — owner: sdk/engine — next: 定义 replace / setProps / mount / unmount / data 五种 ops、base 版本与失败兜底，Python / TS 共用一份 fixture。
-- [ ] **产物消费（预览 + 默认入口）** — owner: app/engine — next: `?engine=tree` 读 `dist/tree/manifest.json` + 页面文档挂载；dev 下供这几份文件；再接默认入口。
+- [ ] **运行时最小应用** — owner: engine — next: `TreeRuntime.applyOps` 接 `changed`，只对触碰的子树根 mount / update / unmount；DOM stats 钉住“未触碰不重画”。
+- [ ] **V1 data op + collection** — owner: engine — next: data 落到 `document.data`、按 source 实例化 collection 模板、`bind` 与 keyed reconcile；坏条目 `E-TEMPLATE`。
+- [ ] **产物消费：默认入口** — owner: app/engine — next: `?engine=tree` 预览已落；等运行时最小应用 + data 后接默认入口与导航 route。
 - [ ] **V1 类型检查后半** — owner: engine — next: per-kind `settings` schema、`on` / `bind` 引用、`E-TEMPLATE` 与 warning 码。
 - [ ] **ideas 一页端到端** — owner: ideas/ui — next: 先接 ops 帧（Python 只发变更节点），TS 按 id 原子应用，DOM 只 patch 变更子树；量复杂度斜率。
 - [ ] **插件迁移清单** — owner: lead — next: 标出哪些插件产出页面（ideas / projects / requirements / manager）、哪些只提供服务，给出迁移顺序。
