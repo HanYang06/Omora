@@ -88,7 +88,7 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 ## 6. 实现状态（与代码的差距）
 
-**V1 树（`dendro.tree/1`）**：契约/校验、Python/TS node scope、Page/State/When/Bind、build composer、runtime mount 已落；**更新层与协议层未落**（runtime 的 replace 仍是整份文档，主会话仍发整份 view）。V1 是目标架构，分阶段接管默认入口，见 [V1 树](../planning/v1-tree.md)。
+**V1 树（`dendro.tree/1`）**：契约/校验、Python/TS node scope、Page/State/When/Bind、build composer、runtime mount 已落；构建期已把真实页面 compose 成每页产物（`dist/tree/`，见 [构建](build.md)），**更新层与协议层未落**（runtime 的 replace 仍是整份文档，主会话仍发整份 view）。V1 是目标架构，分阶段接管默认入口，见 [V1 树](../planning/v1-tree.md)。
 
 文档写的是**契约**，不是现状说明书。S0–S6 与 S7.1 已落（含 Slot 骨架编译、legacy 删除、运行后来源示例），Python / TS 全量测试全绿。差距集中在规则执行（`reactions`）、schema 单一来源、远程来源网络接线；这些是非核心，按需做。主线是 [V1 树](../planning/v1-tree.md) 的最小节点更新与协议。
 

@@ -159,6 +159,7 @@ src/build/vite-plugin.ts     Vite adapter：只决定何时编译、注进哪里
 - 骨架里导航入口保留 handler（外观和旧壳一样可用），内容按钮没有 handler、画成禁用态；真视图到了由运行时接手。
 - 运行时挂载（live 入口）先清掉预渲染 HTML，再用链接后的 Slot 树重建；只保证"首帧不等 JS"，还没做 hydration——首帧 DOM 会被替换一次。
 - 两道门禁：`static_ui.py --check` 查骨架视图是否最新；`skeleton_html.py` 查构建产物确实带 Slot 首帧（CI build job）。
+- V1 树的构建产物见 [build.md](build.md)：`static_tree.py` → `src/generated/static-tree.json` → Vite 插件 compose → `dist/tree/`；首帧仍是 Slot 骨架，运行时尚未消费。
 - `vite.config.ts` import 了引擎源码，所以 `dev/build/test/preview` 统一带 `--configLoader runner`（`omora dev` 同步）；bundle loader 会把整张引擎模块图打进配置并报无扩展名 import 警告。
 
 ## 10. Slot → DOM（S3-d spike，已落）
