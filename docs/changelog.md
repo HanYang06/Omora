@@ -19,6 +19,7 @@
 - **V1 产物消费**：`?engine=tree` 读 `/tree/manifest.json` + 页面文档挂载；dev 由 Vite middleware 现算同一批产物，`vite preview` / 部署读 `dist/tree/`。导航仍禁用（静态产物没有 handler）。
 - **V1 ops 文档层应用**：`applyOps` 做版本判定、目标预检、路径复制、原子回滚与 `changed`；chain / id / order 校验；模板节点只允许 `setProps`。运行时最小重渲染与 `data` 语义未接。
 - **运行时内容更新**：`TreeRuntime.applyOps` 接 `setProps`；只更新目标已挂载节点的 `node` 引用与渲染器，元素复用、兄弟不动；版本 / 原子失败沿用文档层。结构操作与 `data` 未接。
+- **运行时语义统一设计**：数据权威（source + revision、实例不进文档）、行为（`on` → dispatch，V1 不做树内规则）、权限（结构只给父子；来源归属与策略在宿主 guard，引擎不判定）、协议（`document / ops / dispatch / diagnostics`）、持久化（引擎不落盘）、失败（批次原子 + 条目隔离）。
 - **安全例外**：picomatch `GHSA-fc5q-39xc-vjpf` 为 dev-only、无 patched 版本，临时 ignore，2026-12-31 复审（#119）。
 
 ## 2026-11-15
