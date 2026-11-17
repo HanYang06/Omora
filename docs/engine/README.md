@@ -6,7 +6,7 @@
 > 基线：`main@3910928`（S6.5 骨架编译后），工作区干净。
 > 命名决定见 [ADR-0001](decisions/0001-name.md)。
 
-> **2026-11-18：V1 树目标架构**：`dendro.tree/1` 的契约/校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已落地；结构层成立，最小节点 ops 与协议未接。它分阶段接管默认入口（[ADR-0004](decisions/0004-static-tree-minimal-updates.md)），目标链路见 [V1 树](../planning/v1-tree.md)。
+> **2026-11-18：V1 树目标架构**：`dendro.tree/1` 的契约/校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已落地；DOM 宿主与组件适配已落（[V1 运行时](tree-runtime.md)）；最小节点 ops 与协议未接。它分阶段接管默认入口（[ADR-0004](decisions/0004-static-tree-minimal-updates.md)），目标链路见 [V1 树](../planning/v1-tree.md)。
 
 ## 1. 它是什么
 

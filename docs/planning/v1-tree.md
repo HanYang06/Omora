@@ -38,17 +38,17 @@ DOM 复用省的是“创建元素”，不是“序列化、传输、链接、�
 
 ## 2. 现在做到哪
 
-| 能力                              | 状态                        | 证据                                                                     |
-| --------------------------------- | --------------------------- | ------------------------------------------------------------------------ |
-| 节点契约 + schema + 跨语言校验    | 已落                        | `schema/tree/`、`contract/tree.ts`、`sdk/tree.py`                        |
-| 构建期 compose + 诊断             | 已落                        | `build/tree/compose.ts`（E-COLLISION / E-PARENT-MISSING / E-TREE-CHAIN） |
-| runtime mount / replace / dispose | 已落，但 replace 是整份文档 | `engine/tree/runtime.ts`                                                 |
-| Page / State / When / Bind        | 已落（SDK 层）              | `sdk/page.ts`、`authoring/page.py`                                       |
-| Node scope / 生命周期             | 已落                        | `sdk/scope.ts`、`authoring/scope.py`                                     |
-| 真实页面构建期 compose            | **未落**                    | `static_ui.py` 只编空态骨架                                              |
-| 最小节点 ops（Python → TS）       | **未落**                    | runtime 没有 applyOps                                                    |
-| ops 协议帧                        | **未落**                    | 主会话仍发整份 view                                                      |
-| 页面插件迁移                      | **未落**                    | 页面仍由 Slot 产出                                                       |
+| 能力                              | 状态                         | 证据                                                                           |
+| --------------------------------- | ---------------------------- | ------------------------------------------------------------------------------ |
+| 节点契约 + schema + 跨语言校验    | 已落                         | `schema/tree/`、`contract/tree.ts`、`sdk/tree.py`                              |
+| 构建期 compose + 诊断             | 已落                         | `build/tree/compose.ts`（E-COLLISION / E-PARENT-MISSING / E-TREE-CHAIN）       |
+| runtime mount / replace / dispose | 已落；DOM 宿主与组件适配已落 | `engine/tree/runtime.ts`、`app/tree/tree_host.ts`、`app/tree/tree_renderer.ts` |
+| Page / State / When / Bind        | 已落（SDK 层）               | `sdk/page.ts`、`authoring/page.py`                                             |
+| Node scope / 生命周期             | 已落                         | `sdk/scope.ts`、`authoring/scope.py`                                           |
+| 真实页面构建期 compose            | **未落**                     | `static_ui.py` 只编空态骨架                                                    |
+| 最小节点 ops（Python → TS）       | **未落**                     | runtime 没有 applyOps                                                          |
+| ops 协议帧                        | **未落**                     | 主会话仍发整份 view                                                            |
+| 页面插件迁移                      | **未落**                     | 页面仍由 Slot 产出                                                             |
 
 结构层已经成立；**更新层和协议层还没接上**。这就是下一步的全部内容。
 
