@@ -2,7 +2,7 @@
 
 > **Dendrolink：把局部树链接成权威根树的链接期引擎。**
 >
-> 状态：**设计已定；S0–S6 已落，S7 起步**；身份（`code` / `addr`）与根树结构文件起步：契约字段、`root-tree.json`、页面/导航局部树的 `code` / `addr` 派生、`addr` 索引、旧 addr redirect / 墓碑（表上限 256）与结构变化后的子树 addr 重算已落；ops / 渲染仍待。本文是引擎文档集的索引与总纲；主会话、构建期首帧与全部系统插件页面都走 Slot（局部树 → 链接 → EngineRuntime/DocumentView），运行后来源示例已接（自动发现 + 热更新），`?engine=slot` 只是内置 fixture 预览。剩余大项：Host 网络帧 / 订阅 / 媒体登记、规则执行（`reactions`）、schema 单一来源。
+> 状态：**设计已定；S0–S6 已落，S7 起步**；身份与根树结构文件已落：契约字段、`root-tree.json`、页面/导航局部树的 `code` / `addr` 派生、`addr` 索引、旧 addr redirect / 墓碑（表上限 256）与结构变化后的子树 addr 重算；主会话已接 props / 结构 / replace / data batch 增量（端到端 DOM stats 已钉），addr 仍不直接驱动 DOM，ops / 渲染按 `id` + Node 缓存。本文是引擎文档集的索引与总纲；主会话、构建期首帧与全部系统插件页面都走 Slot（局部树 → 链接 → EngineRuntime/DocumentView），运行后来源示例已接（自动发现 + 热更新），`?engine=slot` 只是内置 fixture 预览。剩余大项：Host 网络帧 / 订阅 / 媒体登记、规则执行（`reactions`）、schema 单一来源。
 > 基线：`main@3910928`（S6.5 骨架编译后），工作区干净。
 > 命名决定见 [ADR-0001](decisions/0001-name.md)。
 
