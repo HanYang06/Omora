@@ -8,7 +8,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 本地优先的灵感与项目管理工具：灵感、项目、需求互相可追溯；默认本地跑，也能部署成网页。
 
-当前状态：闭环已通，母 UI（浅色，三栏：图标栏 + 索引栏 + 主区）+ 界面库 + 灵感页 + 传统搜索 + 音频 / 视频捕获（两个独立插件、客户端设备门禁）+ uv workspace 已落——`omora-core` / `omora-sdk` / `omora-plugin-*`、boot / 配置、store（SQLite）/ manager / media / ui / audio / video / ideas / projects / requirements / net 插件、渲染引擎（`app/ui-engine/`）。React 已移除，渲染层直写 DOM；启动骨架由 Vite 在构建期编译进 HTML；链接期编译器（Slot 局部树 + 诊断 + 构建门禁）已落；文档运行时核心（三张索引 + 原子 ops + 集合绑定原语 + data router + 标量绑定/session/route）已落；Slot 文档已能经薄桥直接渲染 DOM（spike），跨父 move 复用元素，`?engine=slot` 可预览；S4 第一版与续作（EngineRuntime/DocumentView/权限薄层/来源宿主/审计/local-trees 全量更新/Slot 布局样式）已落，S4 尾巴 applyFull 权限已收；S5 起步（SourceEngine 来源模式 + renderer 节点统计、schema 重置为 dendro.ui/1、组件目录拆出 src/components）已落；分层完成：`src/` 只剩 app / build / components / contract / engine / generated / host / link / platform / renderer / styles 十一个目录；旧快照路径（legacy 壳、`_diff.py`、贡献组合）已在 S6.5 删除，core/ 也已删除；分层规则与迁移记录见 docs/engine/layering.md。默认入口是 Slot 主会话（连 Python），启动骨架由 Slot 链接编译；`?engine=slot` 是内置 fixture 预览。S7 起步：运行后来源示例（自动发现 + 热更新）已落；下一步远程来源网络帧 / 订阅 / 媒体登记、规则执行与 schema 单一来源（见 docs/engine/migration.md §6）。组件库、Slot 运行时、静态骨架已落；深色主题、转写、AI 待做。
+当前状态：闭环已通，母 UI（浅色，三栏：图标栏 + 索引栏 + 主区）+ 界面库 + 灵感页 + 传统搜索 + 音频 / 视频捕获（两个独立插件、客户端设备门禁）+ uv workspace 已落——`omora-core` / `omora-sdk` / `omora-plugin-*`、boot / 配置、store（SQLite）/ manager / media / ui / audio / video / ideas / projects / requirements / net 插件、渲染引擎（`app/ui-engine/`）。React 已移除，渲染层直写 DOM；启动骨架由 Vite 在构建期编译进 HTML；链接期编译器（Slot 局部树 + 诊断 + 构建门禁）已落；文档运行时核心（三张索引 + 原子 ops + 集合绑定原语 + data router + 标量绑定/session/route）已落；Slot 文档已能经薄桥直接渲染 DOM（spike），跨父 move 复用元素，`?engine=slot` 可预览；S4 第一版与续作（EngineRuntime/DocumentView/权限薄层/来源宿主/审计/local-trees 全量更新/Slot 布局样式）已落，S4 尾巴 applyFull 权限已收；S5 起步（SourceEngine 来源模式 + renderer 节点统计、schema 重置为 dendro.ui/1、组件目录拆出 src/components）已落；分层完成：`src/` 只剩 app / build / components / contract / engine / generated / host / link / platform / renderer / styles 十一个目录；旧快照路径（legacy 壳、`_diff.py`、贡献组合）已在 S6.5 删除，core/ 也已删除；分层规则与迁移记录见 docs/engine/layering.md。默认入口是 Slot 主会话（连 Python），启动骨架由 Slot 链接编译；`?engine=slot` 是内置 fixture 预览。S7 起步：运行后来源示例（自动发现 + 热更新）已落；下一步远程来源网络帧 / 订阅 / 媒体登记、规则执行与 schema 单一来源（见 docs/engine/migration.md §6）。组件库、Slot 运行时、静态骨架已落；深色主题、转写、AI 待做。V1 树（`dendro.tree/1`）的契约、SDK node scope/Page、build composer、runtime mount 已作为独立模块落地，旧 Slot 仍是默认入口；计划 / 队列 / 完成分别看 `docs/roadmap.md` / `docs/todo.md` / `docs/changelog.md`。
 
 ## 结构
 
@@ -19,6 +19,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 | `packages/`      | 系统插件：`omora-plugin-*`，uv workspace 的 member                               | Python  |
 | `app/ui-engine/` | 渲染引擎 + 桌面壳：Dendrolink 运行时、组件、静态骨架；Electron 主进程在 `shell/` | TS / JS |
 | 运行后插件目录   | 生态插件，单独装；现在为空                                                       | 待定    |
+| `schema/`        | 机器可读契约：`dendro.tree/1` / `omora.scope/1` / `omora.page/1`                 | JSON    |
 | `docs/`          | 架构与事实来源                                                                   | —       |
 
 两个进程、两个 runtime：Python（内核 + 插件）与 TS（渲染引擎）。中间只有一条消息协议，由 net 插件（系统插件）持有。
@@ -42,6 +43,7 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 - 多区任务走 Agent 团队：Lead 拆任务（写域/依赖）→ 每个 teammate 自己的 worktree/分支 → 合成一条集成分支 → **只开一个 PR** → Lead review + merge commit；review 问题回给 owner 改，Lead 不亲自改别人的分支/worktree；详见 [omora-team](.agents/skills/omora-team/SKILL.md)。
 - **Agent 要复用，不要一任务一 spawn**：同类任务优先 send_message 唤醒 inactive teammate；每轮默认 1 个、最多 2 个，超了先问用户；小任务 Lead 自己做；spawn 前必须查 `list_agents` 并说明为什么不能复用。
 - **一个功能 = 一个 PR**：同一件事的文档、实现、测试放在同一个 PR 里，PR 内按事件拆提交。多区并行也只提一个 PR。只有要独立回滚、或一次 review 看不完（净变更 > 800 行）才拆。
+- **计划分三层**：`docs/roadmap.md` 只写方向与退出条件；`docs/todo.md` 只写未完成工作，每项必须有 `owner:` / `next:`；`docs/changelog.md` 只记完成。开工前读 TODO，完成即迁移；`uv run python scripts/todo.py` 检查格式。
 - 跑过才算完成；跑不了就明说没验证。
 - 不用"应该可以""理论上没问题"。
 

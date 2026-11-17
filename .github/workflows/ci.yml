@@ -284,6 +284,8 @@ jobs:
         run: uv run python scripts/keys.py --check
       - name: Tree schema
         run: uv run python scripts/tree_schema.py --check
+      - name: TODO and roadmap
+        run: uv run python scripts/todo.py
       - name: Static skeleton
         run: uv run python scripts/static_ui.py --check
       - name: Compiled skeleton HTML

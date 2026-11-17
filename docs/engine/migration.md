@@ -128,7 +128,13 @@
 | S7.2 | 来源网络接线：SourceHost 接 net 帧（远程 / worker 来源）、订阅 / 媒体登记 | 远程来源可注册，断线级联撤来源                      |
 | S7.3 | 规则执行（reactions）与 schema 单一来源                                   | 触发 × 效果闭集跑通；组件词表由 Python 单一来源导出 |
 
-## 7. 未决
+## 7. V1 树并行轨道（2026-11-18）
+
+旧 Slot（`dendro.ui/1`）的 S0–S6 仍是默认运行路径。新的 `dendro.tree/1` 是并行轨道：树契约/校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已作为独立模块落地，但**没有接主入口**。
+
+迁移顺序不是直接删 Slot：先 serializer/UI 组件映射，再 Vite gate + engine bridge，然后 ideas 竖切（`?engine=v1`），最后逐页迁移、删除旧 Slot。当前任务见 [TODO](../todo.md)。
+
+## 8. 未决
 
 - S1 的 schema 描述语言；
 - 运行后来源与 TS 宿主是否放在同一轮；
