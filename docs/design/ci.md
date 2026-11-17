@@ -84,6 +84,7 @@ pnpm --dir app/ui-engine exec vitest run --coverage --configLoader runner
 # 仓库级检查（build job，先跑 pnpm --dir app/ui-engine build）
 uv run python scripts/keys.py --check
 uv run python scripts/tree_schema.py --check
+uv run python scripts/todo.py
 uv run python scripts/static_ui.py --check
 uv run python scripts/skeleton_html.py
 uv run python scripts/smoke.py

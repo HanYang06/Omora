@@ -156,6 +156,8 @@ DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engi
 启动首帧也由 Slot 链接编译；`?engine=slot` 只是内置 fixture 预览。legacy 快照路径（旧壳、
 补丁、贡献组合、`_diff.py`）已在 S6.5 删除。规则执行（`reactions`）与 schema 单一来源还没落。
 
+**V1 树并行轨道（2026-11-18）**：`dendro.tree/1` 的契约、Python/TS 校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已作为独立模块落地；旧 Slot（`dendro.ui/1`）仍是默认入口，V1 还没接 app。当前序列化/组件映射、build gate、engine bridge、ideas 竖切见 [路线图](roadmap.md) 与 [TODO](todo.md)。
+
 - 唯一原语 Slot：窗口 / 页面 / 层 / 布局 / 组件都是 kind 不同的 Slot。
 - 局部树在链接期组合成权威根树，冲突是编译错误。
 - 支持全量 / 纯数据 / 局部树三种更新；稳定 id 寻址。
@@ -228,14 +230,15 @@ DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engi
 
 ## 10. 代码在哪
 
-| 位置             | 是什么                                                          | 语言    |
-| ---------------- | --------------------------------------------------------------- | ------- |
-| `app/core/`      | 内核：插件宿主（四个词）；package `omora-core`                  | Python  |
-| `app/sdk/`       | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk` | Python  |
-| `packages/`      | 系统插件：`omora-plugin-*`，uv workspace 的 member              | Python  |
-| `app/ui-engine/` | 渲染引擎 + 桌面壳；Dendrolink 契约见 `docs/engine/README.md`    | TS / JS |
-| 运行后插件目录   | 单独装、可卸的插件                                              | 待定    |
-| `docs/`          | 事实来源，架构文档在这里                                        | —       |
+| 位置             | 是什么                                                           | 语言    |
+| ---------------- | ---------------------------------------------------------------- | ------- |
+| `app/core/`      | 内核：插件宿主（四个词）；package `omora-core`                   | Python  |
+| `app/sdk/`       | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk`  | Python  |
+| `packages/`      | 系统插件：`omora-plugin-*`，uv workspace 的 member               | Python  |
+| `app/ui-engine/` | 渲染引擎 + 桌面壳；Dendrolink 契约见 `docs/engine/README.md`     | TS / JS |
+| 运行后插件目录   | 单独装、可卸的插件                                               | 待定    |
+| `schema/`        | 机器可读契约：`dendro.tree/1` / `omora.scope/1` / `omora.page/1` | JSON    |
+| `docs/`          | 事实来源，架构文档在这里                                         | —       |
 
 ## 11. 落地顺序
 

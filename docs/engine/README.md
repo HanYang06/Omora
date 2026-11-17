@@ -6,6 +6,8 @@
 > 基线：`main@3910928`（S6.5 骨架编译后），工作区干净。
 > 命名决定见 [ADR-0001](decisions/0001-name.md)。
 
+> **2026-11-18：V1 树并行轨道**：`dendro.tree/1` 的契约/校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已作为独立模块落地；旧 Slot（`dendro.ui/1`）仍是默认入口，V1 还没接 app。当前序列化/组件映射、build gate、engine bridge 见 [路线图](../roadmap.md) 与 [TODO](../todo.md)。
+
 ## 1. 它是什么
 
 Dendrolink 是一个 **UI 文档运行时**：
@@ -85,6 +87,8 @@ Dendrolink 是一个 **UI 文档运行时**：
 8. `migration.md`：从 legacy 到 Dendrolink 怎么走。
 
 ## 6. 实现状态（与代码的差距）
+
+**V1 树（`dendro.tree/1`）**：契约/校验、Python/TS node scope、Page/State/When/Bind、build composer、runtime mount 已落，但都是独立模块；旧 Slot 仍是默认。下一步是 serializer/UI 组件映射、Vite `buildStart` gate、SourceHost / app 接线、ideas 竖切，见 [TODO](../todo.md)。
 
 文档写的是**契约**，不是现状说明书。S0–S6 与 S7.1 已落（含 Slot 骨架编译、legacy 删除、运行后来源示例），Python / TS 全量测试全绿。差距集中在规则执行（`reactions`）、schema 单一来源、远程来源网络接线。
 

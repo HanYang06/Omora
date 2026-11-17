@@ -2,7 +2,7 @@
 
 本地优先的灵感与项目管理工具：灵感、项目、需求互相可追溯。默认本地跑，也能部署成网页。
 
-> 正在从零重写。闭环已通，母 UI（浅色）+ 界面库 + 灵感页 + 传统搜索 + 音频 / 视频捕获 + uv workspace 已落；深色主题待单独设计。
+> 正在从零重写。旧 Slot 主会话仍是默认运行路径；V1 树（`dendro.tree/1`）的契约、SDK node scope/Page、build composer、runtime mount 已作为独立模块落地，但还没接主入口。当前计划见 [路线图](docs/roadmap.md) / [TODO](docs/todo.md)，完成记录见 [changelog](docs/changelog.md)。
 
 ## 架构
 
@@ -22,6 +22,7 @@
 | `app/sdk/`       | 插件 API：`omora-sdk`（workspace member）                                                                                                                                                   |
 | `packages/`      | 系统插件：`omora-plugin-*`（workspace member）                                                                                                                                              |
 | `app/ui-engine/` | 渲染引擎（TS，`src/` 十一个目录：`app` / `build` / `components` / `contract` / `engine` / `generated` / `host` / `link` / `platform` / `renderer` / `styles`）+ Electron 桌面壳（`shell/`） |
+| `schema/`        | 机器可读契约：`dendro.tree/1` / `omora.scope/1` / `omora.page/1`                                                                                                                            |
 | `docs/`          | 事实来源                                                                                                                                                                                    |
 
 Python 侧是一个 uv workspace：一个 lock、一个 venv；每个包有自己的 pyproject / 依赖 / 代码 / tests，import 命名空间是 `omora.*`。
