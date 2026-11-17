@@ -4,6 +4,8 @@
  */
 
 export type * from "./types";
+export * from "./apply";
+export * from "./ops";
 export * from "./registry";
 export * from "./runtime";
 export * from "./view";

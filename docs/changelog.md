@@ -15,7 +15,9 @@
 - **V1 集合字段**：`dendro.tree/1` 节点增加 `collection`（`source` / `key` / `select` / `templates`）；模板子树参与身份校验、不可作挂载目标，组合器报 `E-COLLISION` / `E-PARENT-MISSING`。运行期实例化未接。
 - **V1 kind 门禁**：`treeKinds` 成为 V1 kind 词表（legacy 词表 + `app` + `page-link`）；构建期组合后逐节点查存在性（含 `collection.templates`），未知 kind 报 `E-TREE-KIND` 并让构建失败。当前四个真实页面全部通过。
 - **V1 DOM 运行时**：`TreeRuntime` 接上 DOM 宿主与 `Kind` 适配器——组件不重写，只换协调层。真实 ideas 空态在 jsdom 里挂出 app / 4 条导航 / 页面文案；`collection` 实例化与 `data` op 未接。
+- **V1 ops 形状**：`setProps` / `mount` / `unmount` / `replace` / `data` 五种 op、`base`/`document` 版本与 `seq`；Python 序列化与 TS 解析共用 `tree-ops.json`。应用端（原子应用、最小重渲染）未接。
 - **V1 产物消费**：`?engine=tree` 读 `/tree/manifest.json` + 页面文档挂载；dev 由 Vite middleware 现算同一批产物，`vite preview` / 部署读 `dist/tree/`。导航仍禁用（静态产物没有 handler）。
+- **V1 ops 文档层应用**：`applyOps` 做版本判定、目标预检、路径复制、原子回滚与 `changed`；chain / id / order 校验；模板节点只允许 `setProps`。运行时最小重渲染与 `data` 语义未接。
 - **安全例外**：picomatch `GHSA-fc5q-39xc-vjpf` 为 dev-only、无 patched 版本，临时 ignore，2026-12-31 复审（#119）。
 
 ## 2026-11-15
