@@ -14,9 +14,18 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, overload
 
-from .capabilities import CAPABILITY_TYPES, Capability, capability_for
+from .capabilities import (
+    CAPABILITY_TYPES,
+    Capability,
+    DataPort,
+    FocusPort,
+    NavigationPort,
+    OverlayPort,
+    ScrollPort,
+    capability_for,
+)
 from .requests import STANDARD_REQUESTS, Request, Response, ScopeError
 
 if TYPE_CHECKING:
@@ -56,6 +65,24 @@ class Host:
     @property
     def is_open(self) -> bool:
         return self._state is _State.OPEN
+
+    @overload
+    def capability(self, name: Literal["navigation"]) -> NavigationPort | None: ...
+
+    @overload
+    def capability(self, name: Literal["overlay"]) -> OverlayPort | None: ...
+
+    @overload
+    def capability(self, name: Literal["focus"]) -> FocusPort | None: ...
+
+    @overload
+    def capability(self, name: Literal["scroll"]) -> ScrollPort | None: ...
+
+    @overload
+    def capability(self, name: Literal["data"]) -> DataPort | None: ...
+
+    @overload
+    def capability(self, name: str) -> Capability | None: ...
 
     def capability(self, name: str) -> Capability | None:
         """取能力端口：未授予返回 None；撤销或宿主失效抛稳定错误。"""

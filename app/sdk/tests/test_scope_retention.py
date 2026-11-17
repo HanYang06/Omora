@@ -61,7 +61,7 @@ def test_children_is_always_the_direct_child_list() -> None:
     leaf.add(inner)
     assert page.children == (leaf,)
     page.remove(leaf)
-    assert page.children == ()
+    assert not page.children
     assert leaf.children == (inner,)
     assert inner.parent == ParentRef(id=leaf.id, kind=leaf.kind)
 

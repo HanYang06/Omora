@@ -115,7 +115,7 @@ def test_parent_ref_is_read_only_and_exposes_no_handle() -> None:
     ref = leaf.parent
     assert ref == ParentRef(id=page.id, kind=page.kind)
     with pytest.raises(FrozenInstanceError):
-        ref.id = "0" * 16
+        setattr(ref, "id", "0" * 16)  # noqa: B010 —— 专测 frozen dataclass 的只读行为
     assert not any(hasattr(ref, name) for name in ("add", "remove", "move", "patch"))
 
 
@@ -288,7 +288,12 @@ def test_forwarded_explicitly_through_each_host() -> None:
     page.add(panel)
     panel.add(leaf)
     seen: list[Request] = []
-    app.handle(page, "navigate", lambda request: (seen.append(request), Response.HANDLED)[1])
+
+    def handler(request: Request) -> Response:
+        seen.append(request)
+        return Response.HANDLED
+
+    app.handle(page, "navigate", handler)
     assert (
         error_of(lambda: leaf.request("navigate", route="/x")).code == "E-SCOPE-REQUEST-UNHANDLED"
     )
@@ -369,11 +374,21 @@ def test_each_capability_port_maps_to_its_standard_request() -> None:
     for request_name in STANDARD_REQUESTS:
         page.handle(leaf, request_name, record)
     host = host_of(leaf)
-    assert host.capability("navigation").navigate("/ideas") == Response.HANDLED
-    assert host.capability("overlay").open("dialog", {"title": "x"}) == Response.HANDLED
-    assert host.capability("focus").focus() == Response.HANDLED
-    assert host.capability("scroll").into_view() == Response.HANDLED
-    assert host.capability("data").get("ideas", "feed") == Response.HANDLED
+    navigation = host.capability("navigation")
+    overlay = host.capability("overlay")
+    focus = host.capability("focus")
+    scroll = host.capability("scroll")
+    data = host.capability("data")
+    assert navigation is not None
+    assert overlay is not None
+    assert focus is not None
+    assert scroll is not None
+    assert data is not None
+    assert navigation.navigate("/ideas") == Response.HANDLED
+    assert overlay.open("dialog", {"title": "x"}) == Response.HANDLED
+    assert focus.focus() == Response.HANDLED
+    assert scroll.into_view() == Response.HANDLED
+    assert data.get("ideas", "feed") == Response.HANDLED
     assert seen == [
         ("navigate", {"route": "/ideas"}),
         ("open_overlay", {"kind": "dialog", "props": {"title": "x"}}),
