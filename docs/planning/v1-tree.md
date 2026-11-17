@@ -49,9 +49,11 @@ DOM 复用省的是“创建元素”，不是“序列化、传输、链接、�
 | Page / State / When / Bind        | 已落（SDK 层）               | `sdk/page.ts`、`authoring/page.py`                                             |
 | Node scope / 生命周期             | 已落                         | `sdk/scope.ts`、`authoring/scope.py`                                           |
 | 类型检查第一遍                    | 只落 kind 存在性             | `tree_kinds.ts`；settings schema / 引用未做                                    |
-| 最小节点 ops（Python → TS）       | **未落**                     | runtime 没有 applyOps                                                          |
+| 运行时最小应用                    | **未落**                     | runtime 没有 applyOps（DOM）                                                   |
+| ops 形状 + 跨语言 fixture         | 已落                         | `sdk/tree_ops.py`、`engine/tree/ops.ts`、`tree-ops.json`                       |
+| ops 文档层应用                    | 已落                         | `engine/tree/apply.ts`（版本 / 原子 / 路径复制 / `changed`）                   |
 | ops 协议帧                        | **未落**                     | 主会话仍发整份 view                                                            |
-| 产物消费（预览 / 默认入口）       | **未落**                     | app 还没读 `dist/tree`                                                         |
+| 产物消费（预览 / 默认入口）       | 预览已落；默认入口未落       | `app/tree/preview.ts`、`?engine=tree`                                          |
 | 页面插件迁移                      | **未落**                     | 页面仍由 Slot 产出                                                             |
 
 结构层已经成立；**更新层和协议层还没接上**。这就是下一步的全部内容。
