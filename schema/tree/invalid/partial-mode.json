@@ -1,0 +1,20 @@
+{
+  "schema": "dendro.tree/1",
+  "source": "demo",
+  "mount": {
+    "parent": "aaaaaaaaaaaaaaaa",
+    "mode": "sideways"
+  },
+  "root": {
+    "id": "bbbbbbbbbbbbbbbb",
+    "chain": "aaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbb",
+    "kind": "column",
+    "title": "child",
+    "order": 10,
+    "layout": [],
+    "settings": {},
+    "bind": {},
+    "on": {},
+    "emit": {}
+  }
+}

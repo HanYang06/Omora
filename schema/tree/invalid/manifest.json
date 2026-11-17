@@ -1,0 +1,62 @@
+[
+  {
+    "file": "node-in-settings.json",
+    "type": "document",
+    "scope": "semantic",
+    "code": "E-TREE-NEST"
+  },
+  {
+    "file": "duplicate-id.json",
+    "type": "document",
+    "scope": "semantic",
+    "code": "E-TREE-DUP-ID"
+  },
+  {
+    "file": "chain-last-segment.json",
+    "type": "document",
+    "scope": "semantic",
+    "code": "E-TREE-CHAIN"
+  },
+  {
+    "file": "order-duplicate.json",
+    "type": "document",
+    "scope": "semantic",
+    "code": "E-TREE-ORDER"
+  },
+  {
+    "file": "layout-unsorted.json",
+    "type": "document",
+    "scope": "semantic",
+    "code": "E-TREE-ORDER"
+  },
+  {
+    "file": "active-missing.json",
+    "type": "document",
+    "scope": "semantic",
+    "code": "E-TREE-PAGE"
+  },
+  {
+    "file": "page-not-in-tree.json",
+    "type": "document",
+    "scope": "semantic",
+    "code": "E-TREE-PAGE"
+  },
+  {
+    "file": "partial-mode.json",
+    "type": "partial",
+    "scope": "shape",
+    "code": "E-TREE-MOUNT"
+  },
+  {
+    "file": "missing-layout.json",
+    "type": "node",
+    "scope": "shape",
+    "code": "E-TREE-PAYLOAD"
+  },
+  {
+    "file": "unknown-field.json",
+    "type": "node",
+    "scope": "shape",
+    "code": "E-TREE-PAYLOAD"
+  }
+]

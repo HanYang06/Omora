@@ -1,0 +1,40 @@
+{
+  "schema": "dendro.tree/1",
+  "version": 1,
+  "root": {
+    "id": "aaaaaaaaaaaaaaaa",
+    "chain": "aaaaaaaaaaaaaaaa",
+    "kind": "app",
+    "title": "root",
+    "order": 0,
+    "layout": [
+      {
+        "id": "bbbbbbbbbbbbbbbb",
+        "chain": "aaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbb",
+        "kind": "column",
+        "title": "child",
+        "order": 10,
+        "layout": [],
+        "settings": {
+          "nested": {
+            "id": "cccccccccccccccc",
+            "chain": "aaaaaaaaaaaaaaaa.cccccccccccccccc",
+            "kind": "button",
+            "layout": []
+          }
+        },
+        "bind": {},
+        "on": {},
+        "emit": {}
+      }
+    ],
+    "settings": {},
+    "bind": {},
+    "on": {},
+    "emit": {}
+  },
+  "pages": [],
+  "active": "",
+  "data": {},
+  "ledger": {}
+}

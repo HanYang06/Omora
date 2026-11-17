@@ -1,0 +1,10 @@
+{
+  "id": "bbbbbbbbbbbbbbbb",
+  "chain": "aaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbb",
+  "kind": "text",
+  "order": 10,
+  "settings": {},
+  "bind": {},
+  "on": {},
+  "emit": {}
+}
