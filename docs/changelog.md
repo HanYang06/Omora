@@ -4,6 +4,8 @@
 
 ## 2026-11-18
 
+- **架构定论**：ADR-0004 确立「静态结构 + 最小节点更新」为目标架构，V1 分阶段接管默认入口；ADR-0003 被取代。新增 [项目现状](planning/state-of-project.md)、[V1 树](planning/v1-tree.md)、[决策机制](planning/decision-process.md)；路线图改为现期 / 近期 / 长期 / 展望，TODO 按新阶段重排。
+- **文档口径统一**：README / AGENTS / ARCHITECTURE / engine README / migration 对 V1 的定位统一为「目标架构、分阶段接管」；S7 剩余项归为非核心。
 - **V1 树契约**：`schema/tree/tree.schema.json` 成为 `dendro.tree/1` 唯一来源；Python/TS 校验、生成类型、共享正负例、CI 漂移检查（#114）。
 - **SDK node scope**：`omora.scope/1` 契约；Python/TS 的 Node/Host/Request/Capability/生命周期、move/clone/unmount/dispose；CI 类型与行为测试（#115）。
 - **Page/State/When/Bind**：`omora.page/1` 契约；Python/TS Page 层、When 稳定容器、Bind 单向、Action/节点事件；旧 Slot 未接（#117）。
