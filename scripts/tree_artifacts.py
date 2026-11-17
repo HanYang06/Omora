@@ -57,7 +57,12 @@ def _problems_of_entry(entry: dict[str, Any], where: str, dist: Path) -> list[st
 
 def _count_nodes(document: Any) -> int:
     def walk(node: Any) -> int:
-        return 1 + sum(walk(child) for child in node.layout)
+        templates = () if node.collection is None else node.collection.templates.values()
+        return (
+            1
+            + sum(walk(child) for child in node.layout)
+            + sum(walk(template) for template in templates)
+        )
 
     return int(walk(document.root))
 

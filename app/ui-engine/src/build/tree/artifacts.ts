@@ -198,11 +198,14 @@ function hashOf(json: string): string {
   return createHash("sha256").update(json).digest("hex").slice(0, 16);
 }
 
-/** 文档的节点数（layout 递归；模板子树将来也算）。 */
+/** 文档的节点数：layout 递归，collection.templates 里的模板子树也算。 */
 export function countNodes(node: Node): number {
   let total = 1;
   for (const child of node.layout) {
     total += countNodes(child);
+  }
+  for (const template of Object.values(node.collection?.templates ?? {})) {
+    total += countNodes(template);
   }
   return total;
 }

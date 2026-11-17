@@ -9,7 +9,8 @@
    按 JSON 路径排序取第一条。
 3. 校验语义：chain 必须由父 chain + "." + id 推出；id / chain 全局唯一；
    同级 order 唯一且 layout 升序；非 layout 字段不得藏节点；pages / active /
-   ledger 必须落在树里。
+   ledger 必须落在树里；collection.templates 是不挂载的子树，但里面的节点
+   一样参与 id / chain 唯一性。
 
 Python 是语义权威；partial 的挂载点是 `Mount(parent, mode)`。
 """
@@ -34,6 +35,7 @@ from .tree_generated import (
     NON_NESTING_FIELDS,
     ORDER_FIELD,
     SCHEMA,
+    Collection,
     Document,
     LedgerEntry,
     Mount,
@@ -123,7 +125,11 @@ class _Seen:
 
 
 def _reject_nested(value: object, path: str) -> None:
-    """非 layout 字段里递归不允许出现节点形状；挡住第二套嵌套。"""
+    """非 layout 字段里递归不允许出现节点形状；挡住第二套嵌套。
+
+    collection.templates 是唯一例外：它是具名模板表，里面的节点由 _collection 走
+    同一套身份检查，不走这里。
+    """
     if isinstance(value, dict):
         if value.keys() >= _NODE_SHAPE:
             _fail("E-TREE-NEST", path, "非 layout 字段里出现了节点形状")
@@ -188,6 +194,11 @@ def _walk_node(
     for name in NON_NESTING_FIELDS:
         _reject_nested(record[name], f"{path}.{name}")
 
+    collection: Collection | None = None
+    raw_collection = record.get("collection")
+    if raw_collection is not None:
+        collection = _collection(raw_collection, f"{path}.collection", chain, seen)
+
     return Node(
         id=node_id,
         chain=chain,
@@ -200,6 +211,34 @@ def _walk_node(
         emit=cast(Mapping[str, Any], record["emit"]),
         title=record.get("title"),
         slot=_placement(record["slot"]) if "slot" in record else None,
+        collection=collection,
+    )
+
+
+def _collection(
+    value: object,
+    path: str,
+    parent_chain: str,
+    seen: _Seen,
+) -> Collection:
+    """集合声明：模板是不挂载的子树，但仍参与 id / chain 唯一性。"""
+    record = cast(dict[str, Any], value)
+    templates = cast(dict[str, Any], record["templates"])
+    resolved = cast(str | None, record.get("select"))
+    return Collection(
+        source=cast(str, record["source"]),
+        key=cast(str, record["key"]),
+        templates={
+            name: _walk_node(
+                item,
+                f"{path}.templates.{name}",
+                parent_chain,
+                root_chain=False,
+                seen=seen,
+            )
+            for name, item in templates.items()
+        },
+        select="template" if resolved is None else resolved,
     )
 
 

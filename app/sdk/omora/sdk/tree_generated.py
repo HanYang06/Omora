@@ -50,6 +50,7 @@ class Node:
     emit: Mapping[str, Any]
     title: str | None = None
     slot: Placement | None = None
+    collection: Collection | None = None
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,14 @@ class LedgerEntry:
 class Mount:
     parent: str
     mode: str
+
+
+@dataclass(frozen=True)
+class Collection:
+    source: str
+    key: str
+    templates: Mapping[str, Node]
+    select: str | None = None
 
 
 @dataclass(frozen=True)
@@ -101,6 +110,7 @@ __all__ = [
     "ORDER_FIELD",
     "ROOT_KIND",
     "SCHEMA",
+    "Collection",
     "Document",
     "LedgerEntry",
     "Mount",

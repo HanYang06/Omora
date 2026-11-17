@@ -1,0 +1,28 @@
+{
+  "id": "c1c2c3c4c5c6c7c8",
+  "chain": "c1c2c3c4c5c6c7c8",
+  "kind": "column",
+  "order": 10,
+  "layout": [],
+  "settings": {},
+  "bind": {},
+  "on": {},
+  "emit": {},
+  "collection": {
+    "source": "ideas.feed",
+    "key": "id",
+    "templates": {
+      "item": {
+        "id": "d1d2d3d4d5d6d7d8",
+        "chain": "c1c2c3c4c5c6c7c8.ffffffffffffffff",
+        "kind": "card",
+        "order": 10,
+        "layout": [],
+        "settings": {},
+        "bind": {},
+        "on": {},
+        "emit": {}
+      }
+    }
+  }
+}

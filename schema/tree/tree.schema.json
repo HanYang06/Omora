@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://omora.dev/schema/dendro.tree/1",
   "title": "Dendrolink Tree V1",
-  "description": "Dendrolink tree format V1. One Node primitive; only layout nests nodes. Partials mount by stable node id; documents add pages/active/data/ledger. This file is the single source for fields, types and structural roles.",
+  "description": "Dendrolink tree format V1. One Node primitive; only layout nests mounted nodes (collection.templates holds unmounted template trees). Partials mount by stable node id; documents add pages/active/data/ledger. This file is the single source for fields, types and structural roles.",
   "oneOf": [
     {
       "$ref": "#/$defs/document"
@@ -106,6 +106,36 @@
         },
         "emit": {
           "type": "object"
+        },
+        "collection": {
+          "$ref": "#/$defs/collection"
+        }
+      }
+    },
+    "collection": {
+      "type": "object",
+      "description": "数据驱动的子节点：树里声明模板，数据按 key 填充。source 是数据源，key 是条目身份字段，select 是条目里选模板的字段（缺省 template），templates 是具名模板（不挂载的子树）。",
+      "additionalProperties": false,
+      "required": ["source", "key", "templates"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "select": {
+          "type": "string",
+          "minLength": 1
+        },
+        "templates": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/node"
+          }
         }
       }
     },

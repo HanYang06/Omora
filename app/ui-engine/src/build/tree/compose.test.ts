@@ -135,6 +135,19 @@ function pairs(
   return diagnostics.map((diagnostic) => [diagnostic.code, diagnostic.path]);
 }
 
+/** 给节点挂一个集合模板；模板节点的 chain 由宿主 chain 推出。 */
+function templateOn(host: Node, templateId: string): void {
+  const template = nodeExample();
+  template.id = templateId;
+  template.order = 10;
+  template.chain = host.chain + "." + templateId;
+  host.collection = {
+    source: "ideas.feed",
+    key: "id",
+    templates: { item: template },
+  };
+}
+
 function thrownBy(action: () => unknown): unknown {
   try {
     action();
@@ -373,6 +386,47 @@ describe("构建期树组合：挂载语义", () => {
       ["E-PARENT-MISSING", "partials[0]/mount/parent"],
       ["E-PARENT-MISSING", "partials[1]/mount/parent"],
     ]);
+  });
+});
+
+describe("构建期树组合：collection 模板", () => {
+  it("模板里的 id 撞到已组合树 -> E-COLLISION", () => {
+    const base = rootDocument();
+    const host = leafPartial({
+      id: LEAF_A_ID,
+      order: 30,
+      parent: MAIN_ID,
+      parentChain: findNode(base.root, MAIN_ID).chain,
+    });
+    templateOn(host.root, PAGE_ID);
+
+    const failure = failureOf(base, [host]);
+
+    expect(pairs(failure.diagnostics)).toEqual([
+      ["E-COLLISION", "partials[0]/root/collection/templates/item/id"],
+    ]);
+  });
+
+  it("mount.parent 指向模板节点 -> E-PARENT-MISSING（模板不挂载）", () => {
+    const base = baseWithoutPage();
+    const host = leafPartial({
+      id: LEAF_A_ID,
+      order: 30,
+      parent: MAIN_ID,
+      parentChain: findNode(base.root, MAIN_ID).chain,
+    });
+    templateOn(host.root, LEAF_B_ID);
+    const child = leafPartial({
+      id: "3333333333333333",
+      order: 10,
+      parent: LEAF_B_ID,
+      parentChain: host.root.chain,
+    });
+
+    const failure = failureOf(base, [host, child]);
+
+    expect(pairs(failure.diagnostics)).toEqual([["E-PARENT-MISSING", "partials[1]/mount/parent"]]);
+    expect(failure.diagnostics[0]?.message).toContain("模板不可挂载");
   });
 });
 

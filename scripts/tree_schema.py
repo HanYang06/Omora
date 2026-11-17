@@ -177,7 +177,16 @@ def gen_python(schema: dict[str, Any]) -> str:
             "",
         ]
     )
-    for name in ("Placement", "Node", "Page", "LedgerEntry", "Mount", "Document", "Partial"):
+    for name in (
+        "Placement",
+        "Node",
+        "Page",
+        "LedgerEntry",
+        "Mount",
+        "Collection",
+        "Document",
+        "Partial",
+    ):
         def_key = name.lower() if name != "LedgerEntry" else "ledgerEntry"
         lines.append("@dataclass(frozen=True)")
         lines.append(f"class {name}:")
@@ -212,6 +221,7 @@ def gen_python(schema: dict[str, Any]) -> str:
         "Page",
         "LedgerEntry",
         "Mount",
+        "Collection",
         "Document",
         "Partial",
     )
@@ -228,7 +238,16 @@ def gen_ts(schema: dict[str, Any]) -> str:
     defs = schema["$defs"]
     meta = schema["x-omora"]
     lines = [TS_HEADER]
-    for name in ("Placement", "Node", "Page", "LedgerEntry", "Mount", "Document", "Partial"):
+    for name in (
+        "Placement",
+        "Node",
+        "Page",
+        "LedgerEntry",
+        "Mount",
+        "Collection",
+        "Document",
+        "Partial",
+    ):
         def_key = name.lower() if name != "LedgerEntry" else "ledgerEntry"
         lines.append(f"export interface {name} {{")
         for key, prop, required in ordered_props(defs, def_key):
