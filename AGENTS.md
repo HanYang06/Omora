@@ -40,9 +40,10 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 - 不确定就问，不猜需求；有多种解释就列出来。
 - 一次只做一件事；不顺手改邻近代码。
-- 多区任务走 Agent 团队：Lead 拆任务（写域/依赖）→ 每个 teammate 自己的 worktree/分支 → 合成一条集成分支 → **只开一个 PR** → Lead review + merge commit；review 问题回给 owner 改，Lead 不亲自改别人的分支/worktree；详见 [omora-team](.agents/skills/omora-team/SKILL.md)。
+- 多区任务走 Agent 团队：Lead 拆任务（写域/依赖）→ 每个 teammate 自己的 worktree/分支 → 合成一条集成分支 → **只开一个 PR** → Lead review → 由项目作者合并；review 问题回给 owner 改，Lead 不亲自改别人的分支/worktree；详见 [omora-team](.agents/skills/omora-team/SKILL.md)。
 - **Agent 要复用，不要一任务一 spawn**：同类任务优先 send_message 唤醒 inactive teammate；每轮默认 1 个、最多 2 个，超了先问用户；小任务 Lead 自己做；spawn 前必须查 `list_agents` 并说明为什么不能复用。
 - **一个功能 = 一个 PR**：同一件事的文档、实现、测试放在同一个 PR 里，PR 内按事件拆提交。多区并行也只提一个 PR。只有要独立回滚、或一次 review 看不完（净变更 > 800 行）才拆。
+- **合并权在项目作者**：agent 只开 PR、不做 `gh pr merge`，也不等前一个 PR 合并——该发几个就发几个，可以基于未合并分支继续叠 PR；从哪条分支开顺手从哪条开。
 - **计划分三层**：`docs/roadmap.md` 只写方向与退出条件；`docs/todo.md` 只写未完成工作，每项必须有 `owner:` / `next:`；`docs/changelog.md` 只记完成。开工前读 TODO，完成即迁移；`uv run python scripts/todo.py` 检查格式。
 - 跑过才算完成；跑不了就明说没验证。
 - 不用"应该可以""理论上没问题"。
@@ -66,4 +67,4 @@ Omora 正在从零重写。这份文件是根规则，只写每次都必须知�
 
 ## 提交
 
-按 [omora-git](.agents/skills/omora-git/SKILL.md)：`type(scope): subject`，一次一件事，`main` 只经 PR 合并。团队并行时同样按 omora-git；teammate 不合并，Lead review 后合并。
+按 [omora-git](.agents/skills/omora-git/SKILL.md)：`type(scope): subject`，一次一件事，`main` 只经 PR 合并。**合并由项目作者手动执行**；agent 只开 PR、保持分支可合并，不代替作者点合并。
