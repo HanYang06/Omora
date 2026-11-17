@@ -1,0 +1,1440 @@
+{
+  "format": "omora.tree.build/1",
+  "default": "ideas",
+  "pages": [
+    {
+      "name": "ideas",
+      "title": "灵感",
+      "route": "/ideas",
+      "base": {
+        "schema": "dendro.tree/1",
+        "version": 1,
+        "root": {
+          "id": "774cd5671b9ad811",
+          "chain": "774cd5671b9ad811",
+          "kind": "app",
+          "order": 0,
+          "layout": [
+            {
+              "id": "dcc3ca018d365b00",
+              "chain": "774cd5671b9ad811.dcc3ca018d365b00",
+              "kind": "column",
+              "order": 10,
+              "layout": [],
+              "settings": {},
+              "bind": {},
+              "on": {},
+              "emit": {},
+              "title": "nav"
+            },
+            {
+              "id": "1a99fbf45836c39e",
+              "chain": "774cd5671b9ad811.1a99fbf45836c39e",
+              "kind": "column",
+              "order": 20,
+              "layout": [
+                {
+                  "id": "fca56174e5ff50cf",
+                  "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf",
+                  "kind": "column",
+                  "order": 10,
+                  "layout": [],
+                  "settings": {},
+                  "bind": {},
+                  "on": {},
+                  "emit": {},
+                  "title": "灵感",
+                  "slot": {
+                    "size": {
+                      "width": "fill"
+                    }
+                  }
+                }
+              ],
+              "settings": {},
+              "bind": {},
+              "on": {},
+              "emit": {},
+              "title": "main",
+              "slot": {
+                "size": {
+                  "width": "fill"
+                }
+              }
+            }
+          ],
+          "settings": {},
+          "bind": {},
+          "on": {},
+          "emit": {},
+          "title": "root"
+        },
+        "pages": [
+          {
+            "id": "fca56174e5ff50cf",
+            "title": "灵感",
+            "route": "/ideas"
+          }
+        ],
+        "active": "fca56174e5ff50cf",
+        "data": {}
+      },
+      "partials": [
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "991a7b50ccd51efa",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.991a7b50ccd51efa",
+            "kind": "page-link",
+            "order": 10,
+            "layout": [],
+            "settings": {
+              "label": "灵感",
+              "route": "/ideas",
+              "active": true,
+              "icon": "ideas"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "灵感"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "0781aaeef7699444",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.0781aaeef7699444",
+            "kind": "page-link",
+            "order": 20,
+            "layout": [],
+            "settings": {
+              "label": "项目",
+              "route": "/projects",
+              "active": false,
+              "icon": "projects"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "项目"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "1bd055c8647222f5",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.1bd055c8647222f5",
+            "kind": "page-link",
+            "order": 30,
+            "layout": [],
+            "settings": {
+              "label": "需求",
+              "route": "/requirements",
+              "active": false,
+              "icon": "requirements"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "需求"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "580c3f82107e319a",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.580c3f82107e319a",
+            "kind": "page-link",
+            "order": 40,
+            "layout": [],
+            "settings": {
+              "label": "插件",
+              "route": "/plugins",
+              "active": false,
+              "icon": "settings"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "插件"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ideas",
+          "mount": {
+            "parent": "fca56174e5ff50cf",
+            "mode": "new"
+          },
+          "root": {
+            "id": "beeb99ae14a069f0",
+            "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0",
+            "kind": "split",
+            "order": 10,
+            "layout": [
+              {
+                "id": "4f92399372e20125",
+                "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.4f92399372e20125",
+                "kind": "rail",
+                "order": 10,
+                "layout": [],
+                "settings": {
+                  "title": "全部灵感"
+                },
+                "bind": {},
+                "on": {},
+                "emit": {}
+              },
+              {
+                "id": "2dab97e4990f89d2",
+                "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2",
+                "kind": "column",
+                "order": 20,
+                "layout": [
+                  {
+                    "id": "7c292d05c4169d82",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2.7c292d05c4169d82",
+                    "kind": "search",
+                    "order": 10,
+                    "layout": [],
+                    "settings": {
+                      "placeholder": "搜索灵感…",
+                      "value": ""
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "1253e1445e74bdd1",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2.1253e1445e74bdd1",
+                    "kind": "row",
+                    "order": 20,
+                    "layout": [
+                      {
+                        "id": "fc51989423e60348",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2.1253e1445e74bdd1.fc51989423e60348",
+                        "kind": "tile",
+                        "order": 10,
+                        "layout": [],
+                        "settings": {
+                          "icon": "text",
+                          "title": "文字"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {
+                      "spread": false
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "d68d6364e8e08bab",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2.d68d6364e8e08bab",
+                    "kind": "panel",
+                    "order": 30,
+                    "layout": [
+                      {
+                        "id": "b46b80fded79e457",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2.d68d6364e8e08bab.b46b80fded79e457",
+                        "kind": "row",
+                        "order": 10,
+                        "layout": [
+                          {
+                            "id": "532c3dfa9b33af2b",
+                            "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2.d68d6364e8e08bab.b46b80fded79e457.532c3dfa9b33af2b",
+                            "kind": "chip",
+                            "order": 10,
+                            "layout": [],
+                            "settings": {
+                              "text": "全部",
+                              "active": true
+                            },
+                            "bind": {},
+                            "on": {},
+                            "emit": {}
+                          },
+                          {
+                            "id": "13e582b6d87e4ca9",
+                            "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2.d68d6364e8e08bab.b46b80fded79e457.13e582b6d87e4ca9",
+                            "kind": "chip",
+                            "order": 20,
+                            "layout": [],
+                            "settings": {
+                              "text": "置顶",
+                              "active": false
+                            },
+                            "bind": {},
+                            "on": {},
+                            "emit": {}
+                          },
+                          {
+                            "id": "a4618c82141b9708",
+                            "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2.d68d6364e8e08bab.b46b80fded79e457.a4618c82141b9708",
+                            "kind": "chip",
+                            "order": 30,
+                            "layout": [],
+                            "settings": {
+                              "text": "最近",
+                              "active": false
+                            },
+                            "bind": {},
+                            "on": {},
+                            "emit": {}
+                          },
+                          {
+                            "id": "cbfdade2d5f24e6b",
+                            "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2.d68d6364e8e08bab.b46b80fded79e457.cbfdade2d5f24e6b",
+                            "kind": "chip",
+                            "order": 40,
+                            "layout": [],
+                            "settings": {
+                              "text": "久未打开",
+                              "active": false
+                            },
+                            "bind": {},
+                            "on": {},
+                            "emit": {}
+                          }
+                        ],
+                        "settings": {
+                          "spread": false
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      },
+                      {
+                        "id": "2cc9e81ce1f50f21",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2.d68d6364e8e08bab.2cc9e81ce1f50f21",
+                        "kind": "empty",
+                        "order": 20,
+                        "layout": [],
+                        "settings": {
+                          "title": "还没有灵感。",
+                          "hint": "记下的第一条会出现在这里。"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {},
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "2a4f217f50bc40fb",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.2dab97e4990f89d2.2a4f217f50bc40fb",
+                    "kind": "hotkey",
+                    "order": 40,
+                    "layout": [],
+                    "settings": {
+                      "key": "space"
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  }
+                ],
+                "settings": {},
+                "bind": {},
+                "on": {},
+                "emit": {}
+              }
+            ],
+            "settings": {},
+            "bind": {},
+            "on": {},
+            "emit": {}
+          }
+        }
+      ]
+    },
+    {
+      "name": "projects",
+      "title": "项目",
+      "route": "/projects",
+      "base": {
+        "schema": "dendro.tree/1",
+        "version": 1,
+        "root": {
+          "id": "774cd5671b9ad811",
+          "chain": "774cd5671b9ad811",
+          "kind": "app",
+          "order": 0,
+          "layout": [
+            {
+              "id": "dcc3ca018d365b00",
+              "chain": "774cd5671b9ad811.dcc3ca018d365b00",
+              "kind": "column",
+              "order": 10,
+              "layout": [],
+              "settings": {},
+              "bind": {},
+              "on": {},
+              "emit": {},
+              "title": "nav"
+            },
+            {
+              "id": "1a99fbf45836c39e",
+              "chain": "774cd5671b9ad811.1a99fbf45836c39e",
+              "kind": "column",
+              "order": 20,
+              "layout": [
+                {
+                  "id": "ae1299655b47610b",
+                  "chain": "774cd5671b9ad811.1a99fbf45836c39e.ae1299655b47610b",
+                  "kind": "column",
+                  "order": 10,
+                  "layout": [],
+                  "settings": {},
+                  "bind": {},
+                  "on": {},
+                  "emit": {},
+                  "title": "项目",
+                  "slot": {
+                    "size": {
+                      "width": "fill"
+                    }
+                  }
+                }
+              ],
+              "settings": {},
+              "bind": {},
+              "on": {},
+              "emit": {},
+              "title": "main",
+              "slot": {
+                "size": {
+                  "width": "fill"
+                }
+              }
+            }
+          ],
+          "settings": {},
+          "bind": {},
+          "on": {},
+          "emit": {},
+          "title": "root"
+        },
+        "pages": [
+          {
+            "id": "ae1299655b47610b",
+            "title": "项目",
+            "route": "/projects"
+          }
+        ],
+        "active": "ae1299655b47610b",
+        "data": {}
+      },
+      "partials": [
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "991a7b50ccd51efa",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.991a7b50ccd51efa",
+            "kind": "page-link",
+            "order": 10,
+            "layout": [],
+            "settings": {
+              "label": "灵感",
+              "route": "/ideas",
+              "active": false,
+              "icon": "ideas"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "灵感"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "0781aaeef7699444",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.0781aaeef7699444",
+            "kind": "page-link",
+            "order": 20,
+            "layout": [],
+            "settings": {
+              "label": "项目",
+              "route": "/projects",
+              "active": true,
+              "icon": "projects"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "项目"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "1bd055c8647222f5",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.1bd055c8647222f5",
+            "kind": "page-link",
+            "order": 30,
+            "layout": [],
+            "settings": {
+              "label": "需求",
+              "route": "/requirements",
+              "active": false,
+              "icon": "requirements"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "需求"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "580c3f82107e319a",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.580c3f82107e319a",
+            "kind": "page-link",
+            "order": 40,
+            "layout": [],
+            "settings": {
+              "label": "插件",
+              "route": "/plugins",
+              "active": false,
+              "icon": "settings"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "插件"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "projects",
+          "mount": {
+            "parent": "ae1299655b47610b",
+            "mode": "new"
+          },
+          "root": {
+            "id": "0778e3bed6eb61d6",
+            "chain": "774cd5671b9ad811.1a99fbf45836c39e.ae1299655b47610b.0778e3bed6eb61d6",
+            "kind": "empty",
+            "order": 10,
+            "layout": [],
+            "settings": {
+              "title": "还没有项目。"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {}
+          }
+        }
+      ]
+    },
+    {
+      "name": "requirements",
+      "title": "需求",
+      "route": "/requirements",
+      "base": {
+        "schema": "dendro.tree/1",
+        "version": 1,
+        "root": {
+          "id": "774cd5671b9ad811",
+          "chain": "774cd5671b9ad811",
+          "kind": "app",
+          "order": 0,
+          "layout": [
+            {
+              "id": "dcc3ca018d365b00",
+              "chain": "774cd5671b9ad811.dcc3ca018d365b00",
+              "kind": "column",
+              "order": 10,
+              "layout": [],
+              "settings": {},
+              "bind": {},
+              "on": {},
+              "emit": {},
+              "title": "nav"
+            },
+            {
+              "id": "1a99fbf45836c39e",
+              "chain": "774cd5671b9ad811.1a99fbf45836c39e",
+              "kind": "column",
+              "order": 20,
+              "layout": [
+                {
+                  "id": "80beef4bbe12b958",
+                  "chain": "774cd5671b9ad811.1a99fbf45836c39e.80beef4bbe12b958",
+                  "kind": "column",
+                  "order": 10,
+                  "layout": [],
+                  "settings": {},
+                  "bind": {},
+                  "on": {},
+                  "emit": {},
+                  "title": "需求",
+                  "slot": {
+                    "size": {
+                      "width": "fill"
+                    }
+                  }
+                }
+              ],
+              "settings": {},
+              "bind": {},
+              "on": {},
+              "emit": {},
+              "title": "main",
+              "slot": {
+                "size": {
+                  "width": "fill"
+                }
+              }
+            }
+          ],
+          "settings": {},
+          "bind": {},
+          "on": {},
+          "emit": {},
+          "title": "root"
+        },
+        "pages": [
+          {
+            "id": "80beef4bbe12b958",
+            "title": "需求",
+            "route": "/requirements"
+          }
+        ],
+        "active": "80beef4bbe12b958",
+        "data": {}
+      },
+      "partials": [
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "991a7b50ccd51efa",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.991a7b50ccd51efa",
+            "kind": "page-link",
+            "order": 10,
+            "layout": [],
+            "settings": {
+              "label": "灵感",
+              "route": "/ideas",
+              "active": false,
+              "icon": "ideas"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "灵感"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "0781aaeef7699444",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.0781aaeef7699444",
+            "kind": "page-link",
+            "order": 20,
+            "layout": [],
+            "settings": {
+              "label": "项目",
+              "route": "/projects",
+              "active": false,
+              "icon": "projects"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "项目"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "1bd055c8647222f5",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.1bd055c8647222f5",
+            "kind": "page-link",
+            "order": 30,
+            "layout": [],
+            "settings": {
+              "label": "需求",
+              "route": "/requirements",
+              "active": true,
+              "icon": "requirements"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "需求"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "580c3f82107e319a",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.580c3f82107e319a",
+            "kind": "page-link",
+            "order": 40,
+            "layout": [],
+            "settings": {
+              "label": "插件",
+              "route": "/plugins",
+              "active": false,
+              "icon": "settings"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "插件"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "requirements",
+          "mount": {
+            "parent": "80beef4bbe12b958",
+            "mode": "new"
+          },
+          "root": {
+            "id": "2a90dae8e9dfcd4b",
+            "chain": "774cd5671b9ad811.1a99fbf45836c39e.80beef4bbe12b958.2a90dae8e9dfcd4b",
+            "kind": "empty",
+            "order": 10,
+            "layout": [],
+            "settings": {
+              "title": "还没有需求。"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {}
+          }
+        }
+      ]
+    },
+    {
+      "name": "plugins",
+      "title": "插件",
+      "route": "/plugins",
+      "base": {
+        "schema": "dendro.tree/1",
+        "version": 1,
+        "root": {
+          "id": "774cd5671b9ad811",
+          "chain": "774cd5671b9ad811",
+          "kind": "app",
+          "order": 0,
+          "layout": [
+            {
+              "id": "dcc3ca018d365b00",
+              "chain": "774cd5671b9ad811.dcc3ca018d365b00",
+              "kind": "column",
+              "order": 10,
+              "layout": [],
+              "settings": {},
+              "bind": {},
+              "on": {},
+              "emit": {},
+              "title": "nav"
+            },
+            {
+              "id": "1a99fbf45836c39e",
+              "chain": "774cd5671b9ad811.1a99fbf45836c39e",
+              "kind": "column",
+              "order": 20,
+              "layout": [
+                {
+                  "id": "765c2f3d420dd68e",
+                  "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e",
+                  "kind": "column",
+                  "order": 10,
+                  "layout": [],
+                  "settings": {},
+                  "bind": {},
+                  "on": {},
+                  "emit": {},
+                  "title": "插件",
+                  "slot": {
+                    "size": {
+                      "width": "fill"
+                    }
+                  }
+                }
+              ],
+              "settings": {},
+              "bind": {},
+              "on": {},
+              "emit": {},
+              "title": "main",
+              "slot": {
+                "size": {
+                  "width": "fill"
+                }
+              }
+            }
+          ],
+          "settings": {},
+          "bind": {},
+          "on": {},
+          "emit": {},
+          "title": "root"
+        },
+        "pages": [
+          {
+            "id": "765c2f3d420dd68e",
+            "title": "插件",
+            "route": "/plugins"
+          }
+        ],
+        "active": "765c2f3d420dd68e",
+        "data": {}
+      },
+      "partials": [
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "991a7b50ccd51efa",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.991a7b50ccd51efa",
+            "kind": "page-link",
+            "order": 10,
+            "layout": [],
+            "settings": {
+              "label": "灵感",
+              "route": "/ideas",
+              "active": false,
+              "icon": "ideas"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "灵感"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "0781aaeef7699444",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.0781aaeef7699444",
+            "kind": "page-link",
+            "order": 20,
+            "layout": [],
+            "settings": {
+              "label": "项目",
+              "route": "/projects",
+              "active": false,
+              "icon": "projects"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "项目"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "1bd055c8647222f5",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.1bd055c8647222f5",
+            "kind": "page-link",
+            "order": 30,
+            "layout": [],
+            "settings": {
+              "label": "需求",
+              "route": "/requirements",
+              "active": false,
+              "icon": "requirements"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "需求"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "ui",
+          "mount": {
+            "parent": "dcc3ca018d365b00",
+            "mode": "new"
+          },
+          "root": {
+            "id": "580c3f82107e319a",
+            "chain": "774cd5671b9ad811.dcc3ca018d365b00.580c3f82107e319a",
+            "kind": "page-link",
+            "order": 40,
+            "layout": [],
+            "settings": {
+              "label": "插件",
+              "route": "/plugins",
+              "active": true,
+              "icon": "settings"
+            },
+            "bind": {},
+            "on": {},
+            "emit": {},
+            "title": "插件"
+          }
+        },
+        {
+          "schema": "dendro.tree/1",
+          "source": "manager",
+          "mount": {
+            "parent": "765c2f3d420dd68e",
+            "mode": "new"
+          },
+          "root": {
+            "id": "73cae8277c302828",
+            "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828",
+            "kind": "column",
+            "order": 10,
+            "layout": [
+              {
+                "id": "3a6f3ea61cb716c8",
+                "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.3a6f3ea61cb716c8",
+                "kind": "text",
+                "order": 10,
+                "layout": [],
+                "settings": {
+                  "text": "客户端设备: 未上报",
+                  "kind": "muted"
+                },
+                "bind": {},
+                "on": {},
+                "emit": {}
+              },
+              {
+                "id": "5d4332f1ac25ae00",
+                "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00",
+                "kind": "list",
+                "order": 20,
+                "layout": [
+                  {
+                    "id": "9dcbe51abf1a3925",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.9dcbe51abf1a3925",
+                    "kind": "item",
+                    "order": 10,
+                    "layout": [
+                      {
+                        "id": "192a875580bcc76f",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.9dcbe51abf1a3925.192a875580bcc76f",
+                        "kind": "text",
+                        "order": 10,
+                        "layout": [],
+                        "settings": {
+                          "text": "条目的持久化与查询",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      },
+                      {
+                        "id": "0fa1b44a8b22f6d8",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.9dcbe51abf1a3925.0fa1b44a8b22f6d8",
+                        "kind": "text",
+                        "order": 20,
+                        "layout": [],
+                        "settings": {
+                          "text": "启动项",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {
+                      "meta": "运行中",
+                      "title": "store"
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "3e836211cbd31507",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.3e836211cbd31507",
+                    "kind": "item",
+                    "order": 20,
+                    "layout": [
+                      {
+                        "id": "1697eed3ed580e29",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.3e836211cbd31507.1697eed3ed580e29",
+                        "kind": "text",
+                        "order": 10,
+                        "layout": [],
+                        "settings": {
+                          "text": "插件清单、条件检查与开关 · 依赖: store",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      },
+                      {
+                        "id": "1e6f2ed3b9d8f454",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.3e836211cbd31507.1e6f2ed3b9d8f454",
+                        "kind": "text",
+                        "order": 20,
+                        "layout": [],
+                        "settings": {
+                          "text": "启动项",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {
+                      "meta": "运行中",
+                      "title": "manager"
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "4f1de9770bee0086",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.4f1de9770bee0086",
+                    "kind": "item",
+                    "order": 30,
+                    "layout": [
+                      {
+                        "id": "96844c41cd8beb29",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.4f1de9770bee0086.96844c41cd8beb29",
+                        "kind": "text",
+                        "order": 10,
+                        "layout": [],
+                        "settings": {
+                          "text": "音频 / 视频文件的存取",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      },
+                      {
+                        "id": "3f56e31111502fa5",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.4f1de9770bee0086.3f56e31111502fa5",
+                        "kind": "button",
+                        "order": 20,
+                        "layout": [],
+                        "settings": {
+                          "text": "禁用",
+                          "variant": "ghost"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {
+                      "meta": "运行中",
+                      "title": "media"
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "8a2cc807bd5b70d1",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.8a2cc807bd5b70d1",
+                    "kind": "item",
+                    "order": 40,
+                    "layout": [
+                      {
+                        "id": "397841467673f37c",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.8a2cc807bd5b70d1.397841467673f37c",
+                        "kind": "text",
+                        "order": 10,
+                        "layout": [],
+                        "settings": {
+                          "text": "页面登记、渲染、事件派发",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      },
+                      {
+                        "id": "e08225bb7bbe4623",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.8a2cc807bd5b70d1.e08225bb7bbe4623",
+                        "kind": "button",
+                        "order": 20,
+                        "layout": [],
+                        "settings": {
+                          "text": "禁用",
+                          "variant": "ghost"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {
+                      "meta": "运行中",
+                      "title": "ui"
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "5c7fcb20ab2f11d1",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.5c7fcb20ab2f11d1",
+                    "kind": "item",
+                    "order": 50,
+                    "layout": [
+                      {
+                        "id": "5de40759a7f69b18",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.5c7fcb20ab2f11d1.5de40759a7f69b18",
+                        "kind": "text",
+                        "order": 10,
+                        "layout": [],
+                        "settings": {
+                          "text": "音频捕捉：质量档、降噪、时限与后期处理钩子 · 平台: win32/darwin/linux · 需要: microphone · 依赖: media",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      },
+                      {
+                        "id": "1de5675931e6fcfa",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.5c7fcb20ab2f11d1.1de5675931e6fcfa",
+                        "kind": "button",
+                        "order": 20,
+                        "layout": [],
+                        "settings": {
+                          "text": "禁用",
+                          "variant": "ghost"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {
+                      "meta": "运行中",
+                      "title": "audio"
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "0e5fdbd8cb0b6f46",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.0e5fdbd8cb0b6f46",
+                    "kind": "item",
+                    "order": 60,
+                    "layout": [
+                      {
+                        "id": "188142f4a7d87ba9",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.0e5fdbd8cb0b6f46.188142f4a7d87ba9",
+                        "kind": "text",
+                        "order": 10,
+                        "layout": [],
+                        "settings": {
+                          "text": "视频捕捉：分辨率档、时限、大小上限与后期处理钩子 · 平台: win32/darwin/linux · 需要: camera · 依赖: media",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      },
+                      {
+                        "id": "4acdce29241dd744",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.0e5fdbd8cb0b6f46.4acdce29241dd744",
+                        "kind": "button",
+                        "order": 20,
+                        "layout": [],
+                        "settings": {
+                          "text": "禁用",
+                          "variant": "ghost"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {
+                      "meta": "运行中",
+                      "title": "video"
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "0edc8e18b48028e2",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.0edc8e18b48028e2",
+                    "kind": "item",
+                    "order": 70,
+                    "layout": [
+                      {
+                        "id": "b9724c5a7b46e58d",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.0edc8e18b48028e2.b9724c5a7b46e58d",
+                        "kind": "text",
+                        "order": 10,
+                        "layout": [],
+                        "settings": {
+                          "text": "灵感页：录音、文字捕捉、账本列表 · 依赖: store, media, ui",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      },
+                      {
+                        "id": "d25e4da23cd615bb",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.0edc8e18b48028e2.d25e4da23cd615bb",
+                        "kind": "button",
+                        "order": 20,
+                        "layout": [],
+                        "settings": {
+                          "text": "禁用",
+                          "variant": "ghost"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {
+                      "meta": "运行中",
+                      "title": "ideas"
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "e94e09b3b2434f9b",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.e94e09b3b2434f9b",
+                    "kind": "item",
+                    "order": 80,
+                    "layout": [
+                      {
+                        "id": "41e36a8af259600d",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.e94e09b3b2434f9b.41e36a8af259600d",
+                        "kind": "text",
+                        "order": 10,
+                        "layout": [],
+                        "settings": {
+                          "text": "项目页（占位） · 依赖: ui",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      },
+                      {
+                        "id": "f6ea05282becb648",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.e94e09b3b2434f9b.f6ea05282becb648",
+                        "kind": "button",
+                        "order": 20,
+                        "layout": [],
+                        "settings": {
+                          "text": "禁用",
+                          "variant": "ghost"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {
+                      "meta": "运行中",
+                      "title": "projects"
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "5ea171fed73b5561",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.5ea171fed73b5561",
+                    "kind": "item",
+                    "order": 90,
+                    "layout": [
+                      {
+                        "id": "e27f97617c8241ae",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.5ea171fed73b5561.e27f97617c8241ae",
+                        "kind": "text",
+                        "order": 10,
+                        "layout": [],
+                        "settings": {
+                          "text": "需求页（占位） · 依赖: ui",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      },
+                      {
+                        "id": "ea5d00c46dbed85e",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.5ea171fed73b5561.ea5d00c46dbed85e",
+                        "kind": "button",
+                        "order": 20,
+                        "layout": [],
+                        "settings": {
+                          "text": "禁用",
+                          "variant": "ghost"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {
+                      "meta": "运行中",
+                      "title": "requirements"
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  },
+                  {
+                    "id": "ba39e34471448792",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.ba39e34471448792",
+                    "kind": "item",
+                    "order": 100,
+                    "layout": [
+                      {
+                        "id": "e451f5ad5f15d78e",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.ba39e34471448792.e451f5ad5f15d78e",
+                        "kind": "text",
+                        "order": 10,
+                        "layout": [],
+                        "settings": {
+                          "text": "WebSocket 与帧分发",
+                          "kind": "muted"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      },
+                      {
+                        "id": "2440f2b6fc305445",
+                        "chain": "774cd5671b9ad811.1a99fbf45836c39e.765c2f3d420dd68e.73cae8277c302828.5d4332f1ac25ae00.ba39e34471448792.2440f2b6fc305445",
+                        "kind": "button",
+                        "order": 20,
+                        "layout": [],
+                        "settings": {
+                          "text": "禁用",
+                          "variant": "ghost"
+                        },
+                        "bind": {},
+                        "on": {},
+                        "emit": {}
+                      }
+                    ],
+                    "settings": {
+                      "meta": "运行中",
+                      "title": "net"
+                    },
+                    "bind": {},
+                    "on": {},
+                    "emit": {}
+                  }
+                ],
+                "settings": {},
+                "bind": {},
+                "on": {},
+                "emit": {}
+              }
+            ],
+            "settings": {},
+            "bind": {},
+            "on": {},
+            "emit": {}
+          }
+        }
+      ]
+    }
+  ]
+}

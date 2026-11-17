@@ -288,6 +288,10 @@ jobs:
         run: uv run python scripts/todo.py
       - name: Static skeleton
         run: uv run python scripts/static_ui.py --check
+      - name: Static tree input
+        run: uv run python scripts/static_tree.py --check
+      - name: Tree artifacts
+        run: uv run python scripts/tree_artifacts.py
       - name: Compiled skeleton HTML
         run: uv run python scripts/skeleton_html.py
       - name: End-to-end smoke

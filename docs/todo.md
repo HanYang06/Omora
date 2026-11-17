@@ -8,7 +8,7 @@
 
 - [ ] **文档与队列定基** — owner: lead — next: 把 ADR-0004、路线图、现状、V1 树、TODO 的口径统一，跑 `scripts/todo.py` 与 `scripts/docs_links.py`。
 - [ ] **ops 形状与跨语言 fixture** — owner: sdk/engine — next: 定义 replace / setProps / mount / unmount / data 五种 ops、base 版本与失败兜底，Python / TS 共用一份 fixture。
-- [ ] **真实页面构建期 compose** — owner: build — next: 先让 ideas 的 home 在构建期 compose 出结构，运行时只绑数据，不再整树链接。
+- [ ] **真实页面构建期 compose** — owner: build — next: 每页产物已落 `dist/tree/`（`scripts/static_tree.py` + Vite 插件）；下一步让默认入口读 manifest + 文档挂载，不再整树链接。
 - [ ] **ideas 一页端到端** — owner: ideas/ui — next: Python 只发变更节点，TS 按 id 原子应用，DOM 只 patch 变更子树；量复杂度斜率。
 - [ ] **插件迁移清单** — owner: lead — next: 标出哪些插件产出页面（ideas / projects / requirements / manager）、哪些只提供服务，给出迁移顺序。
 

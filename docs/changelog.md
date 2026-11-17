@@ -11,6 +11,7 @@
 - **Page/State/When/Bind**：`omora.page/1` 契约；Python/TS Page 层、When 稳定容器、Bind 单向、Action/节点事件；旧 Slot 未接（#117）。
 - **Build-time composer**：V1 document + partial `mode:new`、稳定挂载、`E-COLLISION` / `E-PARENT-MISSING` / `E-TREE-CHAIN` 原子诊断；未接 Vite（#116）。
 - **Engine runtime mount**：V1 document → host/renderer registry；mount/replace/unmount/dispose、失败回滚；未接 app（#118）。
+- **V1 构建产物**：`scripts/static_tree.py` 把系统插件页面升成 V1 输入；Vite 构建期 compose 成每页一份 `dendro.tree/1` 文档 + manifest，落在 `dist/tree/`（ideas 5.4 kB / plugins 10.9 kB）；`scripts/tree_artifacts.py` 用 Python 语义复验产物。运行时尚未接入。
 - **安全例外**：picomatch `GHSA-fc5q-39xc-vjpf` 为 dev-only、无 patched 版本，临时 ignore，2026-12-31 复审（#119）。
 
 ## 2026-11-15
