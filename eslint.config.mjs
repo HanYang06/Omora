@@ -20,7 +20,7 @@ export default tseslint.config(
   },
   {
     name: "omora/ui-engine",
-    files: ["app/ui-engine/src/**/*.{ts,tsx}"],
+    files: ["app/ui-engine/src/**/*.{ts,tsx}", "app/ui-engine/tests/**/*.{ts,tsx}"],
     extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       globals: { ...globals.browser },
@@ -39,7 +39,7 @@ export default tseslint.config(
   },
   {
     name: "omora/ui-engine/tests",
-    files: ["app/ui-engine/src/**/*.test.{ts,tsx}"],
+    files: ["app/ui-engine/tests/**/*.test.{ts,tsx}"],
     rules: {
       // 测试替身要对齐被测接口的 async 形状（调用方 await 它），但替身里没有可 await 的东西。
       "@typescript-eslint/require-await": "off",

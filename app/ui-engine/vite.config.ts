@@ -13,7 +13,7 @@ export default defineConfig({
   plugins: [staticSkeletonPlugin(), linkerGatePlugin(), treeArtifactsPlugin(), treeDevPlugin()],
   test: {
     environment: "node",
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["tests/**/*.test.{ts,tsx}"],
     /**
      * 覆盖率只用来发现"没人测过的区域"，不是刷分目标；阈值锁在当前基线之下，
      * 保证只会往上走。cobertura 给 CI / 代码扫描读，text 给人看。
@@ -22,7 +22,8 @@ export default defineConfig({
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
-        // 测试自己不算被测代码
+        // 测试自己不算被测代码（已挪到 app/ui-engine/tests/）
+        "tests/**",
         "src/**/*.test.{ts,tsx}",
         // 环境声明（vite-env.d.ts）与纯类型文件（types.ts）没有可执行语句
         "src/**/*.d.ts",
