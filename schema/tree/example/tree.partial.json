@@ -44,7 +44,7 @@
           "value": ""
         },
         "bind": {
-          "value": "data.query"
+          "value": "ideas.query"
         },
         "on": {
           "input": "action.query"

@@ -3,6 +3,9 @@
 > 状态：**概念已定**；S4 已落薄层：检查器 + 链接期挂载检查 + 运行期 ops/data/全量替换检查（E-PERMISSION）与权限拒绝审计；`observe`/`intercept`、source 级权限未做。形态是【建议】，具体角色/等级模型推迟。
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md)
 > 相关：[addressing.md](addressing.md) · [rules.md](rules.md)
+>
+> **V1 口径**：所有权按 `ledger`，跨来源挂载要目标节点 `settings.open === true`；
+> `grant` 留到 `/2`。见 [runtime-semantics.md](runtime-semantics.md) §3。
 
 ## 0. 本质
 

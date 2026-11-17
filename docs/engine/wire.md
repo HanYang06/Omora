@@ -3,6 +3,9 @@
 > 状态：**已落**；S1.1 契约类型、S2 `local-trees`、S3-a `ops`、S3-b `data`、S3-c `route`、S6.1 主会话 `view` 的 Python/TS 线上形状已落且已接主会话（共享 fixture `local-trees.json` / `ops.json` / `data.json` / `route.json` / `view.json`）；事件 / `dispatch` 的增量帧形状仍是 §9 的未定项。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [updates.md](updates.md) · [collection.md](collection.md)
 > 相关：[docs/design/protocol.md](../design/protocol.md)（帧、传输、订阅）
+>
+> **V1 口径**：帧集合是 `document / ops / dispatch / diagnostics`，`data` 是 op 不是独立帧；
+> 见 [runtime-semantics.md](runtime-semantics.md) §4。
 
 ## 0. 范围
 
