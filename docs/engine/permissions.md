@@ -4,8 +4,8 @@
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md)
 > 相关：[addressing.md](addressing.md) · [rules.md](rules.md)
 >
-> **V1 口径**：所有权按 `ledger`，跨来源挂载要目标节点 `settings.open === true`；
-> `grant` 留到 `/2`。见 [runtime-semantics.md](runtime-semantics.md) §3。
+> **V1 口径**：引擎不做所有权，也不做权限；结构只给父子关系。来源归属与策略都在宿主，
+> 通过 guard 注入；`grant` / `settings.open` 都不进 `/1`。见 [runtime-semantics.md](runtime-semantics.md) §3。
 
 ## 0. 本质
 

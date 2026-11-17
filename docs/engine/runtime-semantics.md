@@ -46,18 +46,20 @@
 - 规则闭集（v2 预留，不在 V1）：触发 `event / data / lifecycle / route`；效果
   `update / mount / unmount / replace / navigate / dispatch / emit`；规则是数据，不是程序。
 
-## 3. 权限模型
+## 3. 所有权 / 权限的边界
 
-- **所有权按节点**：`ledger[node.id].source`；没写就继承最近祖先，根是基座来源。
-- 能力：`read / mount / update / replace / remove / data / route`。
-- 默认：
-  - owner 对自己子树全能力；
-  - 系统来源全能力；
-  - 跨来源 mount 只允许目标节点 `settings.open === true`（贡献点约定）；
-  - 只有 source 的 owner 能发布它的数据；
-  - route 只允许切到自己拥有的页面。
-- 检查点：组合（构建期）、ops（宿主 guard）、data、route。拒绝 → 整批不生效 + 审计。
-- `/1` **没有 `grant` 字段**；需要委派时升 `/2` 再加。`settings.open` 是约定，不是 schema。
+- **结构所有权是树的事实**：父持有子，树本身就说清了“谁是谁的爹”。引擎不需要额外字段
+  或账本；渲染与更新只认结构。
+- **来源归属是宿主事实**：哪个连接 / 来源挂了哪个节点，宿主在收 ops 时自己记；
+  引擎不维护 owner，也不问“这个节点是谁的”。
+- **权限是宿主策略**：能力表、默认分层、跨来源规则、grant、审计口径，全在宿主；
+  引擎不认识 `read / mount / update …` 这些能力名，也不解释 `settings.open`。
+- 引擎只做一件事：结构操作前调用宿主注入的 `guard(op, context)`；拒绝 → 整批不生效，
+  诊断原样透传。
+- 请求者身份属于连接 / 会话：由 net 插件识别，宿主附到 guard 上；**不进 ops payload**。
+- 树格式不携带权限：`/1` 没有 `grant`、没有 `open` 字段；文档 `ledger` 是可选来源元数据，
+  引擎不解释。
+- `E-PERMISSION` 是宿主诊断码，引擎只透传。
 - 这不是安全边界：进程内来源可以绕过引擎 API；真正的隔离要等进程化 / 沙箱。
 
 ## 4. 协议
@@ -104,8 +106,8 @@
 | 写入权   | 只有 `data` op；source owner 发布，宿主唯一写入               |
 | 幂等     | revision 相等 no-op、更小忽略；`(source, seq)` 重复 no-op     |
 | 行为     | `on` → dispatch → 来源回 ops；V1 不做树内规则                 |
-| 权限     | ledger 所有权 + 能力表；跨来源挂载要 `settings.open`          |
-| 兼容     | `grant` / 规则留给 `/2`；`/1` 不加字段                        |
+| 权限     | 引擎不判定；结构只给父子，来源归属与策略在宿主（guard 注入）  |
+| 兼容     | 规则留给 `/2`；权限不进格式，`/1` 不加字段                    |
 | 协议     | `document / ops / dispatch / diagnostics`；data 是 op         |
 | 版本     | 宿主唯一分配；不匹配回全量                                    |
 | 持久化   | 引擎不落盘；快照 = 构建产物；迁移走 `/2`                      |
@@ -114,13 +116,13 @@
 ## 8. 与旧文档的关系
 
 - `rules.md`：触发 / 效果闭集保留，作为 v2 规则设计的边界；V1 不实现树内规则。
-- `permissions.md`：能力 / 主体模型保留；V1 用 ledger 所有权 + `settings.open`，`grant` 留 `/2`。
+- `permissions.md`：能力 / 主体模型属于宿主策略；V1 引擎既不维护 owner，也不判定权限，只留 guard 钩子。
 - `wire.md`：payload 形状保留作参考；V1 的帧集合以本文 §4 为准。
 - `collection.md` / `updates.md`：语义一致；V1 的 data 投影见 §1。
 
 ## 9. 未定
 
-- 树内规则（`reactions`）与 `grant` 的具体形状（`/2`）；
+- 树内规则（`reactions`）的形状（`/2`）；宿主侧的能力模型 / grant；
 - source 的显式移除帧（V1 用全量重载兜底）；
 - 重连增量日志 / 追赶；
 - 进程化后的安全边界。
