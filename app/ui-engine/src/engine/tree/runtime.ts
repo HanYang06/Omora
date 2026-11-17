@@ -23,6 +23,8 @@
  */
 
 import type { Document as TreeDocument } from "../../contract/tree_generated";
+import { applyBatch } from "./apply";
+import { parseOps } from "./ops";
 import type { RendererRegistry, TreeHost, TreeRuntimeDiagnostic } from "./types";
 import {
   applyDocument,
@@ -48,6 +50,9 @@ export interface TreeMountFailure {
 
 /** mount / replace 的结果；成功时诊断通过 `diagnostics` getter 读。 */
 export type TreeMountResult = { ok: true } | TreeMountFailure;
+
+/** applyOps 的结果：成功给被触碰的子树根 id。 */
+export type TreeUpdateResult = { ok: true; changed: string[] } | TreeMountFailure;
 
 export class TreeRuntime {
   private readonly host: TreeHost;
@@ -113,6 +118,102 @@ export class TreeRuntime {
       return this.fail(checked.diagnostics);
     }
     return this.attachDocument(checked.document, this.root, this.byId);
+  }
+
+  /**
+   * 应用一批 ops：文档层先算新文档（版本 / 原子 / 路径复制），成功后只更新被触碰的
+   * 已挂载节点。当前只支持 `setProps`（内容更新）；结构操作下一步接。
+   */
+  applyOps(value: unknown): TreeUpdateResult {
+    const closed = this.rejectWhenDisposed();
+    if (closed !== null) {
+      return closed;
+    }
+    if (this.root === null || this.current === null) {
+      return this.fail([{ code: "E-TREE-STATE", path: "", message: "还没挂载；先 mount" }]);
+    }
+    const parsed = parseOps(value);
+    if (!parsed.ok) {
+      return this.fail(
+        parsed.diagnostics.map((diagnostic) => ({
+          code: diagnostic.code,
+          path: diagnostic.path,
+          message: diagnostic.message,
+        })),
+      );
+    }
+    if (parsed.batch.ops.some((op) => op.op !== "setProps")) {
+      return this.fail([
+        {
+          code: "E-PAYLOAD",
+          path: "/ops",
+          message: "运行时最小应用目前只支持 setProps；结构操作下一步",
+        },
+      ]);
+    }
+    const applied = applyBatch(this.current, parsed.batch);
+    if (!applied.ok) {
+      return this.fail(
+        applied.diagnostics.map((diagnostic) => ({
+          code: diagnostic.code,
+          path: diagnostic.path,
+          message: diagnostic.message,
+        })),
+      );
+    }
+    const updates: Array<{
+      mounted: MountedNode;
+      previous: MountedNode["node"];
+      next: MountedNode["node"];
+    }> = [];
+    for (const op of parsed.batch.ops) {
+      if (op.op !== "setProps") {
+        continue;
+      }
+      const mounted = this.byId.get(op.id);
+      const next = applied.byId.get(op.id);
+      if (mounted === undefined || next === undefined) {
+        return this.fail([
+          { code: "E-TARGET-MISSING", path: "/ops", message: "目标不在已挂载树里: " + op.id },
+        ]);
+      }
+      updates.push({ mounted, previous: mounted.node, next });
+    }
+    const appliedUpdates: typeof updates = [];
+    try {
+      for (const update of updates) {
+        this.setNode(update.mounted, update.next);
+        update.mounted.renderer.update(update.next, update.mounted.output);
+        appliedUpdates.push(update);
+      }
+    } catch (error) {
+      for (const update of [...appliedUpdates].reverse()) {
+        this.setNode(update.mounted, update.previous);
+        try {
+          update.mounted.renderer.update(update.previous, update.mounted.output);
+        } catch {
+          // 回滚也是 best effort；诊断里已经报了首次失败。
+        }
+      }
+      return this.fail([
+        {
+          code: "E-TREE-RENDER",
+          path: "",
+          message: "运行时更新失败: " + (error instanceof Error ? error.message : String(error)),
+        },
+      ]);
+    }
+    // 只更新被触碰的目标节点；未触碰祖先的 `MountedNode.node` 仍是旧对象。
+    // 语义以 `this.current`（新文档）为准；祖先的 kind / chain 不变，不影响复用判断。
+    this.current = applied.document;
+    this.lastDiagnostics = [];
+    return { ok: true, changed: applied.changed };
+  }
+
+  /** 换挂载节点持有的文档对象与 handle；元素 / 渲染器不动。 */
+  private setNode(mounted: MountedNode, node: MountedNode["node"]): void {
+    mounted.node = node;
+    mounted.handle = { node, output: mounted.output };
   }
 
   /** 卸掉整棵树（后序渲染器），runtime 保持可用。未挂载 / 已 dispose 时是空操作。 */

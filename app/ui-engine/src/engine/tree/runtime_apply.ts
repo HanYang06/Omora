@@ -30,7 +30,8 @@ export interface TreeApplyContext {
 
 /** runtime 内部的已挂载节点：渲染器实例 + 输出 + 子挂载点都是挂载期确定的。 */
 export interface MountedNode {
-  readonly node: TreeNode;
+  /** 当前文档里的节点对象；applyOps 成功后会被替换成新对象。 */
+  node: TreeNode;
   readonly renderer: NodeRenderer;
   readonly output: TreeOutput;
   readonly childHost: TreeHost | null;
@@ -38,7 +39,7 @@ export interface MountedNode {
   /** replace 时被复用的旧节点；mount / 新节点为 undefined。 */
   readonly reusedFrom: MountedNode | undefined;
   readonly path: string;
-  readonly handle: TreeChildHandle;
+  handle: TreeChildHandle;
   children: MountedNode[];
   /** 卸载只跑一次（失败回滚与正常清退可能都走到同一节点）。 */
   released: boolean;

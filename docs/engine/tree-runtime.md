@@ -57,6 +57,8 @@ components/*（现有 38 个 kind，不改）
   replace 复用同一元素、unmount 清空。
 - `app/tree/tree_document.test.ts`：真实 ideas 空态（`static-tree.json` → compose）挂出
   app / 4 条导航 / 页面文案。
+- `engine/tree/runtime_ops.test.ts`：`applyOps` 的 `setProps` 只更新目标元素；兄弟元素引用不变；
+  版本不一致 / 结构操作 / 目标缺失整批拒绝。
 
 ## 5. 预览与还没接的
 
@@ -65,4 +67,5 @@ components/*（现有 38 个 kind，不改）
   入口在 `app/tree/preview.ts`，失败会把原因写在页面上。
 - 默认入口还没切（仍走 Slot 主会话）。
 - 导航从 `settings.route` 出发的跳转没接：静态产物没有 handler，导航是禁用态。
-- `collection` 实例化、`data` op、最小节点更新（引擎内部下一段）。
+- `collection` 实例化、`data` op 未接。
+- 运行时结构操作（`mount / unmount / replace`）未接；`setProps` 已接（只动目标元素）。

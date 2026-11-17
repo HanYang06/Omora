@@ -1,6 +1,6 @@
 # V1 更新操作（ops）
 
-> 状态：**形状 + 文档层应用已落**（2026-11-18）；运行时最小应用与 `data` 语义还没接。
+> 状态：**形状 + 文档层应用 + 运行时内容更新已落**（2026-11-18）；运行时结构操作与 `data` 语义还没接。
 > 相关：[V1 树](../planning/v1-tree.md) · [V1 运行时](tree-runtime.md) · [updates.md](updates.md)
 
 ## 0. 一句话
@@ -65,9 +65,11 @@ ops 是“按 id 改一份已存在的 `dendro.tree/1` 文档”的批量：不�
   同级 order 唯一；replace 不能改 order、根不能做结构操作。
 - 模板边界：`collection.templates` 里的节点可以 `setProps`，但不能 mount / unmount / replace。
 - `data` 目前整批拒绝（`E-PAYLOAD`），不让“只应用一半”的更新溜过去。
+- 运行时 `setProps`（内容更新）：只替换目标已挂载节点的 `node` 引用并 `update` 渲染器；
+  元素复用、兄弟不动；版本 / 原子失败沿用文档层，失败时整批不生效。
 
 还没做：
 
-- 运行时最小应用：只对 `changed` 的子树根做 DOM patch，不整树 walk。
+- 运行时结构操作：`mount / unmount / replace` 还没接（现在整批拒绝）。
 - `data` 语义：collection 实例化、keyed reconcile、绑定。
-- 权限 / 审计接 V1。
+- 权限 / 审计：不在引擎，归宿主策略。
