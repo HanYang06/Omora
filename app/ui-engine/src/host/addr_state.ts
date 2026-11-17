@@ -35,6 +35,9 @@ export function oldAddrsFor(index: DocumentIndex, ops: readonly WireOp[]): Map<s
   return addrs;
 }
 
+/** redirect / 墓碑表的写入上限：超出按写入顺序淘汰最旧的一条。 */
+const MAX_REDIRECTS = 256;
+
 export class AddrState {
   private cacheRoot: SlotNode | null = null;
   private cacheIndex: DocumentIndex | null = null;
@@ -77,15 +80,27 @@ export class AddrState {
       const stillThere = next.get(id);
       if (stillThere !== undefined) {
         if (stillThere.addr !== addr) {
-          this.redirects.set(addr, id);
+          this.remember(addr, id);
         }
         continue;
       }
       const replacement = changed.length === 1 ? changed[0] : undefined;
       if (replacement !== undefined && next.get(replacement) !== undefined) {
-        this.redirects.set(addr, replacement);
+        this.remember(addr, replacement);
       } else {
-        this.redirects.set(addr, null);
+        this.remember(addr, null);
+      }
+    }
+  }
+
+  /** 写入 redirect / 墓碑；重复 addr 先删再加，表满淘汰最旧写入。 */
+  private remember(addr: string, target: string | null): void {
+    this.redirects.delete(addr);
+    this.redirects.set(addr, target);
+    if (this.redirects.size > MAX_REDIRECTS) {
+      const oldest = this.redirects.keys().next().value;
+      if (oldest !== undefined) {
+        this.redirects.delete(oldest);
       }
     }
   }
