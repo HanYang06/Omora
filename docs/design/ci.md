@@ -44,6 +44,7 @@ Python 侧暂未接入：mutmut 3 按仓库相对路径推导模块名（期望 
 ## 安全与供应链
 
 - `uv audit` 与 `pnpm audit --audit-level high` 每次 CI 跑。
+- 例外：`GHSA-fc5q-39xc-vjpf`（picomatch，仅 dev 工具链）当前无 patched 版本，CI 临时 ignore；2026-12-31 前复审，有修复就移除。
 - `zizmor` 审 workflow 安全（权限、模板注入、action 固定）；`actionlint` 查语法与 shell。
 - 所有 action 固定到 commit SHA，由 Dependabot 每周升级。
 - PR 上跑 `dependency-review-action`，新增依赖的漏洞与许可证变化要显式过目。
