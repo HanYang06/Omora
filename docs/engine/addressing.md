@@ -61,7 +61,7 @@
 
 - **本地 code 冲突**（同父下两个兄弟派生到同一 code）：派生方**重试**——换种子 / 加盐再派生，直到兄弟级唯一。局部 code 只要求兄弟内唯一，不需要全局避让。
 - **addr 冲突**：先比 `chain`。chain 相同 → 同一逻辑节点（addr 只是它的摘要）；chain 不同 → 摘要碰撞，重派生 / 换编码，不静默合并。
-- **redirect**：`EngineRuntime.resolveAddr(addr)` 先查当前 addr 索引，再查旧 addr → 节点 id 的重定向表；`unmount` 写墓碑，`replace` 把旧 addr 转给新 id。`ops_apply` 在 mount / move / replace 后对受影响子树重算 addr（TS 身份派生已改同步 SHA-256）：code 不变，`addr = H(新父 addr, code)`；旧 addr 仍走 redirect。
+- **redirect**：`EngineRuntime.resolveAddr(addr)` 先查当前 addr 索引，再查旧 addr → 节点 id 的重定向表；`unmount` 写墓碑，`replace` 把旧 addr 转给新 id。`ops_apply` 在 mount / move / replace 后对受影响子树重算 addr（TS 身份派生已改同步 SHA-256）：code 不变，`addr = H(新父 addr, code)`；旧 addr 仍走 redirect。redirect / 墓碑表上限 256 条，超出按写入顺序淘汰最旧，内存有界。
 - **tombstone / generation**：删除不等于回收身份。旧 code / addr 进墓碑，同位置重建时 generation+1；旧订阅、旧补丁、旧引用只会命中墓碑，不会静默打到新节点上。
 
 ### 2.3 静态常量折叠
