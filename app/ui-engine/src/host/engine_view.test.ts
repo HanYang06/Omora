@@ -204,6 +204,28 @@ describe("applyView：整份视图替换", () => {
     expect(engine.metrics).toMatchObject({ version: 3, fullUpdates: 0, opsBatches: 2 });
   });
 
+  it("data 变化走 applyData + 空 ops 升版本", () => {
+    const engine = engineOf(fixture());
+
+    const result = applied(
+      engine.applyView(
+        viewOf((value) => {
+          value.version = 2;
+          value.data = { "ideas.feed": { revision: 1, value: "x" } };
+        }),
+      ),
+    );
+
+    expect(result.changed).toEqual([]);
+    expect(engine.session.data).toEqual({ "ideas.feed": { revision: 1, value: "x" } });
+    expect(engine.metrics).toMatchObject({
+      version: 2,
+      fullUpdates: 0,
+      dataUpdates: 1,
+      opsBatches: 1,
+    });
+  });
+
   it("旧版本：E-VERSION 拒绝，会话与注册表都回滚", () => {
     const engine = engineOf(fixture());
     applied(engine.applyView(viewOf((value) => (value.version = 2))));
