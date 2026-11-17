@@ -1,6 +1,6 @@
 # 寻址：id、身份、索引与更新集合
 
-> 状态：**已定**。S3-a 已落三张索引（`DocumentIndex`）；S4–S6 起运行时更新管线已接主会话；`code` / `addr` 身份字段已进 Slot 契约（可选）；Python UI 升 Slot 与静态骨架已派生，集合模板 / 通用 Node key 仍待；`addr` 已进 `DocumentIndex`，旧 addr redirect / 墓碑已落；ops / 渲染仍按 `id`；`source/path` 路径级索引仍未落。
+> 状态：**已定**。S3-a 已落三张索引（`DocumentIndex`）；S4–S6 起运行时更新管线已接主会话；`code` / `addr` 身份字段已进 Slot 契约（可选）；Python UI 升 Slot 与静态骨架已派生，集合模板 / 通用 Node key 仍待；`addr` 已进 `DocumentIndex`，旧 addr redirect / 墓碑与结构变化后的 addr 重算已落；ops / 渲染仍按 `id`；`source/path` 路径级索引仍未落。
 > 依赖：[contract.md](contract.md)
 > 相关：[structure.md](structure.md) · [updates.md](updates.md) · [permissions.md](permissions.md)
 
@@ -61,7 +61,7 @@
 
 - **本地 code 冲突**（同父下两个兄弟派生到同一 code）：派生方**重试**——换种子 / 加盐再派生，直到兄弟级唯一。局部 code 只要求兄弟内唯一，不需要全局避让。
 - **addr 冲突**：先比 `chain`。chain 相同 → 同一逻辑节点（addr 只是它的摘要）；chain 不同 → 摘要碰撞，重派生 / 换编码，不静默合并。
-- **redirect**：`EngineRuntime.resolveAddr(addr)` 先查当前 addr 索引，再查旧 addr → 节点 id 的重定向表；`unmount` 写墓碑，`replace` 把旧 addr 转给新 id。move 后节点自己的 addr 尚未重算（TS 侧身份派生目前是 async WebCrypto），所以旧 addr 仍靠索引/重定向解析，新 addr 重算留待 sync hash。
+- **redirect**：`EngineRuntime.resolveAddr(addr)` 先查当前 addr 索引，再查旧 addr → 节点 id 的重定向表；`unmount` 写墓碑，`replace` 把旧 addr 转给新 id。`ops_apply` 在 mount / move / replace 后对受影响子树重算 addr（TS 身份派生已改同步 SHA-256）：code 不变，`addr = H(新父 addr, code)`；旧 addr 仍走 redirect。
 - **tombstone / generation**：删除不等于回收身份。旧 code / addr 进墓碑，同位置重建时 generation+1；旧订阅、旧补丁、旧引用只会命中墓碑，不会静默打到新节点上。
 
 ### 2.3 静态常量折叠

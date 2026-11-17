@@ -17,44 +17,44 @@ function fixture(): Fixture {
 }
 
 describe("identity：code / addr 派生", () => {
-  it("shortCode 与 Python 侧 golden fixture 一致", async () => {
+  it("shortCode 与 Python 侧 golden fixture 一致", () => {
     for (const item of fixture().codes) {
-      await expect(shortCode(item.seed)).resolves.toBe(item.code);
+      expect(shortCode(item.seed)).toBe(item.code);
     }
   });
 
-  it("shortCode 固定 16 字符且同种子稳定", async () => {
-    const code = await shortCode("page.ideas.content.main.feed[42]");
+  it("shortCode 固定 16 字符且同种子稳定", () => {
+    const code = shortCode("page.ideas.content.main.feed[42]");
     expect(code).toHaveLength(16);
-    await expect(shortCode("page.ideas.content.main.feed[42]")).resolves.toBe(code);
+    expect(shortCode("page.ideas.content.main.feed[42]")).toBe(code);
   });
 
-  it("chainAddr 与 Python 侧 golden fixture 一致", async () => {
+  it("chainAddr 与 Python 侧 golden fixture 一致", () => {
     for (const item of fixture().addresses) {
-      await expect(chainAddr(item.parent, item.code)).resolves.toBe(item.addr);
+      expect(chainAddr(item.parent, item.code)).toBe(item.addr);
     }
   });
 
-  it("内容变不改 code/addr；同父重复派生结果相同", async () => {
-    const before = await nodeIdentity("zgufckla2amnbrel", "page.ideas");
-    const after = await nodeIdentity("zgufckla2amnbrel", "page.ideas");
+  it("内容变不改 code/addr；同父重复派生结果相同", () => {
+    const before = nodeIdentity("zgufckla2amnbrel", "page.ideas");
+    const after = nodeIdentity("zgufckla2amnbrel", "page.ideas");
     expect(after).toEqual(before);
   });
 
-  it("兄弟插入不改已存在节点的 code", async () => {
-    const before = await shortCode("page.ideas.content.main.feed[42]");
-    await shortCode("page.ideas.content.main.feed[41]");
-    await expect(shortCode("page.ideas.content.main.feed[42]")).resolves.toBe(before);
+  it("兄弟插入不改已存在节点的 code", () => {
+    const before = shortCode("page.ideas.content.main.feed[42]");
+    shortCode("page.ideas.content.main.feed[41]");
+    expect(shortCode("page.ideas.content.main.feed[42]")).toBe(before);
   });
 
-  it("move 保留 code、改变 addr", async () => {
-    const code = await shortCode("page.ideas.content.main.feed[42]");
-    const oldAddr = await chainAddr("feed-parent", code);
-    const newAddr = await chainAddr("rail-parent", code);
+  it("move 保留 code、改变 addr", () => {
+    const code = shortCode("page.ideas.content.main.feed[42]");
+    const oldAddr = chainAddr("feed-parent", code);
+    const newAddr = chainAddr("rail-parent", code);
     expect(oldAddr).not.toBe(newAddr);
   });
 
-  it("空种子被拒绝", async () => {
-    await expect(shortCode("")).rejects.toThrow("seed");
+  it("空种子被拒绝", () => {
+    expect(() => shortCode("")).toThrow("seed");
   });
 });
