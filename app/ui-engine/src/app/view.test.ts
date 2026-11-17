@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { applyData as applyDataUpdate, type DataState } from "../engine/updates/data";
+import type { SlotNode } from "../contract/document";
 import { mountDocumentView } from "./view";
 import { DOCUMENT_FIXTURE_PATH } from "./test_fixtures";
 
@@ -18,6 +19,10 @@ function boot(options: Parameters<typeof mountDocumentView>[2] = {}) {
 
 function cards(container: HTMLElement): HTMLElement[] {
   return [...container.querySelectorAll<HTMLElement>(".omora-card")];
+}
+
+function nodeOf(id: string, over: Partial<SlotNode> = {}): SlotNode {
+  return { id, kind: "dendro:text", owner: "test", props: {}, children: [], ...over };
 }
 
 const UPDATE = {
@@ -84,6 +89,43 @@ describe("DocumentView：引擎 ↔ DOM", () => {
     expect(after[0]?.querySelector(".omora-card-title")?.textContent).toBe("买牛奶（改）");
     expect(view.engine.metrics.dataUpdates).toBe(1);
     view.dispose();
+  });
+
+  it("applyOps 只重画被触碰路径，未变兄弟整棵复用", () => {
+    const doc = {
+      schema: "dendro.ui/1",
+      version: 1,
+      pages: [],
+      active: "",
+      data: {},
+      document: nodeOf("root", {
+        kind: "dendro:window",
+        children: [nodeOf("a", { props: { text: "A" } }), nodeOf("b", { props: { text: "B" } })],
+      }),
+    };
+    const container = document.createElement("div");
+    const mounted = mountDocumentView(container, doc);
+    if (!mounted.ok) {
+      throw new Error("测试文档应该能建视图");
+    }
+
+    const result = mounted.view.engine.applyOps({
+      kind: "ops",
+      document: 2,
+      base: 1,
+      seq: 1,
+      ops: [{ op: "update", id: "a", props: { text: "A2" } }],
+    });
+
+    expect(result.ok).toBe(true);
+    const stats = mounted.view.engine.metrics.lastRender;
+    expect(stats.created).toBe(0);
+    expect(stats.updated).toBe(2);
+    expect(stats.reused).toBe(3);
+    expect(container.querySelectorAll(".omora-text")).toHaveLength(2);
+    expect(container.textContent).toContain("A2");
+    expect(container.textContent).toContain("B");
+    mounted.view.dispose();
   });
 
   it("权限拒绝时视图不动、引擎会话不动", () => {

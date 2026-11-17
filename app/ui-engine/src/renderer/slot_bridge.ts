@@ -32,8 +32,21 @@ function copyLayout(layout: Layout): Layout {
   return copy;
 }
 
+/**
+ * Slot → legacy Node 的缓存：同一个 Slot 对象得到同一个 Node 对象，渲染器的
+ * `candidate.node === node` memo 才能跨 apply 复用；ops 路径复制没碰到的子树
+ * 保持原引用，于是整棵跳过。
+ *
+ * 契约：Slot 节点不可原地改。ops / data 都返回新节点，旧 Slot 不会被改写。
+ */
+const nodeCache = new WeakMap<SlotNode, Node>();
+
 /** Slot → legacy Node：同一个 kind 名、同一条 children 链，附带 layout。 */
 export function slotToNode(slot: SlotNode): Node {
+  const cached = nodeCache.get(slot);
+  if (cached !== undefined) {
+    return cached;
+  }
   const node: Node = {
     type: slot.kind,
     id: slot.id,
@@ -46,5 +59,6 @@ export function slotToNode(slot: SlotNode): Node {
   if (slot.layout !== undefined) {
     node.layout = copyLayout(slot.layout);
   }
+  nodeCache.set(slot, node);
   return node;
 }

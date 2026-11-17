@@ -1,6 +1,6 @@
 # 更新：三种输入粒度
 
-> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed）；S3-b 已落纯数据更新（data router：revision 幂等 + 集合全量/增量 + changed）；S3-c 已落标量绑定（in/bind → props）、会话层 route 执行与全量文档替换；S4 已落 EngineRuntime.applyLocalTrees（全部局部树重新链接 → 替换树 → 水合），全量更新在引擎内闭环；S3-d/S3-e 已接渲染（Slot 桥 / 换页协调 / 跨父 move），S6.4 起主会话默认走 Slot（Slot 路径不再是预览）。未接：主会话的增量 ops / data 接线（当前每个事件交整份 view）、页面参数消费。
+> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed）；S3-b 已落纯数据更新（data router：revision 幂等 + 集合全量/增量 + changed）；S3-c 已落标量绑定（in/bind → props）、会话层 route 执行与全量文档替换；S4 已落 EngineRuntime.applyLocalTrees（全部局部树重新链接 → 替换树 → 水合），全量更新在引擎内闭环；S3-d/S3-e 已接渲染（Slot 桥 / 换页协调 / 跨父 move），S6.4 起主会话默认走 Slot（Slot 路径不再是预览）；applyOps 已做路径复制（结构共享）+ Slot→Node 缓存，未变兄弟整棵跳过。未接：主会话的增量 ops / data 接线（当前每个事件交整份 view）、页面参数消费。
 > 依赖：[addressing.md](addressing.md) · [composition.md](composition.md)
 > 相关：[collection.md](collection.md) · `runtime.md`（待写） · `testing.md`（待写）
 
@@ -82,8 +82,10 @@
 ## 8. S3-a 实现（已落）
 
 - **文档状态**（`app/ui-engine/src/engine/document/document.ts`）：`DocumentState = {root, version}`；`createState` 用 Slot 文档校验器接管根树；`DocumentIndex` 从根树重建三张索引（见 [addressing.md](addressing.md)）。
-- **局部树 ops**（`src/engine/document/ops.ts` + `ops_apply.ts`）：`parseOps` 校验 `{kind:"ops", document, base, seq, ops}`；`applyOps` 要求 `base == 当前版本` 且 `document == base + 1`（否则 `E-VERSION`），按序在深拷上应用，任一失败整批不生效；成功返回新状态 + `changed`（本次触碰的子树根 id）。
+- **局部树 ops**（`src/engine/document/ops.ts` + `ops_apply.ts`）：`parseOps` 校验 `{kind:"ops", document, base, seq, ops}`；`applyOps` 要求 `base == 当前版本` 且 `document == base + 1`（否则 `E-VERSION`），按序在**只沿触碰路径复制**的工作树上应用（未触碰兄弟保持原引用），任一失败整批不生效；成功返回新状态 + `changed`（本次触碰的子树根 id）。
 - **op 语义**：`update`（props 浅合并）、`mount`（at 缺省尾部，越界夹取；容量/重复 id 校验）、`move`（先删后插、成环 `E-CYCLE`）、`unmount`（根不可卸）、`replace`（原位、新 id 可换）。模板节点可 update 内容，结构操作返回 `E-PAYLOAD`（位置由 templates 命名表决定）。
+- **结构共享**：ops 只复制目标及其祖先；`slotToNode` 用 WeakMap 缓存 Node 对象，renderer 的 `candidate.node === node` memo 因此能跨 apply 生效。`view.test` 钉住一次 `update` 的 DOM stats：`created 0 / updated 2 / reused 3`。
+- **回退**：树里出现 `collection.templates`（模板不在 children 路径上）时退回整棵深拷，保证正确性优先。
 - **跨语言**：Python `omora.sdk.update.serialize_ops` 产出同一形状，两侧共用 `app/sdk/tests/fixtures/ops.json`。
 - **未接**：纯数据更新（data router / 集合）、`route`、渲染层（legacy 仍走 `legacy/render/patch.ts`）、全量更新与运行时会话接线。
 

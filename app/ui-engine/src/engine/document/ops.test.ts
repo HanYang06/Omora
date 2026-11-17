@@ -76,6 +76,22 @@ describe("update：props 浅合并", () => {
     expect(result.changed).toEqual(["search", "feed#2"]);
   });
 
+  it("只沿被触碰路径复制，未触碰的兄弟保持原引用", () => {
+    const before = baseState();
+    const result = expectApplied(
+      applyOps(before, batchOf([{ op: "update", id: "feed#1", props: { title: "一改" } }])),
+    );
+    const feedBefore = before.root.children[0];
+    const feedAfter = result.state.root.children[0];
+    const searchBefore = before.root.children[1];
+
+    expect(result.state.root).not.toBe(before.root);
+    expect(feedAfter).not.toBe(feedBefore);
+    expect(result.state.root.children[1]).toBe(searchBefore);
+    expect(feedAfter?.children[1]).toBe(feedBefore?.children[1]);
+    expect(feedAfter?.children[0]).not.toBe(feedBefore?.children[0]);
+  });
+
   it("update 保留节点身份与位置", () => {
     const before = baseState();
     const result = expectApplied(apply([{ op: "update", id: "feed#1", props: { title: "一改" } }]));

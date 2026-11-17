@@ -41,6 +41,15 @@ describe("slotToNode", () => {
     });
   });
 
+  it("同一个 Slot 对象复用同一个 Node，children 也复用", () => {
+    const leaf = slot({ id: "a.b" });
+    const input = slot({ id: "a", children: [leaf] });
+    const first = slotToNode(input);
+
+    expect(slotToNode(input)).toBe(first);
+    expect(slotToNode(leaf)).toBe(first.children[0]);
+  });
+
   it("不改写入参：props / children / events / layout 与入参各自独立", () => {
     const input = slot({
       id: "a",
