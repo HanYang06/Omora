@@ -25,6 +25,7 @@ const manifest = JSON.parse(
 
 const EXAMPLES: ReadonlyArray<readonly [string, TreeShape]> = [
   ["tree.node.json", "node"],
+  ["tree.collection.json", "node"],
   ["tree.partial.json", "partial"],
   ["tree.root.json", "document"],
 ];

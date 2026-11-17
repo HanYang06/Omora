@@ -77,6 +77,15 @@ def test_examples_load() -> None:
     assert node.chain.endswith("." + node.id)
     assert node.layout == ()
 
+    collection = load_node(EXAMPLES / "tree.collection.json")
+    assert collection.collection is not None
+    assert collection.collection.source == "ideas.feed"
+    assert collection.collection.key == "id"
+    assert collection.collection.select == "template"
+    assert set(collection.collection.templates) == {"item"}
+    item = collection.collection.templates["item"]
+    assert item.chain == collection.chain + "." + item.id
+
 
 @pytest.mark.parametrize("field", ["settings", "bind", "on", "emit"])
 def test_non_nesting_fields_cannot_hide_a_node(field: str) -> None:

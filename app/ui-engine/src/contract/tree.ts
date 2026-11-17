@@ -4,7 +4,8 @@
  * `schema/tree/tree.schema.json` 是形状的单一来源；本模块只把 ajv 的原始错误折叠成
  * 稳定的 shape 诊断，不重复实现语义。V1 的语义权威在 Python
  * （`app/sdk/omora/sdk/tree.py`）：chain 与父链一致、id/chain 唯一、同级 order
- * 唯一且升序、页面 / ledger 引用、非 layout 字段不得藏节点——TS 侧不做这些检查。
+ * 唯一且升序、页面 / ledger 引用、非 layout 字段不得藏节点（collection.templates
+ * 是具名模板表，里面的节点合法）——TS 侧不做这些检查。
  *
  * 诊断码映射：
  * - pattern 命中 `$defs/id` -> E-TREE-ID

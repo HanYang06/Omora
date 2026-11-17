@@ -54,6 +54,8 @@ export type TreeComposeResult =
 interface TreeIndex {
   byId: Map<string, Node>;
   byChain: Map<string, Node>;
+  /** 能作为 mount.parent 的 id；collection.templates 里的节点不可挂载。 */
+  mountable: Set<string>;
 }
 
 function compareText(left: string, right: string): number {
@@ -85,17 +87,24 @@ function shapeDiagnostics(
   }));
 }
 
-function indexNode(node: Node, index: TreeIndex): void {
+function indexNode(node: Node, index: TreeIndex, mountable: boolean): void {
   index.byId.set(node.id, node);
   index.byChain.set(node.chain, node);
+  if (mountable) {
+    index.mountable.add(node.id);
+  }
   for (const child of node.layout) {
-    indexNode(child, index);
+    indexNode(child, index, mountable);
+  }
+  // 模板是不挂载的子树：参与身份冲突检查，但不能当挂载目标。
+  for (const template of Object.values(node.collection?.templates ?? {})) {
+    indexNode(template, index, false);
   }
 }
 
 function indexDocument(document: Document): TreeIndex {
-  const index: TreeIndex = { byId: new Map(), byChain: new Map() };
-  indexNode(document.root, index);
+  const index: TreeIndex = { byId: new Map(), byChain: new Map(), mountable: new Set() };
+  indexNode(document.root, index, true);
   return index;
 }
 
@@ -122,6 +131,9 @@ function collisionDiagnostics(root: Node, site: string, index: TreeIndex): TreeC
     node.layout.forEach((child, childIndex) => {
       walk(child, `${path}/layout[${String(childIndex)}]`);
     });
+    for (const [name, template] of Object.entries(node.collection?.templates ?? {})) {
+      walk(template, `${path}/collection/templates/${name}`);
+    }
   };
   walk(root, site);
   return diagnostics;
@@ -147,11 +159,14 @@ function mountPartial(
     return;
   }
   const parent = index.byId.get(mount.parent);
-  if (parent === undefined) {
+  if (parent === undefined || !index.mountable.has(mount.parent)) {
     diagnostics.push({
       code: "E-PARENT-MISSING",
       path: source + "/mount/parent",
-      message: `mount.parent "${mount.parent}" 不在当前树中`,
+      message:
+        parent === undefined
+          ? `mount.parent "${mount.parent}" 不在当前树中`
+          : `mount.parent "${mount.parent}" 在 collection.templates 里，模板不可挂载`,
     });
     return;
   }
@@ -183,7 +198,7 @@ function mountPartial(
   const mounted = structuredClone(root);
   parent.layout.push(mounted);
   parent.layout.sort((left, right) => left.order - right.order);
-  indexNode(mounted, index);
+  indexNode(mounted, index, true);
 }
 
 /**

@@ -57,14 +57,14 @@ manifest 形状：
 }
 ```
 
-`hash` 是文档 JSON 的 sha256 前 16 位；`nodes` 是节点数（layout 递归）。
+`hash` 是文档 JSON 的 sha256 前 16 位；`nodes` 是节点数（layout 与 `collection.templates` 递归）。
 
 ## 3. 门禁
 
 | 命令                                           | 查什么                                                                       |
 | ---------------------------------------------- | ---------------------------------------------------------------------------- |
 | `uv run python scripts/static_tree.py --check` | 输入是否最新                                                                 |
-| `vite build` 的 `treeArtifactsPlugin`          | 每页 compose 是否成功；失败让构建失败                                        |
+| `vite build` 的 `treeArtifactsPlugin`          | 每页 compose 是否成功、每个 kind 是否有实现（`E-TREE-KIND`）；失败让构建失败 |
 | `uv run python scripts/tree_artifacts.py`      | 产物：Python 语义校验（chain / id / order / pages / active）、hash、文件集合 |
 
 分工：构建期只做形状与组合；语义权威仍是 Python，在产物落盘后验一遍。
@@ -74,3 +74,4 @@ manifest 形状：
 - 运行时还没读 `dist/tree`：默认入口仍是 Slot 骨架 + Slot 主会话。
 - 首帧 HTML 仍由 Slot 骨架编译（`src/build/boot-skeleton.ts`）。
 - 事件 / 数据 / 最小更新还没进这份产物；下一步是 DOM host + V1 运行时 + ops。
+- 类型检查只做了 kind 存在性；per-kind `settings` schema、`on` / `bind` 引用仍未查。

@@ -198,11 +198,38 @@ function hashOf(json: string): string {
   return createHash("sha256").update(json).digest("hex").slice(0, 16);
 }
 
-/** 文档的节点数（layout 递归；模板子树将来也算）。 */
+/** 构建期可注入的已知 kind 集合；不传 = 不查 kind 存在性（纯组合测试用）。 */
+export interface TreeArtifactsOptions {
+  kinds?: ReadonlySet<string>;
+}
+
+/** 遍历整棵树（含 collection.templates），收集未知 kind；path 是文档内指针。 */
+function unknownKinds(node: Node, known: ReadonlySet<string>, path: string): TreeBuildDiagnostic[] {
+  const found: TreeBuildDiagnostic[] = [];
+  if (!known.has(node.kind)) {
+    found.push({
+      code: "E-TREE-KIND",
+      path: path + "/kind",
+      message: "没有注册的 kind: " + node.kind,
+    });
+  }
+  node.layout.forEach((child, index) => {
+    found.push(...unknownKinds(child, known, `${path}/layout[${String(index)}]`));
+  });
+  for (const [name, template] of Object.entries(node.collection?.templates ?? {})) {
+    found.push(...unknownKinds(template, known, `${path}/collection/templates/${name}`));
+  }
+  return found;
+}
+
+/** 文档的节点数：layout 递归，collection.templates 里的模板子树也算。 */
 export function countNodes(node: Node): number {
   let total = 1;
   for (const child of node.layout) {
     total += countNodes(child);
+  }
+  for (const template of Object.values(node.collection?.templates ?? {})) {
+    total += countNodes(template);
   }
   return total;
 }
@@ -210,8 +237,14 @@ export function countNodes(node: Node): number {
 /**
  * 输入 → 每页文档 + manifest；任何一页失败就整次失败（不产出半套产物）。
  * 同一份输入永远得到同一批文件名、同一批 hash。
+ *
+ * 传了 `options.kinds` 就顺带做类型检查第一遍里的 kind 存在性：每个节点
+ * （含 collection.templates）的 kind 都必须有实现，否则 E-TREE-KIND。
  */
-export function buildTreeArtifacts(value: unknown): TreeArtifactsResult {
+export function buildTreeArtifacts(
+  value: unknown,
+  options: TreeArtifactsOptions = {},
+): TreeArtifactsResult {
   const parsed = parseInput(value);
   if (!parsed.ok) {
     return parsed;
@@ -242,6 +275,18 @@ export function buildTreeArtifacts(value: unknown): TreeArtifactsResult {
       return;
     }
     const document = composed.document;
+    if (options.kinds !== undefined) {
+      const unknown = unknownKinds(document.root, options.kinds, "root");
+      if (unknown.length > 0) {
+        for (const diagnostic of unknown) {
+          diagnostics.push({
+            ...diagnostic,
+            path: `pages[${String(index)}].${diagnostic.path}`,
+          });
+        }
+        return;
+      }
+    }
     const json = JSON.stringify(document);
     documents.push({
       name: page.name,

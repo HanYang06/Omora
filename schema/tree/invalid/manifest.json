@@ -58,5 +58,23 @@
     "type": "node",
     "scope": "shape",
     "code": "E-TREE-PAYLOAD"
+  },
+  {
+    "file": "collection-empty-templates.json",
+    "type": "node",
+    "scope": "shape",
+    "code": "E-TREE-PAYLOAD"
+  },
+  {
+    "file": "collection-duplicate-id.json",
+    "type": "node",
+    "scope": "semantic",
+    "code": "E-TREE-DUP-ID"
+  },
+  {
+    "file": "collection-bad-chain.json",
+    "type": "node",
+    "scope": "semantic",
+    "code": "E-TREE-CHAIN"
   }
 ]
