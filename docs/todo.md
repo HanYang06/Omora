@@ -1,21 +1,27 @@
 # TODO
 
-> 当前未完成的工作队列。开工前先读；完成一项就从这里删掉，并把结果写进 [changelog](changelog.md)。路线图只写方向，不写完成记录。
+> 当前未完成的工作队列。开工前先读；完成一项就从这里删掉，并把结果写进 [changelog](changelog.md)。方向在 [路线图](roadmap.md)，不在这里。
 >
 > 每个条目必须有 `owner:` 和 `next:`；CI 用 `scripts/todo.py` 检查格式。已完成项不要留在这里。
 
 ## Now
 
-- [ ] **Page/Node → `dendro.tree/1` serializer + component catalog** — owner: lead/sdk — next: 定义组件 kind/props/events 单一来源，Python/TS 各出 serializer，先用 ideas 的搜索/列表节点跑通。
-- [ ] **V1 ideas 竖切（`?engine=v1`）** — owner: lead — next: 在 build/engine 接 serializer，旧 Slot 保持默认，不破现有入口。
-- [ ] **Build Vite `buildStart` gate** — owner: build — next: 把 `assertTreeComposes` 接进 Vite 构建，冲突阻断发布，补失败 fixture。
+- [ ] **文档与队列定基** — owner: lead — next: 把 ADR-0004、路线图、现状、V1 树、TODO 的口径统一，跑 `scripts/todo.py` 与 `scripts/docs_links.py`。
+- [ ] **ops 形状与跨语言 fixture** — owner: sdk/engine — next: 定义 replace / setProps / mount / unmount / data 五种 ops、base 版本与失败兜底，Python / TS 共用一份 fixture。
+- [ ] **真实页面构建期 compose** — owner: build — next: 先让 ideas 的 home 在构建期 compose 出结构，运行时只绑数据，不再整树链接。
+- [ ] **ideas 一页端到端** — owner: ideas/ui — next: Python 只发变更节点，TS 按 id 原子应用，DOM 只 patch 变更子树；量复杂度斜率。
+- [ ] **插件迁移清单** — owner: lead — next: 标出哪些插件产出页面（ideas / projects / requirements / manager）、哪些只提供服务，给出迁移顺序。
 
 ## Next
 
-- [ ] **Engine SourceHost / page / session / route** — owner: engine — next: compose 输出接 `TreeRuntime`，页面切换与导航可用。
-- [ ] **V1 data router / collection / 三级更新** — owner: engine/sdk — next: 复用旧 Slot 的数据路由与集合模板，先跑常驻标量和列表。
-- [ ] **Page clone/patch + PageHost parity** — owner: sdk — next: 定义 clone 时 When/Bind 的重绑，Python/TS 行为对齐。
-- [ ] **旧 Slot 退休与页面迁移** — owner: lead — next: ideas/projects/requirements/plugins 逐页切 V1，最后让 `dendro.ui/1` 退场并改文档。
+- [ ] **静态结构覆盖全部页面** — owner: build — next: 把构建期 compose 从 ideas 推到项目 / 需求 / 插件页。
+- [ ] **最小节点更新成为唯一主路径** — owner: engine — next: 主会话切 ops 帧，全量 view 只作版本不匹配时的兜底。
+- [ ] **页面插件迁移** — owner: ideas/projects/requirements/manager — next: 四页逐个迁到 V1 路径，旧 Slot 出口逐页删。
+- [ ] **删除 Slot 默认路径** — owner: lead — next: 四页迁完后删旧路径与 `dendro.ui/1` 默认入口，保留全量兜底。
+- [ ] **复杂度护栏进 CI** — owner: engine — next: 加斜率测试，事件 → DOM 的工作量不得随总节点数增长。
+- [ ] **Idea 闭环** — owner: ideas — next: 补标签、灵感 ↔ 灵感 / 项目的关联、转写进搜索。
+- [ ] **Project 闭环** — owner: projects — next: 建项目、关联灵感 / 需求、状态推进、归档复盘。
+- [ ] **0.2 发布** — owner: lead — next: 冻结 schema、补迁移 runner 与一条真实迁移、打 tag、出本地安装包与 release notes。
 
 ## Blocked
 
