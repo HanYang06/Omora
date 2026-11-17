@@ -4,13 +4,17 @@
  * 输入是 `applied.changed` 与最终文档（`applied.byId`），不重新 diff 新旧树：
  * - 旧有新无 → unmount；
  * - 旧无新有 → mount（新子树先全部建好再放）；
- * - 新旧都有 → setProps（只换节点引用 + update 渲染器）。
+ * - 新旧都有 → setProps（只换节点引用 + update 渲染器）；
+ * - replace → 先把旧子树摘下，再在同一个父节点下按 order 放新子树。
  *
- * 约束：一次批量里不允许嵌套 mount（新子树应自带子节点）；父节点必须已经挂载。
+ * 约束：一次批量里不允许嵌套 mount（新子树应自带子节点）；父节点必须已经挂载；
+ * 一次批量只支持一个 replace（链式 replace 下一步再放开）。
  * 构建失败会回滚已建的子树；宿主阶段的失败是 best effort（结构变更无法完整回滚）。
  */
 
+import type { Node } from "../../contract/tree_generated";
 import type { AppliedDocument } from "./apply";
+import type { OpsBatch } from "./ops";
 import {
   buildDetachedSubtree,
   detachMountedSubtree,
@@ -29,22 +33,68 @@ export interface MountedUpdateState {
 export type MountedUpdateResult =
   { ok: true; changed: string[] } | { ok: false; diagnostics: TreeRuntimeDiagnostic[] };
 
-interface PlannedMount {
-  next: MountedNode["node"];
+interface PlannedBuild {
+  next: Node;
   parent: MountedNode;
   host: TreeHost;
-  index: number;
+  /** replace 时被替换的旧节点；mount 时为空。 */
+  old?: MountedNode;
 }
 
 export function applyMountedUpdate(
   state: MountedUpdateState,
   applied: AppliedDocument,
+  batch: OpsBatch,
 ): MountedUpdateResult {
   const { byId, context } = state;
+  const replaceOps = batch.ops.filter((op) => op.op === "replace");
+  if (replaceOps.length > 1) {
+    return fail([
+      {
+        code: "E-PAYLOAD",
+        path: "/ops",
+        message: "一次批量只支持一个 replace；链式 replace 下一步",
+      },
+    ]);
+  }
+  const handled = new Set<string>();
+  let replacePlan: {
+    old: MountedNode;
+    next: Node | undefined;
+    parent: MountedNode;
+    host: TreeHost;
+  } | null = null;
+  const replaceOp = replaceOps[0];
+  if (replaceOp !== undefined) {
+    const old = byId.get(replaceOp.id);
+    if (old !== undefined) {
+      const parent = old.parent;
+      if (parent === null) {
+        return fail([{ code: "E-PAYLOAD", path: "/ops", message: "根不能 replace" }]);
+      }
+      const host = parent.childHost;
+      if (host === null) {
+        return fail([{ code: "E-TREE-HOST", path: "/ops", message: "父节点不接受子节点" }]);
+      }
+      const next = applied.byId.get(replaceOp.node.id);
+      for (const id of mountedIds(old)) {
+        handled.add(id);
+      }
+      if (next !== undefined) {
+        for (const id of nodeIds(next)) {
+          handled.add(id);
+        }
+      }
+      replacePlan = { old, next, parent, host };
+    }
+  }
   const removed: MountedNode[] = [];
   const added: string[] = [];
   const updated: string[] = [];
   for (const id of applied.changed) {
+    if (handled.has(id)) {
+      continue;
+    }
     const old = byId.get(id);
     const next = applied.byId.get(id);
     if (old !== undefined && next === undefined) {
@@ -55,7 +105,6 @@ export function applyMountedUpdate(
       updated.push(id);
     }
   }
-  // 只处理被摘子树的最高根；后代跟着整棵走。
   const removedIds = new Set(removed.map((node) => node.node.id));
   const removedRoots = removed.filter((node) => {
     let parent = node.parent;
@@ -68,7 +117,15 @@ export function applyMountedUpdate(
     return true;
   });
   // 先校验所有落点，再建子树：校验失败时还没有任何 DOM 改动。
-  const planned: PlannedMount[] = [];
+  const planned: PlannedBuild[] = [];
+  if (replacePlan !== null && replacePlan.next !== undefined) {
+    planned.push({
+      next: replacePlan.next,
+      parent: replacePlan.parent,
+      host: replacePlan.host,
+      old: replacePlan.old,
+    });
+  }
   const byDepth = (left: string, right: string): number =>
     depthOf(applied.byId.get(left)?.chain ?? "") - depthOf(applied.byId.get(right)?.chain ?? "");
   for (const id of [...added].sort(byDepth)) {
@@ -98,15 +155,9 @@ export function applyMountedUpdate(
         { code: "E-TREE-HOST", path: "/ops", message: "父节点不接受子节点: " + parentId },
       ]);
     }
-    const index = insertionIndex(parent, next.order);
-    if (index < 0) {
-      return fail([
-        { code: "E-TREE-ORDER", path: "/ops", message: "同级 order 冲突: " + String(next.order) },
-      ]);
-    }
-    planned.push({ next, parent, host, index });
+    planned.push({ next, parent, host });
   }
-  const built: Array<PlannedMount & { subtree: DetachedSubtree }> = [];
+  const built: Array<PlannedBuild & { subtree: DetachedSubtree }> = [];
   for (const plan of planned) {
     try {
       built.push({
@@ -138,19 +189,27 @@ export function applyMountedUpdate(
           { code: "E-TREE-HOST", path: "/ops", message: "父节点不接受子节点: " + parent.node.id },
         ]);
       }
-      const at = parent.children.indexOf(node);
-      if (at >= 0) {
-        parent.children.splice(at, 1);
-      }
-      detachMountedSubtree(context, node, host);
-      for (const id of mountedIds(node)) {
-        byId.delete(id);
-      }
-      reindex(parent, host);
+      removeMounted(context, node, parent, host, byId);
+    }
+    if (replacePlan !== null && replacePlan.next === undefined) {
+      removeMounted(context, replacePlan.old, replacePlan.parent, replacePlan.host, byId);
     }
     for (const entry of built) {
-      placeDetachedSubtree(context, entry.subtree, entry.host, entry.index);
-      entry.parent.children.splice(entry.index, 0, entry.subtree.root);
+      if (entry.old !== undefined) {
+        removeMounted(context, entry.old, entry.parent, entry.host, byId);
+      }
+      const index = insertionIndex(entry.parent, entry.next.order);
+      if (index < 0) {
+        return fail([
+          {
+            code: "E-TREE-ORDER",
+            path: "/ops",
+            message: "同级 order 冲突: " + String(entry.next.order),
+          },
+        ]);
+      }
+      placeDetachedSubtree(context, entry.subtree, entry.host, index);
+      entry.parent.children.splice(index, 0, entry.subtree.root);
       for (const [id, mounted] of entry.subtree.byId) {
         byId.set(id, mounted);
         addedIds.add(id);
@@ -186,6 +245,24 @@ export function applyMountedUpdate(
     return fail([...diagnosticsOfError(error), ...context.cleanup]);
   }
   return { ok: true, changed: applied.changed };
+}
+
+function removeMounted(
+  context: TreeApplyContext,
+  node: MountedNode,
+  parent: MountedNode,
+  host: TreeHost,
+  byId: Map<string, MountedNode>,
+): void {
+  const at = parent.children.indexOf(node);
+  if (at >= 0) {
+    parent.children.splice(at, 1);
+  }
+  detachMountedSubtree(context, node, host);
+  for (const id of mountedIds(node)) {
+    byId.delete(id);
+  }
+  reindex(parent, host);
 }
 
 function fail(diagnostics: TreeRuntimeDiagnostic[]): MountedUpdateResult {
@@ -228,6 +305,17 @@ function mountedIds(node: MountedNode): string[] {
   const ids = [node.node.id];
   for (const child of node.children) {
     ids.push(...mountedIds(child));
+  }
+  return ids;
+}
+
+function nodeIds(node: Node): string[] {
+  const ids = [node.id];
+  for (const child of node.layout) {
+    ids.push(...nodeIds(child));
+  }
+  for (const template of Object.values(node.collection?.templates ?? {})) {
+    ids.push(...nodeIds(template));
   }
   return ids;
 }
