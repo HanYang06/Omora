@@ -90,6 +90,20 @@ def test_non_nesting_fields_cannot_hide_a_node(field: str) -> None:
     assert code_of_document(data) == "E-TREE-NEST"
 
 
+@pytest.mark.parametrize("field", ["settings", "bind", "on", "emit"])
+def test_non_nesting_fields_cannot_hide_a_node_in_a_list(field: str) -> None:
+    data = document()
+    nav_items(data)[0][field]["nested"] = [
+        {
+            "id": "ffffffffffffffff",
+            "chain": "ffffffffffffffff",
+            "kind": "button",
+            "layout": [],
+        }
+    ]
+    assert code_of_document(data) == "E-TREE-NEST"
+
+
 def test_duplicate_id_fails() -> None:
     data = document()
     first, second = nav_items(data)
@@ -103,6 +117,16 @@ def test_chain_must_end_with_id() -> None:
     item = nav_items(data)[0]
     item["chain"] = item["chain"].rsplit(".", 1)[0] + ".ffffffffffffffff"
     assert code_of_document(data) == "E-TREE-CHAIN"
+
+
+def test_chain_must_follow_the_parent_chain() -> None:
+    data = document()
+    item = nav_items(data)[0]
+    item["chain"] = "a1b2c3d4e5f6a7b8." + item["id"]
+    with pytest.raises(TreeError) as exc:
+        parse_document(data)
+    assert exc.value.code == "E-TREE-CHAIN"
+    assert exc.value.path == "$.root.layout[0].layout[0].chain"
 
 
 def test_duplicate_order_fails() -> None:
@@ -130,6 +154,16 @@ def test_page_must_be_in_the_tree() -> None:
     data = document()
     data["pages"][0]["id"] = "eeeeeeeeeeeeeeee"
     assert code_of_document(data) == "E-TREE-PAGE"
+
+
+def test_duplicate_page_id_fails() -> None:
+    data = document()
+    first = cast(dict[str, Any], data["pages"][0])
+    data["pages"].append({"id": first["id"], "title": "dup", "route": "/dup"})
+    with pytest.raises(TreeError) as exc:
+        parse_document(data)
+    assert exc.value.code == "E-TREE-PAGE"
+    assert exc.value.path == "$.pages[1].id"
 
 
 def test_missing_layout_fails() -> None:
@@ -161,6 +195,23 @@ def test_standalone_node_chain_can_start_mid_tree() -> None:
     assert node.chain == "a1b2c3d4e5f6a7b8.0a1b2c3d4e5f6a7b.1c2d3e4f5a6b7c8d"
 
 
+def test_load_node_missing_file_is_io_error(tmp_path: Path) -> None:
+    missing = tmp_path / "missing.json"
+    with pytest.raises(TreeError) as exc:
+        load_node(missing)
+    assert exc.value.code == "E-TREE-IO"
+    assert exc.value.path == str(missing)
+
+
+def test_load_node_malformed_json_is_io_error(tmp_path: Path) -> None:
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json", encoding="utf-8")
+    with pytest.raises(TreeError) as exc:
+        load_node(broken)
+    assert exc.value.code == "E-TREE-IO"
+    assert exc.value.path == str(broken)
+
+
 def test_parse_node_root_chain_requires_chain_to_equal_id() -> None:
     node = raw(EXAMPLES / "tree.node.json")
     with pytest.raises(TreeError) as exc:
@@ -183,6 +234,15 @@ def test_id_shape_errors_name_the_concrete_field_path() -> None:
         parse_document(data)
     assert exc.value.code == "E-TREE-ID"
     assert exc.value.path == "$.root.layout[0].layout[0].id"
+
+
+def test_shape_error_path_uses_the_given_prefix() -> None:
+    data = document()
+    nav_items(data)[0]["id"] = "not-hex"
+    with pytest.raises(TreeError) as exc:
+        parse_document(data, path="$doc")
+    assert exc.value.code == "E-TREE-ID"
+    assert exc.value.path == "$doc.root.layout[0].layout[0].id"
 
 
 def test_chain_shape_errors_name_the_concrete_field_path() -> None:
