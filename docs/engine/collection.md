@@ -3,6 +3,8 @@
 > 状态：**建议**（作者已认同方向，细节未定稿）；S3-a 已落实例化与 keyed reconcile 原语（`src/engine/collections/collection.ts`），数据路由与主会话渲染已接（S6）；嵌套集合 / 窗口化仍未做。V1 形状已进 `dendro.tree/1`（§10），运行期实例化未接。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [rules.md](rules.md)
 > 相关：[updates.md](updates.md) · [composition.md](composition.md)
+>
+> **V1 口径**：`data[source]` 的投影与实例派生见 [runtime-semantics.md](runtime-semantics.md) §1。
 
 ## 0. 一句话
 

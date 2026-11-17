@@ -2,6 +2,7 @@
 
 > 状态：**目标架构**（[ADR-0004](../engine/decisions/0004-static-tree-minimal-updates.md)）；分阶段接管默认入口。
 > 这份文档回答四件事：旧结构坏在哪、V1 怎么修、现在做到哪、还差什么。
+> 运行时语义（数据 / 行为 / 权限 / 协议 / 持久化 / 失败）见 [运行时语义](../engine/runtime-semantics.md)。
 
 ## 0. 旧结构的两个同源缺陷
 

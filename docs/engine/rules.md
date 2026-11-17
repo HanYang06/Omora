@@ -3,6 +3,9 @@
 > 状态：**已定与结构平级**；触发/效果闭集是【建议】。S3-c 已落数据输入的最小实现：标量 `in` / `bind` → props 绑定（语义见 §4）；`reactions` 已能解析，执行与 `dispatch` 回来源未落。
 > 依赖：[contract.md](contract.md)
 > 相关：[collection.md](collection.md) · [updates.md](updates.md) · `runtime.md`（待写）
+>
+> **V1 口径**：树内规则（`reactions`）不在 `/1` 里执行；行为 = `on` → `dispatch` → 来源回 ops。
+> 触发 / 效果闭集保留作 v2 边界，见 [runtime-semantics.md](runtime-semantics.md)。
 
 ## 0. 一句话
 
