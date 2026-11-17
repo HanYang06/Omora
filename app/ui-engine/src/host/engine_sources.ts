@@ -20,6 +20,7 @@ import type { RenderStats } from "../contract/render";
 import { parseLocalTrees } from "../link/parse";
 import { parseView } from "../link/view";
 import { sameTree, viewOps } from "./view_diff";
+import { singleDataUpdate } from "./view_data";
 import { applyOps as applyOpsPure } from "../engine/document/ops";
 import type { Diagnostic } from "../contract/diagnostics";
 import type { LocalTree, LocalTreesPayload } from "../link/types";
@@ -150,7 +151,7 @@ export class SourceEngine {
 
   /**
    * 应用一份主会话视图（S6）：整组局部树重链 → 「链接结果 + 页面侧表 + 数据 + 版本」。
-   * 页面 / active / data 与当前一致时，先尝试 view diff（props / mount / move / unmount）的 ops；
+   * 页面 / active 与当前一致时，先尝试 view diff（props / mount / move / unmount）的 ops；树没变、只有一个 data source 变化时走 applyData + 空 ops 升版本；
    * 其余情况（结构 / 页面 / data 变化）仍走全量替换。失败时把 host 注册表恢复到上一份。
    *
    * `keepOwners` 是运行后来源（S7）：主视图只对页面 / 导航这类主来源负责，宿主挂的
@@ -177,31 +178,55 @@ export class SourceEngine {
       return failure(loaded.diagnostics);
     }
     const current = this.inner.session;
-    const sameMeta =
-      parsed.view.version > current.document.version &&
-      JSON.stringify(parsed.view.pages) === JSON.stringify(current.pages) &&
-      parsed.view.active === current.active &&
-      JSON.stringify(parsed.view.data) === JSON.stringify(current.data);
-    if (sameMeta) {
+    const versionAhead = parsed.view.version > current.document.version;
+    const samePages = JSON.stringify(parsed.view.pages) === JSON.stringify(current.pages);
+    const sameActive = parsed.view.active === current.active;
+    const sameData = JSON.stringify(parsed.view.data) === JSON.stringify(current.data);
+    if (versionAhead && samePages && sameActive) {
       const ops = viewOps(current.document.root, this.host.tree);
       if (ops !== undefined) {
-        const batch = {
-          kind: "ops" as const,
-          document: current.document.version + 1,
-          base: current.document.version,
-          seq: parsed.view.version,
-          ops,
-        };
-        const trial = applyOpsPure(current.document, batch);
-        if (trial.ok && sameTree(trial.state.root, this.host.tree)) {
-          const incremental = this.inner.applyOps(batch);
-          if (incremental.ok) {
-            return {
-              ok: true,
-              changed: incremental.changed,
-              session: incremental.session,
-              diagnostics: loaded.diagnostics,
-            };
+        if (sameData) {
+          const batch = {
+            kind: "ops" as const,
+            document: current.document.version + 1,
+            base: current.document.version,
+            seq: parsed.view.version,
+            ops,
+          };
+          const trial = applyOpsPure(current.document, batch);
+          if (trial.ok && sameTree(trial.state.root, this.host.tree)) {
+            const incremental = this.inner.applyOps(batch);
+            if (incremental.ok) {
+              return {
+                ok: true,
+                changed: incremental.changed,
+                session: incremental.session,
+                diagnostics: loaded.diagnostics,
+              };
+            }
+          }
+        } else if (ops.length === 0) {
+          const data = singleDataUpdate(current.data, parsed.view.data);
+          if (data !== undefined) {
+            const dataApplied = this.inner.applyData(data);
+            if (dataApplied.ok) {
+              const baseVersion = dataApplied.session.document.version;
+              const bumped = this.inner.applyOps({
+                kind: "ops",
+                document: baseVersion + 1,
+                base: baseVersion,
+                seq: parsed.view.version,
+                ops: [],
+              });
+              if (bumped.ok) {
+                return {
+                  ok: true,
+                  changed: dataApplied.changed,
+                  session: bumped.session,
+                  diagnostics: loaded.diagnostics,
+                };
+              }
+            }
           }
         }
       }
