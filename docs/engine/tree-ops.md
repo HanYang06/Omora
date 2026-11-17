@@ -1,0 +1,63 @@
+# V1 更新操作（ops）
+
+> 状态：**形状与跨语言 fixture 已落**（2026-11-18）；应用端（`applyOps` + 原子回滚）还没做。
+> 相关：[V1 树](../planning/v1-tree.md) · [V1 运行时](tree-runtime.md) · [updates.md](updates.md)
+
+## 0. 一句话
+
+ops 是“按 id 改一份已存在的 `dendro.tree/1` 文档”的批量：不重链、不重传整棵树，
+只带被改的节点与数据。一次批量一个版本，要么全成，要么全不成。
+
+## 1. 线上形状
+
+```jsonc
+{
+  "kind": "ops",
+  "document": 8, // 新版本
+  "base": 7,     // 客户端当前版本；document 必须 = base + 1
+  "seq": 42,     // 来源内声明序
+  "ops": [
+    { "op": "setProps", "id": "…", "props": { "text": "新入口" } },
+    { "op": "mount", "parent": "…", "node": { /* dendro.tree/1 node */ } },
+    { "op": "unmount", "id": "…" },
+    { "op": "replace", "id": "…", "node": { /* 新子树 */ } },
+    { "op": "data", "source": "ideas.feed", "revision": 6, "items": [ … ] }
+  ]
+}
+```
+
+五种 op：
+
+| op         | 载荷                                                   | 语义（应用端实现）                                             |
+| ---------- | ------------------------------------------------------ | -------------------------------------------------------------- |
+| `setProps` | `id` + `props`                                         | 浅合并进节点的 `settings`；未提到的键保留                      |
+| `mount`    | `parent` + `node`                                      | 挂到父节点 layout；位置由 `node.order` 决定（同级 order 唯一） |
+| `unmount`  | `id`                                                   | 摘掉整棵子树；根不能卸                                         |
+| `replace`  | `id` + `node`                                          | 原位替换；id 可换，chain 由应用端按父链校验                    |
+| `data`     | `source` + `revision` + `value`/`items`/`changes` 之一 | 纯数据；按 source 找集合 / 绑定消费，不改结构                  |
+
+- 空 `ops` 合法：不改变结构，但仍推进版本。
+- 节点载荷仍是完整 `dendro.tree/1` node（带 chain）；ops 不另造一套节点形状。
+- `data` 的三种载荷与 Slot 的 data 形状同义：标量 `value`、全量 `items`、增量 `changes`。
+
+## 2. 版本与失败
+
+- `base` 必须等于当前文档版本，`document` 必须等于 `base + 1`，否则 `E-VERSION`，整批不生效。
+- 任一 op 失败 → 整批不生效、原文档与 DOM 不变；调用方可以请求全量文档兜底。
+- 形状错误一律 `E-PAYLOAD`，诊断带 payload 的 JSON Pointer，按 (path, code, message) 排序。
+- 应用端要在**路径复制**的文档上做：只复制被触碰节点的祖先，未触碰兄弟保持原引用；
+  DOM 只 patch 被触碰的子树根。
+
+## 3. 跨语言契约
+
+`app/sdk/tests/fixtures/tree-ops.json` 是唯一契约：
+
+- Python `omora.sdk.tree_ops.serialize_ops` 的输出必须与 fixture 完全相等；
+- TS `engine/tree/ops.parseOps` 必须接受同一份 fixture，并给出相同的五个 op。
+
+## 4. 还没做
+
+- `applyOps`（文档层）：版本判定、路径复制、原子回滚、`changed`。
+- 运行时最小应用：只动被触碰的子树根，不整树 walk。
+- `data` 语义：collection 实例化、keyed reconcile、绑定。
+- 权限 / 审计接 V1。

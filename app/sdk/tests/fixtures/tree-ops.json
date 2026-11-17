@@ -1,0 +1,70 @@
+{
+  "kind": "ops",
+  "document": 8,
+  "base": 7,
+  "seq": 42,
+  "ops": [
+    {
+      "op": "setProps",
+      "id": "1c2d3e4f5a6b7c8d",
+      "props": {
+        "text": "新入口",
+        "variant": "ghost"
+      }
+    },
+    {
+      "op": "mount",
+      "parent": "7e8f9a0b1c2d3e4f",
+      "node": {
+        "id": "9f0a1b2c3d4e5f60",
+        "chain": "a1b2c3d4e5f6a7b8.3a4b5c6d7e8f9a0b.4b5c6d7e8f9a0b1c.7e8f9a0b1c2d3e4f.9f0a1b2c3d4e5f60",
+        "kind": "card",
+        "title": "item",
+        "order": 30,
+        "layout": [],
+        "settings": {
+          "title": "新条目"
+        },
+        "bind": {},
+        "on": {},
+        "emit": {}
+      }
+    },
+    {
+      "op": "unmount",
+      "id": "0b1c2d3e4f5a6b7c"
+    },
+    {
+      "op": "replace",
+      "id": "1c2d3e4f5a6b7c8d",
+      "node": {
+        "id": "1c2d3e4f5a6b7c8d",
+        "chain": "a1b2c3d4e5f6a7b8.0a1b2c3d4e5f6a7b.1c2d3e4f5a6b7c8d",
+        "kind": "button",
+        "title": "nav-item",
+        "order": 10,
+        "layout": [],
+        "settings": {
+          "text": "再搜"
+        },
+        "bind": {},
+        "on": {
+          "click": "action.nav"
+        },
+        "emit": {}
+      }
+    },
+    {
+      "op": "data",
+      "source": "ideas.feed",
+      "revision": 6,
+      "items": [
+        {
+          "id": "43",
+          "template": "item",
+          "title": "新条目"
+        }
+      ]
+    }
+  ]
+}
