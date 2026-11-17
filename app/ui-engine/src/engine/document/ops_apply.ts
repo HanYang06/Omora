@@ -13,6 +13,7 @@ import type { Capacity, SlotNode } from "../../contract/document";
 import type { Diagnostic, DiagnosticCode } from "../../contract/diagnostics";
 import type { DocumentIndex } from "./document";
 import { makeDiagnostic } from "../../contract/diagnostics";
+import { chainAddr } from "../identity";
 import type { MountOp, MoveOp, Op, ReplaceOp, UnmountOp, UpdateOp } from "./ops";
 
 /** 工作树：applyOps 里深拷出来的根；replace 根时换掉整个引用。 */
@@ -72,6 +73,24 @@ function collectIds(node: SlotNode, out: string[]): void {
     for (const template of Object.values(node.collection.templates)) {
       collectIds(template, out);
     }
+  }
+}
+
+/**
+ * 结构变化后重算子树 addr：code 不变，addr = H(新父 addr, code)。
+ *
+ * `rooted` 表示父链存在；父节点没有 addr 时后代也不该有链根 addr。
+ */
+function rechain(node: SlotNode, parentAddr: string | null, rooted: boolean): void {
+  if (node.code !== undefined && (rooted || parentAddr !== null)) {
+    node.addr = chainAddr(parentAddr, node.code);
+  } else {
+    delete node.addr;
+  }
+  const nextRooted = rooted && node.addr !== undefined;
+  const nextParent = node.addr ?? null;
+  for (const child of node.children) {
+    rechain(child, nextParent, nextRooted);
   }
 }
 
@@ -150,6 +169,7 @@ function applyMount(ctx: OpContext, op: MountOp, path: string): OpOutcome {
   const at = clamp(op.at ?? slotNode.children.length, 0, slotNode.children.length);
   const clone = structuredClone(op.node);
   slotNode.children.splice(at, 0, clone);
+  rechain(clone, slotNode.addr ?? null, slotNode.addr !== undefined);
   return { ok: true, touched: clone.id };
 }
 
@@ -202,6 +222,7 @@ function applyMove(ctx: OpContext, op: MoveOp, path: string): OpOutcome {
   }
   sourceParent.children.splice(source.order, 1);
   target.children.splice(at, 0, node);
+  rechain(node, target.addr ?? null, target.addr !== undefined);
   return { ok: true, touched: op.id };
 }
 
@@ -277,8 +298,10 @@ function applyReplace(ctx: OpContext, op: ReplaceOp, path: string): OpOutcome {
   const parent = location.parent;
   if (parent === undefined) {
     ctx.working.root = clone;
+    rechain(clone, null, true);
   } else {
     parent.children[location.order] = clone;
+    rechain(clone, parent.addr ?? null, parent.addr !== undefined);
   }
   return { ok: true, touched: clone.id };
 }

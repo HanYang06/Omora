@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { chainAddr } from "../engine/identity";
 import { createEngine, type EngineRuntime } from "./engine";
 
-function leaf(id: string, text: string, addr?: string): Record<string, unknown> {
+function leaf(id: string, text: string, addr?: string, code?: string): Record<string, unknown> {
   return {
     id,
     kind: "dendro:text",
     owner: "test",
     props: { text },
     ...(addr === undefined ? {} : { addr }),
+    ...(code === undefined ? {} : { code }),
     children: [],
   };
 }
@@ -84,19 +86,20 @@ describe("EngineRuntime：addr redirect / tombstone", () => {
         {
           op: "replace",
           id: "leaf",
-          node: leaf("leaf2", "y"),
+          node: leaf("leaf2", "y", undefined, "leaf2-code"),
         },
       ],
     });
 
     expect(applied.ok).toBe(true);
     expect(resolve(engine, "leaf-addr")?.id).toBe("leaf2");
+    expect(resolve(engine, chainAddr("left-addr", "leaf2-code"))?.id).toBe("leaf2");
     engine.dispose();
   });
 
   it("move 后旧 addr 仍解析到被移动的节点", () => {
     const engine = engineOf([
-      slot("left", "left-addr", [leaf("leaf", "x", "leaf-addr")]),
+      slot("left", "left-addr", [leaf("leaf", "x", "leaf-addr", "leaf-code")]),
       slot("right", "right-addr"),
     ]);
 
@@ -110,6 +113,7 @@ describe("EngineRuntime：addr redirect / tombstone", () => {
 
     expect(applied.ok).toBe(true);
     expect(resolve(engine, "leaf-addr")?.id).toBe("leaf");
+    expect(resolve(engine, chainAddr("right-addr", "leaf-code"))?.id).toBe("leaf");
     engine.dispose();
   });
 
