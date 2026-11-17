@@ -24,7 +24,7 @@
 
 ## 2. 两个 pass
 
-1. **类型检查**（每个局部树各自）：kind 是否存在、props/events/bind/state/layout 是否符合 schema、动作引用、绑定路径类型。
+1. **类型检查**（每个局部树各自）：kind 是否存在、props/events/bind/state/layout 是否符合 schema、动作引用、绑定路径类型。V1 构建期已落 kind 存在性（`src/components/tree_kinds.ts` + `E-TREE-KIND`）；其余未做。
 2. **链接**（跨局部树）：目标 slot 是否存在、id 是否重复、权限、同 slot 顺序是否明确、单槽容量、成环、规则目标、数据源生产者。
 
 产出只有两种：**权威根树 + 诊断**，或者**因 error 不产出新树**。

@@ -149,6 +149,69 @@ describe("buildTreeArtifacts：每页一份文档 + manifest", () => {
   });
 });
 
+describe("buildTreeArtifacts：kind 存在性", () => {
+  const known = new Set(["app", "column", "page-link", "text"]);
+
+  it("未知 kind -> E-TREE-KIND，带节点路径，构建失败", () => {
+    const partial = contentPartial();
+    partial.root.kind = "mystery";
+    const result = buildTreeArtifacts(
+      input([
+        {
+          name: "ideas",
+          title: "灵感",
+          route: "/ideas",
+          base: baseDocument(),
+          partials: [partial],
+        },
+      ]),
+      { kinds: known },
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    const diagnostic = result.diagnostics.find((entry) => entry.code === "E-TREE-KIND");
+    expect(diagnostic?.path).toBe("pages[0].root/layout[1]/layout[0]/kind");
+    expect(diagnostic?.message).toContain("mystery");
+  });
+
+  it("全部 kind 都有实现时不报错", () => {
+    expect(buildTreeArtifacts(input(), { kinds: known }).ok).toBe(true);
+  });
+
+  it("collection.templates 里的 kind 也要有实现", () => {
+    const partial = contentPartial();
+    const template: Node = {
+      ...node("ffffffffffffffff", partial.root.chain + ".ffffffffffffffff", 10),
+      kind: "mystery",
+    };
+    partial.root.collection = {
+      source: "ideas.feed",
+      key: "id",
+      templates: { item: template },
+    };
+
+    const result = buildTreeArtifacts(
+      input([
+        {
+          name: "ideas",
+          title: "灵感",
+          route: "/ideas",
+          base: baseDocument(),
+          partials: [partial],
+        },
+      ]),
+      { kinds: known },
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.diagnostics.map((entry) => entry.path)).toContain(
+      "pages[0].root/layout[1]/layout[0]/collection/templates/item/kind",
+    );
+  });
+});
+
 describe("buildTreeArtifacts：失败不产半套产物", () => {
   it("局部树 chain 不对：报 E-TREE-CHAIN，路径带页下标", () => {
     const broken = contentPartial();

@@ -11,6 +11,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
+import { knownTreeKinds } from "../components/tree_kinds";
 import { buildTreeArtifacts, type TreeBuildDiagnostic } from "./tree/artifacts";
 
 const INPUT_URL = new URL("../generated/static-tree.json", import.meta.url);
@@ -55,7 +56,7 @@ export function treeArtifactsPlugin(options: TreeArtifactsOptions = {}): Plugin 
     apply: "build",
     buildStart() {
       const inputPath = options.inputPath ?? defaultTreeInputPath();
-      const result = buildTreeArtifacts(readTreeInput(inputPath));
+      const result = buildTreeArtifacts(readTreeInput(inputPath), { kinds: knownTreeKinds() });
       if (!result.ok) {
         throw new Error(formatTreeFailure(inputPath, result.diagnostics));
       }
