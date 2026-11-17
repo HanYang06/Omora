@@ -156,7 +156,7 @@ def default_for(py: str) -> str | None:
 def gen_python(schema: dict[str, Any]) -> str:
     defs = schema["$defs"]
     meta = schema["x-omora"]
-    lines = [PY_HEADER, ""]
+    lines = [PY_HEADER]
     lines.extend(
         [
             f"SCHEMA = {json.dumps(schema['$defs']['document']['properties']['schema']['const'])}",
@@ -196,27 +196,28 @@ def gen_python(schema: dict[str, Any]) -> str:
                     lines.append(f"    {key}: {py} | None = {default}")
         lines.extend(["", ""])
     lines.append("__all__ = [")
+    all_names = (
+        "SCHEMA",
+        "ID_PATTERN",
+        "CHAIN_PATTERN",
+        "ID_FIELD",
+        "CHAIN_FIELD",
+        "ORDER_FIELD",
+        "LAYOUT_FIELD",
+        "NON_NESTING_FIELDS",
+        "ROOT_KIND",
+        "MOUNT_MODES",
+        "Placement",
+        "Node",
+        "Page",
+        "LedgerEntry",
+        "Mount",
+        "Document",
+        "Partial",
+    )
     lines.extend(
         f"    {json.dumps(name)},"
-        for name in (
-            "SCHEMA",
-            "ID_PATTERN",
-            "CHAIN_PATTERN",
-            "ID_FIELD",
-            "CHAIN_FIELD",
-            "ORDER_FIELD",
-            "LAYOUT_FIELD",
-            "NON_NESTING_FIELDS",
-            "ROOT_KIND",
-            "MOUNT_MODES",
-            "Placement",
-            "Node",
-            "Page",
-            "LedgerEntry",
-            "Mount",
-            "Document",
-            "Partial",
-        )
+        for name in sorted(all_names, key=lambda name: (not name.isupper(), name))
     )
     lines.append("]")
     lines.append("")
