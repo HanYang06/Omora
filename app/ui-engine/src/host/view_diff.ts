@@ -1,17 +1,18 @@
 /**
- * 视图 diff 的最小版本：形状不变、只改 props 时产出 update ops。
+ * 视图 diff：形状 / 结构变化都尝试产出 ops；拿不准就返回 undefined 让调用方全量替换。
  *
- * 结构 / kind / layout / events / collection 任何变化都返回 undefined，让调用方
- * 退回全量 applyFull。这样主会话先吃到“纯内容变化”的增量，不冒险猜结构。
+ * 只处理 canProve 的部分：
+ * - 同 id、kind、owner、layout / events / scope / bind / in / reactions / grant 不变；
+ * - props 可增改，不能删（update 只能浅合并）；
+ * - children 可增删 / 重排，用 mount / unmount / move；
+ * - collection.templates 一律返回 undefined（模板位置不在 children 路径上）。
+ *
+ * 顺序：父节点先出 update / 结构 op，再递归公共子节点；调用方会用纯 applyOps
+ * 试跑并按终态是否等于新树来兜底。
  */
 
 import type { SlotNode } from "../contract/document";
-
-export interface PropUpdate {
-  op: "update";
-  id: string;
-  props: Record<string, unknown>;
-}
+import type { WireOp } from "../engine/document/ops";
 
 function sameValue(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) {
@@ -41,23 +42,42 @@ function sameOptional(left: unknown, right: unknown): boolean {
   return sameValue(left ?? null, right ?? null);
 }
 
-/** 形状不变时收集 props update；形状变了返回 undefined。 */
-export function propUpdates(oldRoot: SlotNode, newRoot: SlotNode): PropUpdate[] | undefined {
-  const updates: PropUpdate[] = [];
-  if (!walk(oldRoot, newRoot, updates)) {
-    return undefined;
-  }
-  return updates;
+/** 终态比较：调用方只在试跑结果与新树完全一致时才提交 ops。 */
+export function sameTree(left: SlotNode, right: SlotNode): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function walk(oldNode: SlotNode, newNode: SlotNode, updates: PropUpdate[]): boolean {
+/** 视图树 → ops；任何无法证明等价的变化返回 undefined。 */
+export function viewOps(oldRoot: SlotNode, newRoot: SlotNode): WireOp[] | undefined {
+  const ops: WireOp[] = [];
+  return diffNode(oldRoot, newRoot, ops) ? ops : undefined;
+}
+
+function propChanges(
+  oldProps: Record<string, unknown>,
+  newProps: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  for (const key of Object.keys(oldProps)) {
+    if (!(key in newProps)) {
+      return undefined;
+    }
+  }
+  const changed: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(newProps)) {
+    if (!sameValue(oldProps[key], value)) {
+      changed[key] = value;
+    }
+  }
+  return changed;
+}
+
+function diffNode(oldNode: SlotNode, newNode: SlotNode, ops: WireOp[]): boolean {
   if (
     oldNode.id !== newNode.id ||
     oldNode.kind !== newNode.kind ||
     oldNode.owner !== newNode.owner ||
     oldNode.collection !== undefined ||
     newNode.collection !== undefined ||
-    oldNode.children.length !== newNode.children.length ||
     !sameOptional(oldNode.layout, newNode.layout) ||
     !sameOptional(oldNode.events, newNode.events) ||
     !sameOptional(oldNode.scope, newNode.scope) ||
@@ -68,31 +88,42 @@ function walk(oldNode: SlotNode, newNode: SlotNode, updates: PropUpdate[]): bool
   ) {
     return false;
   }
-  const oldProps = oldNode.props;
-  const newProps = newNode.props;
-  const changed: Record<string, unknown> = {};
-  let dirty = false;
-  for (const key of Object.keys(oldProps)) {
-    if (!(key in newProps)) {
-      return false;
+  const patch = propChanges(oldNode.props, newNode.props);
+  if (patch === undefined) {
+    return false;
+  }
+  if (Object.keys(patch).length > 0) {
+    ops.push({ op: "update", id: oldNode.id, props: patch });
+  }
+
+  const newIds = newNode.children.map((child) => child.id);
+  const newSet = new Set(newIds);
+  for (const child of oldNode.children) {
+    if (!newSet.has(child.id)) {
+      ops.push({ op: "unmount", id: child.id });
     }
   }
-  for (const [key, value] of Object.entries(newProps)) {
-    if (!sameValue(oldProps[key], value)) {
-      changed[key] = value;
-      dirty = true;
-    }
-  }
-  if (dirty) {
-    updates.push({ op: "update", id: oldNode.id, props: changed });
-  }
-  for (let index = 0; index < oldNode.children.length; index += 1) {
-    const oldChild = oldNode.children[index];
+  const current = oldNode.children.map((child) => child.id).filter((id) => newSet.has(id));
+  for (let index = 0; index < newIds.length; index += 1) {
+    const targetId = newIds[index];
     const newChild = newNode.children[index];
-    if (oldChild === undefined || newChild === undefined) {
+    if (targetId === undefined || newChild === undefined) {
       return false;
     }
-    if (!walk(oldChild, newChild, updates)) {
+    const at = current.indexOf(targetId);
+    if (at === -1) {
+      ops.push({ op: "mount", slot: oldNode.id, at: index, node: newChild });
+      current.splice(index, 0, targetId);
+    } else if (at !== index) {
+      ops.push({ op: "move", id: targetId, slot: oldNode.id, at: index });
+      current.splice(at, 1);
+      current.splice(index, 0, targetId);
+    }
+  }
+
+  for (const newChild of newNode.children) {
+    const oldChild = oldNode.children.find((child) => child.id === newChild.id);
+    if (oldChild !== undefined && !diffNode(oldChild, newChild, ops)) {
       return false;
     }
   }

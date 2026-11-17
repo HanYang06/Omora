@@ -128,6 +128,82 @@ describe("applyView：整份视图替换", () => {
     expect(index.get("page.ideas.title")?.props.text).toBe("改过的标题");
   });
 
+  it("结构变化也走 ops：新增节点不全量替换", () => {
+    const engine = engineOf(fixture());
+
+    const result = applied(
+      engine.applyView(
+        viewOf((value) => {
+          value.version = 2;
+          const trees = (value.localTrees as Record<string, unknown>).trees as Record<
+            string,
+            unknown
+          >[];
+          const root = trees[1]?.root as Record<string, unknown>;
+          const children = root.children as Record<string, unknown>[];
+          children.push({
+            id: "page.ideas.extra",
+            kind: "dendro:text",
+            owner: "ideas",
+            props: { text: "新增" },
+            children: [],
+          });
+        }),
+      ),
+    );
+
+    expect(result.changed).toContain("page.ideas.extra");
+    expect(engine.metrics).toMatchObject({ version: 2, fullUpdates: 0, opsBatches: 1 });
+    const index = DocumentIndex.build(engine.session.document.root);
+    expect(index.get("page.ideas.extra")?.props.text).toBe("新增");
+  });
+
+  it("同父重排也走 ops：移动节点不全量替换", () => {
+    const engine = engineOf(fixture());
+    const extra = {
+      id: "page.ideas.extra",
+      kind: "dendro:text",
+      owner: "ideas",
+      props: { text: "新增" },
+      children: [],
+    };
+
+    applied(
+      engine.applyView(
+        viewOf((value) => {
+          value.version = 2;
+          const trees = (value.localTrees as Record<string, unknown>).trees as Record<
+            string,
+            unknown
+          >[];
+          const root = trees[1]?.root as Record<string, unknown>;
+          (root.children as Record<string, unknown>[]).push(extra);
+        }),
+      ),
+    );
+
+    const result = applied(
+      engine.applyView(
+        viewOf((value) => {
+          value.version = 3;
+          const trees = (value.localTrees as Record<string, unknown>).trees as Record<
+            string,
+            unknown
+          >[];
+          const root = trees[1]?.root as Record<string, unknown>;
+          const children = root.children as Record<string, unknown>[];
+          const title = children[0];
+          if (title !== undefined) {
+            root.children = [extra, title];
+          }
+        }),
+      ),
+    );
+
+    expect(result.changed).toEqual(["page.ideas.extra"]);
+    expect(engine.metrics).toMatchObject({ version: 3, fullUpdates: 0, opsBatches: 2 });
+  });
+
   it("旧版本：E-VERSION 拒绝，会话与注册表都回滚", () => {
     const engine = engineOf(fixture());
     applied(engine.applyView(viewOf((value) => (value.version = 2))));
