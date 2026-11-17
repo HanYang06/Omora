@@ -74,7 +74,7 @@ pnpm --dir app/ui-engine exec vitest run --coverage --configLoader runner
 | 脚本                      | 作用                                                   |
 | ------------------------- | ------------------------------------------------------ |
 | `app/cli/`                | `omora` 命令：一条命令起内核 + 渲染引擎（`omora dev`） |
-| `scripts/budget.py`       | 体量预算：文档与代码的文件行数上限，读 `budget.json`   |
+| `scripts/budget.py`       | 体量预算：行数分档（警告 / 阻断），读 `budget.json`    |
 | `scripts/docs_links.py`   | 文档相对链接检查：README、AGENTS、docs 与项目 skill    |
 | `scripts/sync_version.py` | 把 `VERSION` 同步到各 package 元数据                   |
 | `scripts/build.py`        | 发布构建，产物在 `dist/omora-<version>.zip`            |

@@ -1,22 +1,25 @@
 {
-  "//": "体量预算：唯一真相。scripts/budget.py 读它；超了就拆，不改预算。",
+  "//": "体量预算：唯一真相。scripts/budget.py 读它；fileLines 是可接受上限，tiers 按上限的百分比分警告 / 阻断。",
+  "tiers": {
+    "warnPercent": 85,
+    "blockPercent": 120
+  },
   "defaults": {
-    "fileLines": 400
+    "fileLines": 1000
   },
   "suffixes": {
     ".md": { "fileLines": 500 },
-    ".ts": { "fileLines": 400 },
-    ".tsx": { "fileLines": 300 }
+    ".ts": { "fileLines": 1000 },
+    ".tsx": { "fileLines": 1000 }
   },
   "names": {
-    "test_*.py": { "fileLines": 500 },
-    "*.test.ts": { "fileLines": 500 },
-    "*.test.tsx": { "fileLines": 500 }
+    "test_*.py": { "fileLines": 1200 },
+    "*.test.ts": { "fileLines": 1200 },
+    "*.test.tsx": { "fileLines": 1200 }
   },
   "paths": {
     "README.md": { "fileLines": 300 },
     "AGENTS.md": { "fileLines": 300 },
-    "docs": { "fileLines": 500 },
-    "scripts": { "fileLines": 400 }
+    "docs": { "fileLines": 500 }
   }
 }

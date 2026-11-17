@@ -20,6 +20,7 @@
 - **V1 ops 文档层应用**：`applyOps` 做版本判定、目标预检、路径复制、原子回滚与 `changed`；chain / id / order 校验；模板节点只允许 `setProps`。运行时最小重渲染与 `data` 语义未接。
 - **运行时语义统一设计**：数据权威（source + revision、实例不进文档）、行为（`on` → dispatch，V1 不做树内规则）、权限（结构只给父子；来源归属与策略在宿主 guard，引擎不判定）、协议（`document / ops / dispatch / diagnostics`）、持久化（引擎不落盘）、失败（批次原子 + 条目隔离）。
 - **安全例外**：picomatch `GHSA-fc5q-39xc-vjpf` 为 dev-only、无 patched 版本，临时 ignore，2026-12-31 复审（#119）。
+- **体量预算分档**：`fileLines` 改为可接受上限（代码 1000 / 测试 1200 / 文档 500、README 与 AGENTS 300），85% 起 `WARN`、120% 才 `FAIL`；警告不挡门禁，阻断才失败；`scripts/tests/test_budget.py` 钉住分档与合并顺序。
 
 ## 2026-11-15
 

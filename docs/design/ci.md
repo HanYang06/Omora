@@ -33,6 +33,16 @@
 - **抬阈值的流程**：先补真实行为的测试，确认覆盖率变了，再改阈值数字。不允许先改数字再凑测试。
 - 防"垃圾测试"：PR 上用 `diff-cover` 卡新增生产代码行覆盖率；每周一 03:00 UTC 跑 `.github/workflows/mutation.yml`（TS 用 Stryker），只出报告不拦门禁，观察四周后再设地板。报告作为 artifact 保留 30 天。
 
+## 体量预算
+
+`budget.json` 是唯一真相，`scripts/budget.py` 在 `build` job 里检查。每个范围只给一个可接受上限 `fileLines`（代码 1000、测试 1200、文档 500、README / AGENTS 300），再按上限的百分比分三档：
+
+- 不超过 `warnPercent`（默认 85%）：合格，静默通过；
+- 超过警告线、不到 `blockPercent`（默认 120%）：`WARN`，不影响退出码；
+- 超过阻断线：`FAIL`，门禁失败。
+
+代码 1000 的警告线是 850、阻断线是 1200；文档 500 则是 425 / 600。这样上限内可以正常增长，接近上限才开始提醒，只有真的拆不下来、又超出上限 20% 才阻断。警告不是免死金牌：同一个文件连续几轮只涨不拆，应当在 review 里处理；一旦超过阻断线，先拆文件，不要调大预算。
+
 ## 变异测试
 
 每周一 03:00 UTC 跑 `.github/workflows/mutation.yml`：TS 用 Stryker（vitest runner，inPlace 模式），只出变异分数与报告，不拦 PR；报告作为 artifact 保留 30 天，观察四周后再决定地板。
