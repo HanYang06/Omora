@@ -33,7 +33,13 @@
       "copiesState": true,
       "host": null,
       "mounted": false
-    }
+    },
+    "hooks": ["on_create", "on_mount", "on_update", "on_reparent", "on_unmount", "on_dispose"],
+    "order": {
+      "mount": "parent-before-children",
+      "unmount": "children-before-parent"
+    },
+    "selfRemove": "request-only"
   },
   "operations": {
     "add": {
@@ -49,7 +55,9 @@
       "target": "new-parent",
       "preserves": ["id", "state"],
       "rebindsHost": true,
-      "remount": "optional"
+      "remount": "optional",
+      "capabilities": "revoked-on-rebind",
+      "state": "preserved"
     },
     "clone": {
       "by": "holder",
@@ -67,6 +75,11 @@
       "by": "parent",
       "to": "child",
       "revocable": true
+    },
+    "unmount": {
+      "by": "root",
+      "cascade": true,
+      "childSelfRemove": "request-only"
     }
   },
   "request": {
