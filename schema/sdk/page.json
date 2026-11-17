@@ -1,0 +1,65 @@
+{
+  "schema": "omora.page/1",
+  "version": 1,
+  "title": "Omora page authoring contract",
+  "page": {
+    "unit": "root node scope",
+    "is": "node",
+    "fields": ["name", "label", "icon", "root", "state", "actions"],
+    "mount": "host",
+    "unmount": "root-only",
+    "invalidate": "re-evaluate When/Bind and update the mounted subtree; no page function re-execution",
+    "noRenderFunction": true
+  },
+  "state": {
+    "kind": "mutable mapping",
+    "scope": "page",
+    "change": "page.invalidate()",
+    "serialization": "not-serialized"
+  },
+  "when": {
+    "attachedTo": "node",
+    "fields": {
+      "condition": "predicate",
+      "then": "node[]",
+      "otherwise": "node[]"
+    },
+    "evaluation": ["mount", "invalidate"],
+    "serialization": "resolved branch only",
+    "identity": "stable key by node id"
+  },
+  "bind": {
+    "attachedTo": "node",
+    "fields": {
+      "prop": "string",
+      "source": "state path or data key"
+    },
+    "direction": "down",
+    "evaluation": ["mount", "invalidate"],
+    "serialization": "tree.bind",
+    "twoWay": false
+  },
+  "action": {
+    "attachedTo": "node event",
+    "fields": {
+      "name": "string",
+      "handler": "method"
+    },
+    "effect": "mutate page state then invalidate",
+    "serialization": "tree.on handler id"
+  },
+  "serialization": {
+    "treeSchema": "dendro.tree/1",
+    "pageRoot": "node",
+    "conditions": "resolved",
+    "state": "not-serialized"
+  },
+  "rules": [
+    "page is an object with explicit mount/invalidate; no pure render function",
+    "state is page-local; no global state",
+    "When/Bind only affect the node subtree",
+    "child cannot mutate page state except through an action or request",
+    "page clone/patch reuse node scope semantics",
+    "no React/JSX/hooks"
+  ]
+}
