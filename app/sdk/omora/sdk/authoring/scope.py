@@ -285,6 +285,12 @@ class Node:
         for grandchild in child._children:
             child._mount_subtree(grandchild)
 
+    def _reactivate(self) -> None:
+        """页面层显式 mount：把保留的树重新变 live（补建 host、发 mount 钩子）。"""
+        self._live = True
+        for child in self._children:
+            self._mount_subtree(child)
+
     def _unmount_subtree(self) -> None:
         """关 host、发 unmount（子先父后）；子树、parent 链、children 全保留。"""
         was_live = self._live
