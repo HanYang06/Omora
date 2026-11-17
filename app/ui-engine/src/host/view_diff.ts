@@ -5,7 +5,8 @@
  * - 同 id、kind、owner、layout / events / scope / bind / in / reactions / grant 不变；
  * - props 可增改，不能删（update 只能浅合并）；
  * - children 可增删 / 重排，用 mount / unmount / move；
- * - collection / layout / events 等元数据变化用整节点 replace；模板字段变化仍靠试跑兜底。
+ * - collection 结构 / 模板变化、layout / events 等元数据变化用整节点 replace；
+ * - 叶子 props 删键用 replace，有子节点则退回全量（保子树身份）。
  *
  * 顺序：父节点先出 update / 结构 op，再递归公共子节点；调用方会用纯 applyOps
  * 试跑并按终态是否等于新树来兜底。
@@ -75,11 +76,13 @@ function diffNode(oldNode: SlotNode, newNode: SlotNode, ops: WireOp[]): boolean 
   if (oldNode.id !== newNode.id) {
     return false;
   }
+  const collectionChanged =
+    (oldNode.collection === undefined) !== (newNode.collection === undefined) ||
+    (oldNode.collection !== undefined && !sameOptional(oldNode.collection, newNode.collection));
   const metadataChanged =
     oldNode.kind !== newNode.kind ||
     oldNode.owner !== newNode.owner ||
-    oldNode.collection !== undefined ||
-    newNode.collection !== undefined ||
+    collectionChanged ||
     !sameOptional(oldNode.layout, newNode.layout) ||
     !sameOptional(oldNode.events, newNode.events) ||
     !sameOptional(oldNode.scope, newNode.scope) ||
@@ -94,6 +97,11 @@ function diffNode(oldNode: SlotNode, newNode: SlotNode, ops: WireOp[]): boolean 
   }
   const patch = propChanges(oldNode.props, newNode.props);
   if (patch === undefined) {
+    // props 有删键：无子节点时 replace 能精确表达；有子节点则保留子树身份，退回全量。
+    if (oldNode.children.length === 0 && newNode.children.length === 0) {
+      ops.push({ op: "replace", id: oldNode.id, node: newNode });
+      return true;
+    }
     return false;
   }
   if (Object.keys(patch).length > 0) {
