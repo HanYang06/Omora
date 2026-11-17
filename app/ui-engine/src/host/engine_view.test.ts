@@ -222,7 +222,7 @@ describe("applyView：整份视图替换", () => {
       version: 2,
       fullUpdates: 0,
       dataUpdates: 1,
-      opsBatches: 1,
+      opsBatches: 0,
     });
   });
 
@@ -249,7 +249,7 @@ describe("applyView：整份视图替换", () => {
       version: 2,
       fullUpdates: 0,
       dataUpdates: 2,
-      opsBatches: 1,
+      opsBatches: 0,
     });
   });
 

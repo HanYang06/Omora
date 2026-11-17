@@ -208,33 +208,14 @@ export class SourceEngine {
         } else if (ops.length === 0) {
           const payloads = dataUpdates(current.data, parsed.view.data);
           if (payloads !== undefined && payloads.length > 0) {
-            const changed: string[] = [];
-            let ok = true;
-            for (const payload of payloads) {
-              const dataApplied = this.inner.applyData(payload);
-              if (!dataApplied.ok) {
-                ok = false;
-                break;
-              }
-              changed.push(...dataApplied.changed);
-            }
-            if (ok) {
-              const baseVersion = this.inner.session.document.version;
-              const bumped = this.inner.applyOps({
-                kind: "ops",
-                document: baseVersion + 1,
-                base: baseVersion,
-                seq: parsed.view.version,
-                ops: [],
-              });
-              if (bumped.ok) {
-                return {
-                  ok: true,
-                  changed,
-                  session: bumped.session,
-                  diagnostics: loaded.diagnostics,
-                };
-              }
+            const applied = this.inner.applyDataBatch(payloads, parsed.view.version);
+            if (applied.ok) {
+              return {
+                ok: true,
+                changed: applied.changed,
+                session: applied.session,
+                diagnostics: loaded.diagnostics,
+              };
             }
           }
         }

@@ -51,11 +51,8 @@ import type { Diagnostic } from "../contract/diagnostics";
 import type { LinkOptions } from "../link/types";
 import { AuditLog } from "./audit";
 import { auditApplied, auditRejected } from "./engine_audit_helpers";
-import {
-  applyData as applyDataUpdate,
-  type DataGuard,
-  type DataState,
-} from "../engine/updates/data";
+import type { DataGuard } from "../engine/updates/data";
+import { applyDataBatch as applyDataBatchPure } from "./data_batch";
 import { makeDiagnostic } from "../contract/diagnostics";
 import { hydrateSession } from "../engine/updates/hydrate";
 import { LifecycleLedger, type DisposeReport } from "./lifecycle";
@@ -215,31 +212,27 @@ export class EngineRuntime {
 
   /** 应用一条数据更新（标量 / 集合全量 / 集合增量）；条目级坏数据只丢自己并记诊断。 */
   applyData(payload: unknown): EngineApplyResult {
+    return this.applyDataBatch([payload], this.current.document.version);
+  }
+
+  /**
+   * 原子应用一批数据更新：全部成功才提交，只 publish 一次；版本一次设到
+   * `version`（view 版本）。任一 payload 失败整批不生效。
+   */
+  applyDataBatch(payloads: readonly unknown[], version: number): EngineApplyResult {
     if (this.isDisposed) {
       return this.disposedFailure();
     }
     const start = this.clock();
-    // session.data 由文档校验 + 深拷而来，形状就是数据文档投影；纯函数层只读它。
-    const applied = applyDataUpdate(
-      this.current.document,
-      this.current.data as DataState,
-      payload,
-      this.guardOptions(this.dataGuard),
-    );
-    if (!applied.ok) {
-      return this.reject(applied.diagnostics, this.elapsed(start));
+    const batch = applyDataBatchPure(this.current, payloads, this.dataGuard, version);
+    if (!batch.ok) {
+      return this.reject(batch.diagnostics, this.elapsed(start));
     }
-    const next: SessionState = {
-      document: applied.document,
-      pages: this.current.pages,
-      active: this.current.active,
-      data: applied.data,
-    };
     return this.publish(
-      next,
-      applied.changed,
-      { dataUpdates: 1 },
-      applied.diagnostics,
+      batch.session,
+      batch.changed,
+      { dataUpdates: payloads.length },
+      batch.diagnostics,
       this.elapsed(start),
     );
   }
