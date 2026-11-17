@@ -28,7 +28,11 @@ import { parseOps } from "./ops";
 import type { RendererRegistry, TreeHost, TreeRuntimeDiagnostic } from "./types";
 import {
   applyDocument,
+  buildDetachedSubtree,
+  detachMountedSubtree,
+  placeDetachedSubtree,
   unmountTree,
+  type DetachedSubtree,
   type MountedNode,
   type TreeApplyContext,
 } from "./runtime_apply";
@@ -121,8 +125,12 @@ export class TreeRuntime {
   }
 
   /**
-   * 应用一批 ops：文档层先算新文档（版本 / 原子 / 路径复制），成功后只更新被触碰的
-   * 已挂载节点。当前只支持 `setProps`（内容更新）；结构操作下一步接。
+   * 应用一批 ops：文档层先算新文档（版本 / 原子 / 路径复制），成功后按最终状态只改
+   * 被触碰的已挂载子树。支持 setProps / mount / unmount；replace 与 data 下一步接。
+   *
+   * 结构操作按“子树”处理：mount 建一棵新子树挂到父节点；unmount 摘一棵；不重建整棵树。
+   * 一次批量里不允许嵌套 mount（新子树应自带子节点）；所有新子树先建好再改 DOM。
+   * 构建失败回滚已建的子树；宿主阶段的失败是 best effort（结构变更无法完整回滚）。
    */
   applyOps(value: unknown): TreeUpdateResult {
     const closed = this.rejectWhenDisposed();
@@ -142,12 +150,31 @@ export class TreeRuntime {
         })),
       );
     }
-    if (parsed.batch.ops.some((op) => op.op !== "setProps")) {
+    if (parsed.batch.ops.some((op) => op.op === "data")) {
+      return this.fail([
+        { code: "E-PAYLOAD", path: "/ops", message: "data op 还没接（下一步：collection / 绑定）" },
+      ]);
+    }
+    if (parsed.batch.ops.some((op) => op.op === "replace")) {
+      return this.fail([
+        { code: "E-PAYLOAD", path: "/ops", message: "运行时 replace 还没接；下一步" },
+      ]);
+    }
+    const mountedThisBatch = new Set<string>();
+    const unmountedThisBatch = new Set<string>();
+    for (const op of parsed.batch.ops) {
+      if (op.op === "mount") {
+        mountedThisBatch.add(op.node.id);
+      } else if (op.op === "unmount") {
+        unmountedThisBatch.add(op.id);
+      }
+    }
+    if ([...mountedThisBatch].some((id) => unmountedThisBatch.has(id))) {
       return this.fail([
         {
           code: "E-PAYLOAD",
           path: "/ops",
-          message: "运行时最小应用目前只支持 setProps；结构操作下一步",
+          message: "同一批里不要摘了又挂同一个 id；分成两批",
         },
       ]);
     }
@@ -161,30 +188,141 @@ export class TreeRuntime {
         })),
       );
     }
-    const updates: Array<{
+    const context = this.newContext();
+    const removed: MountedNode[] = [];
+    const added: string[] = [];
+    const updated: string[] = [];
+    for (const id of applied.changed) {
+      const old = this.byId.get(id);
+      const next = applied.byId.get(id);
+      if (old !== undefined && next === undefined) {
+        removed.push(old);
+      } else if (old === undefined && next !== undefined) {
+        added.push(id);
+      } else if (old !== undefined && next !== undefined) {
+        updated.push(id);
+      }
+    }
+    // 只处理被摘子树的最高根；后代跟着整棵走。
+    const removedIds = new Set(removed.map((node) => node.node.id));
+    const removedRoots = removed.filter((node) => {
+      let parent = node.parent;
+      while (parent !== null) {
+        if (removedIds.has(parent.node.id)) {
+          return false;
+        }
+        parent = parent.parent;
+      }
+      return true;
+    });
+    // 新子树先全部建好（此时不碰 DOM）；父必须已经挂载，且不能是本批新挂的节点。
+    const built: Array<{
+      subtree: DetachedSubtree;
+      parent: MountedNode;
+      host: TreeHost;
+      index: number;
+    }> = [];
+    const addedIds = new Set<string>();
+    const byDepth = (left: string, right: string): number =>
+      depthOf(applied.byId.get(left)?.chain ?? "") - depthOf(applied.byId.get(right)?.chain ?? "");
+    for (const id of [...added].sort(byDepth)) {
+      const next = applied.byId.get(id);
+      if (next === undefined) {
+        continue;
+      }
+      const parentId = parentIdOf(next.chain);
+      if (parentId === null || added.includes(parentId)) {
+        return this.fail([
+          {
+            code: "E-PAYLOAD",
+            path: "/ops",
+            message: "一次批量里不要嵌套 mount；把子节点放进同一棵子树",
+          },
+        ]);
+      }
+      const parent = this.byId.get(parentId);
+      if (parent === undefined) {
+        return this.fail([
+          { code: "E-TARGET-MISSING", path: "/ops", message: "父节点没有挂载: " + parentId },
+        ]);
+      }
+      const host = parent.childHost;
+      if (host === null) {
+        return this.fail([
+          { code: "E-TREE-HOST", path: "/ops", message: "父节点不接受子节点: " + parentId },
+        ]);
+      }
+      const index = insertionIndex(parent, next.order);
+      if (index < 0) {
+        return this.fail([
+          { code: "E-TREE-ORDER", path: "/ops", message: "同级 order 冲突: " + String(next.order) },
+        ]);
+      }
+      try {
+        built.push({
+          subtree: buildDetachedSubtree(context, next, parent, "/ops"),
+          parent,
+          host,
+          index,
+        });
+      } catch (error) {
+        for (const entry of built) {
+          detachMountedSubtree(context, entry.subtree.root, entry.host);
+        }
+        return this.fail([...diagnosticsOfError(error), ...context.cleanup]);
+      }
+      addedIds.add(id);
+    }
+    const appliedUpdates: Array<{
       mounted: MountedNode;
       previous: MountedNode["node"];
       next: MountedNode["node"];
     }> = [];
-    for (const op of parsed.batch.ops) {
-      if (op.op !== "setProps") {
-        continue;
-      }
-      const mounted = this.byId.get(op.id);
-      const next = applied.byId.get(op.id);
-      if (mounted === undefined || next === undefined) {
-        return this.fail([
-          { code: "E-TARGET-MISSING", path: "/ops", message: "目标不在已挂载树里: " + op.id },
-        ]);
-      }
-      updates.push({ mounted, previous: mounted.node, next });
-    }
-    const appliedUpdates: typeof updates = [];
     try {
-      for (const update of updates) {
+      for (const node of removedRoots) {
+        const parent = node.parent;
+        if (parent === null) {
+          return this.fail([{ code: "E-PAYLOAD", path: "/ops", message: "根不能卸载" }]);
+        }
+        const host = parent.childHost;
+        if (host === null) {
+          return this.fail([
+            { code: "E-TREE-HOST", path: "/ops", message: "父节点不接受子节点: " + parent.node.id },
+          ]);
+        }
+        const at = parent.children.indexOf(node);
+        if (at >= 0) {
+          parent.children.splice(at, 1);
+        }
+        detachMountedSubtree(context, node, host);
+        for (const id of mountedIds(node)) {
+          this.byId.delete(id);
+        }
+        reindex(parent, host);
+      }
+      for (const entry of built) {
+        placeDetachedSubtree(context, entry.subtree, entry.host, entry.index);
+        entry.parent.children.splice(entry.index, 0, entry.subtree.root);
+        for (const [id, mounted] of entry.subtree.byId) {
+          this.byId.set(id, mounted);
+          addedIds.add(id);
+        }
+        reindex(entry.parent, entry.host);
+      }
+      for (const id of updated) {
+        if (addedIds.has(id)) {
+          continue;
+        }
+        const mounted = this.byId.get(id);
+        const next = applied.byId.get(id);
+        if (mounted === undefined || next === undefined) {
+          continue;
+        }
+        appliedUpdates.push({ mounted, previous: mounted.node, next });
+      }
+      for (const update of appliedUpdates) {
         this.setNode(update.mounted, update.next);
         update.mounted.renderer.update(update.next, update.mounted.output);
-        appliedUpdates.push(update);
       }
     } catch (error) {
       for (const update of [...appliedUpdates].reverse()) {
@@ -195,21 +333,14 @@ export class TreeRuntime {
           // 回滚也是 best effort；诊断里已经报了首次失败。
         }
       }
-      return this.fail([
-        {
-          code: "E-TREE-RENDER",
-          path: "",
-          message: "运行时更新失败: " + (error instanceof Error ? error.message : String(error)),
-        },
-      ]);
+      return this.fail([...diagnosticsOfError(error), ...context.cleanup]);
     }
-    // 只更新被触碰的目标节点；未触碰祖先的 `MountedNode.node` 仍是旧对象。
-    // 语义以 `this.current`（新文档）为准；祖先的 kind / chain 不变，不影响复用判断。
+    // 只更新被触碰的目标节点；未触碰祖先的 MountedNode.node 仍是旧对象。
+    // 语义以 this.current（新文档）为准；祖先的 kind / chain 不变，不影响复用判断。
     this.current = applied.document;
-    this.lastDiagnostics = [];
+    this.lastDiagnostics = context.cleanup;
     return { ok: true, changed: applied.changed };
   }
-
   /** 换挂载节点持有的文档对象与 handle；元素 / 渲染器不动。 */
   private setNode(mounted: MountedNode, node: MountedNode["node"]): void {
     mounted.node = node;
@@ -283,4 +414,54 @@ export class TreeRuntime {
     this.lastDiagnostics = diagnostics;
     return { ok: false, diagnostics };
   }
+}
+
+function depthOf(chain: string): number {
+  return chain === "" ? 0 : chain.split(".").length;
+}
+
+function parentIdOf(chain: string): string | null {
+  const segments = chain.split(".");
+  return segments.length < 2 ? null : (segments[segments.length - 2] ?? null);
+}
+
+/** 同级按 order 升序：第一个更大的子节点之前就是插入点；order 撞了返回 -1。 */
+function insertionIndex(parent: MountedNode, order: number): number {
+  for (let index = 0; index < parent.children.length; index += 1) {
+    const child = parent.children[index];
+    if (child === undefined) {
+      continue;
+    }
+    if (child.node.order === order) {
+      return -1;
+    }
+    if (child.node.order > order) {
+      return index;
+    }
+  }
+  return parent.children.length;
+}
+
+function reindex(parent: MountedNode, host: TreeHost): void {
+  parent.children.forEach((child, index) => {
+    host.update(child.handle, index);
+  });
+}
+
+function mountedIds(node: MountedNode): string[] {
+  const ids = [node.node.id];
+  for (const child of node.children) {
+    ids.push(...mountedIds(child));
+  }
+  return ids;
+}
+
+function diagnosticsOfError(error: unknown): TreeRuntimeDiagnostic[] {
+  return [
+    {
+      code: "E-TREE-RENDER",
+      path: "",
+      message: "运行时结构更新失败: " + (error instanceof Error ? error.message : String(error)),
+    },
+  ];
 }
