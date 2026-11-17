@@ -5,7 +5,7 @@
 
 ## 1. 它是什么
 
-本地优先的灵感与项目管理工具：灵感、项目、需求互相可追溯。默认本地跑，也能部署成网页。
+本地优先的灵感与项目管理工具：灵感、项目、需求互相可追溯。默认本地跑；网页形态（server）未实现，远期再看（见 [路线图](roadmap.md) §3）。
 
 ## 2. 两个进程，两个 runtime
 
@@ -156,7 +156,7 @@ DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engi
 启动首帧也由 Slot 链接编译；`?engine=slot` 只是内置 fixture 预览。legacy 快照路径（旧壳、
 补丁、贡献组合、`_diff.py`）已在 S6.5 删除。规则执行（`reactions`）与 schema 单一来源还没落。
 
-**V1 树并行轨道（2026-11-18）**：`dendro.tree/1` 的契约、Python/TS 校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已作为独立模块落地；旧 Slot（`dendro.ui/1`）仍是默认入口，V1 还没接 app。当前序列化/组件映射、build gate、engine bridge、ideas 竖切见 [路线图](roadmap.md) 与 [TODO](todo.md)。
+**V1 树目标架构（2026-11-18）**：`dendro.tree/1` 的契约、Python/TS 校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已落地，用来修掉「每事件全树重建 + 运行时组织树」的结构缺陷。它分阶段接管默认入口，旧 Slot（`dendro.ui/1`）逐步退场（[ADR-0004](engine/decisions/0004-static-tree-minimal-updates.md)）；目标链路与现状见 [V1 树](planning/v1-tree.md)。
 
 - 唯一原语 Slot：窗口 / 页面 / 层 / 布局 / 组件都是 kind 不同的 Slot。
 - 局部树在链接期组合成权威根树，冲突是编译错误。
@@ -211,7 +211,7 @@ DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engi
 ## 8. 运行形态
 
 - App：Python 进程 + TS 进程。
-- Server：只有 Python 进程；没人拉视图，就不构造。
+- Server：只有 Python 进程；没人拉视图，就不构造。**未实现**，远期见 [路线图](roadmap.md) §3。
 
 插件是否独立进程：先跑在 Python 进程内。要崩溃隔离或者要跑别的语言时再挪——那时契约会变（进程内拿的是对象），这一版不为此提前设计。
 

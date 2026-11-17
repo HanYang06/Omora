@@ -2,11 +2,11 @@
 
 > **Dendrolink：把局部树链接成权威根树的链接期引擎。**
 >
-> 状态：**设计已定；S0–S6 已落，S7 起步**；身份与根树结构文件已落：契约字段、`root-tree.json`、页面/导航局部树的 `code` / `addr` 派生、`addr` 索引、旧 addr redirect / 墓碑（表上限 256）与结构变化后的子树 addr 重算；主会话已接 props / 结构 / replace / data batch 增量（端到端 DOM stats 已钉），addr 仍不直接驱动 DOM，ops / 渲染按 `id` + Node 缓存。本文是引擎文档集的索引与总纲；主会话、构建期首帧与全部系统插件页面都走 Slot（局部树 → 链接 → EngineRuntime/DocumentView），运行后来源示例已接（自动发现 + 热更新），`?engine=slot` 只是内置 fixture 预览。剩余大项：Host 网络帧 / 订阅 / 媒体登记、规则执行（`reactions`）、schema 单一来源。
+> 状态：**设计已定；S0–S6 已落，S7 起步（剩余项归为非核心，按需）**；身份与根树结构文件已落：契约字段、`root-tree.json`、页面/导航局部树的 `code` / `addr` 派生、`addr` 索引、旧 addr redirect / 墓碑（表上限 256）与结构变化后的子树 addr 重算；主会话已接 props / 结构 / replace / data batch 增量（端到端 DOM stats 已钉），addr 仍不直接驱动 DOM，ops / 渲染按 `id` + Node 缓存。本文是引擎文档集的索引与总纲；主会话、构建期首帧与全部系统插件页面都走 Slot（局部树 → 链接 → EngineRuntime/DocumentView），运行后来源示例已接（自动发现 + 热更新），`?engine=slot` 只是内置 fixture 预览。剩余大项：Host 网络帧 / 订阅 / 媒体登记、规则执行（`reactions`）、schema 单一来源——都归为非核心，按需做；主线是 V1 的静态结构与最小节点更新。
 > 基线：`main@3910928`（S6.5 骨架编译后），工作区干净。
 > 命名决定见 [ADR-0001](decisions/0001-name.md)。
 
-> **2026-11-18：V1 树并行轨道**：`dendro.tree/1` 的契约/校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已作为独立模块落地；旧 Slot（`dendro.ui/1`）仍是默认入口，V1 还没接 app。当前序列化/组件映射、build gate、engine bridge 见 [路线图](../roadmap.md) 与 [TODO](../todo.md)。
+> **2026-11-18：V1 树目标架构**：`dendro.tree/1` 的契约/校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已落地；结构层成立，最小节点 ops 与协议未接。它分阶段接管默认入口（[ADR-0004](decisions/0004-static-tree-minimal-updates.md)），目标链路见 [V1 树](../planning/v1-tree.md)。
 
 ## 1. 它是什么
 
@@ -88,9 +88,9 @@ Dendrolink 是一个 **UI 文档运行时**：
 
 ## 6. 实现状态（与代码的差距）
 
-**V1 树（`dendro.tree/1`）**：契约/校验、Python/TS node scope、Page/State/When/Bind、build composer、runtime mount 已落，但都是独立模块；旧 Slot 仍是默认。下一步是 serializer/UI 组件映射、Vite `buildStart` gate、SourceHost / app 接线、ideas 竖切，见 [TODO](../todo.md)。
+**V1 树（`dendro.tree/1`）**：契约/校验、Python/TS node scope、Page/State/When/Bind、build composer、runtime mount 已落；**更新层与协议层未落**（runtime 的 replace 仍是整份文档，主会话仍发整份 view）。V1 是目标架构，分阶段接管默认入口，见 [V1 树](../planning/v1-tree.md)。
 
-文档写的是**契约**，不是现状说明书。S0–S6 与 S7.1 已落（含 Slot 骨架编译、legacy 删除、运行后来源示例），Python / TS 全量测试全绿。差距集中在规则执行（`reactions`）、schema 单一来源、远程来源网络接线。
+文档写的是**契约**，不是现状说明书。S0–S6 与 S7.1 已落（含 Slot 骨架编译、legacy 删除、运行后来源示例），Python / TS 全量测试全绿。差距集中在规则执行（`reactions`）、schema 单一来源、远程来源网络接线；这些是非核心，按需做。主线是 [V1 树](../planning/v1-tree.md) 的最小节点更新与协议。
 
 | 能力       | 现状                                                                                                                          | 缺口                                                                                                                                                                         |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

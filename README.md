@@ -1,8 +1,8 @@
 # Omora
 
-本地优先的灵感与项目管理工具：灵感、项目、需求互相可追溯。默认本地跑，也能部署成网页。
+本地优先的灵感与项目管理工具：灵感、项目、需求互相可追溯。默认本地跑；网页形态（server）未实现，远期再看。
 
-> 正在从零重写。旧 Slot 主会话仍是默认运行路径；V1 树（`dendro.tree/1`）的契约、SDK node scope/Page、build composer、runtime mount 已作为独立模块落地，但还没接主入口。当前计划见 [路线图](docs/roadmap.md) / [TODO](docs/todo.md)，完成记录见 [changelog](docs/changelog.md)。
+> 正在从零重写。默认入口仍走 Slot（`dendro.ui/1`）；V1 树（`dendro.tree/1`）是**目标架构**——静态结构 + 最小节点更新，分阶段接管默认入口（[ADR-0004](docs/engine/decisions/0004-static-tree-minimal-updates.md)）。方向见 [路线图](docs/roadmap.md)，现状见 [项目现状](docs/planning/state-of-project.md)，队列见 [TODO](docs/todo.md)。
 
 ## 架构
 
