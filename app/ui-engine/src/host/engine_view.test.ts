@@ -128,6 +128,32 @@ describe("applyView：整份视图替换", () => {
     expect(index.get("page.ideas.title")?.props.text).toBe("改过的标题");
   });
 
+  it("layout 变化走 replace ops，不全量替换", () => {
+    const engine = engineOf(fixture());
+
+    const result = applied(
+      engine.applyView(
+        viewOf((value) => {
+          value.version = 2;
+          const trees = (value.localTrees as Record<string, unknown>).trees as Record<
+            string,
+            unknown
+          >[];
+          const root = trees[1]?.root as Record<string, unknown>;
+          const title = (root.children as Record<string, unknown>[])[0];
+          if (title !== undefined) {
+            title.layout = { flow: "row", capacity: "many" };
+          }
+        }),
+      ),
+    );
+
+    expect(result.changed).toEqual(["page.ideas.title"]);
+    expect(engine.metrics).toMatchObject({ version: 2, fullUpdates: 0, opsBatches: 1 });
+    const index = DocumentIndex.build(engine.session.document.root);
+    expect(index.get("page.ideas.title")?.layout).toEqual({ flow: "row", capacity: "many" });
+  });
+
   it("结构变化也走 ops：新增节点不全量替换", () => {
     const engine = engineOf(fixture());
 
