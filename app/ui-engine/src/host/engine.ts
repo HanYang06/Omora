@@ -62,6 +62,7 @@ import { LifecycleLedger, type DisposeReport } from "./lifecycle";
 import { RuntimeMetrics, type MetricsCounts, type RuntimeMetricsSnapshot } from "./metrics";
 import { checkPermission, type Requester } from "../contract/policy";
 import { parseOps, type OpGuard } from "../engine/document/ops";
+import { AddrState } from "./addr_state";
 import { checkOpPermission } from "./permissions";
 import { applyFullWithPermission } from "./engine_full";
 import { applySessionOps, createSession, type SessionState } from "../engine/document/session";
@@ -120,7 +121,7 @@ export class EngineRuntime {
   private readonly opsGuard: OpGuard | undefined;
   private readonly dataGuard: DataGuard | undefined;
   private isDisposed = false;
-
+  readonly addrs = new AddrState();
   constructor(session: SessionState, options: EngineOptions = {}) {
     this.current = session;
     this.counter = options.metrics ?? new RuntimeMetrics();
@@ -197,10 +198,12 @@ export class EngineRuntime {
     if (!parsed.ok) {
       return this.reject(parsed.diagnostics, this.elapsed(start));
     }
+    const oldAddrs = this.addrs.begin(this.current.document.root, parsed.batch.ops);
     const applied = applySessionOps(this.current, parsed.batch, this.guardOptions(this.opsGuard));
     if (!applied.ok) {
       return this.reject(applied.diagnostics, this.elapsed(start));
     }
+    this.addrs.note(applied.session.document.root, oldAddrs, applied.changed);
     return this.publish(
       applied.session,
       applied.changed,
@@ -255,7 +258,7 @@ export class EngineRuntime {
     if (!hydrated.ok) {
       return this.reject(hydrated.diagnostics, this.elapsed(start));
     }
-    // 全量替换后整棵树都是新的；changed 用新根 id 表示「按根重画」，不逐个列实例 id。
+    this.addrs.clear();
     return this.publish(
       hydrated.session,
       [hydrated.session.document.root.id],
@@ -291,6 +294,7 @@ export class EngineRuntime {
     if (!hydrated.ok) {
       return this.reject(hydrated.diagnostics, this.elapsed(start));
     }
+    this.addrs.clear();
     return this.publish(
       hydrated.session,
       [hydrated.session.document.root.id],
@@ -310,6 +314,7 @@ export class EngineRuntime {
     }
     this.isDisposed = true;
     this.listeners.clear();
+    this.addrs.clear();
     return this.ledger.disposeAll();
   }
 
