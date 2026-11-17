@@ -34,6 +34,9 @@
  * templates 命名表决定，不是 children 顺序；对模板节点做 mount/move/unmount/replace
  * 返回 E-PAYLOAD（沿用既有诊断码，不为这条规则新增码）。
  *
+ * 结构共享：批量只沿被触碰节点的祖先路径复制，未触碰的兄弟保持原引用；树里
+ * 出现 collection.templates 时退回整棵深拷（模板位置是命名表，不在 children 路径上）。
+ *
  * changed：本次批量触碰到的「子树根 id」，按首次触碰顺序去重：
  * - update → 被更新的 id；
  * - mount → 新子树根 id；
@@ -53,6 +56,7 @@ import type { Diagnostic, DiagnosticCode } from "../../contract/diagnostics";
 import { DocumentIndex, documentErrorDiagnostic, type DocumentState } from "./document";
 import { makeDiagnostic } from "../../contract/diagnostics";
 import { applyOp, buildLiveLocations, type LiveLocations, type Working } from "./ops_apply";
+import { cloneForOps } from "./ops_share";
 
 /** 改一个节点的 props（浅合并）。 */
 export interface UpdateOp {
@@ -353,7 +357,8 @@ export function applyOps(
       "$.document",
     );
   }
-  const working: Working = { root: structuredClone(state.root) };
+  const before = DocumentIndex.build(state.root);
+  const working: Working = { root: cloneForOps(state.root, batch.ops, before) };
   const changed: string[] = [];
   const touchedIds = new Set<string>();
   let index: DocumentIndex = DocumentIndex.build(working.root);
