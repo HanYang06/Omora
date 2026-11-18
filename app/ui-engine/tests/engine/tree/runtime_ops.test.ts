@@ -236,8 +236,9 @@ describe("TreeRuntime.applyOps：内容更新", () => {
     container.remove();
   });
 
-  it("replace 还没接：整批拒绝", () => {
-    const { container, runtime } = mount();
+  it("replace 同 id：换一棵子树，兄弟不动", () => {
+    const { container, runtime, counters } = mount();
+    const before = [...container.querySelectorAll("span")];
     const replaceOp = {
       op: "replace",
       id: A,
@@ -246,11 +247,83 @@ describe("TreeRuntime.applyOps：内容更新", () => {
 
     const result = runtime.applyOps(batch(1, 2, [replaceOp]));
 
+    expect(result.ok).toBe(true);
+    const after = [...container.querySelectorAll("span")];
+    expect(after.map((el) => el.textContent)).toEqual(["新", "乙"]);
+    expect(after[0]).not.toBe(before[0]);
+    expect(after[1]).toBe(before[1]);
+    expect(counters).toEqual({ created: 5, updated: 0, destroyed: 1 });
+
+    runtime.dispose();
+    container.remove();
+  });
+
+  it("replace 换 id：旧子树摘掉、新子树放到同一个父下", () => {
+    const { container, runtime } = mount();
+    const E = "eeeeeeeeeeeeeeee";
+    const replaceOp = {
+      op: "replace",
+      id: B,
+      node: node(E, ROOT + "." + PAGE + "." + E, "text", 20, { settings: { text: "换" } }),
+    };
+
+    const result = runtime.applyOps(batch(1, 2, [replaceOp]));
+
+    expect(result.ok).toBe(true);
+    expect([...container.querySelectorAll("span")].map((el) => el.textContent)).toEqual([
+      "甲",
+      "换",
+    ]);
+
+    runtime.dispose();
+    container.remove();
+  });
+
+  it("replace + setProps 同一批：用最终节点的内容", () => {
+    const { container, runtime, counters } = mount();
+    const ops = [
+      {
+        op: "replace",
+        id: A,
+        node: node(A, ROOT + "." + PAGE + "." + A, "text", 10, { settings: { text: "一" } }),
+      },
+      { op: "setProps", id: A, props: { text: "二" } },
+    ];
+
+    const result = runtime.applyOps(batch(1, 2, ops));
+
+    expect(result.ok).toBe(true);
+    expect([...container.querySelectorAll("span")].map((el) => el.textContent)).toEqual([
+      "二",
+      "乙",
+    ]);
+    expect(counters.created).toBe(5);
+
+    runtime.dispose();
+    container.remove();
+  });
+
+  it("一次批量多个 replace：整批拒绝", () => {
+    const { container, runtime } = mount();
+    const ops = [
+      {
+        op: "replace",
+        id: A,
+        node: node(A, ROOT + "." + PAGE + "." + A, "text", 10, { settings: { text: "一" } }),
+      },
+      {
+        op: "replace",
+        id: B,
+        node: node(B, ROOT + "." + PAGE + "." + B, "text", 20, { settings: { text: "二" } }),
+      },
+    ];
+
+    const result = runtime.applyOps(batch(1, 2, ops));
+
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["E-PAYLOAD"]);
     }
-    expect(container.querySelectorAll("span").length).toBe(2);
 
     runtime.dispose();
     container.remove();

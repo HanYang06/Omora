@@ -146,11 +146,6 @@ export class TreeRuntime {
         { code: "E-PAYLOAD", path: "/ops", message: "data op 还没接（下一步：collection / 绑定）" },
       ]);
     }
-    if (parsed.batch.ops.some((op) => op.op === "replace")) {
-      return this.fail([
-        { code: "E-PAYLOAD", path: "/ops", message: "运行时 replace 还没接；下一步" },
-      ]);
-    }
     const mountedThisBatch = new Set<string>();
     const unmountedThisBatch = new Set<string>();
     for (const op of parsed.batch.ops) {
@@ -169,12 +164,22 @@ export class TreeRuntime {
         },
       ]);
     }
+    const replaceIds = parsed.batch.ops.filter((op) => op.op === "replace").map((op) => op.id);
+    if (replaceIds.some((id) => mountedThisBatch.has(id))) {
+      return this.fail([
+        {
+          code: "E-PAYLOAD",
+          path: "/ops",
+          message: "同一批里不要 mount 后再 replace；分成两批",
+        },
+      ]);
+    }
     const applied = applyBatch(this.current, parsed.batch);
     if (!applied.ok) {
       return this.fail(applied.diagnostics.map(toRuntimeDiagnostic));
     }
     const context = this.newContext();
-    const updated = applyMountedUpdate({ byId: this.byId, context }, applied);
+    const updated = applyMountedUpdate({ byId: this.byId, context }, applied, parsed.batch);
     if (!updated.ok) {
       return this.fail([...updated.diagnostics, ...context.cleanup]);
     }
