@@ -111,7 +111,7 @@
 - **渲染接入**（`src/renderer/slot_bridge.ts` + `src/components/slot_registry.ts`）：SlotNode 经 `slotToNode` 薄桥 + `slotRegistry`（`dendro:<type>` 别名 / 宿主别名 / `src/components/slot_kinds.ts` 的 Slot 原生结构 kind）交给现有 DOM renderer；不迁移 38 个 kind。
 - **水合**（`src/engine/updates/hydrate.ts`）：全量文档的 data 投影按 source 物化成集合实例子树，session 可直接渲染。
 - **换页分类**（`src/engine/document/page_switch.ts`）：`diffPageTrees(previous, next)` 按 id 给出 keep / move / replace / cancel / add（live 子树；templates 不参与）。
-- **集成验证**（`src/app/spike.test.ts`）：fixture → session → 水合 → 渲染；数据更新/全量替换后同 id 元素复用；换页分类 + 渲染切页。
+- **集成验证**（`tests/app/spike.test.ts`）：fixture → session → 水合 → 渲染；数据更新/全量替换后同 id 元素复用；换页分类 + 渲染切页。
 - **S3-e 已补**：跨父 move 的 DOM 复用（renderer 跨渲染按 key 索引复用元素）、`?engine=slot` 预览入口。S6.4 已接主会话；layout 的 size/gap/align 与路由参数后续补。
 
 ## 12. S3-e 实现（已落）
