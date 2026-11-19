@@ -113,7 +113,7 @@ export function expandCollection(
       });
       return;
     }
-    const template = collection.templates[templateName];
+    const template = collection.templates?.[templateName];
     if (template === undefined) {
       diagnostics.push({
         code: "E-TEMPLATE",

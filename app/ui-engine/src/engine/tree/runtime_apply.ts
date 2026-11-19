@@ -180,6 +180,7 @@ function buildNode(
     childHost = old.childHost;
     reusedFrom = old;
     invoke(path, () => {
+      renderer.setData?.(context.data);
       renderer.update(node, output);
     });
   } else {
@@ -190,6 +191,7 @@ function buildNode(
       ]);
     }
     renderer = invoke(path, () => factory(node));
+    renderer.setData?.(context.data);
     const created = invoke(path, () => renderer.mount(node));
     output = created.output;
     childHost = created.host;
@@ -210,7 +212,7 @@ function buildNode(
     fresh.push(mounted);
   }
   let children = node.layout;
-  if (node.collection !== undefined) {
+  if (node.collection !== undefined && node.collection.virtual !== true) {
     const expansion = expandCollection(node, node.collection, context.data);
     context.cleanup.push(...expansion.diagnostics);
     children = expansion.nodes;

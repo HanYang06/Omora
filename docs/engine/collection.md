@@ -136,6 +136,8 @@ Slot 的 `collection` 原样进 V1 节点，字段同名同义：
 ```
 
 - `templates` 是唯一允许在 `layout` 之外出现节点的地方：它是具名模板表，不是第二套嵌套。
+- `virtual: true` 时不实例化条目：运行时把 `data[source].items` 投影给 kind 的 `props.items`，
+  `templates` 可省；只给窗口化 kind（`virtual-list`）用。
 - 模板节点参与 id / chain 唯一性检查，但**不能**作为 partial 的 `mount.parent`——组合器报
   `E-PARENT-MISSING`（模板不挂载）。
 - 组合器把模板子树一起索引：模板里的 id / chain 撞上已组合树 → `E-COLLISION`。

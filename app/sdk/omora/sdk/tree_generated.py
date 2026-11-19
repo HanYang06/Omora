@@ -76,8 +76,9 @@ class Mount:
 class Collection:
     source: str
     key: str
-    templates: Mapping[str, Node]
     select: str | None = None
+    templates: Mapping[str, Node] = field(default_factory=dict)
+    virtual: bool | None = None
 
 
 @dataclass(frozen=True)

@@ -232,6 +232,7 @@ export function applyMountedUpdate(
     for (const update of appliedUpdates) {
       update.mounted.node = update.next;
       update.mounted.handle = { node: update.next, output: update.mounted.output };
+      update.mounted.renderer.setData?.(context.data);
       update.mounted.renderer.update(update.next, update.mounted.output);
     }
   } catch (error) {
@@ -239,6 +240,7 @@ export function applyMountedUpdate(
       update.mounted.node = update.previous;
       update.mounted.handle = { node: update.previous, output: update.mounted.output };
       try {
+        update.mounted.renderer.setData?.(context.data);
         update.mounted.renderer.update(update.previous, update.mounted.output);
       } catch {
         // 回滚也是 best effort；诊断里已经报了首次失败。

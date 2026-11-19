@@ -38,6 +38,11 @@ export function mergeCollectionInstances(
     if (collection === undefined || !sources.has(collection.source)) {
       continue;
     }
+    if (collection.virtual === true) {
+      // 不实例化；只要让这个节点 update 一次，渲染器会用新数据重投影 items。
+      changed.add(mounted.node.id);
+      continue;
+    }
     const expansion = expandCollection(mounted.node, collection, applied.document.data);
     diagnostics.push(...expansion.diagnostics);
     const oldIds = new Set(mounted.children.map((child) => child.node.id));

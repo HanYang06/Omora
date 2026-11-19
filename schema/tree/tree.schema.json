@@ -114,9 +114,9 @@
     },
     "collection": {
       "type": "object",
-      "description": "数据驱动的子节点：树里声明模板，数据按 key 填充。source 是数据源，key 是条目身份字段，select 是条目里选模板的字段（缺省 template），templates 是具名模板（不挂载的子树）。",
+      "description": "数据驱动的子节点：树里声明模板，数据按 key 填充。source 是数据源，key 是条目身份字段，select 是条目里选模板的字段（缺省 template），templates 是具名模板（不挂载的子树）。virtual=true 时不实例化条目，items 直接投影给 kind（窗口化用），templates 可省。",
       "additionalProperties": false,
-      "required": ["source", "key", "templates"],
+      "required": ["source", "key"],
       "properties": {
         "source": {
           "type": "string",
@@ -136,6 +136,10 @@
           "additionalProperties": {
             "$ref": "#/$defs/node"
           }
+        },
+        "virtual": {
+          "type": "boolean",
+          "description": "不实例化条目；把 items 投影给 kind，由 kind 自己做窗口化。"
         }
       }
     },

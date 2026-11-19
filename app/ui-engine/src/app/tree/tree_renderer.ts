@@ -36,6 +36,19 @@ function asElement(output: TreeOutput): HTMLElement {
   return output;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function propsOf(node: TreeNode, data: Record<string, unknown>): Record<string, unknown> {
+  if (node.collection?.virtual !== true) {
+    return node.settings;
+  }
+  const entry = data[node.collection.source];
+  const items = isRecord(entry) && Array.isArray(entry.items) ? entry.items : [];
+  return { ...node.settings, items };
+}
+
 function handlersOf(on: Record<string, unknown>): Record<string, string> {
   const events: Record<string, string> = {};
   for (const [name, value] of Object.entries(on)) {
@@ -57,10 +70,10 @@ function shallowChild(node: TreeNode): LegacyNode {
   };
 }
 
-function toLegacyNode(node: TreeNode): LegacyNode {
+function toLegacyNode(node: TreeNode, data: Record<string, unknown>): LegacyNode {
   return {
     type: node.kind,
-    props: node.settings,
+    props: propsOf(node, data),
     children: node.layout.map(shallowChild),
     id: node.id,
     events: handlersOf(node.on),
@@ -120,9 +133,13 @@ function childHostsOf(kind: Kind, el: HTMLElement, node: LegacyNode): HTMLElemen
 /** 一个 V1 节点的渲染器：mount / update / unmount 都用同一个 Kind 实例。 */
 export function createTreeKindRenderer(kind: Kind, context: RenderContext): NodeRenderer {
   let childHost: DomTreeHost | null = null;
+  let data: Record<string, unknown> = {};
   return {
+    setData(next: Record<string, unknown>): void {
+      data = next;
+    },
     mount(node: TreeNode): NodeRendererMount {
-      const legacy = toLegacyNode(node);
+      const legacy = toLegacyNode(node, data);
       const el = kind.create(legacy, context);
       applyPlacement(el, node.slot);
       const hosts = childHostsOf(kind, el, legacy);
@@ -131,7 +148,7 @@ export function createTreeKindRenderer(kind: Kind, context: RenderContext): Node
     },
     update(node: TreeNode, output: TreeOutput): void {
       const el = asElement(output);
-      const legacy = toLegacyNode(node);
+      const legacy = toLegacyNode(node, data);
       kind.update?.(el, legacy, context);
       applyPlacement(el, node.slot);
       if (childHost !== null) {

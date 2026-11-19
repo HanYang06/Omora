@@ -46,6 +46,8 @@ export interface NodeRenderer {
   mount(node: TreeNode): NodeRendererMount;
   update(node: TreeNode, output: TreeOutput): void;
   unmount(node: TreeNode, output: TreeOutput): void;
+  /** 渲染前注入当前文档 data 快照；data 驱动的 kind（virtual collection）用。 */
+  setData?(data: Record<string, unknown>): void;
 }
 
 /** 按节点建渲染器；registry 只按 kind 查找，未知 kind 返回 undefined。 */

@@ -33,9 +33,13 @@ function node(
 }
 
 export function virtualPreviewDocument(): TreeDocument {
-  const items = Array.from({ length: 1000 }, (_, index) => "第 " + String(index) + " 行");
+  const items = Array.from({ length: 1000 }, (_, index) => ({
+    id: String(index),
+    title: "第 " + String(index) + " 行",
+  }));
   const list = node(LIST, ROOT + "." + PAGE + "." + LIST, "virtual-list", 10, {
-    settings: { items, rowHeight: 32 },
+    settings: { rowHeight: 32 },
+    collection: { source: "virtual.items", key: "id", virtual: true },
     // 预览页没有树壳的窗口高度，显式给视口高度，让滚动容器有确定尺寸。
     slot: { size: { height: "100vh" } },
   });
@@ -49,7 +53,7 @@ export function virtualPreviewDocument(): TreeDocument {
     root: node(ROOT, ROOT, "app", 0, { layout: [page] }),
     pages: [{ id: PAGE, title: "虚拟列表", route: "/virtual" }],
     active: PAGE,
-    data: {},
+    data: { "virtual.items": { revision: 1, items } },
   };
 }
 

@@ -39,7 +39,17 @@ function itemsOf(node: Node): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value.map((item) => (typeof item === "string" ? item : JSON.stringify(item)));
+  return value.map((item) => {
+    if (typeof item === "string") {
+      return item;
+    }
+    if (typeof item !== "object" || item === null) {
+      return String(item);
+    }
+    const record = item as Record<string, unknown>;
+    const text = record.title ?? record.text ?? record.label;
+    return typeof text === "string" ? text : JSON.stringify(item);
+  });
 }
 
 function rowHeightOf(node: Node): number {

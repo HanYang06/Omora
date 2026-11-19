@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import type { Document, Node } from "../../../src/contract/tree_generated";
-import type { RenderContext } from "../../../src/renderer/types";
+import type { Kind, RenderContext } from "../../../src/renderer/types";
+import { treeKinds } from "../../../src/components/tree_kinds";
 import { mountTreeDocument } from "../../../src/app/tree/tree_renderer";
 
 const ROOT = "aaaaaaaaaaaaaaaa";
@@ -223,6 +224,82 @@ describe("V1 collection 挂载期实例化", () => {
     const codes = runtime.diagnostics.map((diagnostic) => diagnostic.code);
     expect(codes).toContain("E-TEMPLATE");
     expect(codes).toContain("E-ID-DUPLICATE");
+
+    runtime.dispose();
+    container.remove();
+  });
+
+  it("virtual collection 把 items 投影给 kind，data op 触发 update", () => {
+    const seen: unknown[] = [];
+    const probe: Kind = {
+      create(node) {
+        const el = document.createElement("div");
+        el.dataset.type = "probe";
+        seen.push(node.props.items);
+        el.textContent = String((node.props.items as unknown[]).length);
+        return el;
+      },
+      update(el, node) {
+        seen.push(node.props.items);
+        el.textContent = String((node.props.items as unknown[]).length);
+      },
+      childrenHosts: () => null,
+    };
+    const documentValue: Document = {
+      schema: "dendro.tree/1",
+      version: 1,
+      root: node(ROOT, ROOT, "app", 0, {
+        layout: [
+          node(PAGE, ROOT + "." + PAGE, "column", 10, {
+            layout: [
+              node(FEED, ROOT + "." + PAGE + "." + FEED, "probe", 10, {
+                collection: { source: "virtual.items", key: "id", virtual: true },
+              }),
+            ],
+          }),
+        ],
+      }),
+      pages: [{ id: PAGE, title: "灵感", route: "/ideas" }],
+      active: PAGE,
+      data: {
+        "virtual.items": {
+          revision: 1,
+          items: [
+            { id: "a", title: "甲" },
+            { id: "b", title: "乙" },
+          ],
+        },
+      },
+    };
+    const container = document.createElement("div");
+    document.body.append(container);
+    const runtime = mountTreeDocument(container, documentValue, context(), {
+      ...treeKinds,
+      probe,
+    });
+
+    const el = container.querySelector<HTMLElement>('[data-type="probe"]');
+    expect(el?.textContent).toBe("2");
+    expect((seen[0] as unknown[]).length).toBe(2);
+
+    const result = runtime.applyOps({
+      kind: "ops",
+      document: 2,
+      base: 1,
+      seq: 1,
+      ops: [
+        {
+          op: "data",
+          source: "virtual.items",
+          revision: 2,
+          items: [{ id: "a", title: "甲" }, { id: "b", title: "乙" }, { id: "c", title: "丙" }],
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(el?.textContent).toBe("3");
+    expect((seen.at(-1) as unknown[]).length).toBe(3);
 
     runtime.dispose();
     container.remove();
