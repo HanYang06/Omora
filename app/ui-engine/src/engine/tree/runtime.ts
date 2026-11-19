@@ -184,9 +184,7 @@ export class TreeRuntime {
       }
     }
     const reconciled =
-      dataSources.size === 0
-        ? null
-        : mergeCollectionInstances(this.byId, applied, dataSources);
+      dataSources.size === 0 ? null : mergeCollectionInstances(this.byId, applied, dataSources);
     const context = this.newContext(
       applied.document.data,
       applied.document.messages ?? {},

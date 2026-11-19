@@ -7,11 +7,7 @@ import { composeTree } from "../../../src/link/tree_compose";
 import type { Document } from "../../../src/contract/tree_generated";
 import type { RenderContext } from "../../../src/renderer/types";
 import { mountTreeDocument } from "../../../src/app/tree/tree_renderer";
-import {
-  isTreeBuild,
-  mountTreeBuild,
-  type TreeBuildPayload,
-} from "../../../src/app/tree/live";
+import { isTreeBuild, mountTreeBuild, type TreeBuildPayload } from "../../../src/app/tree/live";
 
 // jsdom 下 Vite 会把 new URL(..., import.meta.url) 改写成 dev server 地址，用 node:path。
 const HERE = dirname(fileURLToPath(import.meta.url));

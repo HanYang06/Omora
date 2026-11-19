@@ -1235,7 +1235,6 @@ mark {
   background: var(--paper);
 }
 
-
 /* V1 虚拟列表：窗口内的行绝对定位，靠 transform 排；spacer 撑总高度。 */
 .omora-virtual-list {
   position: relative;
@@ -1259,7 +1258,6 @@ mark {
   background: var(--paper);
   box-sizing: border-box;
 }
-
 
 /* 原生 dialog：模态、backdrop 与焦点都交给平台，这里只管皮。 */
 .omora-dialog {

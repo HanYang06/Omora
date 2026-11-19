@@ -183,6 +183,34 @@ describe("TreeLiveApp 事件回源", () => {
     container.remove();
   });
 
+  it("prepare 在拉树之前跑一次", async () => {
+    const connection = new FakeConnection([payload("归档")]);
+    let prepared = false;
+    let treeSawPrepared = false;
+    const originalCall = connection.call.bind(connection);
+    connection.call = (target, method, args) => {
+      if (method === "tree") {
+        treeSawPrepared = prepared;
+      }
+      return originalCall(target, method, args);
+    };
+    const app = new TreeLiveApp(connection, createLogger({ enabled: false }), {
+      prepare: async () => {
+        prepared = true;
+      },
+    });
+    const container = document.createElement("div");
+    document.body.append(container);
+
+    app.mount(container);
+    await tick();
+
+    expect(treeSawPrepared).toBe(true);
+
+    app.dispose();
+    container.remove();
+  });
+
   it("ui.tree 不存在时不回退：页面显示不可用", async () => {
     const connection = new FakeConnection([], new CallError("unknown_method", "ui 没有方法 tree"));
     const app = new TreeLiveApp(connection, createLogger({ enabled: false }));

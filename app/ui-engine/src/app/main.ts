@@ -1,4 +1,5 @@
 import { Connection } from "./connection";
+import { reportDevicesOnce } from "./device_report";
 import { createLogger } from "./log";
 import { TreeLiveApp } from "./tree/live";
 import "../styles/styles.css";
@@ -33,7 +34,10 @@ function startTreeLive(container: HTMLElement): void {
   const logger = createLogger({
     call: (target, method, args) => connection.call(target, method, args),
   });
-  new TreeLiveApp(connection, logger).mount(container);
+  const tree = new TreeLiveApp(connection, logger, {
+    prepare: () => reportDevicesOnce(connection),
+  });
+  tree.mount(container);
 }
 
 /** 虚拟列表预览：1000 行，验证只挂窗口内的行。 */
