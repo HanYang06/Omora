@@ -1,6 +1,6 @@
 """设置页：清单怎么读在 test_manager.py，这里只钉页面这一层的行为。
 
-页面把开关接到 manager；事件的结果是新 view，异步变化（设备上报）走 ui.snapshot 推整份 view。
+页面把开关接到 manager；事件的结果是 V1 树的 ops / 整树回退，设备上报改变下一次 tree() 的内容。
 """
 
 from __future__ import annotations
@@ -119,6 +119,67 @@ def _scene() -> Kernel:
     return kernel
 
 
+def _find_tree_node(node: dict[str, Any], node_id: str) -> dict[str, Any] | None:
+    if node["id"] == node_id:
+        return node
+    for child in node["layout"]:
+        found = _find_tree_node(child, node_id)
+        if found is not None:
+            return found
+    return None
+
+
+def _as_slot(node: dict[str, Any]) -> dict[str, Any]:
+    """V1 节点 → 测试视图节点（kind / props / events / children）。"""
+    return {
+        "kind": "dendro:" + str(node["kind"]),
+        "props": dict(node["settings"]),
+        "events": dict(node["on"]),
+        "children": [_as_slot(child) for child in node["layout"]],
+    }
+
+
+def _adapt_tree(ui: Any, frame: dict[str, Any] | None = None) -> dict[str, Any]:
+    """把 ui 当前这棵树摊成旧 view 形状，测试体只认页面内容。"""
+    document = ui.current_document
+    if document is None:
+        raise AssertionError("tree 还没构建")
+    page = _find_tree_node(document["root"], document["active"])
+    if page is None:
+        raise AssertionError("tree 里没有 active 页")
+    return {
+        "kind": "view",
+        "version": 1,
+        "frame": frame,
+        "pages": [
+            {"id": "page." + info.name, "label": info.label, "owner": info.owner}
+            for info in ui.pages()
+        ],
+        "localTrees": {
+            "trees": [
+                {
+                    "mountAt": PAGE_MOUNT_AT,
+                    "root": {
+                        "kind": "dendro:page",
+                        "props": {},
+                        "events": {},
+                        "children": [_as_slot(page["layout"][0])],
+                    },
+                }
+            ]
+        },
+    }
+
+
+def _tree_view(ui: Any, page: str | None = None) -> dict[str, Any]:
+    """整页兜底：重建当前页（或指定页）。"""
+    if page is None:
+        ui.tree()
+    else:
+        ui.tree(page)
+    return _adapt_tree(ui)
+
+
 def _walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
     found = [slot]
     for child in slot["children"]:
@@ -162,7 +223,7 @@ def test_the_settings_page_lists_plugins_and_its_toggle_changes_one() -> None:
     ui = kernel.resolve("ui")
     net: _Net = kernel.resolve("net")
 
-    view = ui.render("plugins")
+    view = _tree_view(ui, "plugins")
     assert [row["props"]["title"] for row in _items(view)] == [
         "store",
         "manager",
@@ -180,29 +241,27 @@ def test_the_settings_page_lists_plugins_and_its_toggle_changes_one() -> None:
     disable = _find_action(view, notes, "禁用")
     assert disable is not None
 
-    after = ui.event(disable, {})
+    frame = ui.tree_event(disable, {})
+    after = _adapt_tree(ui, frame)
 
     assert net.sent == []
     assert after["kind"] == "view"
-    assert after["version"] == view["version"] + 1
+    assert after["frame"]["kind"] in {"ops", "tree"}
+    if after["frame"]["kind"] == "ops":
+        assert after["frame"]["document"] == after["frame"]["base"] + 1
     notes_after = _find_item(after, "notes")
     assert notes_after is not None
     assert _find_action(after, notes_after, "启用") is not None
     assert kernel.running("notes") is False
 
 
-def test_a_device_report_pushes_the_settings_page_when_it_is_open() -> None:
+def test_a_device_report_updates_the_next_settings_tree() -> None:
     kernel = _scene()
     ui = kernel.resolve("ui")
-    net: _Net = kernel.resolve("net")
-
-    ui.render("plugins")
-    before = len(net.sent)
+    before = _tree_view(ui, "plugins")
+    assert "audioinput" not in json.dumps(before, ensure_ascii=False)
 
     kernel.resolve("manager").report_devices(["audioinput"])
 
-    assert len(net.sent) == before + 1
-    topic, pushed = net.sent[-1]
-    assert topic == "ui.snapshot"
-    assert pushed["kind"] == "view"
-    assert "audioinput" in json.dumps(pushed, ensure_ascii=False)
+    after = _tree_view(ui, "plugins")
+    assert "audioinput" in json.dumps(after, ensure_ascii=False)

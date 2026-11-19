@@ -95,11 +95,8 @@ pnpm --dir app/ui-engine exec vitest run --coverage --configLoader runner
 uv run python scripts/keys.py --check
 uv run python scripts/tree_schema.py --check
 uv run python scripts/todo.py
-uv run python scripts/static_ui.py --check
 uv run python scripts/static_tree.py --check
 uv run python scripts/tree_artifacts.py
-uv run python scripts/skeleton_html.py
-uv run python scripts/smoke.py
 uv run python scripts/budget.py
 uv run python scripts/docs_links.py
 ```

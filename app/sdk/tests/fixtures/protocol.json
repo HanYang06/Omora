@@ -54,7 +54,7 @@
         "target": "net",
         "method": "subscribe",
         "args": {
-          "topics": ["ui.snapshot", "media.progress"]
+          "topics": ["ideas.changed", "media.progress"]
         }
       }
     },
@@ -113,7 +113,7 @@
       "ok": true,
       "frame": {
         "type": "event",
-        "topic": "ui.snapshot",
+        "topic": "ideas.changed",
         "payload": {
           "page": "ideas",
           "version": 8,

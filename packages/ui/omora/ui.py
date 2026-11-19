@@ -1,31 +1,40 @@
-"""ui：页面登记、渲染与事件派发。
+"""ui：页面登记、V1 树构建与事件派发。
 
-它不碰 socket，也不认识业务。插件把一页交给它，它把页变成主会话视图（wire §8）：
-nav / page 两棵局部树 + 页面侧表 + active + data + 单调 version；权威根树由 TS 链接器链接。
+它不碰 socket，也不认识业务。插件把一页交给它，Ui 自己记页面列表与 active，
+按页产出 `dendro.tree/1` 的 base + 局部树（导航 + 内容）；事件经稳定 handler id
+派发，回包是“上一棵树 → 新树”的差分 ops。client 首帧 / 整页兜底走 `tree()`。
 
-视图只有一个出口：render 的 result 是整份 view，event 的 result 是新 view；
-异步变化（set_page / refresh_page）走 ui.snapshot 推整份 view。
+异步变化（set_page / refresh_page）不再推整份 view；下一次 tree() 会按最新页面
+状态重建。推送帧留给 V1 主路径的 data op / 后续来源通道。
 """
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 from omora.core.log import Log, NullLog
 from omora.sdk import Context
-from omora.sdk.realtime import emit
 from omora.sdk.tree_build import NavEntry, build_page, compose
 from omora.sdk.tree_diff import diff_documents, needs_full
 from omora.sdk.ui import Page
 
 from ._handle import PageHandle
-from ._slot import PageInfo, SlotView
 
 Builder = Callable[[], Page]
 Counter = Callable[[], int]
 
-SNAPSHOT_TOPIC = "ui.snapshot"
+
+@dataclass(frozen=True)
+class PageInfo:
+    """页面登记信息；owner 是登记这一页的插件名。"""
+
+    name: str
+    label: str
+    owner: str
+    icon: str | None
 
 
 class _Page:
@@ -52,24 +61,17 @@ class _Page:
 
 
 class Ui:
-    def __init__(self, log: Log | None = None, ctx: Context | None = None) -> None:
+    def __init__(self, log: Log | None = None) -> None:
         self._pages: dict[str, _Page] = {}
         self._log = log if log is not None else NullLog()
-        self._ctx = ctx
-        # 事件回调运行期间由 ui 负责交新 view，set_page 不要再另推一份。
-        self._in_event = False
+        # 页面列表与 active 由 Ui 自己管：tree() 按它选页，导航回调改它。
+        self._active: str | None = None
         self._tree_handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
+        # 上一代 handler 留一次宽限：组件卸载时提交带的 id 属于上一代，不能丢。
+        self._previous_handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
         self._tree_document: dict[str, Any] | None = None
         self._tree_version = 0
         self._tree_seq = 0
-        self._slots = SlotView(
-            names=lambda: list(self._pages),
-            info=self._page_info,
-            body=lambda name: self._page_body(name, self._entry(name)),
-            rebuild=self._rebuild,
-            emit=self._emit,
-            log=self._log,
-        )
 
     def page(  # noqa: PLR0913, PLR0917 —— 页面登记的声明式参数
         self,
@@ -91,75 +93,43 @@ class Ui:
 
         def remove() -> None:
             self._pages.pop(name, None)
-            self._slots.page_removed(name)
+            if self._active == name:
+                self._active = None
 
         ctx.effect(remove)
         return PageHandle(self, name)
 
     def set_page(self, name: str, page: Page) -> None:
-        """插件交来一页当前的树；客户端已经有一份视图就推一份新的整份 view。"""
+        """插件交来一页当前的树；下一次 tree() / tree_event 用它重建。"""
         self._entry(name).tree = page
-        if self._in_event:
-            return
-        self._slots.push()
+
+    def refresh_page(self, name: str) -> None:
+        """校验这一页还在；真正的重建发生在下一次 tree()。"""
+        self._entry(name)
 
     def bind_rebuild(self, name: str, builder: Builder) -> None:
         self._entry(name).rebuild = builder
 
-    def refresh_page(self, name: str) -> None:
-        """把当前页的视图重交给客户端一次（全量兜底）。"""
-        self._entry(name)
-        self._slots.push()
+    def pages(self) -> tuple[PageInfo, ...]:
+        """按登记顺序列出页面（构建期工具与调试用；不进 wire）。"""
+        return tuple(
+            PageInfo(name, entry.label, entry.owner, entry.icon)
+            for name, entry in self._pages.items()
+        )
 
-    def render(self, page: str | None = None) -> dict[str, Any]:
-        """画一页；不指定就画当前页（还没有就画第一个登记的）。result 是整份 view。"""
-        return self._slots.render(page)
+    @property
+    def active_page(self) -> str | None:
+        """当前活动页的登记名；还没有选中时 None。"""
+        return self._active
+
+    @property
+    def current_document(self) -> dict[str, Any] | None:
+        """最近一次 tree() / tree_event 组合出的完整文档（只读，测试与工具用）。"""
+        return self._tree_document
 
     def page_tree(self, name: str) -> Page:
         """这一页当前的节点树（拉取式 build 或插件交上来的树）；构建期工具用。"""
         return self._page_body(name, self._entry(name))
-
-    def _build_tree(self, page: str | None) -> tuple[dict[str, Any], dict[str, Any]]:
-        """组装一页的 base + 局部树，并 compose 成可对比的完整文档。"""
-        view = self._slots.render(page)
-        active = str(view["active"])
-        pages = [item for item in view["pages"] if isinstance(item, dict)]
-        current = next((item for item in pages if item.get("id") == active), None)
-        if current is None:
-            raise LookupError(f"当前页不在侧表里: {active}")
-        name = active.removeprefix("page.")
-        handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
-
-        def register(callback: Callable[[dict[str, Any]], None], node_id: str, event: str) -> str:
-            handler = f"tree:{node_id}:{event}"
-            handlers[handler] = callback
-            return handler
-
-        def nav_entry(item: dict[str, Any]) -> NavEntry:
-            target = str(item["id"]).removeprefix("page.")
-
-            def navigate(_payload: dict[str, Any], target: str = target) -> None:
-                self._slots.activate(target)
-
-            return NavEntry(
-                name=target,
-                title=str(item["label"]),
-                icon=None if item.get("icon") is None else str(item["icon"]),
-                on_click=navigate,
-            )
-
-        nav = [nav_entry(item) for item in pages]
-        built = build_page(
-            name=name,
-            title=str(current["label"]),
-            route=str(current.get("route") or f"/{name}"),
-            page=self.page_tree(name),
-            owner=str(current["owner"]),
-            nav=nav,
-            register=register,
-        )
-        self._tree_handlers = handlers
-        return built, compose(built["base"], built["partials"])
 
     def tree(self, page: str | None = None) -> dict[str, Any]:
         """当前页的 V1 树构建输入（base + 局部树）；V1 主路径的迁移桥，构建期同款。
@@ -176,20 +146,28 @@ class Ui:
     def tree_event(self, handler: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         """派发 handler，并把“上一棵树 → 新树”的差异作为 ops 交回去。"""
         callback = self._tree_handlers.get(handler)
+        late = False
         if callback is None:
+            callback = self._previous_handlers.get(handler)
+            late = callback is not None
+        if callback is None:
+            self._log.warning("tree.event.unknown", handler=handler)
             raise LookupError(f"未知 handler: {handler}")
+        if late:
+            self._log.info("tree.event.stale", handler=handler, page=self._active)
         if self._tree_document is None:
             raise RuntimeError("tree 还没挂载")
-        self._in_event = True
-        try:
-            callback({} if payload is None else payload)
-        finally:
-            self._in_event = False
+        callback({} if payload is None else payload)
         before = self._tree_document
         base = self._tree_version
-        _, after = self._build_tree(None)
+        built, after = self._build_tree(None)
         if needs_full(before, after):
-            return self.tree()
+            # 差分表达不了的变化回退整树：直接用这次重建的树，别再 build 一代——
+            # 多 build 一次会把上一代 handler 的宽限提前用掉。
+            self._tree_document = after
+            self._tree_version = int(after.get("version", 1))
+            self._tree_seq = 0
+            return {"kind": "tree", **built}
         ops = diff_documents(before, after)
         self._tree_document = after
         self._tree_version = base + 1
@@ -202,23 +180,72 @@ class Ui:
             "ops": ops,
         }
 
-    def event(self, handler: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """把载荷交给 handler；result 是派发之后当前页的新 view。"""
-        self._in_event = True
-        try:
-            return self._slots.event(handler, payload)
-        finally:
-            self._in_event = False
+    def _build_tree(self, page: str | None) -> tuple[dict[str, Any], dict[str, Any]]:
+        """组装一页的 base + 局部树，并 compose 成可对比的完整文档。"""
+        name = self._resolve(page)
+        started = time.perf_counter()
+        entry = self._entry(name)
+        self._rebuild(name)
+        self._active = name
+        handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
+
+        def register(callback: Callable[[dict[str, Any]], None], node_id: str, event: str) -> str:
+            handler = f"tree:{node_id}:{event}"
+            handlers[handler] = callback
+            return handler
+
+        pages = self.pages()
+        nav = [
+            NavEntry(
+                name=info.name,
+                title=info.label,
+                icon=info.icon,
+                on_click=self._navigate(info.name),
+            )
+            for info in pages
+        ]
+        built = build_page(
+            name=name,
+            title=entry.label,
+            route=f"/{name}",
+            page=self._page_body(name, entry),
+            owner=entry.owner,
+            nav=nav,
+            register=register,
+        )
+        self._previous_handlers = self._tree_handlers
+        self._tree_handlers = handlers
+        self._log.debug(
+            "ui.tree",
+            page=name,
+            ms=(time.perf_counter() - started) * 1000,
+        )
+        return built, compose(built["base"], built["partials"])
+
+    def _resolve(self, page: str | None) -> str:
+        """显式页 → 校验；否则 active（还登记着）→ 第一页。"""
+        if page is not None:
+            self._entry(page)
+            return page
+        if self._active is not None and self._active in self._pages:
+            return self._active
+        if not self._pages:
+            raise LookupError("没有登记任何页面")
+        return next(iter(self._pages))
+
+    def _navigate(self, target: str) -> Callable[[dict[str, Any]], None]:
+        """导航条目点了把当前页切成它；重建后的树由下一次 tree_event 交回去。"""
+
+        def navigate(_payload: dict[str, Any]) -> None:
+            self._active = target
+
+        return navigate
 
     def _entry(self, page: str) -> _Page:
         entry = self._pages.get(page)
         if entry is None:
             raise LookupError(f"未知页面: {page}")
         return entry
-
-    def _page_info(self, name: str) -> PageInfo:
-        entry = self._entry(name)
-        return PageInfo(name, entry.label, entry.owner, entry.icon)
 
     def _rebuild(self, name: str) -> None:
         entry = self._entry(name)
@@ -233,17 +260,12 @@ class Ui:
             return entry.tree
         raise LookupError(f"页面还没交树: {name}")
 
-    def _emit(self, payload: dict[str, Any]) -> None:
-        if self._ctx is None:
-            return
-        emit(self._ctx, SNAPSHOT_TOPIC, payload)
-
 
 class UiPlugin:
     name = "ui"
 
     def apply(self, ctx: Context) -> None:
-        ctx.provide("ui", Ui(ctx.log, ctx))
+        ctx.provide("ui", Ui(ctx.log))
 
 
-__all__ = ["SNAPSHOT_TOPIC", "PageHandle", "Ui", "UiPlugin"]
+__all__ = ["PageHandle", "PageInfo", "Ui", "UiPlugin"]

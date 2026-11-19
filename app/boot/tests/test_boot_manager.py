@@ -142,5 +142,5 @@ def test_the_real_manifest_is_installed_through_the_manager(tmp_path: Path) -> N
     assert rows["manager"]["bootstrap"] is True
     assert all(row["phase"] == "active" for row in rows.values())
     assert rows["ideas"]["conditions"]["requires"] == ["store", "media", "ui"]
-    pages = kernel.resolve("ui").render()["pages"]
-    assert "page.plugins" in [page["id"] for page in pages]
+    pages = kernel.resolve("ui").pages()
+    assert "plugins" in [page.name for page in pages]

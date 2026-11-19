@@ -24,7 +24,7 @@ class _Echo:
         return "pong"
 
     def push(self) -> str:
-        emit(self.ctx, "ui.snapshot", {"version": 9})
+        emit(self.ctx, "ideas.changed", {"version": 9})
         emit(self.ctx, "media.progress", {"percent": 40.0})
         return "ok"
 
@@ -86,9 +86,9 @@ def test_only_subscribed_topics_are_pushed() -> None:
         port = await net.serve()
         try:
             async with connect(_url(port)) as ws:
-                await _send_call(ws, "1", "net", "subscribe", topics=["ui.snapshot"])
+                await _send_call(ws, "1", "net", "subscribe", topics=["ideas.changed"])
                 subscribed = await _recv(ws)
-                net.emit("ui.snapshot", {"version": 8})
+                net.emit("ideas.changed", {"version": 8})
                 net.emit("media.progress", {"percent": 10.0})
                 pushed = await _recv(ws)
                 return subscribed, pushed, net.stats()
@@ -100,9 +100,9 @@ def test_only_subscribed_topics_are_pushed() -> None:
     assert subscribed == {
         "id": "1",
         "type": "result",
-        "value": {"topics": ["ui.snapshot"]},
+        "value": {"topics": ["ideas.changed"]},
     }
-    assert pushed == {"type": "event", "topic": "ui.snapshot", "payload": {"version": 8}}
+    assert pushed == {"type": "event", "topic": "ideas.changed", "payload": {"version": 8}}
     # frames_out 只有订阅的 result 和这一条 event：media.progress 根本没进队列。
     assert stats["frames_out"] == 2
     assert stats["queue_depth"] == 0
@@ -172,7 +172,7 @@ def test_subscribe_rejects_args_topics_that_are_not_non_empty_strings() -> None:
                 replies: list[dict[str, Any]] = []
                 bad_args: list[dict[str, Any]] = [
                     {},
-                    {"topics": "ui.snapshot"},
+                    {"topics": "ideas.changed"},
                     {"topics": [""]},
                     {"topics": [1]},
                 ]
@@ -204,7 +204,7 @@ def test_events_emitted_during_a_call_come_after_its_result() -> None:
         try:
             async with connect(_url(port)) as ws:
                 await _send_call(
-                    ws, "1", "net", "subscribe", topics=["ui.snapshot", "media.progress"]
+                    ws, "1", "net", "subscribe", topics=["ideas.changed", "media.progress"]
                 )
                 await _recv(ws)
                 await _send_call(ws, "2", "svc", "push")
@@ -215,7 +215,7 @@ def test_events_emitted_during_a_call_come_after_its_result() -> None:
     first, second, third = asyncio.run(scenario())
 
     assert first == {"id": "2", "type": "result", "value": "ok"}
-    assert second == {"type": "event", "topic": "ui.snapshot", "payload": {"version": 9}}
+    assert second == {"type": "event", "topic": "ideas.changed", "payload": {"version": 9}}
     assert third == {"type": "event", "topic": "media.progress", "payload": {"percent": 40.0}}
 
 
@@ -378,13 +378,13 @@ def test_stats_reports_calls_frames_and_bytes() -> None:
 
 def test_emit_without_a_connection_is_dropped() -> None:
     net = _net()
-    net.emit("ui.snapshot", {"version": 1})
+    net.emit("ideas.changed", {"version": 1})
 
     async def scenario() -> dict[str, Any]:
         port = await net.serve()
         try:
             async with connect(_url(port)) as ws:
-                await _send_call(ws, "1", "net", "subscribe", topics=["ui.snapshot"])
+                await _send_call(ws, "1", "net", "subscribe", topics=["ideas.changed"])
                 await _recv(ws)
                 return net.stats()
         finally:

@@ -136,9 +136,7 @@ def test_build_page_packages_base_and_all_partials() -> None:
 
 def test_compose_mounts_nav_and_content_into_one_document() -> None:
     base = base_document(name="ideas", title="灵感", route="/ideas")
-    nav = nav_partials(
-        [NavEntry("ideas", "灵感"), NavEntry("projects", "项目")], active="ideas"
-    )
+    nav = nav_partials([NavEntry("ideas", "灵感"), NavEntry("projects", "项目")], active="ideas")
     content = content_partial(_page_page(), name="ideas", owner="ideas")
 
     document = compose(base, [*nav, content])

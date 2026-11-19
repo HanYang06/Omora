@@ -166,8 +166,8 @@ DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engi
 ### 窗口、页面与 Slot（现状）
 
 - **窗口骨架**是链接基准：`dendro.window` 下两个区域——`dendro.window.nav`（56px 图标栏）与
-  `dendro.window.page`（主区）。结构只在
-  [`app/sdk/omora/sdk/root-tree.json`](../app/sdk/omora/sdk/root-tree.json) 定义（结构文件与加载器已落），代码不各写一份。
+  `dendro.window.page`（主区）。结构由 V1 树构建期的 base 骨架定义
+  （原 Slot 的 `app/sdk/omora/sdk/root-tree.json` 已随 Slot 路径删除），代码不各写一份。
 - **页面**是一个可导航的 Slot 根（`page.<name>`），页面来源把局部树按 `mountAt` 挂到窗口区域；
   页面侧表、当前页与数据文档随主会话 view 一起给。
 - **事件**带 handler id 回传；handler 由 Python ui 插件登记，事件处理完返回新 view。
