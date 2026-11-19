@@ -8,6 +8,8 @@
     "build": "vite build --configLoader runner",
     "preview": "vite preview --configLoader runner",
     "test": "vitest --configLoader runner",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots",
     "typecheck": "tsc --noEmit",
     "shell": "electron shell/main.cjs"
   },
@@ -15,12 +17,14 @@
     "wavesurfer.js": "^8.0.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@stryker-mutator/core": "^10.1.1",
     "@stryker-mutator/vitest-runner": "^10.1.1",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.6.6",
     "@vitest/coverage-v8": "5.1.0",
     "ajv": "^8.20.0",
+    "axe-core": "^4.14.1",
     "electron": "^45.2.3",
     "jsdom": "^31.0.0",
     "typescript": "^6.0.3",

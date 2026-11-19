@@ -23,6 +23,9 @@ node_modules/
 
 # 测试产物
 coverage/
+test-results/
+playwright-report/
+blob-report/
 
 # 本地数据
 .omora/
