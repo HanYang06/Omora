@@ -4,8 +4,8 @@ import { LiveSlotApp } from "./live";
 import "../styles/styles.css";
 import "../styles/media.css";
 
-/** 入口模式：默认主会话 Slot；`?engine=slot` 看 Slot fixture 预览；`?engine=tree` 看 V1 产物。 */
-export type EngineMode = "preview" | "tree" | "live";
+/** 入口模式：默认主会话 Slot；`?engine=slot` / `tree` / `virtual` 是内置预览。 */
+export type EngineMode = "preview" | "tree" | "virtual" | "live";
 
 /**
  * 解析入口模式（可单独测试）：
@@ -20,6 +20,9 @@ export function engineMode(search: string): EngineMode {
   }
   if (engine === "tree") {
     return "tree";
+  }
+  if (engine === "virtual") {
+    return "virtual";
   }
   return "live";
 }
@@ -56,6 +59,18 @@ function startPreview(container: HTMLElement): void {
     });
 }
 
+/** 虚拟列表预览：1000 行，验证只挂窗口内的行。 */
+function startVirtual(container: HTMLElement): void {
+  void import("./virtual_preview")
+    .then((preview) => {
+      preview.mountVirtualPreview(container);
+    })
+    .catch((error: unknown) => {
+      container.textContent = "虚拟列表预览加载失败：" + String(error);
+      console.error("[omora] 虚拟列表预览加载失败:", error);
+    });
+}
+
 /** V1 产物预览也在独立 chunk：读 /tree/ 产物，失败直接把原因写在页面上。 */
 function startTree(container: HTMLElement): void {
   void import("./tree/preview")
@@ -81,6 +96,10 @@ export function bootstrap(container: HTMLElement, search: string): void {
   }
   if (mode === "tree") {
     startTree(container);
+    return;
+  }
+  if (mode === "virtual") {
+    startVirtual(container);
     return;
   }
   startLive(container);

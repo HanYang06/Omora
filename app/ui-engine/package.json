@@ -14,6 +14,7 @@
     "shell": "electron shell/main.cjs"
   },
   "dependencies": {
+    "@tanstack/virtual-core": "^3.19.11",
     "ajv": "^8.20.0",
     "wavesurfer.js": "^8.0.5"
   },

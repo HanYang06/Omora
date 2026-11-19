@@ -1234,3 +1234,28 @@ mark {
   overflow-y: auto;
   background: var(--paper);
 }
+
+
+/* V1 虚拟列表：窗口内的行绝对定位，靠 transform 排；spacer 撑总高度。 */
+.omora-virtual-list {
+  position: relative;
+  min-height: 0;
+}
+
+.omora-virtual-spacer {
+  position: relative;
+  width: 100%;
+}
+
+.omora-virtual-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s3);
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+  box-sizing: border-box;
+}

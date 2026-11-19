@@ -13,6 +13,7 @@
 import type { Kind, KindRegistry } from "../renderer/types";
 import { registry } from "./registry";
 import { slotKinds } from "./slot_kinds";
+import { virtualListKinds } from "./virtual_list";
 
 const app: Kind = {
   create() {
@@ -34,6 +35,7 @@ function requireKind(kind: Kind | undefined, name: string): Kind {
 /** 树 V1 的 kind → Kind；裸名字与 legacy 注册表同键。 */
 export const treeKinds: KindRegistry = {
   ...registry,
+  ...virtualListKinds,
   app,
   "page-link": requireKind(slotKinds["dendro:page-link"], "dendro:page-link"),
 };
