@@ -1,18 +1,24 @@
 /**
  * 运行期 V1 树：调 `ui.tree` 拿 base + 局部树，链接期 compose 后挂到 DOM。
  *
- * 当前是只读桥：事件还没有回源协议，`event` 只记日志。等 `on` handler id +
- * dispatch + ops 接上，这里再换成真正的派发。
+ * 事件走 `ui.tree_event`：派发后拿一份新树，整棵 replace（ops 回包下一步）。
+ * 事件串行执行，失败保留旧树并记日志。
  */
 
-import type { JsonObject } from "../../contract/protocol";
+import type { ConnectionStatus, JsonObject } from "../../contract/protocol";
 import type { TreeRuntime } from "../../engine/tree/runtime";
 import { composeTree } from "../../link/tree_compose";
 import { fetchMedia } from "../../platform/media";
 import type { RenderContext } from "../../renderer/types";
-import type { Connection } from "../connection";
 import type { Logger } from "../log";
 import { mountTreeDocument } from "./tree_renderer";
+
+/** 树主会话只需要连接的三件事；`Connection` 结构上满足它，测试可以打桩。 */
+export interface TreeConnection {
+  call(target: string, method: string, args: JsonObject): Promise<unknown>;
+  subscribeStatus(listener: (status: ConnectionStatus) => void): void;
+  connect(): void;
+}
 
 /** `ui.tree` 的线上形状：一页的 base + 局部树，和构建期 `build_page` 同形。 */
 export interface TreeBuildPayload {
@@ -48,10 +54,11 @@ export class TreeLiveApp {
   private host: HTMLElement | null = null;
   private container: HTMLElement | null = null;
   private loading = false;
+  private queue: Promise<void> = Promise.resolve();
   private readonly log: Logger;
 
   constructor(
-    private readonly connection: Connection,
+    private readonly connection: TreeConnection,
     logger: Logger,
   ) {
     this.log = logger.child("tree");
@@ -91,9 +98,7 @@ export class TreeLiveApp {
       if (!isTreeBuild(payload)) {
         throw new Error("ui.tree 返回的不是树构建输入");
       }
-      const next = mountTreeBuild(host, payload, this.context());
-      this.runtime?.dispose();
-      this.runtime = next;
+      this.show(payload);
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
       this.log.error("tree.load.failed", { err: text });
@@ -103,10 +108,44 @@ export class TreeLiveApp {
     }
   }
 
+  /** 新树挂进新宿主，成功后再换掉旧树；失败时旧树还在。 */
+  private show(payload: TreeBuildPayload): void {
+    if (this.container === null) {
+      return;
+    }
+    const host = document.createElement("div");
+    host.className = "dendro-tree-live-host";
+    const runtime = mountTreeBuild(host, payload, this.context());
+    this.container.replaceChildren(host);
+    this.runtime?.dispose();
+    this.runtime = runtime;
+    this.host = host;
+  }
+
+  private dispatch(handler: string, payload?: JsonObject): void {
+    this.queue = this.queue
+      .then(() => this.applyEvent(handler, payload))
+      .catch((error: unknown) => {
+        const text = error instanceof Error ? error.message : String(error);
+        this.log.error("tree.event.failed", { handler, err: text });
+      });
+  }
+
+  private async applyEvent(handler: string, payload?: JsonObject): Promise<void> {
+    const next = await this.connection.call("ui", "tree_event", {
+      handler,
+      payload: payload ?? {},
+    });
+    if (!isTreeBuild(next)) {
+      throw new Error("ui.tree_event 返回的不是树构建输入");
+    }
+    this.show(next);
+  }
+
   private context(): RenderContext {
     return {
       event: (handler: string, payload?: JsonObject) => {
-        this.log.info("tree.event.unhandled", { handler, payload });
+        this.dispatch(handler, payload);
       },
       loadMedia: (media: string) =>
         fetchMedia((target, method, args) => this.connection.call(target, method, args), media),
