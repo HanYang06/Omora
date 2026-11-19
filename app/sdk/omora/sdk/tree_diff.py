@@ -30,6 +30,28 @@ def _index(document: Node) -> tuple[dict[str, Node], dict[str, str | None]]:
     return nodes, parents
 
 
+_STRUCT_FIELDS = ("kind", "chain", "title", "on", "a11y", "slot", "collection", "bind", "emit")
+
+
+def needs_full(old: Node, new: Node) -> bool:
+    """差分表达不了的变化：结构字段、order、同级相对顺序。命中就整树重挂。"""
+    old_nodes, _ = _index(old)
+    new_nodes, _ = _index(new)
+    for node_id, node in new_nodes.items():
+        before = old_nodes.get(node_id)
+        if before is None:
+            continue
+        if any(node.get(field) != before.get(field) for field in _STRUCT_FIELDS):
+            return True
+        if node.get("order") != before.get("order"):
+            return True
+        old_order = [child["id"] for child in before["layout"] if child["id"] in new_nodes]
+        new_order = [child["id"] for child in node["layout"] if child["id"] in old_nodes]
+        if old_order != new_order:
+            return True
+    return False
+
+
 def diff_documents(old: Node, new: Node) -> list[dict[str, Any]]:
     """old → new 的最小 ops；空列表表示只有版本推进。"""
     old_nodes, old_parents = _index(old)
@@ -63,4 +85,4 @@ def diff_documents(old: Node, new: Node) -> list[dict[str, Any]]:
     return ops
 
 
-__all__ = ["diff_documents"]
+__all__ = ["diff_documents", "needs_full"]

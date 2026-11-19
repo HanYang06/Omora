@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from omora.sdk.tree_diff import diff_documents
+from omora.sdk.tree_diff import diff_documents, needs_full
 
 ROOT = "a" * 16
 ONE = "1" * 16
@@ -85,3 +85,30 @@ def test_added_subtree_is_one_mount() -> None:
 
 def test_unchanged_document_has_no_ops() -> None:
     assert diff_documents(document(node(ONE)), document(node(ONE))) == []
+
+
+def test_reorder_needs_full() -> None:
+    first = node(ONE)
+    second = node(TWO)
+
+    assert needs_full(document(first, second), document(second, first)) is True
+
+
+def test_handler_change_needs_full() -> None:
+    before = node(ONE)
+    before["on"] = {"click": "h1"}
+    after = node(ONE)
+    after["on"] = {"click": "h2"}
+
+    assert needs_full(document(before), document(after)) is True
+
+
+def test_mount_does_not_need_full() -> None:
+    assert needs_full(document(node(ONE)), document(node(ONE), node(TWO))) is False
+
+
+def test_settings_change_does_not_need_full() -> None:
+    before = node(ONE, settings={"text": "甲"})
+    after = node(ONE, settings={"text": "乙"})
+
+    assert needs_full(document(before), document(after)) is False

@@ -16,7 +16,7 @@ from omora.core.log import Log, NullLog
 from omora.sdk import Context
 from omora.sdk.realtime import emit
 from omora.sdk.tree_build import NavEntry, build_page, compose
-from omora.sdk.tree_diff import diff_documents
+from omora.sdk.tree_diff import diff_documents, needs_full
 from omora.sdk.ui import Page
 
 from ._handle import PageHandle
@@ -188,6 +188,8 @@ class Ui:
         before = self._tree_document
         base = self._tree_version
         _, after = self._build_tree(None)
+        if needs_full(before, after):
+            return self.tree()
         ops = diff_documents(before, after)
         self._tree_document = after
         self._tree_version = base + 1
