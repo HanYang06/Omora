@@ -83,12 +83,12 @@ class MediaHttp:
         try:
             response = await handler(request)
         except _HttpError as exc:
-            response = _error(exc.status, str(exc))
+            response = _error(exc.status, "bad request")
         except web.HTTPException:
             raise
-        except Exception as exc:
+        except Exception:
             # 旧实现把意外异常也回成 JSON 500；不让 aiohttp 换成纯文本。
-            response = _error(500, str(exc))
+            response = _error(500, "internal server error")
         # v0 边界（protocol.md §7）：没有 keep-alive，一问一答就关连接。
         response.force_close()
         response.headers.update(self._cors(request.headers.get("Origin")))
