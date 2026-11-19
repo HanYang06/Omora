@@ -1,0 +1,28 @@
+name: Bug
+description: 一个可复现的缺陷
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 现象
+      description: 实际发生了什么，期望是什么
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 命令 / 页面 / 数据；最小复现最好
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 证据
+      description: 日志、截图、测试失败输出
+  - type: textarea
+    id: scope
+    attributes:
+      label: 影响范围
