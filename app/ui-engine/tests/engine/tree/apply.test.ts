@@ -18,6 +18,10 @@ function baseDocument(): Document {
   return { ...document, version: 7 };
 }
 
+function withData(data: Record<string, unknown>): Document {
+  return { ...baseDocument(), data };
+}
+
 function fixtureOps(): unknown[] {
   return (readJson(OPS).ops as unknown[]).slice(0, 4);
 }
@@ -107,15 +111,183 @@ describe("applyOps：版本与原子性", () => {
     expect(base).toEqual(snapshot);
   });
 
-  it("data op 还没接：整批失败，不应用一半", () => {
+  it("data 的 changes 还没接：整批失败，同批结构变更不生效", () => {
     const base = baseDocument();
+    const snapshot = structuredClone(base);
     const result = applyOps(
       base,
-      batch([{ op: "data", source: "ideas.feed", revision: 1, value: 1 }]),
+      batch([
+        { op: "setProps", id: "1c2d3e4f5a6b7c8d", props: { text: "新" } },
+        { op: "data", source: "ideas.feed", revision: 1, changes: [{ id: "1" }] },
+      ]),
     );
 
     expect(codes(result)).toEqual(["E-PAYLOAD"]);
-    expect(base.version).toBe(7);
+    expect(result.ok ? "" : result.diagnostics[0]?.path).toBe("/ops/1/changes");
+    expect(base).toEqual(snapshot);
+  });
+
+  it("data value 无法深拷：坏载荷整批 E-PAYLOAD", () => {
+    const base = baseDocument();
+    const snapshot = structuredClone(base);
+
+    const result = applyOps(
+      base,
+      batch([{ op: "data", source: "ideas.feed", revision: 1, value: () => 1 }]),
+    );
+
+    expect(codes(result)).toEqual(["E-PAYLOAD"]);
+    expect(result.ok ? "" : result.diagnostics[0]?.path).toBe("/ops/0/value");
+    expect(base).toEqual(snapshot);
+  });
+});
+
+describe("applyOps：data 文档层", () => {
+  it("value 写入 data[source]：版本推进，结构不动、不进 changed", () => {
+    const base = baseDocument();
+
+    const result = applyOps(
+      base,
+      batch([{ op: "data", source: "net.status", revision: 1, value: { connected: true } }]),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.version).toBe(8);
+    expect(result.document.data).toEqual({
+      "net.status": { revision: 1, value: { connected: true } },
+    });
+    expect(result.document.root).toBe(base.root);
+    expect(result.changed).toEqual([]);
+    expect(result.diagnostics).toEqual([]);
+    expect(base.data).toEqual({});
+  });
+
+  it("items 全量写入 data[source]", () => {
+    const items = [{ id: "43", template: "item", title: "新条目" }];
+
+    const result = applyOps(
+      baseDocument(),
+      batch([{ op: "data", source: "ideas.feed", revision: 2, items }]),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.data).toEqual({ "ideas.feed": { revision: 2, items } });
+  });
+
+  it("revision 更大才应用：覆盖旧条目", () => {
+    const base = withData({
+      "net.status": { revision: 1, value: { connected: false } },
+    });
+
+    const result = applyOps(
+      base,
+      batch([{ op: "data", source: "net.status", revision: 2, value: { connected: true } }]),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.data).toEqual({
+      "net.status": { revision: 2, value: { connected: true } },
+    });
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("revision 相等是幂等 no-op：换了内容也不覆盖", () => {
+    const base = withData({
+      "ideas.feed": { revision: 5, items: [{ id: "1", template: "item" }] },
+    });
+
+    const result = applyOps(
+      base,
+      batch([
+        { op: "data", source: "ideas.feed", revision: 5, items: [{ id: "2", template: "item" }] },
+      ]),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.data).toBe(base.data);
+    expect(result.document.data).toEqual({
+      "ideas.feed": { revision: 5, items: [{ id: "1", template: "item" }] },
+    });
+    expect(result.changed).toEqual([]);
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("revision 更小：过期忽略并记 E-DATA-STALE", () => {
+    const base = withData({
+      "net.status": { revision: 4, value: { connected: true } },
+    });
+
+    const result = applyOps(
+      base,
+      batch([{ op: "data", source: "net.status", revision: 3, value: { connected: false } }]),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.data).toBe(base.data);
+    expect(result.document.version).toBe(8);
+    expect(result.changed).toEqual([]);
+    expect(result.diagnostics.map((diagnostic) => [diagnostic.path, diagnostic.code])).toEqual([
+      ["/ops/0", "E-DATA-STALE"],
+    ]);
+  });
+
+  it("树里有 collection 模板时 data 批也不深拷结构", () => {
+    const base = baseDocument();
+    const feed = find(base.root, "7e8f9a0b1c2d3e4f");
+    if (feed === undefined) throw new Error("fixture 少了 feed");
+    feed.collection = {
+      source: "ideas.feed",
+      key: "id",
+      templates: {
+        item: {
+          id: "1111111111111111",
+          chain: feed.chain + ".1111111111111111",
+          kind: "card",
+          order: 10,
+          layout: [],
+          settings: {},
+          bind: {},
+          on: {},
+          emit: {},
+        },
+      },
+    };
+
+    const result = applyOps(
+      base,
+      batch([{ op: "data", source: "ideas.feed", revision: 2, items: [{ id: "43" }] }]),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.root).toBe(base.root);
+    expect(result.changed).toEqual([]);
+    expect(result.document.data).toEqual({ "ideas.feed": { revision: 2, items: [{ id: "43" }] } });
+  });
+
+  it("data 与结构 op 混批：changed 只列结构目标，data 一起生效", () => {
+    const result = applyOps(
+      baseDocument(),
+      batch([
+        { op: "data", source: "ideas.feed", revision: 6, items: [{ id: "43", template: "item" }] },
+        { op: "setProps", id: "1c2d3e4f5a6b7c8d", props: { text: "新入口" } },
+      ]),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.changed).toEqual(["1c2d3e4f5a6b7c8d"]);
+    expect(result.document.data).toEqual({
+      "ideas.feed": { revision: 6, items: [{ id: "43", template: "item" }] },
+    });
+    expect(find(result.document.root, "1c2d3e4f5a6b7c8d")?.settings).toMatchObject({
+      text: "新入口",
+    });
   });
 });
 

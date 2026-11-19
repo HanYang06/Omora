@@ -71,7 +71,8 @@ export type TreeRuntimeDiagnosticCode =
   | "E-PAYLOAD" // ops 形状 / 语义不合法
   | "E-VERSION" // base 与当前文档版本不一致
   | "E-TARGET-MISSING" // ops 的目标不在已挂载树里
-  | "E-TREE-ORDER"; // 同级 order 冲突
+  | "E-TREE-ORDER" // 同级 order 冲突
+  | "E-DATA-STALE"; // data revision 落后于当前，已忽略
 
 /** 一条挂载诊断；path 是文档的 JSON Pointer（根为 ""），能带现场就带。 */
 export interface TreeRuntimeDiagnostic {

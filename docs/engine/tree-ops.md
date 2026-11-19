@@ -1,6 +1,7 @@
 # V1 更新操作（ops）
 
-> 状态：**形状 + 文档层应用 + 运行时最小更新已落**（2026-11-18）；`data` 语义还没接。
+> 状态：**形状 + 文档层应用 + 运行时最小更新 / `data` 文档层已落**（2026-11-19）；
+> collection 实例化、`bind` 与 `changes` 增量还没接。
 > 相关：[V1 树](../planning/v1-tree.md) · [V1 运行时](tree-runtime.md) · [updates.md](updates.md)
 
 ## 0. 一句话
@@ -28,13 +29,13 @@ ops 是“按 id 改一份已存在的 `dendro.tree/1` 文档”的批量：不�
 
 五种 op：
 
-| op         | 载荷                                                   | 语义（应用端实现）                                             |
-| ---------- | ------------------------------------------------------ | -------------------------------------------------------------- |
-| `setProps` | `id` + `props`                                         | 浅合并进节点的 `settings`；未提到的键保留                      |
-| `mount`    | `parent` + `node`                                      | 挂到父节点 layout；位置由 `node.order` 决定（同级 order 唯一） |
-| `unmount`  | `id`                                                   | 摘掉整棵子树；根不能卸                                         |
-| `replace`  | `id` + `node`                                          | 原位替换；id 可换，chain 由应用端按父链校验                    |
-| `data`     | `source` + `revision` + `value`/`items`/`changes` 之一 | 纯数据；按 source 找集合 / 绑定消费，不改结构                  |
+| op         | 载荷                                                   | 语义（应用端实现）                                               |
+| ---------- | ------------------------------------------------------ | ---------------------------------------------------------------- |
+| `setProps` | `id` + `props`                                         | 浅合并进节点的 `settings`；未提到的键保留                        |
+| `mount`    | `parent` + `node`                                      | 挂到父节点 layout；位置由 `node.order` 决定（同级 order 唯一）   |
+| `unmount`  | `id`                                                   | 摘掉整棵子树；根不能卸                                           |
+| `replace`  | `id` + `node`                                          | 原位替换；id 可换，chain 由应用端按父链校验                      |
+| `data`     | `source` + `revision` + `value`/`items`/`changes` 之一 | 纯数据；写 `data[source] = {revision, value \| items}`，不改结构 |
 
 - 空 `ops` 合法：不改变结构，但仍推进版本。
 - 节点载荷仍是完整 `dendro.tree/1` node（带 chain）；ops 不另造一套节点形状。
@@ -64,7 +65,10 @@ ops 是“按 id 改一份已存在的 `dendro.tree/1` 文档”的批量：不�
 - 结构校验：mount / replace 的 chain 必须由目标父链推出；id 不与现有节点冲突；
   同级 order 唯一；replace 不能改 order、根不能做结构操作。
 - 模板边界：`collection.templates` 里的节点可以 `setProps`，但不能 mount / unmount / replace。
-- `data` 目前整批拒绝（`E-PAYLOAD`），不让“只应用一半”的更新溜过去。
+- `data` 文档层：把 `data[source]` 写成 `{revision, value}` 或 `{revision, items}`；
+  revision 相等是幂等 no-op、更小是过期（忽略并记 `E-DATA-STALE`）、更大才应用。
+  只改文档数据，不改结构、不进 `changed`；`changes` 增量还没接，遇到整批 `E-PAYLOAD`。
+- 运行时没有 data 的 patch 阶段：数据不进 `changed`，已挂载节点一个不动。
 - 运行时 `setProps`（内容更新）：只替换目标已挂载节点的 `node` 引用并 `update` 渲染器；
   元素复用、兄弟不动；版本 / 原子失败沿用文档层，失败时整批不生效。
 - 运行时 `mount / unmount`：新子树先全部建好再放，只动目标子树；兄弟元素引用不变。
@@ -74,5 +78,6 @@ ops 是“按 id 改一份已存在的 `dendro.tree/1` 文档”的批量：不�
 
 还没做：
 
-- `data` 语义：collection 实例化、keyed reconcile、绑定。
+- `data` 的消费语义：collection 实例化、keyed reconcile、`bind` 投影；`changes` 增量。
+- 数据变更后的订阅 / 通知（宿主回头接）。
 - 权限 / 审计：不在引擎，归宿主策略。

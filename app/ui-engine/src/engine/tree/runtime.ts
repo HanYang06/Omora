@@ -126,8 +126,9 @@ export class TreeRuntime {
   }
 
   /**
-   * 应用一批 ops：文档层算新文档（版本 / 原子 / 路径复制），运行时只改被触碰的子树。
-   * 支持 setProps / mount / unmount；replace 与 data 下一步接。
+   * 应用一批 ops：文档层算新文档（版本 / 原子 / 路径复制 / data），运行时只改被触碰的
+   * 子树。支持 setProps / mount / unmount / replace；data 只写文档数据、不进 changed，
+   * 运行时 patch 阶段没有要改的节点。
    */
   applyOps(value: unknown): TreeUpdateResult {
     const closed = this.rejectWhenDisposed();
@@ -140,11 +141,6 @@ export class TreeRuntime {
     const parsed = parseOps(value);
     if (!parsed.ok) {
       return this.fail(parsed.diagnostics.map(toRuntimeDiagnostic));
-    }
-    if (parsed.batch.ops.some((op) => op.op === "data")) {
-      return this.fail([
-        { code: "E-PAYLOAD", path: "/ops", message: "data op 还没接（下一步：collection / 绑定）" },
-      ]);
     }
     const mountedThisBatch = new Set<string>();
     const unmountedThisBatch = new Set<string>();
@@ -186,7 +182,7 @@ export class TreeRuntime {
     // 只更新被触碰的目标节点；未触碰祖先的 MountedNode.node 仍是旧对象。
     // 语义以 this.current（新文档）为准；祖先的 kind / chain 不变，不影响复用判断。
     this.current = applied.document;
-    this.lastDiagnostics = context.cleanup;
+    this.lastDiagnostics = [...applied.diagnostics, ...context.cleanup];
     return { ok: true, changed: updated.changed };
   }
 

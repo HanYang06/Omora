@@ -67,5 +67,6 @@ components/*（现有 38 个 kind，不改）
   入口在 `app/tree/preview.ts`，失败会把原因写在页面上。
 - 默认入口还没切（仍走 Slot 主会话）。
 - 导航从 `settings.route` 出发的跳转没接：静态产物没有 handler，导航是禁用态。
-- `collection` 实例化、`data` op 未接。
-- `setProps / mount / unmount / replace` 已接（只动目标子树）；`data` 未接。
+- `collection` 实例化、`bind` 投影、`data` 的 `changes` 增量未接。
+- `setProps / mount / unmount / replace` 已接（只动目标子树）；
+  `data` 文档层已接（写 `document.data`、revision 幂等 / 过期诊断），运行时没有要 patch 的节点。

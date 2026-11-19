@@ -366,3 +366,123 @@ describe("TreeRuntime.applyOps：内容更新", () => {
     container.remove();
   });
 });
+
+describe("TreeRuntime.applyOps：data 文档层", () => {
+  it("data op 只写数据：版本推进、changed 空、DOM 不动", () => {
+    const { container, runtime, counters } = mount();
+    const before = [...container.querySelectorAll("span")];
+
+    const result = runtime.applyOps(
+      batch(1, 2, [{ op: "data", source: "net.status", revision: 1, value: { connected: true } }]),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.changed).toEqual([]);
+    expect(runtime.document?.version).toBe(2);
+    expect(runtime.document?.data).toEqual({
+      "net.status": { revision: 1, value: { connected: true } },
+    });
+    expect(counters).toEqual({ created: 4, updated: 0, destroyed: 0 });
+    expect([...container.querySelectorAll("span")]).toEqual(before);
+    expect(runtime.diagnostics).toEqual([]);
+
+    runtime.dispose();
+    container.remove();
+  });
+
+  it("revision 相等 no-op、更小记 E-DATA-STALE：数据与 DOM 都不动", () => {
+    const { container, runtime, counters } = mount();
+    const first = runtime.applyOps(
+      batch(1, 2, [{ op: "data", source: "net.status", revision: 1, value: { connected: true } }]),
+    );
+    expect(first.ok).toBe(true);
+
+    const same = runtime.applyOps(
+      batch(2, 3, [{ op: "data", source: "net.status", revision: 1, value: { connected: false } }]),
+    );
+    expect(same.ok).toBe(true);
+    expect(runtime.document?.data).toEqual({
+      "net.status": { revision: 1, value: { connected: true } },
+    });
+    expect(runtime.diagnostics).toEqual([]);
+
+    const stale = runtime.applyOps(
+      batch(3, 4, [{ op: "data", source: "net.status", revision: 0, value: { connected: false } }]),
+    );
+    expect(stale.ok).toBe(true);
+    expect(runtime.document?.version).toBe(4);
+    expect(runtime.document?.data).toEqual({
+      "net.status": { revision: 1, value: { connected: true } },
+    });
+    expect(runtime.diagnostics.map((diagnostic) => [diagnostic.path, diagnostic.code])).toEqual([
+      ["/ops/0", "E-DATA-STALE"],
+    ]);
+    expect(counters).toEqual({ created: 4, updated: 0, destroyed: 0 });
+
+    runtime.dispose();
+    container.remove();
+  });
+
+  it("data 与 setProps 混批：changed 只列结构目标", () => {
+    const { container, runtime } = mount();
+
+    const result = runtime.applyOps(
+      batch(1, 2, [
+        { op: "data", source: "ideas.feed", revision: 6, items: [{ id: "43", template: "item" }] },
+        { op: "setProps", id: A, props: { text: "甲改" } },
+      ]),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.changed).toEqual([A]);
+    expect(container.querySelector("span")?.textContent).toBe("甲改");
+    expect(runtime.document?.data).toEqual({
+      "ideas.feed": { revision: 6, items: [{ id: "43", template: "item" }] },
+    });
+
+    runtime.dispose();
+    container.remove();
+  });
+
+  it("同批结构失败：data 不生效，版本不动", () => {
+    const { container, runtime } = mount();
+
+    const result = runtime.applyOps(
+      batch(1, 2, [
+        { op: "data", source: "net.status", revision: 1, value: { connected: true } },
+        { op: "setProps", id: "ffffffffffffffff", props: { text: "没有" } },
+      ]),
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toContain("E-TARGET-MISSING");
+    expect(runtime.document?.version).toBe(1);
+    expect(runtime.document?.data).toEqual({});
+    expect(container.querySelector("span")?.textContent).toBe("甲");
+
+    runtime.dispose();
+    container.remove();
+  });
+
+  it("data 的 changes 还没接：整批 E-PAYLOAD，数据不生效", () => {
+    const { container, runtime } = mount();
+
+    const result = runtime.applyOps(
+      batch(1, 2, [{ op: "data", source: "ideas.feed", revision: 1, changes: [{ id: "43" }] }]),
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.diagnostics.map((diagnostic) => [diagnostic.path, diagnostic.code])).toEqual([
+      ["/ops/0/changes", "E-PAYLOAD"],
+    ]);
+    expect(runtime.document?.version).toBe(1);
+    expect(runtime.document?.data).toEqual({});
+
+    runtime.dispose();
+    container.remove();
+  });
+});
