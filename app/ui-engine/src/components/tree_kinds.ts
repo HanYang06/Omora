@@ -13,6 +13,7 @@
 import type { Kind, KindRegistry } from "../renderer/types";
 import { registry } from "./registry";
 import { slotKinds } from "./slot_kinds";
+import { dialogKinds } from "./dialog";
 import { virtualListKinds } from "./virtual_list";
 
 const app: Kind = {
@@ -36,6 +37,7 @@ function requireKind(kind: Kind | undefined, name: string): Kind {
 export const treeKinds: KindRegistry = {
   ...registry,
   ...virtualListKinds,
+  ...dialogKinds,
   app,
   "page-link": requireKind(slotKinds["dendro:page-link"], "dendro:page-link"),
 };

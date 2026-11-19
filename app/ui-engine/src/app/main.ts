@@ -5,7 +5,7 @@ import "../styles/styles.css";
 import "../styles/media.css";
 
 /** 入口模式：默认主会话 Slot；`?engine=slot` / `tree` / `virtual` 是内置预览。 */
-export type EngineMode = "preview" | "tree" | "virtual" | "live";
+export type EngineMode = "preview" | "tree" | "virtual" | "dialog" | "live";
 
 /**
  * 解析入口模式（可单独测试）：
@@ -23,6 +23,9 @@ export function engineMode(search: string): EngineMode {
   }
   if (engine === "virtual") {
     return "virtual";
+  }
+  if (engine === "dialog") {
+    return "dialog";
   }
   return "live";
 }
@@ -71,6 +74,18 @@ function startVirtual(container: HTMLElement): void {
     });
 }
 
+/** 原生 dialog 预览：模态、Esc、焦点都由平台负责。 */
+function startDialog(container: HTMLElement): void {
+  void import("./dialog_preview")
+    .then((preview) => {
+      preview.mountDialogPreview(container);
+    })
+    .catch((error: unknown) => {
+      container.textContent = "对话框预览加载失败：" + String(error);
+      console.error("[omora] 对话框预览加载失败:", error);
+    });
+}
+
 /** V1 产物预览也在独立 chunk：读 /tree/ 产物，失败直接把原因写在页面上。 */
 function startTree(container: HTMLElement): void {
   void import("./tree/preview")
@@ -100,6 +115,10 @@ export function bootstrap(container: HTMLElement, search: string): void {
   }
   if (mode === "virtual") {
     startVirtual(container);
+    return;
+  }
+  if (mode === "dialog") {
+    startDialog(container);
     return;
   }
   startLive(container);
