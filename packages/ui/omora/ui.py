@@ -15,7 +15,8 @@ from typing import Any
 from omora.core.log import Log, NullLog
 from omora.sdk import Context
 from omora.sdk.realtime import emit
-from omora.sdk.tree_build import NavEntry, build_page
+from omora.sdk.tree_build import NavEntry, build_page, compose
+from omora.sdk.tree_diff import diff_documents
 from omora.sdk.ui import Page
 
 from ._handle import PageHandle
@@ -58,6 +59,9 @@ class Ui:
         # 事件回调运行期间由 ui 负责交新 view，set_page 不要再另推一份。
         self._in_event = False
         self._tree_handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
+        self._tree_document: dict[str, Any] | None = None
+        self._tree_version = 0
+        self._tree_seq = 0
         self._slots = SlotView(
             names=lambda: list(self._pages),
             info=self._page_info,
@@ -115,11 +119,8 @@ class Ui:
         """这一页当前的节点树（拉取式 build 或插件交上来的树）；构建期工具用。"""
         return self._page_body(name, self._entry(name))
 
-    def tree(self, page: str | None = None) -> dict[str, Any]:
-        """当前页的 V1 树构建输入（base + 局部树）；V1 主路径的迁移桥，构建期同款。
-
-        只搬形状：事件 callable 经 register 换成 handler id；TS 侧 compose 后挂载。
-        """
+    def _build_tree(self, page: str | None) -> tuple[dict[str, Any], dict[str, Any]]:
+        """组装一页的 base + 局部树，并 compose 成可对比的完整文档。"""
         view = self._slots.render(page)
         active = str(view["active"])
         pages = [item for item in view["pages"] if isinstance(item, dict)]
@@ -158,19 +159,46 @@ class Ui:
             register=register,
         )
         self._tree_handlers = handlers
+        return built, compose(built["base"], built["partials"])
+
+    def tree(self, page: str | None = None) -> dict[str, Any]:
+        """当前页的 V1 树构建输入（base + 局部树）；V1 主路径的迁移桥，构建期同款。
+
+        事件 callable 经 register 换成稳定 handler id；TS 侧 compose 后挂载。
+        这里保存 compose 后的文档，作为下一次 tree_event 差分的基准。
+        """
+        built, document = self._build_tree(page)
+        self._tree_document = document
+        self._tree_version = int(document.get("version", 1))
+        self._tree_seq = 0
         return {"kind": "tree", **built}
 
     def tree_event(self, handler: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        """tree 的 handler 派发：执行后交一份新 tree（handler id 换代）。"""
+        """派发 handler，并把“上一棵树 → 新树”的差异作为 ops 交回去。"""
         callback = self._tree_handlers.get(handler)
         if callback is None:
             raise LookupError(f"未知 handler: {handler}")
+        if self._tree_document is None:
+            raise RuntimeError("tree 还没挂载")
         self._in_event = True
         try:
             callback({} if payload is None else payload)
         finally:
             self._in_event = False
-        return self.tree()
+        before = self._tree_document
+        base = self._tree_version
+        _, after = self._build_tree(None)
+        ops = diff_documents(before, after)
+        self._tree_document = after
+        self._tree_version = base + 1
+        self._tree_seq += 1
+        return {
+            "kind": "ops",
+            "document": self._tree_version,
+            "base": base,
+            "seq": self._tree_seq,
+            "ops": ops,
+        }
 
     def event(self, handler: str, payload: dict[str, Any]) -> dict[str, Any]:
         """把载荷交给 handler；result 是派发之后当前页的新 view。"""

@@ -172,10 +172,16 @@ def test_tree_registers_handlers_and_dispatches() -> None:
     handler = _tree_handler(content)
     assert handler is not None
 
-    next_tree = ui.tree_event(handler, {"value": 1})
+    frame = ui.tree_event(handler, {"value": 1})
 
     assert state["n"] == 1
     assert seen == [{"value": 1}]
+    assert frame["kind"] == "ops"
+    assert (frame["base"], frame["document"]) == (1, 2)
+    assert [op["op"] for op in frame["ops"]] == ["setProps"]
+    assert frame["ops"][0]["props"]["text"] == "1"
+
+    next_tree = ui.tree()
     next_content = cast(dict[str, Any], next_tree["partials"][-1]["root"])
     assert next_content["layout"][0]["settings"]["text"] == "1"
     assert _tree_handler(next_content) == handler
@@ -198,8 +204,15 @@ def test_tree_nav_handlers_switch_page() -> None:
     assert other["root"]["settings"]["active"] is False
     handler = other["root"]["on"]["click"]
 
-    next_tree = ui.tree_event(handler)
+    frame = ui.tree_event(handler)
 
+    assert frame["kind"] == "ops"
+    kinds = [op["op"] for op in frame["ops"]]
+    assert "unmount" in kinds
+    assert "mount" in kinds
+    assert "setProps" in kinds
+
+    next_tree = ui.tree()
     assert next_tree["name"] == "other"
     next_navs = [partial for partial in next_tree["partials"] if partial["source"] == "ui"]
     other_next = next(
