@@ -1,13 +1,28 @@
 import asyncio
+import contextlib
 import json
+import socket
 from pathlib import Path
+from typing import Any
+
+import pytest
+from aiohttp.test_utils import make_mocked_request
 
 from omora.core.context import Context
 from omora.media import Media
-from omora.media_http import MediaHttp
+from omora.media_http import MediaHttp, _HttpError
 from omora.net import Net
 
 ORIGIN = "http://127.0.0.1:5173"
+
+
+class _BrokenMedia:
+    """媒体服务在读取时炸掉，用来钉住"意外异常回 JSON 500"。"""
+
+    max_bytes = 1024
+
+    def read(self, media_id: str) -> dict[str, Any]:
+        raise RuntimeError(f"读不了: {media_id}")
 
 
 def _ctx(tmp_path: Path, *, max_mb: int = 1) -> Context:
@@ -105,6 +120,23 @@ def test_playing_a_media_back_returns_the_bytes_and_the_mime(tmp_path: Path) -> 
     assert (status, headers["content-type"], payload) == (200, "video/webm", b"video-bytes")
 
 
+def test_a_range_request_still_gets_the_whole_media(tmp_path: Path) -> None:
+    async def scenario() -> tuple[int, dict[str, str], bytes]:
+        ctx = _ctx(tmp_path)
+        net, port = await _serve(ctx)
+        try:
+            media_id = ctx.resolve("media").save(b"video-bytes", "video/webm")
+            return await _request(
+                port, "GET", f"/media/{media_id}", headers=(("Range", "bytes=0-4"),)
+            )
+        finally:
+            await net.stop()
+
+    status, headers, payload = asyncio.run(scenario())
+
+    assert (status, "content-range" in headers, payload) == (200, False, b"video-bytes")
+
+
 def test_an_unknown_media_id_is_404(tmp_path: Path) -> None:
     async def scenario() -> tuple[int, dict[str, str], bytes]:
         net, port = await _serve(_ctx(tmp_path))
@@ -173,6 +205,43 @@ def test_a_upload_over_the_media_limit_is_413(tmp_path: Path) -> None:
     assert asyncio.run(scenario()) == 413
 
 
+def test_an_empty_media_is_400(tmp_path: Path) -> None:
+    async def scenario() -> tuple[int, dict[str, str], bytes]:
+        net, port = await _serve(_ctx(tmp_path))
+        try:
+            return await _request(
+                port,
+                "POST",
+                "/media",
+                headers=(("Content-Type", "video/webm"),),
+            )
+        finally:
+            await net.stop()
+
+    status, _, payload = asyncio.run(scenario())
+
+    assert (status, json.loads(payload)) == (400, {"error": "空媒体"})
+
+
+def test_an_unexpected_media_failure_is_500_json(tmp_path: Path) -> None:
+    async def scenario() -> tuple[int, dict[str, str], bytes]:
+        ctx = Context()
+        ctx.provide("media", _BrokenMedia())
+        net, port = await _serve(ctx)
+        try:
+            return await _request(port, "GET", "/media/x")
+        finally:
+            await net.stop()
+
+    status, headers, payload = asyncio.run(scenario())
+
+    assert (status, headers["content-type"], json.loads(payload)) == (
+        500,
+        "application/json",
+        {"error": "读不了: x"},
+    )
+
+
 def test_the_dev_origin_gets_cors_and_others_do_not(tmp_path: Path) -> None:
     async def scenario() -> tuple[dict[str, str], dict[str, str]]:
         net, port = await _serve(_ctx(tmp_path))
@@ -210,38 +279,92 @@ def test_uploading_without_the_media_service_is_503(tmp_path: Path) -> None:
     assert asyncio.run(scenario()) == 503
 
 
-def _handle_raw(tmp_path: Path, raw: bytes) -> tuple[int, dict[str, str], bytes]:
-    async def scenario() -> tuple[int, dict[str, str], bytes]:
-        server = MediaHttp(_ctx(tmp_path))
-        reader = asyncio.StreamReader()
-        reader.feed_data(raw)
-        reader.feed_eof()
-        return await server._handle(reader)
-
-    return asyncio.run(scenario())
+async def _raw_status(port: int, raw: bytes) -> int:
+    reader, writer = await asyncio.open_connection("127.0.0.1", port)
+    try:
+        writer.write(raw)
+        await writer.drain()
+        line = await reader.readline()
+        return int(line.split(b" ")[1])
+    finally:
+        writer.close()
+        with contextlib.suppress(ConnectionError, OSError):
+            await writer.wait_closed()
 
 
 def test_a_malformed_request_line_is_400(tmp_path: Path) -> None:
-    status, _, _ = _handle_raw(tmp_path, b"NOPE\r\n\r\n")
+    async def scenario() -> int:
+        net, port = await _serve(_ctx(tmp_path))
+        try:
+            return await _raw_status(port, b"NOPE\r\n\r\n")
+        finally:
+            await net.stop()
 
-    assert status == 400
+    assert asyncio.run(scenario()) == 400
 
 
 def test_a_truncated_body_is_400(tmp_path: Path) -> None:
-    raw = b"POST /media HTTP/1.1\r\nContent-Type: video/webm\r\nContent-Length: 10\r\n\r\nab"
+    async def scenario() -> int:
+        request = make_mocked_request(
+            "POST",
+            "/media",
+            headers={"Content-Type": "video/webm", "Content-Length": "10"},
+        )
+        try:
+            await MediaHttp(_ctx(tmp_path))._upload(request)
+        except _HttpError as exc:
+            return exc.status
+        return 0
 
-    status, _, _ = _handle_raw(tmp_path, raw)
-
-    assert status == 400
+    assert asyncio.run(scenario()) == 400
 
 
 def test_a_header_without_a_name_is_400(tmp_path: Path) -> None:
-    status, _, _ = _handle_raw(tmp_path, b"GET /media/x HTTP/1.1\r\n: nope\r\n\r\n")
+    raw = b"GET /media/x HTTP/1.1\r\nHost: 127.0.0.1\r\n: nope\r\n\r\n"
 
-    assert status == 400
+    async def scenario() -> int:
+        net, port = await _serve(_ctx(tmp_path))
+        try:
+            return await _raw_status(port, raw)
+        finally:
+            await net.stop()
+
+    assert asyncio.run(scenario()) == 400
 
 
 def test_an_unknown_route_is_404(tmp_path: Path) -> None:
-    status, _, _ = _handle_raw(tmp_path, b"DELETE /nope HTTP/1.1\r\n\r\n")
+    async def scenario() -> tuple[int, dict[str, str], bytes]:
+        net, port = await _serve(_ctx(tmp_path))
+        try:
+            return await _request(port, "DELETE", "/nope")
+        finally:
+            await net.stop()
 
-    assert status == 404
+    status, _, payload = asyncio.run(scenario())
+
+    assert (status, json.loads(payload)) == (404, {"error": "没有这个路由"})
+
+
+def test_start_fails_cleanly_when_the_port_is_taken(tmp_path: Path) -> None:
+    async def scenario() -> int:
+        with socket.socket() as busy:
+            busy.bind(("127.0.0.1", 0))
+            busy.listen()
+            server = MediaHttp(_ctx(tmp_path), port=busy.getsockname()[1])
+            with pytest.raises(OSError, match=r"in use|10048|地址"):
+                await server.start()
+            assert server.url is None
+        port = await server.start()
+        await server.stop()
+        return port
+
+    assert asyncio.run(scenario()) > 0
+
+
+def test_stopping_before_starting_is_a_no_op(tmp_path: Path) -> None:
+    async def scenario() -> str | None:
+        server = MediaHttp(_ctx(tmp_path))
+        await server.stop()
+        return server.url
+
+    assert asyncio.run(scenario()) is None
