@@ -1,4 +1,5 @@
 import { Connection } from "./connection";
+import { reportDevicesOnce } from "./device_report";
 import { createLogger } from "./log";
 import { LiveSlotApp } from "./live";
 import { TreeLiveApp } from "./tree/live";
@@ -55,8 +56,11 @@ function startLive(container: HTMLElement): void {
   const logger = createLogger({
     call: (target, method, args) => connection.call(target, method, args),
   });
-  const tree = new TreeLiveApp(connection, logger, () => {
-    new LiveSlotApp(connection, logger).mount(container);
+  const tree = new TreeLiveApp(connection, logger, {
+    onUnavailable: () => {
+      new LiveSlotApp(connection, logger).mount(container);
+    },
+    prepare: () => reportDevicesOnce(connection),
   });
   tree.mount(container);
 }

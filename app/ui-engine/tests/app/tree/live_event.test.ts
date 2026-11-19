@@ -128,7 +128,9 @@ describe("TreeLiveApp 事件回源", () => {
 
     const call = connection.calls.find((item) => item.method === "tree_event");
     expect(call?.args).toEqual({ handler: "h1", payload: {} });
-    expect(container.querySelector<HTMLElement>('[data-type="button"]')?.textContent).toBe("已归档");
+    expect(container.querySelector<HTMLElement>('[data-type="button"]')?.textContent).toBe(
+      "已归档",
+    );
 
     app.dispose();
     container.remove();
@@ -181,14 +183,41 @@ describe("TreeLiveApp 事件回源", () => {
     container.remove();
   });
 
+  it("prepare 在拉树之前跑一次", async () => {
+    const connection = new FakeConnection([payload("归档")]);
+    let prepared = false;
+    let treeSawPrepared = false;
+    const originalCall = connection.call.bind(connection);
+    connection.call = (target, method, args) => {
+      if (method === "tree") {
+        treeSawPrepared = prepared;
+      }
+      return originalCall(target, method, args);
+    };
+    const app = new TreeLiveApp(connection, createLogger({ enabled: false }), {
+      prepare: async () => {
+        prepared = true;
+      },
+    });
+    const container = document.createElement("div");
+    document.body.append(container);
+
+    app.mount(container);
+    await tick();
+
+    expect(treeSawPrepared).toBe(true);
+
+    app.dispose();
+    container.remove();
+  });
+
   it("ui.tree 不存在时回退 Slot", async () => {
-    const connection = new FakeConnection(
-      [],
-      new CallError("unknown_method", "ui 没有方法 tree"),
-    );
+    const connection = new FakeConnection([], new CallError("unknown_method", "ui 没有方法 tree"));
     let fellBack = false;
-    const app = new TreeLiveApp(connection, createLogger({ enabled: false }), () => {
-      fellBack = true;
+    const app = new TreeLiveApp(connection, createLogger({ enabled: false }), {
+      onUnavailable: () => {
+        fellBack = true;
+      },
     });
     const container = document.createElement("div");
     document.body.append(container);

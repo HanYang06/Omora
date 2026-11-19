@@ -21,6 +21,14 @@ export interface TreeConnection {
   connect(): void;
 }
 
+/** 树主会话的宿主钩子：迁移期兜底、首帧前的一次性准备。 */
+export interface TreeLiveOptions {
+  /** `ui.tree` 不存在时的退路（旧 Slot 主会话）。 */
+  readonly onUnavailable?: () => void;
+  /** 首次拉树前跑一次（例如上报客户端设备），失败只记日志。 */
+  readonly prepare?: () => Promise<void>;
+}
+
 /** `ui.tree` 的线上形状：一页的 base + 局部树，和构建期 `build_page` 同形。 */
 export interface TreeBuildPayload {
   readonly kind: "tree";
@@ -73,16 +81,18 @@ export class TreeLiveApp {
   private container: HTMLElement | null = null;
   private loading = false;
   private unavailable = false;
+  private prepared = false;
   private queue: Promise<void> = Promise.resolve();
   private readonly log: Logger;
+  private readonly options: TreeLiveOptions;
 
   constructor(
     private readonly connection: TreeConnection,
     logger: Logger,
-    /** `ui.tree` 不存在时的退路（旧 Slot 主会话）。 */
-    private readonly onUnavailable?: () => void,
+    options: TreeLiveOptions = {},
   ) {
     this.log = logger.child("tree");
+    this.options = options;
   }
 
   mount(container: HTMLElement): void {
@@ -115,6 +125,15 @@ export class TreeLiveApp {
     this.loading = true;
     const host = this.host;
     try {
+      if (!this.prepared) {
+        this.prepared = true;
+        try {
+          await this.options.prepare?.();
+        } catch (error) {
+          const text = error instanceof Error ? error.message : String(error);
+          this.log.error("tree.prepare.failed", { err: text });
+        }
+      }
       const payload = await this.connection.call("ui", "tree", {});
       if (!isTreeBuild(payload)) {
         throw new Error("ui.tree 返回的不是树构建输入");
@@ -124,11 +143,11 @@ export class TreeLiveApp {
       if (
         error instanceof CallError &&
         error.code === "unknown_method" &&
-        this.onUnavailable !== undefined
+        this.options.onUnavailable !== undefined
       ) {
         this.unavailable = true;
         this.log.info("tree.unavailable", { method: "ui.tree" });
-        this.onUnavailable();
+        this.options.onUnavailable?.();
         return;
       }
       const text = error instanceof Error ? error.message : String(error);
@@ -190,7 +209,10 @@ export class TreeLiveApp {
     target?.focus();
   }
 
-  private restoreScroll(host: HTMLElement, scrolls: ReadonlyArray<{ id: string; top: number }>): void {
+  private restoreScroll(
+    host: HTMLElement,
+    scrolls: ReadonlyArray<{ id: string; top: number }>,
+  ): void {
     for (const { id, top } of scrolls) {
       const target = [...host.querySelectorAll<HTMLElement>("[data-node-id]")].find(
         (element) => element.dataset.nodeId === id,
