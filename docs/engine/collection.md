@@ -1,6 +1,8 @@
 # 集合绑定：用数据实例化已声明的结构
 
-> 状态：**建议**（作者已认同方向，细节未定稿）；S3-a 已落实例化与 keyed reconcile 原语（`src/engine/collections/collection.ts`），数据路由与主会话渲染已接（S6）；嵌套集合 / 窗口化仍未做。V1 形状已进 `dendro.tree/1`（§10），挂载期实例化、replace 按 key 复用与 data op 定向 reconcile 已接；嵌套集合 / 窗口化未接。
+> 状态：**历史**（Slot 时期，代码已随 2026-11-20 拆桥删除）。保留当时的契约 / 设计记录，
+> 不再代表代码现状；现行唯一格式是 V1 树（`dendro.tree/1`），见 [tree-runtime](tree-runtime.md) /
+> [tree-ops](tree-ops.md) / [runtime-semantics](runtime-semantics.md)。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [rules.md](rules.md)
 > 相关：[updates.md](updates.md) · [composition.md](composition.md)
 >

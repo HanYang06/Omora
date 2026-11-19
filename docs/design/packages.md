@@ -213,37 +213,28 @@ class Ui:
 
 一次渲染产出**整份主会话视图**，不是页面快照：
 
-1. `render(page)` 定目标页：显式给了就用，否则当前页，首次取第一个登记的；先跑该页的
-   `rebuild` 钩子（吸收插件装卸这类外部变化），再设为 active；
-2. 开一代新 handler 表：上一代挪进 `previous`（只留一次宽限，见 §7.3），`version` /
-   `generation` 各 +1；
-3. 取该页的 `Page`，序列化 content：字段名 → `props`；可调用字段 → `events`
-   （按对象身份在当前代次里分配 id，同一个回调对象在同一份 view 里取回同一个 id）；
-   `None` 字段不写；`children` 递归；
-4. 组 view 的输入：两棵局部树 + 页面侧表 + `active` + `data` + 单调 `version`：
-   - 导航局部树 `ui.nav`：每页一条 `dendro:page-link`，带 label / icon / active；
-   - 当前页局部树 `page.<name>`：owner 是注册者，挂在根树页面锚点；
-   - 页面侧表、`active`、`data`（当前为空对象）、单调 `version`。
-5. `serialize_view` 出整份 view：
-   `{kind: "view", schema: "dendro.ui/1", version, localTrees, pages, active, data}`。
-   `pages` 按登记顺序，每项带 id / label / route（`/<name>`）/ owner / icon，与页面根 props 同源。
+1. `tree(page)` 定目标页：显式给了就校验并用，否则用 active（还在登记）→ 第一个登记的；
+   先跑该页的 `rebuild` 钩子（吸收插件装卸这类外部变化），再设 active；
+2. 页面列表与 active 由 Ui 自己记；导航条目按登记顺序，每页一条 `page-link`；
+3. 取该页的 Page，经 `omora.sdk.tree_build` 升成 V1 节点：字段名 → `settings`，
+   `on_*` 回调 → handler id，`children` → `layout`（`order` = 下标 × 10）；
+4. 出 `ui.tree`：`{kind:"tree", name, title, route, base, partials}`；
+   base 是骨架（app 根 + 导航 / 主区 + 页面容器 + 页面侧表），partials 是导航 + 页面内容局部树；
+5. TS 用 `link/tree_compose.composeTree` 合成唯一文档后挂载。
 
-**handler id 按视图代次分配、永不复用**：`slot:<generation>:<index>`，generation 只增不减。
-如果 id 回收，一个「视图换掉之前出发、换掉之后才回来」的事件就会打到新树里同序号、却完全
-不相干的回调上。典型场景：组件卸载时提交录制的那一段（见 [捕捉工作区](ui-capture.md) §5）。
-权威根树仍由 TS 链接器在本地链接，Python 不产出整棵根树。
+**handler id 是稳定的 `tree:<nodeId>:<event>`**，上一代留一次宽限：组件卸载时提交录制的那一段
+（见 [捕捉工作区](ui-capture.md) §5）不会因为中间重画而丢。
 
-### 7.3 派发：跑回调，交新 view
+### 7.3 派发：跑回调，回 ops
 
-- `render` / `event` 的 result 都是整份 view；异步变化（`set_page` / `refresh_page`）
-  走 `ui.snapshot` 推整份 view。三处形状相同。
-- 找 handler：先查当前代，再查上一代（`previous`）。命中上一代说明事件比它的树慢了一拍：
-  记一条 `ui.event.stale`（带 handler 与 page），不静默；两代都没有 → 记 `ui.event.unknown`，
-  抛 `LookupError`，由 net 插件包成错误帧。
-- 跑回调（回调里改插件状态、可能切页），然后按当前页造一份新 view 返回。回调运行期间由 ui
-  负责交新 view，`set_page()` 不另推一份，避免一次事件推两份。
-- 当前主会话**每个事件交整份 view**（重链 + 全量替换），渲染层按 id 复用 DOM；增量
-  ops / data 是后续优化，不改帧类型。
+- `tree_event` 的 result 是差分 ops（`setProps` / `mount` / `unmount`），差分表达不了就回
+  整树（`kind:"tree"`）；`ui.changed` 推同一套 payload。
+- 找 handler：先查当前代，再查上一代；命中上一代记 `tree.event.stale`，两代都没有 →
+  `tree.event.unknown` + `LookupError`，由 net 插件包成错误帧。
+- 跑回调（改插件状态、可能切页），然后按当前页重建并差分；回调期间 `set_page()` 不另推，
+  由这次事件回包带出去。
+- Python 侧现在事件后重建整页再差分；脏节点产线是 TODO，协议侧已经只发差异。
+- 换页 = 导航回调改 active，下一次 `tree_event` / `ui.changed` 带结构变化（或整树兜底）。
 
 ### 7.4 页面与节点
 

@@ -1,6 +1,8 @@
 # 权限：能力 × 主体
 
-> 状态：**概念已定**；S4 已落薄层：检查器 + 链接期挂载检查 + 运行期 ops/data/全量替换检查（E-PERMISSION）与权限拒绝审计；`observe`/`intercept`、source 级权限未做。形态是【建议】，具体角色/等级模型推迟。
+> 状态：**历史**（Slot 时期，代码已随 2026-11-20 拆桥删除）。保留当时的契约 / 设计记录，
+> 不再代表代码现状；现行唯一格式是 V1 树（`dendro.tree/1`），见 [tree-runtime](tree-runtime.md) /
+> [tree-ops](tree-ops.md) / [runtime-semantics](runtime-semantics.md)。
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md)
 > 相关：[addressing.md](addressing.md) · [rules.md](rules.md)
 >

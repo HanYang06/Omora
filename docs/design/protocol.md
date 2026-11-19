@@ -36,10 +36,10 @@
 ## 2. 四种帧
 
 ```
-call   {"id": "1", "type": "call",   "target": "ui", "method": "render", "args": {"page": "ideas"}}
+call   {"id": "1", "type": "call",   "target": "ui", "method": "tree",   "args": {"page": "ideas"}}
 result {"id": "1", "type": "result", "value": {...}}
 error  {"id": "1", "type": "error",  "code": "unknown_target", "message": "服务未提供: x"}
-event  {"type": "event", "topic": "ui.snapshot", "payload": {...}}
+event  {"type": "event", "topic": "ui.changed", "payload": {...}}
 ```
 
 规矩：
@@ -86,8 +86,8 @@ event  {"type": "event", "topic": "ui.snapshot", "payload": {...}}
 
 - `call` 默认 30s 超时，超时 reject `CallError{code:"timeout"}`；长调用显式传 `timeout: 0` 关掉。
 - 断线后指数退避重连（0.5s → 10s，带抖动）。连接状态仍是 `idle` / `connecting` / `open` / `closed` / `failed`。
-- 重连成功后**客户端重放**：上报设备（`manager.report_devices`）、重画当前页（`ui.render`）、
-  重建订阅（`net.subscribe`）。订阅挂在连接上，服务端不需要会话恢复，也不需要记住谁是谁。
+- 重连成功后**客户端重放**：上报设备（`manager.report_devices`）、重拉当前页（`ui.tree`）、
+  重订阅 `ui.changed`（`net.subscribe`）。订阅挂在连接上，服务端不需要会话恢复，也不需要记住谁是谁。
 
 ### 4.2 插件管理调用
 
@@ -103,8 +103,8 @@ manager 是普通服务，不新增帧类型：
 
 ## 5. 订阅与推送
 
-- `call {"target": "net", "method": "subscribe", "args": {"topics": ["ui.snapshot", "media.progress"]}}`
-  → `result {"topics": ["ui.snapshot", "media.progress"]}`；`unsubscribe` 同形状。
+- `call {"target": "net", "method": "subscribe", "args": {"topics": ["ui.changed", "media.progress"]}}`
+  → `result {"topics": ["ui.changed", "media.progress"]}`；`unsubscribe` 同形状。
   两者都回操作完之后这条连接上的 topic 列表：去重、保持首次订阅的顺序。
 - topic 是普通字符串，不通配。订阅挂在连接上，断开即清空。
 - **net 不判断 topic 认不认识**：没有注册表、没有白名单，net 里不出现任何领域 topic 名。
@@ -116,21 +116,26 @@ manager 是普通服务，不新增帧类型：
   SDK 给一层薄封装 `omora.sdk.realtime.emit(ctx, topic, payload)` —— 内核不新增概念，插件仍只靠服务名。
 - `emit(..., coalesce=True)`：队列里同 topic 的旧消息被这条替换。给"只关心最新值"的流用（进度、光标）。
 
-## 6. 视图负载、版本与增量
+## 6. 页面负载、ops 与异步变化
 
-视图 payload 是 **主会话 view**（形状见 [docs/engine/wire.md](../engine/wire.md) §8）：局部树 +
-页面侧表 + 数据文档 + 单调 `version`。net 不解释 payload，只负责运。
+页面 payload 是 V1 树的构建输入 / 更新（形状见 [engine/wire.md](../engine/wire.md)）：
+net 不解释 payload，只负责运。
 
-- `version` 单调递增；引擎拒绝更旧的全量视图（`E-VERSION`）。
-- `ui.event` 的 result 直接是新 view；异步变化走 `ui.snapshot`，payload 同样带 `kind:"view"`。
-- **永远有全量兜底**：客户端收到 view 就整份应用；当前主会话每个事件交整份 view，渲染层按 id
-  复用 DOM。增量 ops / data 是后续优化（形状见 wire.md），不改变帧类型与"单一更新路径"。
+- **首帧 / 重连**：`ui.tree` 的 result 是 `kind:"tree"`（`name` / `title` / `route` /
+  `base` / `partials`）；客户端本地 compose 后挂载。
+- **事件回包**：`ui.tree_event` 的 result 是 `kind:"ops"` 差分，或 `kind:"tree"` 整树兜底。
+- **异步变化**：`set_page` / `refresh_page` 之后推 `ui.changed` topic，payload 同样是
+  ops 或整树；客户端与事件共用一条串行队列。
+- **永远有全量兜底**：差分表达不了（结构字段 / order / 相对顺序变化）就回整树；
+  客户端整棵替换，不做猜测。
+- Python 侧的 `ui.tree_event` 当前只发 `setProps` / `mount` / `unmount`；
+  `data` / `replace` 形状已定义，产线暂未发。
 
 ### 6.1 视图只有一个出口
 
-- 视图变化只走两条：调用结果（`ui.render` / `ui.event` 的 result）与 `ui.snapshot` event；
-  两条携带的都是同一份 view 形状。
-- 顺序由 §4 保证：同一次调用触发的 event 排在它的 result 之后，客户端不会在确认之前处理视图。
+- 页面变化只走两条：调用结果（`ui.tree` / `ui.tree_event`）与 `ui.changed` event；
+  两条携带同一套 tree / ops 形状。
+- 顺序由 §4 保证：同一次调用触发的 event 排在它的 result 之后，客户端不会在确认之前处理更新。
 
 ## 7. HTTP 媒体通道（音频与视频）
 
@@ -164,7 +169,7 @@ manager 是普通服务，不新增帧类型：
   "bytes_out": 901234,
   "queue_depth": 0,
   "dropped": 0,
-  "slow_calls": [{ "target": "ui", "method": "render", "ms": 12.3 }]
+  "slow_calls": [{ "target": "ui", "method": "tree", "ms": 12.3 }]
 }
 ```
 
@@ -185,11 +190,11 @@ manager 是普通服务，不新增帧类型：
 
 ## 10. 跨语言钉
 
-`app/sdk/tests/fixtures/protocol.json` 是唯一的跨语言样例，Python 与 TS 的测试都读它：
+`app/sdk/tests/fixtures/protocol.json` 是帧形状的唯一跨语言样例，Python 与 TS 的测试都读它：
 
 - `calls`：call 帧，合法与非法都要有（含 `net.subscribe`）；
 - `events`：event 帧，合法与非法都要有（含未知 topic 的合法帧）；
-- `calls` / `events`：帧本身的形状；视图 payload 的跨语言 fixture 在
-  [docs/engine/wire.md](../engine/wire.md)（`view.json` 等），不重复放进协议 fixture。
+- 帧本身的形状与 topic 的样例；页面 payload 的跨语言 fixture 在
+  [engine/wire.md](../engine/wire.md) §6（tree / ops），不重复放进协议 fixture。
 
 两边都不自己造样例。

@@ -1,6 +1,8 @@
 # 规则：事件、数据与反应
 
-> 状态：**已定与结构平级**；触发/效果闭集是【建议】。S3-c 已落数据输入的最小实现：标量 `in` / `bind` → props 绑定（语义见 §4）；`reactions` 已能解析，执行与 `dispatch` 回来源未落。
+> 状态：**历史**（Slot 时期，代码已随 2026-11-20 拆桥删除）。保留当时的契约 / 设计记录，
+> 不再代表代码现状；现行唯一格式是 V1 树（`dendro.tree/1`），见 [tree-runtime](tree-runtime.md) /
+> [tree-ops](tree-ops.md) / [runtime-semantics](runtime-semantics.md)。
 > 依赖：[contract.md](contract.md)
 > 相关：[collection.md](collection.md) · [updates.md](updates.md) · `runtime.md`（待写）
 >
