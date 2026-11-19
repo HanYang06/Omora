@@ -2,7 +2,7 @@
  * 运行期 V1 树：调 `ui.tree` 拿 base + 局部树，链接期 compose 后挂到 DOM。
  *
  * 事件走 `ui.tree_event`：派发后拿一份新树，整棵 replace（ops 回包下一步）。
- * 事件串行执行，失败保留旧树并记日志。
+ * 事件串行执行，失败保留旧树并记日志；replace 前后保留焦点与滚动位置。
  */
 
 import type { ConnectionStatus, JsonObject } from "../../contract/protocol";
@@ -113,6 +113,8 @@ export class TreeLiveApp {
     if (this.container === null) {
       return;
     }
+    const focusId = this.activeNodeId();
+    const scrolls = this.captureScroll();
     const host = document.createElement("div");
     host.className = "dendro-tree-live-host";
     const runtime = mountTreeBuild(host, payload, this.context());
@@ -120,6 +122,52 @@ export class TreeLiveApp {
     this.runtime?.dispose();
     this.runtime = runtime;
     this.host = host;
+    this.restoreFocus(host, focusId);
+    this.restoreScroll(host, scrolls);
+  }
+
+  /** 当前焦点所在的树节点 id；焦点不在树里就是 undefined。 */
+  private activeNodeId(): string | undefined {
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement) || this.host === null || !this.host.contains(active)) {
+      return undefined;
+    }
+    return active.dataset.nodeId;
+  }
+
+  private captureScroll(): Array<{ id: string; top: number }> {
+    if (this.host === null) {
+      return [];
+    }
+    const found: Array<{ id: string; top: number }> = [];
+    for (const element of this.host.querySelectorAll<HTMLElement>("[data-node-id]")) {
+      const id = element.dataset.nodeId;
+      if (id !== undefined && element.scrollTop > 0) {
+        found.push({ id, top: element.scrollTop });
+      }
+    }
+    return found;
+  }
+
+  private restoreFocus(host: HTMLElement, id: string | undefined): void {
+    if (id === undefined) {
+      return;
+    }
+    const target = [...host.querySelectorAll<HTMLElement>("[data-node-id]")].find(
+      (element) => element.dataset.nodeId === id,
+    );
+    target?.focus();
+  }
+
+  private restoreScroll(host: HTMLElement, scrolls: ReadonlyArray<{ id: string; top: number }>): void {
+    for (const { id, top } of scrolls) {
+      const target = [...host.querySelectorAll<HTMLElement>("[data-node-id]")].find(
+        (element) => element.dataset.nodeId === id,
+      );
+      if (target !== undefined) {
+        target.scrollTop = top;
+      }
+    }
   }
 
   private dispatch(handler: string, payload?: JsonObject): void {

@@ -11,6 +11,7 @@ import {
 
 const ROOT = "aaaaaaaaaaaaaaaa";
 const BUTTON = "bbbbbbbbbbbbbbbb";
+const BUTTON_B = "cccccccccccccccc";
 
 function node(
   id: string,
@@ -39,6 +40,23 @@ function payload(text: string, handler = "h1"): TreeBuildPayload {
     on: { click: handler },
   });
   const root = node(ROOT, ROOT, "app", 0, { layout: [button] });
+  return {
+    kind: "tree",
+    base: { schema: "dendro.tree/1", version: 1, root, pages: [], active: "", data: {} },
+    partials: [],
+  };
+}
+
+function twoPayload(archived: string, pinned: string): TreeBuildPayload {
+  const archive = node(BUTTON, ROOT + "." + BUTTON, "button", 10, {
+    settings: { text: archived },
+    on: { click: "ha" },
+  });
+  const pin = node(BUTTON_B, ROOT + "." + BUTTON_B, "button", 20, {
+    settings: { text: pinned },
+    on: { click: "hb" },
+  });
+  const root = node(ROOT, ROOT, "app", 0, { layout: [archive, pin] });
   return {
     kind: "tree",
     base: { schema: "dendro.tree/1", version: 1, root, pages: [], active: "", data: {} },
@@ -95,6 +113,32 @@ describe("TreeLiveApp 事件回源", () => {
     const call = connection.calls.find((item) => item.method === "tree_event");
     expect(call?.args).toEqual({ handler: "h1", payload: {} });
     expect(container.querySelector<HTMLElement>('[data-type="button"]')?.textContent).toBe("已归档");
+
+    app.dispose();
+    container.remove();
+  });
+
+  it("replace 后焦点回到同一个节点", async () => {
+    const connection = new FakeConnection([
+      twoPayload("归档", "置顶"),
+      twoPayload("已归档", "已置顶"),
+    ]);
+    const app = new TreeLiveApp(connection, createLogger({ enabled: false }));
+    const container = document.createElement("div");
+    document.body.append(container);
+
+    app.mount(container);
+    await tick();
+    const pin = container.querySelector<HTMLElement>('[data-node-id="' + BUTTON_B + '"]');
+    pin?.focus();
+    expect(document.activeElement).toBe(pin);
+
+    container.querySelector<HTMLElement>('[data-node-id="' + BUTTON + '"]')?.click();
+    await tick();
+
+    const nextPin = container.querySelector<HTMLElement>('[data-node-id="' + BUTTON_B + '"]');
+    expect(nextPin).not.toBe(pin);
+    expect(document.activeElement).toBe(nextPin);
 
     app.dispose();
     container.remove();

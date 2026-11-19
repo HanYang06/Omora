@@ -171,6 +171,7 @@ export function createTreeKindRenderer(kind: Kind, context: RenderContext): Node
     mount(node: TreeNode): NodeRendererMount {
       const legacy = toLegacyNode(node, snapshot);
       const el = kind.create(legacy, context);
+      el.dataset.nodeId = node.id;
       applyPlacement(el, node.slot);
       const hosts = childHostsOf(kind, el, legacy);
       childHost = hosts.length === 0 ? null : new DomTreeHost(hosts);
@@ -180,6 +181,7 @@ export function createTreeKindRenderer(kind: Kind, context: RenderContext): Node
       const el = asElement(output);
       const legacy = toLegacyNode(node, snapshot);
       kind.update?.(el, legacy, context);
+      el.dataset.nodeId = node.id;
       applyPlacement(el, node.slot);
       if (childHost !== null) {
         childHost.replaceHosts(childHostsOf(kind, el, legacy));
