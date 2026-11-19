@@ -111,6 +111,35 @@ def test_render_returns_the_page_view_content_tree() -> None:
     assert action["events"]["click"]
 
 
+def test_tree_returns_base_and_partials_for_compose() -> None:
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(_simple, label="首页"))
+    ui: Ui = kernel.resolve("ui")
+
+    payload = ui.tree()
+
+    assert payload["kind"] == "tree"
+    assert payload["name"] == "main"
+    assert payload["base"]["schema"] == "dendro.tree/1"
+    page_id = payload["base"]["pages"][0]["id"]
+    assert payload["base"]["active"] == page_id
+    assert [partial["source"] for partial in payload["partials"]] == ["ui", "viewer"]
+    content = payload["partials"][-1]["root"]
+    assert content["kind"] == "empty"
+    assert content["settings"]["title"] == "空"
+
+
+def test_tree_rejects_unknown_page() -> None:
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(_simple, label="首页"))
+    ui: Ui = kernel.resolve("ui")
+
+    with pytest.raises(LookupError):
+        ui.tree("nope")
+
+
 def test_a_handler_receives_the_payload() -> None:
     seen: list[dict[str, Any]] = []
 

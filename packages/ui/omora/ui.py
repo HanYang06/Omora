@@ -15,6 +15,7 @@ from typing import Any
 from omora.core.log import Log, NullLog
 from omora.sdk import Context
 from omora.sdk.realtime import emit
+from omora.sdk.tree_build import NavEntry, build_page
 from omora.sdk.ui import Page
 
 from ._handle import PageHandle
@@ -112,6 +113,36 @@ class Ui:
     def page_tree(self, name: str) -> Page:
         """这一页当前的节点树（拉取式 build 或插件交上来的树）；构建期工具用。"""
         return self._page_body(name, self._entry(name))
+
+    def tree(self, page: str | None = None) -> dict[str, Any]:
+        """当前页的 V1 树构建输入（base + 局部树）；V1 主路径的迁移桥，构建期同款。
+
+        只搬形状：事件 callable 不进树，运行时先读后写；TS 侧 compose 后挂载。
+        """
+        view = self._slots.render(page)
+        active = str(view["active"])
+        pages = [item for item in view["pages"] if isinstance(item, dict)]
+        current = next((item for item in pages if item.get("id") == active), None)
+        if current is None:
+            raise LookupError(f"当前页不在侧表里: {active}")
+        name = active.removeprefix("page.")
+        nav = [
+            NavEntry(
+                name=str(item["id"]).removeprefix("page."),
+                title=str(item["label"]),
+                icon=None if item.get("icon") is None else str(item["icon"]),
+            )
+            for item in pages
+        ]
+        built = build_page(
+            name=name,
+            title=str(current["label"]),
+            route=str(current.get("route") or f"/{name}"),
+            page=self.page_tree(name),
+            owner=str(current["owner"]),
+            nav=nav,
+        )
+        return {"kind": "tree", **built}
 
     def event(self, handler: str, payload: dict[str, Any]) -> dict[str, Any]:
         """把载荷交给 handler；result 是派发之后当前页的新 view。"""
