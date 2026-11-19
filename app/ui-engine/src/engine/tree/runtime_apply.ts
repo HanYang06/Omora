@@ -11,6 +11,7 @@
  */
 
 import type { Document as TreeDocument, Node as TreeNode } from "../../contract/tree_generated";
+import { expandCollection } from "./collection";
 import type {
   NodeRenderer,
   RendererRegistry,
@@ -24,6 +25,11 @@ import type {
 export interface TreeApplyContext {
   readonly host: TreeHost;
   readonly renderers: RendererRegistry;
+  /** 当前文档的 data 快照；collection 展开用它。 */
+  readonly data: Record<string, unknown>;
+  /** 当前 locale 的 message 表；节点 i18n 解析用它。 */
+  readonly messages: Record<string, string>;
+  readonly locale: string;
   /** 被隔离掉的清理失败（renderer.unmount / host.unmount 抛错）写进这里。 */
   readonly cleanup: TreeRuntimeDiagnostic[];
 }
@@ -177,6 +183,7 @@ function buildNode(
     childHost = old.childHost;
     reusedFrom = old;
     invoke(path, () => {
+      renderer.setData?.(context.data, context.messages, context.locale);
       renderer.update(node, output);
     });
   } else {
@@ -187,6 +194,7 @@ function buildNode(
       ]);
     }
     renderer = invoke(path, () => factory(node));
+    renderer.setData?.(context.data, context.messages, context.locale);
     const created = invoke(path, () => renderer.mount(node));
     output = created.output;
     childHost = created.host;
@@ -206,7 +214,13 @@ function buildNode(
   if (!reusable) {
     fresh.push(mounted);
   }
-  if (childHost === null && node.layout.length > 0) {
+  let children = node.layout;
+  if (node.collection !== undefined && node.collection.virtual !== true) {
+    const expansion = expandCollection(node, node.collection, context.data);
+    context.cleanup.push(...expansion.diagnostics);
+    children = expansion.nodes;
+  }
+  if (childHost === null && children.length > 0) {
     // 已经 mount 出输出：先登记进 fresh，回滚时才卸得掉，不留半个渲染器。
     throw new TreeAbort([
       {
@@ -217,7 +231,7 @@ function buildNode(
     ]);
   }
   nextById.set(node.id, mounted);
-  mounted.children = node.layout.map((child, index) => {
+  mounted.children = children.map((child, index) => {
     return buildNode(context, child, path + "/layout/" + index, mounted, oldById, nextById, fresh);
   });
   return mounted;

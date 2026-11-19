@@ -7,6 +7,8 @@
  * - 新旧都有 → setProps（只换节点引用 + update 渲染器）；
  * - replace → 先把旧子树摘下，再在同一个父节点下按 order 放新子树。
  *
+ * data op 只写文档数据、不进 changed：这里没有对应的节点要 patch，自然跳过。
+ *
  * 约束：一次批量里不允许嵌套 mount（新子树应自带子节点）；父节点必须已经挂载；
  * 一次批量只支持一个 replace（链式 replace 下一步再放开）。
  * 构建失败会回滚已建的子树；宿主阶段的失败是 best effort（结构变更无法完整回滚）。
@@ -230,6 +232,7 @@ export function applyMountedUpdate(
     for (const update of appliedUpdates) {
       update.mounted.node = update.next;
       update.mounted.handle = { node: update.next, output: update.mounted.output };
+      update.mounted.renderer.setData?.(context.data, context.messages, context.locale);
       update.mounted.renderer.update(update.next, update.mounted.output);
     }
   } catch (error) {
@@ -237,6 +240,7 @@ export function applyMountedUpdate(
       update.mounted.node = update.previous;
       update.mounted.handle = { node: update.previous, output: update.mounted.output };
       try {
+        update.mounted.renderer.setData?.(context.data, context.messages, context.locale);
         update.mounted.renderer.update(update.previous, update.mounted.output);
       } catch {
         // 回滚也是 best effort；诊断里已经报了首次失败。

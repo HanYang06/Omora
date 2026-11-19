@@ -11,12 +11,15 @@
  * 版本与索引：本函数每次按当前文档建一次 id 索引（O(N)），应用后不维护增量索引；
  * 运行时可以逐步把它替换成跨批次的索引。DOM 只该 patch `changed` 里的子树根。
  *
- * 暂时不支持 `data`：纯数据的 collection / 绑定语义在下一步；遇到就整批失败，
- * 不让“只应用一半”的更新溜过去。
+ * `data` op 只写文档层：把 `data[source]` 写成 `{revision, value}` 或
+ * `{revision, items}`。revision 相等是幂等 no-op，更小是过期（忽略并记
+ * `E-DATA-STALE`），更大才应用。它不改结构、也不进 `changed`；collection 实例化 /
+ * bind / `changes` 增量是下一步，遇到 `changes` 整批 `E-PAYLOAD`，不让“只应用一半”
+ * 的更新溜过去。
  */
 
 import type { Document, Node } from "../../contract/tree_generated";
-import { parseOps, type OpsBatch, type OpsDiagnostic, type WireOp } from "./ops";
+import { parseOps, type DataOp, type OpsBatch, type OpsDiagnostic, type WireOp } from "./ops";
 
 export type ApplyDiagnosticCode =
   | "E-PAYLOAD"
@@ -24,7 +27,8 @@ export type ApplyDiagnosticCode =
   | "E-TARGET-MISSING"
   | "E-TREE-CHAIN"
   | "E-TREE-DUP-ID"
-  | "E-TREE-ORDER";
+  | "E-TREE-ORDER"
+  | "E-DATA-STALE";
 
 /** 一条应用诊断；path 是 ops payload 的 JSON Pointer。 */
 export interface ApplyDiagnostic {
@@ -34,7 +38,14 @@ export interface ApplyDiagnostic {
 }
 
 export type ApplyOpsResult =
-  | { ok: true; document: Document; changed: string[]; byId: ReadonlyMap<string, Node> }
+  | {
+      ok: true;
+      document: Document;
+      changed: string[];
+      byId: ReadonlyMap<string, Node>;
+      /** 成功也可能带非致命诊断（例如过期 data revision 被忽略）。 */
+      diagnostics: ApplyDiagnostic[];
+    }
   | { ok: false; diagnostics: ApplyDiagnostic[] };
 
 /** 成功结果：新文档 + 被触碰的子树根 + id → 新节点。 */
@@ -72,15 +83,15 @@ function hasTemplates(node: Node): boolean {
   return node.layout.some(hasTemplates);
 }
 
-/** 目标 + 全部祖先；树里有模板时返回 undefined（退回整棵深拷）。 */
+/**
+ * 目标 + 全部祖先；树里有模板时返回 undefined（退回整棵深拷）。
+ * 没有任何结构 op（例如只有 data）时返回空集：根引用原样保留，data 不改结构。
+ */
 function cloneTargets(
   root: Node,
   ops: readonly WireOp[],
   index: DocumentIndex,
 ): Set<string> | undefined {
-  if (hasTemplates(root)) {
-    return undefined;
-  }
   const ids = new Set<string>();
   for (const op of ops) {
     const target = targetOf(op);
@@ -92,6 +103,12 @@ function cloneTargets(
       ids.add(current.node.id);
       current = current.parent === null ? undefined : index.get(current.parent.id);
     }
+  }
+  if (ids.size === 0) {
+    return ids;
+  }
+  if (hasTemplates(root)) {
+    return undefined;
   }
   return ids;
 }
@@ -236,6 +253,80 @@ function precheckTargets(batch: OpsBatch, index: DocumentIndex): ApplyDiagnostic
   return diagnostics;
 }
 
+/** 文档里某 source 的当前 revision；没有条目 / 形状不对时按“还没有版本”处理。 */
+function currentRevision(value: unknown): number | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const revision = (value as Record<string, unknown>).revision;
+  if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0) {
+    return null;
+  }
+  return revision;
+}
+
+/** data 负载必须可深拷：文档不能持有调用方之后还会改的引用。 */
+class PayloadFailure extends Error {
+  readonly path: string;
+
+  constructor(path: string, message: string) {
+    super(message);
+    this.name = "PayloadFailure";
+    this.path = path;
+  }
+}
+
+function clonePayload<T>(value: T, path: string): T {
+  try {
+    return structuredClone(value);
+  } catch {
+    throw new PayloadFailure(path, "data 负载必须是可深拷的 JSON 数据");
+  }
+}
+
+/** 批次里正在组装的文档数据；只在真正应用时浅拷，未改动保持原引用。 */
+interface WorkingData {
+  data: Record<string, unknown>;
+  touched: boolean;
+}
+
+/**
+ * 应用一条 data op：revision 相等 no-op、更小忽略（返回过期诊断）、更大才写。
+ * 只改文档数据，不碰结构；写进去的是深拷后的值 / 条目。
+ */
+function applyDataOp(op: DataOp, path: string, working: WorkingData): ApplyDiagnostic | null {
+  const current = currentRevision(working.data[op.source]);
+  if (current !== null) {
+    if (op.revision < current) {
+      return {
+        code: "E-DATA-STALE",
+        path,
+        message:
+          'source "' +
+          op.source +
+          '" 的 revision ' +
+          String(op.revision) +
+          " 落后于当前 " +
+          String(current) +
+          "，已忽略",
+      };
+    }
+    if (op.revision === current) {
+      return null;
+    }
+  }
+  const entry =
+    op.items === undefined
+      ? { revision: op.revision, value: clonePayload(op.value, path + "/value") }
+      : { revision: op.revision, items: clonePayload(op.items, path + "/items") };
+  if (!working.touched) {
+    working.data = { ...working.data };
+    working.touched = true;
+  }
+  working.data[op.source] = entry;
+  return null;
+}
+
 function applySetProps(op: Extract<WireOp, { op: "setProps" }>, index: DocumentIndex): string {
   const target = index.get(op.id);
   if (target === undefined) {
@@ -313,7 +404,7 @@ function applyReplace(op: Extract<WireOp, { op: "replace" }>, index: DocumentInd
 }
 
 /**
- * 应用一批 ops；成功返回新文档（原文档不变）与被触碰的子树根 id。
+ * 应用一批 ops；成功返回新文档（原文档不变）、被触碰的子树根 id 与非致命诊断。
  * 失败返回诊断，整批不生效。
  */
 export function applyOps(document: Document, value: unknown): ApplyOpsResult {
@@ -340,9 +431,6 @@ export function applyBatch(document: Document, batch: OpsBatch): ApplyOpsResult 
       "base " + String(batch.base) + " 与当前版本 " + String(document.version) + " 不一致",
     );
   }
-  if (batch.ops.some((op) => op.op === "data")) {
-    return failure("E-PAYLOAD", "/ops", "data op 还没接（下一步：collection / 绑定）");
-  }
   const index = indexDocument(document.root);
   const targetProblems = precheckTargets(batch, index);
   if (targetProblems.length > 0) {
@@ -352,11 +440,14 @@ export function applyBatch(document: Document, batch: OpsBatch): ApplyOpsResult 
   const workingRoot =
     targets === undefined ? structuredClone(document.root) : cloneAlong(document.root, targets);
   const workingIndex = indexDocument(workingRoot);
+  const workingData: WorkingData = { data: document.data, touched: false };
   const changed: string[] = [];
+  const diagnostics: ApplyDiagnostic[] = [];
   let current = 0;
   try {
     batch.ops.forEach((op, position) => {
       current = position;
+      const path = "/ops/" + String(position);
       switch (op.op) {
         case "setProps":
           changed.push(applySetProps(op, workingIndex));
@@ -370,11 +461,22 @@ export function applyBatch(document: Document, batch: OpsBatch): ApplyOpsResult 
         case "replace":
           changed.push(applyReplace(op, workingIndex));
           break;
-        case "data":
-          throw new Error("data op 还没接");
+        case "data": {
+          if (op.changes !== undefined) {
+            throw new PayloadFailure(path + "/changes", "changes 还没接；先发全量 value / items");
+          }
+          const stale = applyDataOp(op, path, workingData);
+          if (stale !== null) {
+            diagnostics.push(stale);
+          }
+          break;
+        }
       }
     });
   } catch (error) {
+    if (error instanceof PayloadFailure) {
+      return failure("E-PAYLOAD", error.path, error.message);
+    }
     return failure(
       "E-PAYLOAD",
       "/ops/" + String(current),
@@ -387,8 +489,14 @@ export function applyBatch(document: Document, batch: OpsBatch): ApplyOpsResult 
   }
   return {
     ok: true,
-    document: { ...document, version: batch.document, root: workingRoot },
+    document: {
+      ...document,
+      version: batch.document,
+      root: workingRoot,
+      data: workingData.data,
+    },
     changed: [...new Set(changed)],
     byId,
+    diagnostics,
   };
 }

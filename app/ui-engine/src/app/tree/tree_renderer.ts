@@ -15,7 +15,7 @@
  * 这些由 kind 自己（column / row / list…）表达。
  */
 
-import type { Node as TreeNode, Placement } from "../../contract/tree_generated";
+import type { A11y, Node as TreeNode, Placement } from "../../contract/tree_generated";
 import { NodeRendererRegistry } from "../../engine/tree/registry";
 import { TreeRuntime } from "../../engine/tree/runtime";
 import type {
@@ -27,13 +27,52 @@ import type {
 } from "../../engine/tree/types";
 import { treeKinds } from "../../components/tree_kinds";
 import type { Kind, KindRegistry, Node as LegacyNode, RenderContext } from "../../renderer/types";
+import IntlMessageFormat from "intl-messageformat";
 import { DomTreeHost } from "./tree_host";
+
+const DEFAULT_LOCALE = "zh-CN";
+
+interface DocumentSnapshot {
+  readonly data: Record<string, unknown>;
+  readonly messages: Record<string, string>;
+  readonly locale: string;
+}
 
 function asElement(output: TreeOutput): HTMLElement {
   if (!(output instanceof HTMLElement)) {
     throw new Error("V1 渲染输出不是 HTMLElement");
   }
   return output;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function formatMessage(template: string, locale: string): string {
+  try {
+    const formatted = new IntlMessageFormat(template, locale).format();
+    return Array.isArray(formatted) ? formatted.join("") : String(formatted);
+  } catch {
+    return template;
+  }
+}
+
+function propsOf(node: TreeNode, snapshot: DocumentSnapshot): Record<string, unknown> {
+  const props: Record<string, unknown> = { ...node.settings };
+  if (node.collection?.virtual === true) {
+    const entry = snapshot.data[node.collection.source];
+    props.items = isRecord(entry) && Array.isArray(entry.items) ? entry.items : [];
+  }
+  if (node.i18n !== undefined) {
+    for (const [prop, key] of Object.entries(node.i18n)) {
+      const template = snapshot.messages[key];
+      if (template !== undefined) {
+        props[prop] = formatMessage(template, snapshot.locale);
+      }
+    }
+  }
+  return props;
 }
 
 function handlersOf(on: Record<string, unknown>): Record<string, string> {
@@ -47,21 +86,21 @@ function handlersOf(on: Record<string, unknown>): Record<string, string> {
 }
 
 /** 直接子节点浅搬：kind 读子节点数据时（tabs / search）能拿到 props / events。 */
-function shallowChild(node: TreeNode): LegacyNode {
+function shallowChild(node: TreeNode, snapshot: DocumentSnapshot): LegacyNode {
   return {
     type: node.kind,
-    props: node.settings,
+    props: propsOf(node, snapshot),
     children: [],
     id: node.id,
     events: handlersOf(node.on),
   };
 }
 
-function toLegacyNode(node: TreeNode): LegacyNode {
+function toLegacyNode(node: TreeNode, snapshot: DocumentSnapshot): LegacyNode {
   return {
     type: node.kind,
-    props: node.settings,
-    children: node.layout.map(shallowChild),
+    props: propsOf(node, snapshot),
+    children: node.layout.map((child) => shallowChild(child, snapshot)),
     id: node.id,
     events: handlersOf(node.on),
   };
@@ -82,6 +121,34 @@ function alignValue(align: NonNullable<Placement["align"]>): string {
     return "center";
   }
   return "stretch";
+}
+
+/**
+ * 作者声明的无障碍语义：渲染器统一落到元素上，覆盖组件默认值。
+ * 只清自己写过的属性，组件自己设的 aria 不动。
+ */
+const appliedA11y = new WeakMap<HTMLElement, A11y>();
+
+function applyA11y(el: HTMLElement, a11y: A11y | undefined): void {
+  const previous = appliedA11y.get(el) ?? {};
+  const next = a11y ?? {};
+  const attrs: readonly [keyof A11y, string][] = [
+    ["role", "role"],
+    ["label", "aria-label"],
+    ["description", "aria-description"],
+  ];
+  for (const [key, attr] of attrs) {
+    if (next[key] === previous[key]) {
+      continue;
+    }
+    const value = next[key];
+    if (value === undefined) {
+      el.removeAttribute(attr);
+    } else {
+      el.setAttribute(attr, value);
+    }
+  }
+  appliedA11y.set(el, next);
 }
 
 /** 把 V1 placement 落到元素上；字段消失时清掉，避免 update 后残留。 */
@@ -120,10 +187,20 @@ function childHostsOf(kind: Kind, el: HTMLElement, node: LegacyNode): HTMLElemen
 /** 一个 V1 节点的渲染器：mount / update / unmount 都用同一个 Kind 实例。 */
 export function createTreeKindRenderer(kind: Kind, context: RenderContext): NodeRenderer {
   let childHost: DomTreeHost | null = null;
+  let snapshot: DocumentSnapshot = { data: {}, messages: {}, locale: DEFAULT_LOCALE };
   return {
+    setData(
+      data: Record<string, unknown>,
+      messages: Record<string, string> = {},
+      locale: string = DEFAULT_LOCALE,
+    ): void {
+      snapshot = { data, messages, locale };
+    },
     mount(node: TreeNode): NodeRendererMount {
-      const legacy = toLegacyNode(node);
+      const legacy = toLegacyNode(node, snapshot);
       const el = kind.create(legacy, context);
+      el.dataset.nodeId = node.id;
+      applyA11y(el, node.a11y);
       applyPlacement(el, node.slot);
       const hosts = childHostsOf(kind, el, legacy);
       childHost = hosts.length === 0 ? null : new DomTreeHost(hosts);
@@ -131,8 +208,10 @@ export function createTreeKindRenderer(kind: Kind, context: RenderContext): Node
     },
     update(node: TreeNode, output: TreeOutput): void {
       const el = asElement(output);
-      const legacy = toLegacyNode(node);
+      const legacy = toLegacyNode(node, snapshot);
       kind.update?.(el, legacy, context);
+      el.dataset.nodeId = node.id;
+      applyA11y(el, node.a11y);
       applyPlacement(el, node.slot);
       if (childHost !== null) {
         childHost.replaceHosts(childHostsOf(kind, el, legacy));

@@ -7,8 +7,8 @@ V1 节点，本模块随之删除。它只搬形状，不解释业务：
   页面容器；
 - id 由逻辑 key 经 blake2b 派生（16 位小写十六进制），同一页重建得到同一批 id；
 - chain = 父 chain + '.' + id；order 按兄弟下标 ×10（同级唯一且升序）；
-- settings 是 Node 字段里「不是 children、不是 callable、不是 None」的那些；事件暂时不
-  进树（`on` 为空），等运行时接上再绑；`bind` / `emit` 也是空对象；
+- settings 是 Node 字段里「不是 children、不是 callable、不是 None」的那些；传了
+  `register` 时，`on_*` callable 换成 handler id 写进 `on`；构建期不传，`on` 为空；
 - 每页产出：一份 base document（骨架 + 这一页的容器 + 页面侧表）、导航局部树（每个页面
   一条）、页面内容局部树。
 
@@ -19,7 +19,8 @@ base 里已经含这一页的容器与 `pages` / `active`，所以 `composeTree(
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from copy import deepcopy
 from dataclasses import dataclass, fields
 from typing import Any
 
@@ -40,11 +41,12 @@ NAV_KIND = "page-link"
 
 @dataclass(frozen=True)
 class NavEntry:
-    """导航里的一条页面入口：构建期只需要名字、标题与图标。"""
+    """导航里的一条页面入口：名字、标题、图标，以及可选的点击回调。"""
 
     name: str
     title: str
     icon: str | None = None
+    on_click: Callable[[dict[str, Any]], None] | None = None
 
 
 def tree_id(key: str) -> str:
@@ -83,6 +85,7 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
     title: str | None = None,
     settings: dict[str, Any] | None = None,
     slot: dict[str, Any] | None = None,
+    on: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """一个 `dendro.tree/1` 节点；字段与 schema 的 node 一一对应。"""
     record: dict[str, Any] = {
@@ -93,7 +96,7 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
         "layout": layout,
         "settings": {} if settings is None else settings,
         "bind": {},
-        "on": {},
+        "on": {} if on is None else on,
         "emit": {},
     }
     if title is not None:
@@ -103,12 +106,23 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
     return record
 
 
-def _ui_node(node: Node, *, parent_chain: str, key: str, order: int) -> dict[str, Any]:
-    """legacy Node → V1 节点：children 进 layout，callable 丢掉（运行时再绑），其余进 settings。"""
+Register = Callable[[Callable[[dict[str, Any]], None], str, str], str]
+
+
+def _ui_node(
+    node: Node,
+    *,
+    parent_chain: str,
+    key: str,
+    order: int,
+    register: Register | None = None,
+) -> dict[str, Any]:
+    """legacy Node → V1 节点：children 进 layout，on_* 换成 handler id，其余进 settings。"""
     node_id = tree_id(key)
     chain = _chain(parent_chain, node_id)
     settings: dict[str, Any] = {}
     layout: list[dict[str, Any]] = []
+    on: dict[str, str] = {}
     for field in fields(node):
         value: Any = getattr(node, field.name)
         if field.name == "children":
@@ -118,10 +132,14 @@ def _ui_node(node: Node, *, parent_chain: str, key: str, order: int) -> dict[str
                     parent_chain=chain,
                     key=f"{key}/{index}",
                     order=(index + 1) * ORDER_STEP,
+                    register=register,
                 )
                 for index, child in enumerate(value)
             ]
         elif callable(value):
+            if register is not None and field.name.startswith("on_"):
+                event = field.name[3:]
+                on[event] = register(value, node_id, event)
             continue
         elif value is not None:
             settings[field.name] = value
@@ -132,6 +150,7 @@ def _ui_node(node: Node, *, parent_chain: str, key: str, order: int) -> dict[str
         order=order,
         layout=layout,
         settings=settings,
+        on=on,
     )
 
 
@@ -203,7 +222,12 @@ def base_document(*, name: str, title: str, route: str) -> dict[str, Any]:
     }
 
 
-def nav_partials(entries: Sequence[NavEntry], *, active: str) -> list[dict[str, Any]]:
+def nav_partials(
+    entries: Sequence[NavEntry],
+    *,
+    active: str,
+    register: Register | None = None,
+) -> list[dict[str, Any]]:
     """导航局部树：每个页面一条，挂进骨架的导航容器；active 标当前页。"""
     _text(active, "nav.active")
     nav_id = tree_id(NAV_KEY)
@@ -223,6 +247,9 @@ def nav_partials(entries: Sequence[NavEntry], *, active: str) -> list[dict[str, 
         }
         if entry.icon is not None:
             settings["icon"] = _text(entry.icon, f"nav.{name}.icon")
+        on: dict[str, str] = {}
+        if register is not None and entry.on_click is not None:
+            on["click"] = register(entry.on_click, node_id, "click")
         partials.append(
             {
                 "schema": SCHEMA,
@@ -236,13 +263,20 @@ def nav_partials(entries: Sequence[NavEntry], *, active: str) -> list[dict[str, 
                     order=(index + 1) * ORDER_STEP,
                     layout=[],
                     settings=settings,
+                    on=on,
                 ),
             }
         )
     return partials
 
 
-def content_partial(page: Page, *, name: str, owner: str) -> dict[str, Any]:
+def content_partial(
+    page: Page,
+    *,
+    name: str,
+    owner: str,
+    register: Register | None = None,
+) -> dict[str, Any]:
     """页面内容局部树：挂在 base 的页面容器里。"""
     if not isinstance(page, Page):
         raise TypeError("page 必须是 omora.sdk.ui.Page")
@@ -253,6 +287,7 @@ def content_partial(page: Page, *, name: str, owner: str) -> dict[str, Any]:
         parent_chain=_page_chain(name),
         key=f"{PAGE_KEY_PREFIX}/{name}/content",
         order=ORDER_STEP,
+        register=register,
     )
     return {
         "schema": SCHEMA,
@@ -270,6 +305,7 @@ def build_page(  # noqa: PLR0913 —— 一页的构建输入
     page: Page,
     owner: str,
     nav: Sequence[NavEntry],
+    register: Register | None = None,
 ) -> dict[str, Any]:
     """一页的构建输入：base + 局部树（导航 + 内容）。"""
     return {
@@ -278,10 +314,51 @@ def build_page(  # noqa: PLR0913 —— 一页的构建输入
         "route": _text(route, "page.route"),
         "base": base_document(name=name, title=title, route=route),
         "partials": [
-            *nav_partials(nav, active=name),
-            content_partial(page, name=name, owner=owner),
+            *nav_partials(nav, active=name, register=register),
+            content_partial(page, name=name, owner=owner, register=register),
         ],
     }
+
+
+def compose(base: dict[str, Any], partials: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """把局部树挂进 base，返回唯一 document；同级按 order 排序，id 全局唯一。"""
+    document = deepcopy(base)
+    index: dict[str, dict[str, Any]] = {}
+
+    def visit(node: dict[str, Any]) -> None:
+        node_id = node["id"]
+        if node_id in index:
+            raise ValueError(f"节点 id 重复: {node_id}")
+        index[node_id] = node
+        for child in node["layout"]:
+            visit(child)
+        for template in node.get("collection", {}).get("templates", {}).values():
+            visit(template)
+
+    visit(document["root"])
+    for partial in partials:
+        mount = partial.get("mount", {})
+        if mount.get("mode") != "new":
+            raise ValueError("只支持 mount.mode=new")
+        parent = index.get(mount.get("parent"))
+        if parent is None:
+            raise ValueError(f"父节点不存在: {mount.get('parent')}")
+        root = deepcopy(partial["root"])
+        expected = f"{parent['chain']}.{root['id']}"
+        if root["chain"] != expected:
+            raise ValueError(f"局部树 chain 不匹配: {root['chain']} != {expected}")
+        parent["layout"].append(root)
+        visit(root)
+
+    def sort_layout(node: dict[str, Any]) -> None:
+        node["layout"].sort(key=lambda child: child["order"])
+        for child in node["layout"]:
+            sort_layout(child)
+        for template in node.get("collection", {}).get("templates", {}).values():
+            sort_layout(template)
+
+    sort_layout(document["root"])
+    return document
 
 
 __all__ = [
@@ -292,6 +369,7 @@ __all__ = [
     "NavEntry",
     "base_document",
     "build_page",
+    "compose",
     "content_partial",
     "nav_partials",
     "tree_id",

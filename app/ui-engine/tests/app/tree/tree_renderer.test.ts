@@ -140,6 +140,57 @@ describe("V1 DOM 适配器", () => {
     container.remove();
   });
 
+  it("i18n key 从 messages 解析，缺 key 保留原值", () => {
+    const first = textNode("占位");
+    first.i18n = { text: "greeting" };
+    const translated = docOf([first]);
+    translated.messages = { greeting: "你好" };
+    translated.locale = "zh-CN";
+    const mounted = mount(translated);
+
+    expect(mounted.container.querySelector<HTMLElement>('[data-type="text"]')?.textContent).toBe(
+      "你好",
+    );
+    mounted.runtime.dispose();
+    mounted.container.remove();
+
+    const second = textNode("占位");
+    second.i18n = { text: "missing" };
+    const untranslated = docOf([second]);
+    untranslated.messages = {};
+    const fallback = mount(untranslated);
+
+    expect(fallback.container.querySelector<HTMLElement>('[data-type="text"]')?.textContent).toBe(
+      "占位",
+    );
+    fallback.runtime.dispose();
+    fallback.container.remove();
+  });
+
+  it("a11y 落到元素上，更新时覆盖与清除", () => {
+    const first = textNode("甲");
+    first.a11y = { role: "note", label: "提示", description: "说明" };
+    const { container, runtime } = mount(docOf([first]));
+
+    const el = container.querySelector<HTMLElement>('[data-type="text"]');
+    expect(el?.getAttribute("role")).toBe("note");
+    expect(el?.getAttribute("aria-label")).toBe("提示");
+    expect(el?.getAttribute("aria-description")).toBe("说明");
+
+    const second = textNode("甲");
+    second.a11y = { label: "新提示" };
+    expect(runtime.replace(docOf([second])).ok).toBe(true);
+
+    const after = container.querySelector<HTMLElement>('[data-type="text"]');
+    expect(after).toBe(el);
+    expect(after?.getAttribute("role")).toBeNull();
+    expect(after?.getAttribute("aria-label")).toBe("新提示");
+    expect(after?.getAttribute("aria-description")).toBeNull();
+
+    runtime.dispose();
+    container.remove();
+  });
+
   it("unmount 把整棵树从容器里摘掉", () => {
     const { container, runtime } = mount(docOf([textNode("甲")]));
 

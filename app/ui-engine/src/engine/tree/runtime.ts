@@ -32,7 +32,10 @@ import {
   type MountedNode,
   type TreeApplyContext,
 } from "./runtime_apply";
+import { mergeCollectionInstances, reorderCollections } from "./runtime_collections";
 import { applyMountedUpdate } from "./runtime_update";
+
+const DEFAULT_LOCALE = "zh-CN";
 import { validateDocument } from "./validate";
 
 function toRuntimeDiagnostic(diagnostic: ApplyDiagnostic | OpsDiagnostic): TreeRuntimeDiagnostic {
@@ -126,8 +129,9 @@ export class TreeRuntime {
   }
 
   /**
-   * 应用一批 ops：文档层算新文档（版本 / 原子 / 路径复制），运行时只改被触碰的子树。
-   * 支持 setProps / mount / unmount；replace 与 data 下一步接。
+   * 应用一批 ops：文档层算新文档（版本 / 原子 / 路径复制 / data），运行时只改被触碰的
+   * 子树。支持 setProps / mount / unmount / replace；data 只写文档数据、不进 changed，
+   * 运行时 patch 阶段没有要改的节点。
    */
   applyOps(value: unknown): TreeUpdateResult {
     const closed = this.rejectWhenDisposed();
@@ -140,11 +144,6 @@ export class TreeRuntime {
     const parsed = parseOps(value);
     if (!parsed.ok) {
       return this.fail(parsed.diagnostics.map(toRuntimeDiagnostic));
-    }
-    if (parsed.batch.ops.some((op) => op.op === "data")) {
-      return this.fail([
-        { code: "E-PAYLOAD", path: "/ops", message: "data op 还没接（下一步：collection / 绑定）" },
-      ]);
     }
     const mountedThisBatch = new Set<string>();
     const unmountedThisBatch = new Set<string>();
@@ -178,16 +177,41 @@ export class TreeRuntime {
     if (!applied.ok) {
       return this.fail(applied.diagnostics.map(toRuntimeDiagnostic));
     }
-    const context = this.newContext();
-    const updated = applyMountedUpdate({ byId: this.byId, context }, applied, parsed.batch);
+    const dataSources = new Set<string>();
+    for (const op of parsed.batch.ops) {
+      if (op.op === "data") {
+        dataSources.add(op.source);
+      }
+    }
+    const reconciled =
+      dataSources.size === 0 ? null : mergeCollectionInstances(this.byId, applied, dataSources);
+    const context = this.newContext(
+      applied.document.data,
+      applied.document.messages ?? {},
+      applied.document.locale ?? DEFAULT_LOCALE,
+    );
+    const updated = applyMountedUpdate(
+      { byId: this.byId, context },
+      reconciled?.applied ?? applied,
+      parsed.batch,
+    );
     if (!updated.ok) {
       return this.fail([...updated.diagnostics, ...context.cleanup]);
     }
+    const reorderDiagnostics =
+      reconciled === null ? [] : reorderCollections(reconciled.collections);
     // 只更新被触碰的目标节点；未触碰祖先的 MountedNode.node 仍是旧对象。
     // 语义以 this.current（新文档）为准；祖先的 kind / chain 不变，不影响复用判断。
     this.current = applied.document;
-    this.lastDiagnostics = context.cleanup;
-    return { ok: true, changed: updated.changed };
+    this.lastDiagnostics = [
+      ...applied.diagnostics,
+      ...(reconciled?.diagnostics ?? []),
+      ...reorderDiagnostics,
+      ...context.cleanup,
+    ];
+    // data 只改数据：实例 id 不对外暴露，公开 changed 仍只含结构节点。
+    const structural = new Set(applied.changed);
+    return { ok: true, changed: updated.changed.filter((id) => structural.has(id)) };
   }
 
   /** 卸掉整棵树（后序渲染器），runtime 保持可用。未挂载 / 已 dispose 时是空操作。 */
@@ -195,7 +219,11 @@ export class TreeRuntime {
     if (this.isDisposed || this.root === null) {
       return;
     }
-    const context = this.newContext();
+    const context = this.newContext(
+      this.current?.data ?? {},
+      this.current?.messages ?? {},
+      this.current?.locale ?? DEFAULT_LOCALE,
+    );
     unmountTree(context, this.root);
     const diagnostics = context.cleanup;
     this.clearState();
@@ -217,7 +245,11 @@ export class TreeRuntime {
     oldRoot: MountedNode | null,
     oldById: Map<string, MountedNode> | undefined,
   ): TreeMountResult {
-    const context = this.newContext();
+    const context = this.newContext(
+      document.data,
+      document.messages ?? {},
+      document.locale ?? DEFAULT_LOCALE,
+    );
     const applied = applyDocument(context, document, oldRoot, oldById);
     if (!applied.ok) {
       this.clearState();
@@ -230,8 +262,12 @@ export class TreeRuntime {
     return { ok: true };
   }
 
-  private newContext(): TreeApplyContext {
-    return { host: this.host, renderers: this.renderers, cleanup: [] };
+  private newContext(
+    data: Record<string, unknown> = {},
+    messages: Record<string, string> = {},
+    locale: string = DEFAULT_LOCALE,
+  ): TreeApplyContext {
+    return { host: this.host, renderers: this.renderers, data, messages, locale, cleanup: [] };
   }
 
   private clearState(): void {

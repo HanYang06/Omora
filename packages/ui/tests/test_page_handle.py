@@ -1,143 +1,137 @@
-"""页面对象：插件自己交树（推送式），不再把 build 回调交给 ui。"""
+"""页面对象：插件自己交树（推送式），下一次 tree() / tree_event 用它重建。"""
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 import pytest
 
 from omora.core.context import Context
+from omora.sdk.tree_build import compose
 from omora.sdk.ui import Button, Column, Page, Text
 from omora.ui import Ui
 
-PAGE_MOUNT_AT = "dendro.window.page"
 
-
-class _Net:
-    """net 的替身：记下推出去的东西，不解释。"""
-
-    def __init__(self) -> None:
-        self.sent: list[dict[str, Any]] = []
-
-    def emit(self, topic: str, payload: dict[str, Any], *, coalesce: bool = False) -> None:
-        self.sent.append(payload)
-
-
-def _ui() -> tuple[Ui, Context, _Net]:
-    net = _Net()
+def _ui() -> tuple[Ui, Context]:
     ctx = Context(name="notes")
-    ctx.provide("net", net)
-    return Ui(ctx=ctx), ctx, net
+    return Ui(), ctx
 
 
-def _page_root(view: dict[str, Any]) -> dict[str, Any]:
-    for tree in cast(list[dict[str, Any]], view["localTrees"]["trees"]):
-        if tree["mountAt"] == PAGE_MOUNT_AT:
-            return cast(dict[str, Any], tree["root"])
-    raise AssertionError("view 里没有页面局部树")
-
-
-def _walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
-    found = [slot]
-    for child in slot["children"]:
+def _walk(node: dict[str, Any]) -> list[dict[str, Any]]:
+    found = [node]
+    for child in node["layout"]:
         found.extend(_walk(child))
     return found
 
 
-def _texts(view: dict[str, Any]) -> list[str]:
+def _texts(ui: Ui, page: str | None = None) -> list[str]:
+    payload = ui.tree() if page is None else ui.tree(page)
+    document = compose(payload["base"], payload["partials"])
     return [
-        str(slot["props"]["text"])
-        for slot in _walk(_page_root(view))
-        if slot["kind"] == "dendro:text"
+        str(node["settings"]["text"])
+        for node in _walk(document["root"])
+        if node["kind"] == "text" and "text" in node["settings"]
     ]
 
 
+def _handler(ui: Ui, text: str, event: str = "click") -> str:
+    payload = ui.tree()
+    document = compose(payload["base"], payload["partials"])
+    for node in _walk(document["root"]):
+        if node["kind"] == "button" and node["settings"].get("text") == text:
+            return str(node["on"][event])
+    raise AssertionError(f"没有按钮: {text}")
+
+
 def test_a_page_can_be_set_without_a_build_callback() -> None:
-    ui, ctx, _ = _ui()
+    ui, ctx = _ui()
     handle = ui.page(ctx, "notes", "笔记")
     handle.set(Page(Column(Text("第一条"))))
 
-    view = ui.render("notes")
-
-    assert view["active"] == "page.notes"
-    assert _texts(view) == ["第一条"]
+    assert _texts(ui, "notes") == ["第一条"]
+    assert ui.active_page == "notes"
 
 
 def test_rendering_before_a_tree_is_set_is_an_error() -> None:
-    ui, ctx, _ = _ui()
+    ui, ctx = _ui()
     ui.page(ctx, "notes", "笔记")
 
     with pytest.raises(LookupError, match="还没交树"):
-        ui.render("notes")
+        ui.tree("notes")
 
 
-def test_set_inside_an_event_updates_the_returned_view() -> None:
-    ui, ctx, net = _ui()
+def test_set_inside_an_event_updates_the_next_tree() -> None:
+    ui, ctx = _ui()
     handle = ui.page(ctx, "notes", "笔记")
 
     def click(_payload: dict[str, Any]) -> None:
         handle.set(Page(Column(Text("点过了"))))
 
     handle.set(Page(Column(Button("点", on_click=click))))
-    view = ui.render("notes")
-    button = next(slot for slot in _walk(_page_root(view)) if slot["kind"] == "dendro:button")
-    handler = str(button["events"]["click"])
+    handler = _handler(ui, "点")
 
-    after = ui.event(handler, {})
+    ui.tree_event(handler, {})
 
-    assert net.sent == []
-    assert "点过了" in _texts(after)
+    assert "点过了" in _texts(ui, "notes")
 
 
-def test_refresh_pushes_the_current_view_again() -> None:
-    ui, ctx, net = _ui()
+def test_set_outside_an_event_is_picked_up_by_the_next_tree() -> None:
+    ui, ctx = _ui()
     handle = ui.page(ctx, "notes", "笔记")
     handle.set(Page(Column(Text("第一条"))))
-    ui.render("notes")
-    before = len(net.sent)
-
-    handle.refresh()
-
-    assert len(net.sent) == before + 1
-    assert net.sent[-1]["kind"] == "view"
-    assert net.sent[-1]["version"] == 2
-    assert "第一条" in _texts(net.sent[-1])
-
-
-def test_set_outside_an_event_pushes_the_current_view() -> None:
-    ui, ctx, net = _ui()
-    handle = ui.page(ctx, "notes", "笔记")
-    handle.set(Page(Column(Text("第一条"))))
-    ui.render("notes")
-    before = len(net.sent)
+    _texts(ui, "notes")
 
     handle.set(Page(Column(Text("第二条"))))
 
-    assert len(net.sent) == before + 1
-    assert net.sent[-1]["kind"] == "view"
-    assert net.sent[-1]["version"] == 2
-    assert "第二条" in _texts(net.sent[-1])
+    assert "第二条" in _texts(ui, "notes")
+
+
+def test_refresh_of_a_known_page_is_a_no_op_until_the_next_tree() -> None:
+    ui, ctx = _ui()
+    handle = ui.page(ctx, "notes", "笔记")
+    handle.set(Page(Column(Text("第一条"))))
+    _texts(ui, "notes")
+
+    handle.refresh()
+
+    assert "第一条" in _texts(ui, "notes")
 
 
 def test_refresh_of_an_unknown_page_says_so() -> None:
-    ui, _, _ = _ui()
+    ui, _ = _ui()
 
     with pytest.raises(LookupError, match="未知页面: missing"):
         ui.refresh_page("missing")
 
 
 def test_set_page_for_an_unknown_page_says_so() -> None:
-    ui, _, _ = _ui()
+    ui, _ = _ui()
 
     with pytest.raises(LookupError, match="未知页面: missing"):
         ui.set_page("missing", Page(Column(Text("没人收"))))
 
 
-def test_refresh_before_the_first_render_does_not_push() -> None:
-    ui, ctx, net = _ui()
+def test_refresh_before_the_first_tree_does_not_fail() -> None:
+    ui, ctx = _ui()
     ui.page(ctx, "notes", "笔记")
     ui.page(ctx, "chart", "图表")
 
     ui.refresh_page("notes")
 
-    assert net.sent == []
+    assert ui.pages()[0].name == "notes"
+
+
+def test_rebuild_hook_runs_when_the_tree_is_built() -> None:
+    ui, ctx = _ui()
+    handle = ui.page(ctx, "notes", "笔记")
+    state = {"n": 0}
+
+    def rebuild() -> Page:
+        state["n"] += 1
+        return Page(Column(Text(f"第 {state['n']} 版")))
+
+    handle.rebuild(rebuild)
+
+    assert "第 1 版" in _texts(ui, "notes")
+    assert "第 2 版" in _texts(ui, "notes")
+    assert state["n"] == 2

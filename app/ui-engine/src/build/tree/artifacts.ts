@@ -16,7 +16,7 @@
 import { createHash } from "node:crypto";
 import { validateTree } from "../../contract/tree";
 import type { Node } from "../../contract/tree_generated";
-import { composeTree } from "./compose";
+import { composeTree } from "../../link/tree_compose";
 
 /** 构建输入的格式标记；和 Python `tree_build.FORMAT` 同值。 */
 export const TREE_BUILD_FORMAT = "omora.tree.build/1";

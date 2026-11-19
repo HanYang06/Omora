@@ -26,9 +26,9 @@ class FakeContext:
 def test_emit_hands_the_event_to_net() -> None:
     net = FakeNet()
 
-    emit(FakeContext(net), "ui.snapshot", {"version": 8})
+    emit(FakeContext(net), "ideas.changed", {"version": 8})
 
-    assert net.sent == [("ui.snapshot", {"version": 8}, False)]
+    assert net.sent == [("ideas.changed", {"version": 8}, False)]
 
 
 def test_emit_passes_the_coalesce_flag() -> None:
@@ -43,4 +43,4 @@ def test_emit_without_a_net_service_is_dropped() -> None:
     with pytest.raises(LookupError):
         FakeContext().resolve("net")
 
-    emit(FakeContext(), "ui.snapshot", {"version": 8})
+    emit(FakeContext(), "ideas.changed", {"version": 8})

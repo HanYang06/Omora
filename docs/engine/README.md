@@ -1,160 +1,127 @@
 # Dendrolink（Dendro）· 树链引擎
 
-> **Dendrolink：把局部树链接成权威根树的链接期引擎。**
+> **Dendrolink：把静态结构 + 最小节点更新做成一份权威文档的运行时。**
 >
-> 状态：**设计已定；S0–S6 已落，S7 起步（剩余项归为非核心，按需）**；身份与根树结构文件已落：契约字段、`root-tree.json`、页面/导航局部树的 `code` / `addr` 派生、`addr` 索引、旧 addr redirect / 墓碑（表上限 256）与结构变化后的子树 addr 重算；主会话已接 props / 结构 / replace / data batch 增量（端到端 DOM stats 已钉），addr 仍不直接驱动 DOM，ops / 渲染按 `id` + Node 缓存。本文是引擎文档集的索引与总纲；主会话、构建期首帧与全部系统插件页面都走 Slot（局部树 → 链接 → EngineRuntime/DocumentView），运行后来源示例已接（自动发现 + 热更新），`?engine=slot` 只是内置 fixture 预览。剩余大项：Host 网络帧 / 订阅 / 媒体登记、规则执行（`reactions`）、schema 单一来源——都归为非核心，按需做；主线是 V1 的静态结构与最小节点更新。
-> 基线：`main@3910928`（S6.5 骨架编译后），工作区干净。
-> 命名决定见 [ADR-0001](decisions/0001-name.md)。
+> 状态：**V1 树（`dendro.tree/1`）是唯一格式与默认入口**（2026-11-20）。
+> 旧 Slot 文档运行时（`dendro.ui/1`、链接期组合、EngineRuntime/DocumentView、启动骨架）已删除；
+> 它的设计记录保留在 [decisions/](decisions/)、[archive/](archive/)、[migration.md](migration.md)
+> 与 [changelog](../changelog.md)，不再代表代码现状。
+> 命名决定见 [ADR-0001](decisions/0001-name.md)，V1 的架构决定见
+> [ADR-0004](decisions/0004-static-tree-minimal-updates.md)。
 
-> **2026-11-18：V1 树目标架构**：`dendro.tree/1` 的契约/校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已落地；DOM 宿主与组件适配已落（[V1 运行时](tree-runtime.md)）；ops 形状与文档层应用已落，运行时最小应用与协议未接；运行时语义见 [runtime-semantics.md](runtime-semantics.md)。它分阶段接管默认入口（[ADR-0004](decisions/0004-static-tree-minimal-updates.md)），目标链路见 [V1 树](../planning/v1-tree.md)。
+## 1. 它现在是什么
 
-## 1. 它是什么
+V1 引擎是一个 **V1 树文档运行时**：
 
-Dendrolink 是一个 **UI 文档运行时**：
+- **输入**：插件用 `omora.sdk.ui` 的 Page / Node 写的页面树；`omora.sdk.tree_build`
+  把它升成 `dendro.tree/1` 的 base + 局部树（构建期与运行期同一份桥）。
+- **结构**：真实页面在构建期 compose 成每页一份文档（`scripts/static_tree.py` →
+  `dist/tree/`）；运行时不再组织结构，只挂载。
+- **更新**：事件后 Python 产差分 ops（`setProps` / `mount` / `unmount`），TS 按 id
+  原子应用、只 patch 被触碰的子树；差分表达不了就回整树，客户端整棵替换。
+- **异步变化**：`ui.changed` 推同一套 ops / 整树；首帧 / 重连走 `ui.tree` 全量。
+- **持久化**：引擎不落盘；构建产物是唯一的静态快照。
 
-- **输入**：多个独立来源的**局部树**。插件只是来源之一；worker、独立进程、远程服务、AI 生成、测试 fixture 都可以走同一份契约。
-- **核心**：在**链接期**把局部树组合成唯一权威的**根树**；冲突是编译错误，不是运行期猜一个顺序。
-- **输出**：一份可寻址的文档。同一份文档上支持**全量 / 纯数据 / 局部树**三种更新；稳定身份让更新只碰该碰的节点。
-- **行为**：结构与规则平级。事件/数据 → 反应（改内容、挂卸、路由、回源）都写在树里，引擎只执行。
+数据（`document.data`）目前只有 TS **文档层**：`data` op 能按 revision 写
+`data[source]`，collection / bind 的消费语义还没接产线；运行期 ops 的`data` /
+`replace` 形状已经定义、应用端已实现，但 Python 的 `tree_event` 还没发它们。
 
-它**不是组件库**，也**不是插件系统**。组件是 Slot 的 kind，插件是局部树的一种来源——两者都是外面的壳，不是引擎的本质。
+## 2. 文档地图
 
-## 2. 论文式定义
+现行事实来源：
 
-> 多来源应用的界面由独立编写的局部树组成，但现有运行时要么在运行期尽力合并，要么整棵快照推来推去。Dendrolink 把界面建模成一份权威的、可寻址的 Slot 文档：局部树在链接期组合，冲突是编译错误；同一份文档支持三级更新；稳定身份消除重挂与回调换代的成本。
+| 文档                                         | 负责什么                                                                    |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| [runtime-semantics.md](runtime-semantics.md) | 运行时语义：数据权威、行为、权限边界、协议、持久化、失败——**V1 的权威口径** |
+| [tree-ops.md](tree-ops.md)                   | `dendro.tree/1` 的 ops 线上形状、应用端语义、跨语言 fixture                 |
+| [tree-runtime.md](tree-runtime.md)           | V1 运行时：TreeRuntime / 宿主 / 渲染适配、目前接了什么                      |
+| [build.md](build.md)                         | 构建期 compose 与 `dist/tree/` 产物                                         |
+| [wire.md](wire.md)                           | 线上 payload：`tree` / `ops` / `ui.changed` / 事件回传与诊断                |
+| [renderer.md](renderer.md)                   | kind 接口、DOM 协调、V1 适配层、测试约定                                    |
+| [components.md](components.md)               | 组件词表、authoring API、schema 单一来源仍是【建议】                        |
+| [layering.md](layering.md)                   | 当前目录分层与依赖方向                                                      |
+| [testing.md](testing.md)                     | 测试分层、命令、覆盖范围                                                    |
 
-贡献五条：
+历史（Slot 时期，代码已删除，仅作设计记录）：
 
-1. **唯一原语 Slot**：结构、排布、数据输入、反应规则、权限在同一个信封里。
-2. **链接期组合**：局部树 + 编译/链接 + Rust 式诊断；运行期不猜顺序、不静默丢东西。
-3. **三级更新**：全量 / 纯数据（含集合模板）/ 局部树，收口到同一份权威文档。
-4. **全寻址 + 按 Slot 订阅**：事件与数据不靠渲染代次定位，最小重渲染成立。
-5. **可测性质**：收敛、幂等、原子、身份保持、编译确定性，加真实应用迁移验证。
+| 文档                             | 记的是什么                                             |
+| -------------------------------- | ------------------------------------------------------ |
+| [contract.md](contract.md)       | Slot 节点信封、`dendro.ui/1` 文档契约                  |
+| [addressing.md](addressing.md)   | Slot 的 code / chain / addr 身份与三张索引             |
+| [structure.md](structure.md)     | 窗口 / 页面 / 层 / 布局、`root-tree.json` 骨架         |
+| [rules.md](rules.md)             | 触发 × 效果闭集（留作 v2 规则边界）                    |
+| [collection.md](collection.md)   | Slot 集合绑定与 keyed reconcile 的设计                 |
+| [composition.md](composition.md) | 链接期组合、诊断码、局部树                             |
+| [updates.md](updates.md)         | Slot 的三级更新（全量 / 纯数据 / 局部树）              |
+| [permissions.md](permissions.md) | Slot 时期的权限薄层设计与“引擎不判定权限”的边界        |
+| [runtime.md](runtime.md)         | Slot 时期的 EngineRuntime / SourceEngine / 指标 / 审计 |
+| [migration.md](migration.md)     | legacy → Slot 的迁移记录（历史；Slot 已删除）          |
+| [archive/](archive/)             | 更早的提案与旧设计                                     |
 
-## 3. 命名与命名空间
+## 3. 阅读顺序
 
-| 项            | 值                                                                                       |
-| ------------- | ---------------------------------------------------------------------------------------- |
-| 正式名        | Dendrolink                                                                               |
-| 简称 / 口头   | Dendro、树链引擎                                                                         |
-| 英文标题      | Dendrolink: A Link-Time Engine for Composing Local Trees into an Authoritative Root Tree |
-| 中文标题      | 《Dendrolink：把局部树链接成权威根树的链接期引擎》                                       |
-| schema        | `dendro.ui/1`                                                                            |
-| 引擎内置 kind | `dendro:slot` / `dendro:page` / `dendro:layer` / `dendro:window`                         |
-| 宿主导入 kind | 保持 `ideas:card` 这种                                                                   |
-| id 前缀       | `dendro.window` / `dendro.window.page`                                                   |
-| CSS 前缀      | `dendro-`                                                                                |
-| 包名          | `@dendro/runtime`（或 `dendro-runtime`）                                                 |
-| 文档目录      | `docs/engine/`                                                                           |
+1. 本文：现状与文档地图。
+2. [runtime-semantics.md](runtime-semantics.md)：V1 的运行时口径。
+3. [tree-ops.md](tree-ops.md) + [tree-runtime.md](tree-runtime.md)：文档怎么被改、运行时怎么应用。
+4. [build.md](build.md) + [wire.md](wire.md)：结构从哪里来、线上长什么样。
+5. [layering.md](layering.md) + [renderer.md](renderer.md) + [components.md](components.md)：代码怎么分层、怎么加组件。
+6. [testing.md](testing.md)：拿什么验收。
+7. 历史文档按需查，不再作为实现依据。
 
-## 4. 文档地图
+## 4. 实现状态（与代码的差距）
 
-本文档集按“一个概念一个家”拆；状态见下表。
+**已落**（2026-11-20）：
 
-| 文档                                      | 负责什么                                                                    | 状态   |
-| ----------------------------------------- | --------------------------------------------------------------------------- | ------ |
-| `README.md`                               | 索引、定位、命名、术语、实现状态                                            | 已写   |
-| `decisions/0001-name.md`                  | 命名决定与影响                                                              | 已写   |
-| `decisions/0002-no-react-dom-renderer.md` | 移除 React、渲染层直写 DOM 的决定                                           | 已接受 |
-| [contract.md](contract.md)                | Slot 原语、字段、schema、版本、kind 注册                                    | 已写   |
-| [addressing.md](addressing.md)            | id 规则、身份（code/chain/addr/path）、三张索引、更新集合、全寻址 vs 可介入 | 已写   |
-| [structure.md](structure.md)              | window/page/layer/layout、窗口骨架结构文件、页面切换的按 id 协调            | 已写   |
-| [rules.md](rules.md)                      | 触发 × 效果闭集、数据输入、规则索引                                         | 已写   |
-| [collection.md](collection.md)            | 集合绑定、模板、keyed reconcile、条目实例 id                                | 已写   |
-| [composition.md](composition.md)          | 局部树、编译/链接、顺序模型、诊断、root tree 归属                           | 已写   |
-| [updates.md](updates.md)                  | 三种更新、事务、版本、兜底、重同步                                          | 已写   |
-| [permissions.md](permissions.md)          | 能力 × 主体、默认分层、检查点、非安全边界                                   | 已写   |
-| [runtime.md](runtime.md)                  | 引擎分层、生命周期账本、失败隔离、诊断面板                                  | 已写   |
-| [layering.md](layering.md)                | 组件/渲染/链接/算法/宿主分层与依赖方向                                      | 已写   |
-| [renderer.md](renderer.md)                | 渲染层：Kind 接口、DOM 协调、测试约定                                       | 已写   |
-| [components.md](components.md)            | 组件词表、schema 单一来源、authoring API 与 wire 形态                       | 已写   |
-| [wire.md](wire.md)                        | 引擎 payload 形状；帧/传输仍归 `docs/design/protocol.md`                    | 已写   |
-| [testing.md](testing.md)                  | 九条不变量、fixture、编译诊断测试、集合等价测试                             | 已写   |
-| [migration.md](migration.md)              | legacy→Dendrolink 迁移记录、S0–S7、旧文档去向                               | 已写   |
-| [archive/](archive/)                      | 已退役的提案与旧设计                                                        | 已退役 |
+- `dendro.tree/1` 契约、schema、Python / TS 校验、跨语言示例；
+- 构建期 compose 与门禁：真实四页 → `dist/tree/`，kind 存在性、chain / id / order / pages 校验；
+- 运行时：mount / replace / dispose、路径复制、原子回滚、DOM 宿主与 Kind 适配；
+- ops：形状与跨语言 fixture、文档层应用（版本 / 原子 / 路径复制 / `changed`）、
+  运行时 `setProps` / `mount` / `unmount` / `replace`；`data` op 文档层（revision 幂等 / 过期诊断）；
+- 主会话：默认入口 V1 树（`ui.tree` 首帧、`ui.tree_event` 事件、`ui.changed` 异步变化）、
+  导航与 handler 登记、设备上报；`?engine=tree` 产物预览、`virtual` / `dialog` 组件预览；
+- 组件：38 个 kind + `app` + `page-link`（`treeKinds`）、a11y / i18n / placement 适配；
+- 旧 Slot 路径、`dendro.ui/1` 契约、Slot 测试与构建脚本全部删除。
 
-旧草案（`docs/design/ui-tree.md`）已拆入本系列并删除。
+**还没落**：
 
-## 5. 阅读顺序
+- Python 发射端仍按“改完重建整页 → 差分”出 ops，没有脏节点产线；
+- `data` / collection 的产线：TS 有文档层与集合原语，Python 还没发 `data` op；
+- `bind` / `changes` 增量、嵌套集合、窗口化之上的数据消费；
+- 树内规则（`reactions`）、权限 / 审计接 V1、远程 / 运行后来源；
+- per-kind `settings` schema、`on` / `bind` 引用校验（现在只查 kind 存在性）；
+- 复杂度护栏（事件 → DOM 不随总节点数增长）进 CI；
+- schema 单一来源（Python / TS 词表仍两份手写）。
 
-1. 本文：它是什么、叫什么、文档在哪。
-2. `contract.md`：一个 Slot 长什么样。
-3. `addressing.md` + `structure.md`：怎么找到它、它挂在哪。
-4. `rules.md` + `collection.md`：它怎么动、数据怎么进来。
-5. `composition.md` + `updates.md`：局部树怎么合成权威根树、之后怎么更新。
-6. `permissions.md` + `runtime.md`：谁能动它、引擎内部怎么分层。
-7. `components.md` + `wire.md` + `testing.md`：怎么加组件、线上长什么样、拿什么验收。
-8. `migration.md`：从 legacy 到 Dendrolink 怎么走。
+## 5. 术语
 
-## 6. 实现状态（与代码的差距）
+| 词             | 意思                                                                  |
+| -------------- | --------------------------------------------------------------------- |
+| **V1 树**      | `dendro.tree/1` 文档：稳定 id / chain / order 的节点树                |
+| **base**       | 一页的骨架：`app` 根 + 导航 / 主区目录 + 页面容器 + 页面侧表          |
+| **局部树**     | 构建期 / 运行期挂进 base 的子树（导航条目、页面内容）                 |
+| **ops**        | 按 id 改一份已存在文档的原子批量；一个批量涨一个版本                  |
+| **整树回退**   | 差分表达不了的变化，直接回一份 `kind:"tree"` 让客户端整棵替换         |
+| **ui.changed** | `set_page` / `refresh_page` 之后的异步变化推送，payload 同 ops / 整树 |
 
-**V1 树（`dendro.tree/1`）**：契约/校验、Python/TS node scope、Page/State/When/Bind、build composer、runtime mount 已落；构建期已把真实页面 compose 成每页产物（`dist/tree/`，见 [构建](build.md)），**更新层与协议层未落**（runtime 的 replace 仍是整份文档，主会话仍发整份 view）。V1 是目标架构，分阶段接管默认入口，见 [V1 树](../planning/v1-tree.md)。
+## 6. 历史阶段（Slot 时期，已结束）
 
-文档写的是**契约**，不是现状说明书。S0–S6 与 S7.1 已落（含 Slot 骨架编译、legacy 删除、运行后来源示例），Python / TS 全量测试全绿。差距集中在规则执行（`reactions`）、schema 单一来源、远程来源网络接线；这些是非核心，按需做。主线是 [V1 树](../planning/v1-tree.md) 的最小节点更新与协议。
+| 阶段  | 内容                                          | 结局                       |
+| ----- | --------------------------------------------- | -------------------------- |
+| S0–S2 | 仓库结构、Slot 契约、链接期组合与构建门禁     | 代码已删，记录在 migration |
+| S3–S4 | 三级更新、集合绑定、权限薄层、EngineRuntime   | 代码已删，记录在 migration |
+| S5–S6 | 来源宿主、渲染节点统计、Slot 主会话、启动骨架 | 代码已删，记录在 migration |
+| S7    | 运行后来源示例                                | 随 Slot 删除，未迁 V1      |
 
-| 能力       | 现状                                                                                                                          | 缺口                                                                                                                                                                         |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 节点契约   | Slot 信封（id / owner / kind / layout / props / children / events / reactions / grant）                                       | `reactions` 只解析，执行未做                                                                                                                                                 |
-| 文档契约   | `dendro.ui/1` + 跨语言 fixture + `parseDocument` 校验                                                                         | schema 单一来源（Python 词表导出 TS）未做                                                                                                                                    |
-| 寻址       | 三张索引 + 全寻址；列表项可用 `id_key` 稳定                                                                                   | 路径级索引与增量维护未做（当前每步重建）；通用 `Node.key` 未做                                                                                                               |
-| 身份       | Slot 可选 `code` / `addr` 契约字段；`addr = H(parent.addr, code)`，`chain` 由祖先 code 算出；页面/导航局部树已派生            | `id` + `addr` 索引、旧 addr redirect / 墓碑与 move/mount/replace 后子树 addr 重算已落；ops / 渲染仍按 `id`；集合模板 / 通用 Node key 待补                                    |
-| 根树结构   | 窗口 / 导航 / 页面骨架单一来源 `app/sdk/omora/sdk/root-tree.json`（`anchors` 映射语义名 → slot id；骨架静态 `code` / `addr`） | 结构文件与加载器已落；页面/导航从锚点继续链                                                                                                                                  |
-| 组合       | 链接器：形状校验 / 多轮挂载 / 顺序 / 容量 / replace / 诊断码 / 构建门禁                                                       | 按 kind 的 props/events schema、`before/after`、`E-TEMPLATE` 未做                                                                                                            |
-| 更新       | 全量 / 纯数据 / 局部树三级更新均落；主会话已接；ops 路径复制 + 桥缓存 + props/结构 view→ops 已落                              | replace / collection 模板 / 叶子 props 删键已接；有子节点 props 删键仍全量；data batch 已接（一次提交、单次通知）；页面侧表尚未进 local-trees payload（S7 来源热更新一起定） |
-| 规则       | 标量 `in` / `bind` → props 已落                                                                                               | 触发 × 效果闭集、dispatch 回来源、规则索引/诊断未做                                                                                                                          |
-| 集合       | 模板实例化 + keyed reconcile；全量更新不移除重挂                                                                              | 嵌套集合、坏条目上报、窗口化未做                                                                                                                                             |
-| 权限       | ops / data / applyFull + 链接期挂载检查，E-PERMISSION + 审计                                                                  | observe / intercept、source 级权限未做；非安全边界                                                                                                                           |
-| 生命周期   | EngineRuntime 账本：逆序清理、错误隔离、幂等                                                                                  | 渲染层媒体 / 订阅清理点未接                                                                                                                                                  |
-| 组件词表   | 38 个 kind + Slot 原生结构 kind + registry 已落                                                                               | schema 单一来源与代码生成未做                                                                                                                                                |
-| 渲染层     | DOM renderer + 38 kind + 跨父 move + 节点统计                                                                                 | —                                                                                                                                                                            |
-| 启动骨架   | Vite 构建期把 Slot 首帧编译进 HTML（view → link → DOM）                                                                       | —                                                                                                                                                                            |
-| 主会话     | 默认走 Slot（局部树 → TS 链接 → EngineRuntime）；legacy 快照路径已删                                                          | —                                                                                                                                                                            |
-| 运行后来源 | `SourceEngine.registerSource/removeSource` + `applyView(keepOwners)`；示例 clock 自动发现并热更新                             | 远程 / worker 来源的网络帧、订阅与媒体登记、来源账本未接                                                                                                                     |
+逐条进度注记在 [migration.md](migration.md) §1；按 [ADR-0004](decisions/0004-static-tree-minimal-updates.md)，
+V1 取代 Slot，不再维护双路径。
 
-## 7. 术语
-
-| 词                   | 意思                                                        |
-| -------------------- | ----------------------------------------------------------- |
-| **Slot**             | 唯一原语；可寻址的界面单元，带 id、layout、输入、反应、权限 |
-| **局部树**           | 某个来源独立编写的一棵 Slot 树；引擎的输入                  |
-| **根树**             | 引擎把局部树链接后的唯一权威文档                            |
-| **来源（producer）** | 提供局部树或数据的实体；插件只是其中一种 adapter            |
-| **链接 / 编译**      | 把局部树解析、定序、拼进根树并产诊断的过程                  |
-| **反应（reaction）** | 事件/数据/生命周期/路由触发的一组效果声明                   |
-| **集合绑定**         | Slot 上的闭合原语：按 key 用模板实例化条目                  |
-| **更新集合**         | 一次原子更新涉及的 slot 集合（单槽 / 一批 / 内部节点）      |
-| **全寻址**           | 引擎内部每个 Slot 都能按 id 定位                            |
-| **可介入**           | 外部来源被 `grant` 允许去读/挂/换/改/观测                   |
-
-## 8. 讨论与基线
-
-- 设计讨论：2026-11-12 ~ 2026-11-13。
-- 基线：`main@3910928`（S6.5 骨架编译后）；legacy 已删，分层与目录整改完成（PR #79–#84）。
-- 收敛前的材料：旧提案归档在 [archive/ui-engine-subsystem.md](archive/ui-engine-subsystem.md)；旧 legacy 文档（`ui-engine.md` / `ui-plugins.md`）已删除，内容并入本系列。
-- 产品页面设计（[ui-rules.md](../design/ui-rules.md)、[ui-home.md](../design/ui-home.md)、[ui-capture.md](../design/ui-capture.md)）不属于引擎契约，留在 `docs/design/`，引擎文档只链接。
-
-## 9. 落地阶段
-
-| 阶段 | 内容                                                   | 状态                                                      |
-| ---- | ------------------------------------------------------ | --------------------------------------------------------- |
-| S0   | 收尾：仓库结构迁移单独 PR；提案文档入 docs；修过期数字 | ✅                                                        |
-| S1   | 契约：Slot 序列化 + 跨语言 fixture                     | ✅ S1.1（schema 单一来源未做）                            |
-| S2   | 链接期组合：诊断码、顺序模型、构建期编译门禁           | ✅ 第一版（按 kind schema 未做；static_ui 已升级）        |
-| S3   | 三张索引 + 三种更新 + 集合绑定                         | ✅ a–e（主会话已接）                                      |
-| S4   | 权限薄层 + 生命周期账本 + 观测指标                     | ✅（applyFull 已收；observe/intercept 见 permissions §8） |
-| S5   | 来源宿主 + 渲染节点统计 + TS 宿主                      | ✅ 来源宿主 / 渲染统计；运行后来源示例已落（S7.1）        |
-| S6   | 主会话接入：Python 产 Slot → TS 主入口 → 删 legacy     | ✅ S6.1–S6.5（主入口 / 骨架 / legacy 删除）               |
-| S7   | 运行后来源 / Host 网络接线；规则执行与 schema 单一来源 | ◐ 运行后来源示例已落；网络帧 / 规则 / schema 未落         |
-
-各阶段的逐条进度记录在 [migration.md](migration.md) §1 的阶段注记里；本文只保留阶段表。
-
-## 10. 文档状态约定
+## 7. 文档状态约定
 
 每份文档头部写一行状态，四档：
 
 - **现状**：代码已实现，文档描述当前行为；
 - **已定未实现**：契约已定，代码还没跟上；
 - **提案**：还在讨论，可能变；
-- **已废弃**：保留历史，不再有效。
+- **历史**：保留设计记录，不再代表代码现状。
 
 文档不是代码的说明书：契约与现状冲突时，先看状态；要改契约，先改文档，再改代码。

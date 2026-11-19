@@ -1234,3 +1234,43 @@ mark {
   overflow-y: auto;
   background: var(--paper);
 }
+
+/* V1 虚拟列表：窗口内的行绝对定位，靠 transform 排；spacer 撑总高度。 */
+.omora-virtual-list {
+  position: relative;
+  min-height: 0;
+}
+
+.omora-virtual-spacer {
+  position: relative;
+  width: 100%;
+}
+
+.omora-virtual-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s3);
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+  box-sizing: border-box;
+}
+
+/* 原生 dialog：模态、backdrop 与焦点都交给平台，这里只管皮。 */
+.omora-dialog {
+  width: min(560px, calc(100vw - 48px));
+  max-width: 560px;
+  border: 0;
+  border-radius: var(--r-panel);
+  padding: var(--s5);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 18px 48px rgba(26, 29, 25, 0.2);
+}
+
+.omora-dialog::backdrop {
+  background: rgba(26, 29, 25, 0.28);
+}

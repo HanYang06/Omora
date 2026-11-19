@@ -20,7 +20,7 @@ import {
   type TreeComposeDiagnostic,
   type TreeComposeDiagnosticCode,
   type TreeComposeResult,
-} from "../../../src/build/tree/compose";
+} from "../../../src/link/tree_compose";
 
 // src/build/tree -> src -> app/ui-engine -> app -> 仓库根
 const TREE_URL = new URL("../../../../../schema/tree/", import.meta.url);

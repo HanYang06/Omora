@@ -38,6 +38,13 @@ class Placement:
 
 
 @dataclass(frozen=True)
+class A11y:
+    role: str | None = None
+    label: str | None = None
+    description: str | None = None
+
+
+@dataclass(frozen=True)
 class Node:
     id: str
     chain: str
@@ -51,6 +58,8 @@ class Node:
     title: str | None = None
     slot: Placement | None = None
     collection: Collection | None = None
+    i18n: Mapping[str, str] = field(default_factory=dict)
+    a11y: A11y | None = None
 
 
 @dataclass(frozen=True)
@@ -76,8 +85,9 @@ class Mount:
 class Collection:
     source: str
     key: str
-    templates: Mapping[str, Node]
     select: str | None = None
+    templates: Mapping[str, Node] = field(default_factory=dict)
+    virtual: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -88,6 +98,8 @@ class Document:
     pages: tuple[Page, ...]
     active: str
     data: Mapping[str, Any]
+    messages: Mapping[str, str] = field(default_factory=dict)
+    locale: str | None = None
     ledger: Mapping[str, LedgerEntry] = field(default_factory=dict)
 
 
@@ -110,6 +122,7 @@ __all__ = [
     "ORDER_FIELD",
     "ROOT_KIND",
     "SCHEMA",
+    "A11y",
     "Collection",
     "Document",
     "LedgerEntry",

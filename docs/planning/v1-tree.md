@@ -1,111 +1,100 @@
 # V1 树：静态结构与最小节点更新
 
-> 状态：**目标架构**（[ADR-0004](../engine/decisions/0004-static-tree-minimal-updates.md)）；分阶段接管默认入口。
-> 这份文档回答四件事：旧结构坏在哪、V1 怎么修、现在做到哪、还差什么。
-> 运行时语义（数据 / 行为 / 权限 / 协议 / 持久化 / 失败）见 [运行时语义](../engine/runtime-semantics.md)。
+> 状态：**唯一格式与默认入口**（2026-11-20）。旧 Slot（`dendro.ui/1`）已删除，
+> 作为历史留在 [ADR-0004](../engine/decisions/0004-static-tree-minimal-updates.md)、
+> [archive](../engine/archive/) 与 [changelog](../changelog.md)。
+> 运行时语义见 [runtime-semantics](../engine/runtime-semantics.md)，
+> ops 见 [tree-ops](../engine/tree-ops.md)，运行时见 [tree-runtime](../engine/tree-runtime.md)。
 
-## 0. 旧结构的两个同源缺陷
+## 0. 它解决的两个同源缺陷
 
 ### 0.1 每事件全树重建
 
-一次 UI 变更现在的链路：
-
-**事件 → 整份 view 重新序列化（Python）→ 整帧传输 → 全树链接（TS）→ 全树替换 → 按 id diff → 落 DOM**
-
-每一层都是 O(N)，N 是整页的节点数。改一个按钮的文字，也要走完整棵树。
-
-项目自己的文档写过这件事：`docs/design/packages.md` §7.3——“当前主会话每个事件交整份 view（重链 + 全量替换），渲染层按 id 复用 DOM；增量 ops / data 是后续优化”。
-
-DOM 复用省的是“创建元素”，不是“序列化、传输、链接、替换、diff”的遍历。所以这不是“渲染优化能补上”的问题。
+旧链路：**事件 → 整份 view 重新序列化 → 整帧传输 → 全树链接 → 全树替换 → 按 id diff → DOM**。
+每一层都是 O(N)，N 是整页节点数。
 
 ### 0.2 运行时组织树
 
-启动与切页也要整棵链接：静态构建只覆盖“空数据首帧骨架”（`scripts/static_ui.py`），真实视图仍然是运行时由插件交局部树、TS 链接出来。
+旧结构是多个局部树 + 集合模板，启动与切页都要在运行时链接成权威根树；
+静态构建只覆盖空态骨架。
 
-两个缺陷同源：**结构在运行时才成立**。树小看不出来，树大必然出现；这不是“要不要测”，是构造决定的。
+两个缺陷同源：**结构在运行时才成立**。V1 的答案：结构在构建期 compose，
+节点按稳定 id / chain / order 可寻址，更新只带差异。
 
-## 1. V1 的答案
+## 1. 现在的链路（已实现）
 
-| 旧问题           | V1 的做法                                                      |
-| ---------------- | -------------------------------------------------------------- |
-| 整棵树重画       | 每个节点可单独寻址（`id` / `chain` / `order`），最小变更是节点 |
-| 变更代价随全树   | 替换大节点慢、替换小节点快；代价取决于节点，不取决于树         |
-| 运行时组织树     | 结构在构建期 compose（`dendro.tree/1`），运行时只 mount        |
-| 全树 diff        | Page 持可变 Node，脏节点天然可知，不需要新旧文档对比           |
-| 全量帧           | 上层协议只发变更节点 + 有限数据                                |
-| 运行期才发现冲突 | 父子、顺序、重复身份在构建期 compose 时报错，不等到运行时      |
+```text
+插件（omora.sdk.ui 的 Page / Node）
+  → sdk/tree_build：升成 dendro.tree/1 的 base + 局部树
+  → ui.tree（首帧 / 重连 / 切页）
+  → TS link/tree_compose：compose 成唯一文档 → 挂载
+  → 事件：ui.tree_event → Python 重建 + 差分
+      ├─ 能表达：setProps / mount / unmount（ops，按 id patch）
+      └─ 表达不了：整树回退（kind:"tree"，整棵替换）
+  → 异步变化：set_page / refresh_page 推 ui.changed（ops 或整树）
+```
 
-一句话：**结构静态、节点可寻址、更新最小、协议只带增量。**
+- 构建期：`scripts/static_tree.py` → `dist/tree/`，`?engine=tree` 预览消费。
+- 默认入口：tree-live（连 Python）；`?engine=tree` / `virtual` / `dialog` 是内置预览。
+- `ui.tree_event` 当前只产 `setProps` / `mount` / `unmount`；`replace` / `data`
+  形状与应用端已实现，产线暂未发。
+- `ui.changed` 推 ops / 整树，客户端与事件共用一条串行队列。
 
 ## 2. 现在做到哪
 
-| 能力                              | 状态                         | 证据                                                                               |
-| --------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------- |
-| 节点契约 + schema + 跨语言校验    | 已落                         | `schema/tree/`、`contract/tree.ts`、`sdk/tree.py`                                  |
-| 构建期 compose + 诊断             | 已落                         | `build/tree/compose.ts`（E-COLLISION / E-PARENT-MISSING / E-TREE-CHAIN）           |
-| 真实页面构建期 compose            | 已落（四页）                 | `scripts/static_tree.py` → `dist/tree/pages/*.json`                                |
-| 构建门禁（compose / 语义 / kind） | 已落                         | `build/vite-tree.ts`、`scripts/tree_artifacts.py`、`E-TREE-KIND`                   |
-| collection 声明字段               | 已落（运行期未接）           | schema `collection`、`sdk/tree.py`、`compose.ts`                                   |
-| runtime mount / replace / dispose | 已落；DOM 宿主与组件适配已落 | `engine/tree/runtime.ts`、`app/tree/tree_host.ts`、`app/tree/tree_renderer.ts`     |
-| Page / State / When / Bind        | 已落（SDK 层）               | `sdk/page.ts`、`authoring/page.py`                                                 |
-| Node scope / 生命周期             | 已落                         | `sdk/scope.ts`、`authoring/scope.py`                                               |
-| 类型检查第一遍                    | 只落 kind 存在性             | `tree_kinds.ts`；settings schema / 引用未做                                        |
-| 运行时最小应用                    | 已落                         | `runtime_update.ts`、`runtime_ops.test.ts`（setProps / mount / unmount / replace） |
-| ops 形状 + 跨语言 fixture         | 已落                         | `sdk/tree_ops.py`、`engine/tree/ops.ts`、`tree-ops.json`                           |
-| ops 文档层应用                    | 已落                         | `engine/tree/apply.ts`（版本 / 原子 / 路径复制 / `changed`）                       |
-| ops 协议帧                        | **未落**                     | 主会话仍发整份 view                                                                |
-| 产物消费（预览 / 默认入口）       | 预览已落；默认入口未落       | `app/tree/preview.ts`、`?engine=tree`                                              |
-| 页面插件迁移                      | **未落**                     | 页面仍由 Slot 产出                                                                 |
+| 能力                              | 状态             | 证据                                                                    |
+| --------------------------------- | ---------------- | ----------------------------------------------------------------------- |
+| 节点契约 + schema + 跨语言校验    | 已落             | `schema/tree/`、`contract/tree.ts`、`sdk/tree.py`                       |
+| 构建期 compose + 诊断             | 已落             | `link/tree_compose.ts`（E-COLLISION / E-PARENT-MISSING / E-TREE-CHAIN） |
+| 真实页面构建期 compose            | 已落（四页）     | `scripts/static_tree.py` → `dist/tree/pages/*.json`                     |
+| 构建门禁（compose / 语义 / kind） | 已落             | `build/vite-tree.ts`、`scripts/tree_artifacts.py`、`E-TREE-KIND`        |
+| runtime mount / replace / dispose | 已落             | `engine/tree/runtime.ts`、`app/tree/tree_host.ts`                       |
+| ops 形状 + 跨语言 fixture         | 已落             | `sdk/tree_ops.py`、`engine/tree/ops.ts`、`tree-ops.json`                |
+| ops 文档层 + 运行时最小更新       | 已落             | `engine/tree/apply.ts`、`runtime_update.ts`、`runtime_ops.test.ts`      |
+| `data` op 文档层                  | 已落             | `engine/tree/apply.ts`（revision 幂等 / 过期诊断）                      |
+| 默认入口 + 事件 + 异步推送        | 已落             | `ui.tree` / `ui.tree_event` / `ui.changed`；`app/tree/live.ts`          |
+| page / scope / when / bind 契约   | 已落（SDK 层）   | `sdk/page.ts`、`authoring/page.py`                                      |
+| collection 运行期原语             | 已落（TS）       | `engine/tree/collection.ts`、`runtime_collections.ts`                   |
+| Python 脏节点产线                 | **未落**         | 现在事件后重建整页再差分                                                |
+| data / collection 产线            | **未落**         | Python 还没发 `data` op；bind / changes 未接                            |
+| 类型检查后半                      | 只落 kind 存在性 | per-kind `settings` schema / `on` / `bind` 引用未做                     |
+| 权限 / 审计 / 规则                | **未落**         | V1 引擎不判定权限；`reactions` 留 v2                                    |
+| 复杂度护栏                        | **未落**         | 没有斜率测试                                                            |
 
-结构层已经成立；**更新层和协议层还没接上**。这就是下一步的全部内容。
-
-## 3. 目标链路
-
-```text
-Python: Page 改 Node → 脏节点 ops（replace / setProps / mount / unmount / data）
-   ↓ 协议帧：{ base: version, seq, ops: [...] }
-TS: 按 id 原子应用 → 不重链 → DOM 只 patch 变更子树
-   ↓ 版本不匹配 / 应用失败
-   全量 view 兜底（不是主路径）
-```
-
-三条硬要求：
+## 3. 三条硬要求
 
 1. **原子**：一批 ops 要么全应用，要么全回滚，不留半棵树。
-2. **版本**：`base` 对不上就拒绝，走全量兜底；不猜顺序。
-3. **可测**：跨语言 fixture 钉住 ops 形状；斜率测试钉住 O(k)。
+2. **版本**：`base` / `document` / `seq` 一致；差分表达不了就整树兜底，不猜。
+3. **可测**：跨语言 fixture 钉住形状；复杂度斜率钉住“事件 → DOM 不随总节点数增长”。
 
-## 4. 迁移顺序
+## 4. 迁移顺序（已完成的部分）
 
-1. 冻结 ops 形状 + 跨语言 fixture（单线，先做）。
-2. Python 发射端：Page / 插件只交变更节点。
-3. TS 应用端：按 id 原子 apply，不重链。
-4. 真实页面构建期 compose：先 ideas，再其余。
-5. 页面插件迁移：ideas / projects / requirements / manager。
-6. 删除旧 Slot 默认路径；全量只作兜底。
+1. ~~冻结 ops 形状 + 跨语言 fixture~~（已落）。
+2. ~~Python 发射端：由整页文档差分出 ops~~（已落；脏节点产线是下一步）。
+3. ~~TS 应用端：按 id 原子 apply，不重链~~（已落）。
+4. ~~真实页面构建期 compose~~（四页已落）。
+5. ~~页面插件接 V1~~（页面仍经 `tree_build` 桥，但默认入口已只走 V1）。
+6. ~~删除旧 Slot 默认路径~~（TS / Python 两条拆桥分支已删）。
 
 ## 5. 核心与非核心
 
-**核心（必须做完，否则引擎不成立）**：
+**核心（引擎收口）**：
 
-- 静态结构：真实页面构建期 compose。
-- 最小节点更新：ops + 脏节点。
-- 协议：ops 帧、版本、兜底、跨语言 fixture。
-- 主路径：页面插件迁移 + 旧 Slot 删除。
-- 护栏：事件 → DOM 不随总节点数增长。
+- Python 脏节点产线：事件后只算被改的节点，不再整页重建。
+- data / collection 产线：Python 发 `data` op；collection 实例化 / bind / changes。
+- 护栏：事件 → DOM 的工作量不随总节点数增长，进 CI。
+- 权限 / 审计接 V1（宿主策略 + guard 注入点）。
 
 **非核心（随业务与维护补）**：
 
 - 组件词表补齐（按页面需要）。
-- 规则执行 `reactions`、`observe/intercept`、`before/after`。
-- 远程 / worker 来源、订阅、媒体登记。
-- 集合嵌套、窗口化、坏条目隔离。
-- 权限细项、审计扩展。
+- 树内规则 `reactions`、观察 / 拦截钩子。
+- 远程 / 运行后来源、订阅、媒体登记。
+- 集合嵌套、窗口化、坏条目隔离的产线部分。
+- schema 单一来源与代码生成。
 
-## 6. 为什么分阶段，不是一刀切
+## 6. 为什么先结构、后更新
 
-- 两套契约（`dendro.ui/1` / `dendro.tree/1`）没有转换器，只能逐页迁。
-- 协议没定之前不能切主路径，否则丢更新。
-- 旧路径是兜底，删早了没有退路。
-
-分阶段不是犹豫，是**给每一步留回滚**。
+结构先立住，更新才有基准：先冻结文档与 ops 形状、构建期 compose、运行时挂载；
+再补最小更新与协议。倒过来做（先做增量更新）没有稳定的文档形状可依。
+拆桥已经完成，现在是“把 O(N) 的产线换成 O(k) 的产线”。
