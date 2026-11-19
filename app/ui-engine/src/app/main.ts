@@ -1,6 +1,7 @@
 import { Connection } from "./connection";
 import { createLogger } from "./log";
 import { LiveSlotApp } from "./live";
+import { TreeLiveApp } from "./tree/live";
 import "../styles/styles.css";
 import "../styles/media.css";
 
@@ -45,13 +46,19 @@ export function wantsLive(search: string): boolean {
   return engineMode(search) === "live";
 }
 
-/** 主会话 Slot 入口：连接 Python，第一份视图建引擎，之后按视图更新。 */
+/**
+ * 主会话入口：优先 V1 树；`ui.tree` 不存在时退回 Slot。
+ * 两条路径共用一条连接，Slot 只是迁移期的兜底。
+ */
 function startLive(container: HTMLElement): void {
   const connection = new Connection();
   const logger = createLogger({
     call: (target, method, args) => connection.call(target, method, args),
   });
-  new LiveSlotApp(connection, logger).mount(container);
+  const tree = new TreeLiveApp(connection, logger, () => {
+    new LiveSlotApp(connection, logger).mount(container);
+  });
+  tree.mount(container);
 }
 
 /** Slot 运行时只在需要时拉：preview 是独立 chunk，不进主 chunk。 */

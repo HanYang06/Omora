@@ -10,6 +10,7 @@ import type { TreeRuntime } from "../../engine/tree/runtime";
 import { composeTree } from "../../link/tree_compose";
 import { fetchMedia } from "../../platform/media";
 import type { RenderContext } from "../../renderer/types";
+import { CallError } from "../connection";
 import type { Logger } from "../log";
 import { mountTreeDocument } from "./tree_renderer";
 
@@ -54,12 +55,15 @@ export class TreeLiveApp {
   private host: HTMLElement | null = null;
   private container: HTMLElement | null = null;
   private loading = false;
+  private unavailable = false;
   private queue: Promise<void> = Promise.resolve();
   private readonly log: Logger;
 
   constructor(
     private readonly connection: TreeConnection,
     logger: Logger,
+    /** `ui.tree` 不存在时的退路（旧 Slot 主会话）。 */
+    private readonly onUnavailable?: () => void,
   ) {
     this.log = logger.child("tree");
   }
@@ -72,7 +76,7 @@ export class TreeLiveApp {
     container.append(host);
     this.host = host;
     this.connection.subscribeStatus((status) => {
-      if (status === "open") {
+      if (status === "open" && !this.unavailable) {
         void this.load();
       }
     });
@@ -100,6 +104,16 @@ export class TreeLiveApp {
       }
       this.show(payload);
     } catch (error) {
+      if (
+        error instanceof CallError &&
+        error.code === "unknown_method" &&
+        this.onUnavailable !== undefined
+      ) {
+        this.unavailable = true;
+        this.log.info("tree.unavailable", { method: "ui.tree" });
+        this.onUnavailable();
+        return;
+      }
       const text = error instanceof Error ? error.message : String(error);
       this.log.error("tree.load.failed", { err: text });
       host.textContent = "V1 树加载失败：" + text;

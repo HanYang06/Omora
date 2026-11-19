@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { ConnectionStatus, JsonObject } from "../../../src/contract/protocol";
 import type { Node as TreeNode } from "../../../src/contract/tree_generated";
+import { CallError } from "../../../src/app/connection";
 import { createLogger } from "../../../src/app/log";
 import {
   TreeLiveApp,
@@ -68,15 +69,19 @@ class FakeConnection implements TreeConnection {
   readonly calls: Array<{ target: string; method: string; args: JsonObject }> = [];
   private listener: ((status: ConnectionStatus) => void) | undefined;
   private readonly trees: TreeBuildPayload[];
+  private readonly treeError: Error | undefined;
 
-  constructor(trees: TreeBuildPayload[]) {
+  constructor(trees: TreeBuildPayload[], treeError?: Error) {
     this.trees = trees;
+    this.treeError = treeError;
   }
 
   call(target: string, method: string, args: JsonObject): Promise<unknown> {
     this.calls.push({ target, method, args });
     if (target === "ui" && method === "tree") {
-      return Promise.resolve(this.trees[0]);
+      return this.treeError === undefined
+        ? Promise.resolve(this.trees[0])
+        : Promise.reject(this.treeError);
     }
     if (target === "ui" && method === "tree_event") {
       return Promise.resolve(this.trees[1]);
@@ -139,6 +144,27 @@ describe("TreeLiveApp 事件回源", () => {
     const nextPin = container.querySelector<HTMLElement>('[data-node-id="' + BUTTON_B + '"]');
     expect(nextPin).not.toBe(pin);
     expect(document.activeElement).toBe(nextPin);
+
+    app.dispose();
+    container.remove();
+  });
+
+  it("ui.tree 不存在时回退 Slot", async () => {
+    const connection = new FakeConnection(
+      [],
+      new CallError("unknown_method", "ui 没有方法 tree"),
+    );
+    let fellBack = false;
+    const app = new TreeLiveApp(connection, createLogger({ enabled: false }), () => {
+      fellBack = true;
+    });
+    const container = document.createElement("div");
+    document.body.append(container);
+
+    app.mount(container);
+    await tick();
+
+    expect(fellBack).toBe(true);
 
     app.dispose();
     container.remove();
