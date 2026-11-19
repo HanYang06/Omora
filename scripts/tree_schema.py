@@ -179,6 +179,7 @@ def gen_python(schema: dict[str, Any]) -> str:
     )
     for name in (
         "Placement",
+        "A11y",
         "Node",
         "Page",
         "LedgerEntry",
@@ -217,6 +218,7 @@ def gen_python(schema: dict[str, Any]) -> str:
         "ROOT_KIND",
         "MOUNT_MODES",
         "Placement",
+        "A11y",
         "Node",
         "Page",
         "LedgerEntry",
@@ -240,6 +242,7 @@ def gen_ts(schema: dict[str, Any]) -> str:
     lines = [TS_HEADER]
     for name in (
         "Placement",
+        "A11y",
         "Node",
         "Page",
         "LedgerEntry",

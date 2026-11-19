@@ -38,6 +38,13 @@ class Placement:
 
 
 @dataclass(frozen=True)
+class A11y:
+    role: str | None = None
+    label: str | None = None
+    description: str | None = None
+
+
+@dataclass(frozen=True)
 class Node:
     id: str
     chain: str
@@ -51,6 +58,7 @@ class Node:
     title: str | None = None
     slot: Placement | None = None
     collection: Collection | None = None
+    a11y: A11y | None = None
 
 
 @dataclass(frozen=True)
@@ -110,6 +118,7 @@ __all__ = [
     "ORDER_FIELD",
     "ROOT_KIND",
     "SCHEMA",
+    "A11y",
     "Collection",
     "Document",
     "LedgerEntry",

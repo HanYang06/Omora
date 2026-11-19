@@ -140,6 +140,30 @@ describe("V1 DOM 适配器", () => {
     container.remove();
   });
 
+  it("a11y 落到元素上，更新时覆盖与清除", () => {
+    const first = textNode("甲");
+    first.a11y = { role: "note", label: "提示", description: "说明" };
+    const { container, runtime } = mount(docOf([first]));
+
+    const el = container.querySelector<HTMLElement>('[data-type="text"]');
+    expect(el?.getAttribute("role")).toBe("note");
+    expect(el?.getAttribute("aria-label")).toBe("提示");
+    expect(el?.getAttribute("aria-description")).toBe("说明");
+
+    const second = textNode("甲");
+    second.a11y = { label: "新提示" };
+    expect(runtime.replace(docOf([second])).ok).toBe(true);
+
+    const after = container.querySelector<HTMLElement>('[data-type="text"]');
+    expect(after).toBe(el);
+    expect(after?.getAttribute("role")).toBeNull();
+    expect(after?.getAttribute("aria-label")).toBe("新提示");
+    expect(after?.getAttribute("aria-description")).toBeNull();
+
+    runtime.dispose();
+    container.remove();
+  });
+
   it("unmount 把整棵树从容器里摘掉", () => {
     const { container, runtime } = mount(docOf([textNode("甲")]));
 

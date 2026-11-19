@@ -15,7 +15,7 @@
  * 这些由 kind 自己（column / row / list…）表达。
  */
 
-import type { Node as TreeNode, Placement } from "../../contract/tree_generated";
+import type { A11y, Node as TreeNode, Placement } from "../../contract/tree_generated";
 import { NodeRendererRegistry } from "../../engine/tree/registry";
 import { TreeRuntime } from "../../engine/tree/runtime";
 import type {
@@ -84,6 +84,34 @@ function alignValue(align: NonNullable<Placement["align"]>): string {
   return "stretch";
 }
 
+/**
+ * 作者声明的无障碍语义：渲染器统一落到元素上，覆盖组件默认值。
+ * 只清自己写过的属性，组件自己设的 aria 不动。
+ */
+const appliedA11y = new WeakMap<HTMLElement, A11y>();
+
+function applyA11y(el: HTMLElement, a11y: A11y | undefined): void {
+  const previous = appliedA11y.get(el) ?? {};
+  const next = a11y ?? {};
+  const attrs: readonly [keyof A11y, string][] = [
+    ["role", "role"],
+    ["label", "aria-label"],
+    ["description", "aria-description"],
+  ];
+  for (const [key, attr] of attrs) {
+    if (next[key] === previous[key]) {
+      continue;
+    }
+    const value = next[key];
+    if (value === undefined) {
+      el.removeAttribute(attr);
+    } else {
+      el.setAttribute(attr, value);
+    }
+  }
+  appliedA11y.set(el, next);
+}
+
 /** 把 V1 placement 落到元素上；字段消失时清掉，避免 update 后残留。 */
 function applyPlacement(el: HTMLElement, slot: Placement | undefined): void {
   const width = slot?.size?.width;
@@ -124,6 +152,7 @@ export function createTreeKindRenderer(kind: Kind, context: RenderContext): Node
     mount(node: TreeNode): NodeRendererMount {
       const legacy = toLegacyNode(node);
       const el = kind.create(legacy, context);
+      applyA11y(el, node.a11y);
       applyPlacement(el, node.slot);
       const hosts = childHostsOf(kind, el, legacy);
       childHost = hosts.length === 0 ? null : new DomTreeHost(hosts);
@@ -133,6 +162,7 @@ export function createTreeKindRenderer(kind: Kind, context: RenderContext): Node
       const el = asElement(output);
       const legacy = toLegacyNode(node);
       kind.update?.(el, legacy, context);
+      applyA11y(el, node.a11y);
       applyPlacement(el, node.slot);
       if (childHost !== null) {
         childHost.replaceHosts(childHostsOf(kind, el, legacy));

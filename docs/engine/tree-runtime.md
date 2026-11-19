@@ -40,6 +40,7 @@ components/*（现有 38 个 kind，不改）
 | `on`       | `events`    | 只收字符串 handler id                                                                |
 | `layout`   | （不搬）    | 子节点由 runtime 挂；tabs / search 这类读子节点数据的 kind 拿浅搬的直接子节点        |
 | `slot`     | 内联样式    | `size.width/height` → width / height（数字 px，`fill` → 100%），`align` → align-self |
+| `a11y`     | （不搬）    | `role` / `label` / `description` → `role` / `aria-label` / `aria-description`，覆盖组件默认值 |
 
 **没有 Slot 的 `layout`（flow / gap / scroll / capacity）**：V1 里布局由 kind 表达
 （`column` / `row` / `list`…），placement 只管尺寸与对齐。这是两套格式的语义差，不是遗漏。
