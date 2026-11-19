@@ -1,0 +1,33 @@
+name: Feature / capability
+description: 一个可验收的引擎或产品能力
+title: "[area] "
+labels: ["type:feature", "area:engine"]
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      description: 谁的问题、为什么现在做、现状是什么
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收
+      description: 可观察/可测试的结果，不是文件清单
+    validations:
+      required: true
+  - type: textarea
+    id: deps
+    attributes:
+      label: 依赖与轮子
+      description: 依赖哪些 issue / 库；没有就写无
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: 非目标
+      description: 这次明确不做什么
+  - type: textarea
+    id: risk
+    attributes:
+      label: 风险与回滚

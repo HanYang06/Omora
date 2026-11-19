@@ -54,13 +54,13 @@ def test_subscribe_is_an_ordinary_call() -> None:
     call = parse_call(subscribe["frame"])
 
     assert (call.target, call.method) == ("net", "subscribe")
-    assert call.args == {"topics": ["ui.snapshot", "media.progress"]}
+    assert call.args == {"topics": ["ideas.changed", "media.progress"]}
 
 
 def test_event_frame_carries_the_topic_and_payload() -> None:
-    assert event_frame("ui.snapshot", {"version": 8}) == {
+    assert event_frame("ideas.changed", {"version": 8}) == {
         "type": "event",
-        "topic": "ui.snapshot",
+        "topic": "ideas.changed",
         "payload": {"version": 8},
     }
 

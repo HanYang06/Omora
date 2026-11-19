@@ -1,0 +1,26 @@
+changelog:
+  categories:
+    - title: Features
+      labels:
+        - type:feature
+    - title: Fixes
+      labels:
+        - type:fix
+        - bug
+    - title: Performance
+      labels:
+        - type:perf
+    - title: Refactors
+      labels:
+        - type:refactor
+    - title: Documentation
+      labels:
+        - type:docs
+        - documentation
+    - title: Build / CI
+      labels:
+        - type:build
+        - type:ci
+    - title: Other Changes
+      labels:
+        - "*"

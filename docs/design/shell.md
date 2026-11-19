@@ -60,8 +60,21 @@ pnpm install                        # 第一次（根目录 workspace，一次�
 第 5 个坑：**截图看不见视频**。渲染器侧截图拿不到视频层，会是一片黑，但这不代表
 预览坏了——先看 `live` 的 `readyState=4 / paused=false`，再决定要不要开 surface。
 
+## 打包
+
+```bash
+pnpm --dir app/ui-engine dist                        # vite build + electron-builder，出 NSIS 安装包
+pnpm --dir app/ui-engine exec electron-builder --dir # 只出目录产物，不下载 NSIS 工具链
+```
+
+产物在 `app/ui-engine/release/`：`--dir` 给出 `release/win-unpacked/Omora.exe`，
+目前**未签名**，图标是 Electron 默认图标。`build` 配置在
+`app/ui-engine/package.json`（appId / productName / files / output / win target）。
+
+NSIS target 已配置，但**还没实跑**（本机 GitHub 下载超时）；目前只验证过 `--dir`
+产物能启动并渲染页面。签名、图标、安装/卸载流程都还没做。
+
 ## 下一步
 
-- 打包：electron-builder，Windows 先做
 - 壳拉起内核（发布形态）：`python.exe app/main.py` 子进程 + 端口约定
 - 菜单、快捷键、窗口状态记忆

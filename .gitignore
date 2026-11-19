@@ -21,6 +21,9 @@ app/ui-engine/reports/
 node_modules/
 *.tsbuildinfo
 
+# electron-builder 产物（app/ui-engine/dist 是 Vite 产物，另行忽略）
+app/ui-engine/release/
+
 # 测试产物
 coverage/
 test-results/
