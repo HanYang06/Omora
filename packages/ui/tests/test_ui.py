@@ -178,7 +178,10 @@ def test_tree_registers_handlers_and_dispatches() -> None:
     assert seen == [{"value": 1}]
     next_content = cast(dict[str, Any], next_tree["partials"][-1]["root"])
     assert next_content["layout"][0]["settings"]["text"] == "1"
-    assert _tree_handler(next_content) != handler
+    assert _tree_handler(next_content) == handler
+
+    ui.tree_event(handler, {})
+    assert state["n"] == 2
 
 
 def test_tree_nav_handlers_switch_page() -> None:

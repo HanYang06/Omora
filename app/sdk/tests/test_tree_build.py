@@ -13,6 +13,7 @@ from omora.sdk.tree_build import (
     NavEntry,
     base_document,
     build_page,
+    compose,
     content_partial,
     nav_partials,
     tree_id,
@@ -131,6 +132,41 @@ def test_build_page_packages_base_and_all_partials() -> None:
     parse_document(page["base"])
     for partial in page["partials"]:
         parse_partial(partial)
+
+
+def test_compose_mounts_nav_and_content_into_one_document() -> None:
+    base = base_document(name="ideas", title="灵感", route="/ideas")
+    nav = nav_partials(
+        [NavEntry("ideas", "灵感"), NavEntry("projects", "项目")], active="ideas"
+    )
+    content = content_partial(_page_page(), name="ideas", owner="ideas")
+
+    document = compose(base, [*nav, content])
+
+    parsed = parse_document(document)
+    assert parsed.root.kind == "app"
+    page_node = _page_node(document)
+    assert [child["kind"] for child in page_node["layout"]] == ["column"]
+    nav_node = next(
+        node for node in _walk(document["root"]) if node["id"] == nav[0]["mount"]["parent"]
+    )
+    assert [child["settings"]["route"] for child in nav_node["layout"]] == [
+        "/ideas",
+        "/projects",
+    ]
+    assert [child["order"] for child in nav_node["layout"]] == [10, 20]
+
+
+def test_compose_rejects_missing_parent_and_duplicate_ids() -> None:
+    base = base_document(name="ideas", title="灵感", route="/ideas")
+    content = content_partial(_page_page(), name="ideas", owner="ideas")
+
+    missing = {"mount": {"parent": "0" * 16, "mode": "new"}, "root": content["root"]}
+    with pytest.raises(ValueError, match="父节点不存在"):
+        compose(base, [missing])
+
+    with pytest.raises(ValueError, match="节点 id 重复"):
+        compose(base, [content, content])
 
 
 def test_rebuilding_the_same_page_gives_the_same_input() -> None:

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Callable, Sequence
+from copy import deepcopy
 from dataclasses import dataclass, fields
 from typing import Any
 
@@ -105,7 +106,7 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
     return record
 
 
-Register = Callable[[Callable[[dict[str, Any]], None]], str]
+Register = Callable[[Callable[[dict[str, Any]], None], str, str], str]
 
 
 def _ui_node(
@@ -137,7 +138,8 @@ def _ui_node(
             ]
         elif callable(value):
             if register is not None and field.name.startswith("on_"):
-                on[field.name[3:]] = register(value)
+                event = field.name[3:]
+                on[event] = register(value, node_id, event)
             continue
         elif value is not None:
             settings[field.name] = value
@@ -247,7 +249,7 @@ def nav_partials(
             settings["icon"] = _text(entry.icon, f"nav.{name}.icon")
         on: dict[str, str] = {}
         if register is not None and entry.on_click is not None:
-            on["click"] = register(entry.on_click)
+            on["click"] = register(entry.on_click, node_id, "click")
         partials.append(
             {
                 "schema": SCHEMA,
@@ -318,6 +320,47 @@ def build_page(  # noqa: PLR0913 —— 一页的构建输入
     }
 
 
+def compose(base: dict[str, Any], partials: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """把局部树挂进 base，返回唯一 document；同级按 order 排序，id 全局唯一。"""
+    document = deepcopy(base)
+    index: dict[str, dict[str, Any]] = {}
+
+    def visit(node: dict[str, Any]) -> None:
+        node_id = node["id"]
+        if node_id in index:
+            raise ValueError(f"节点 id 重复: {node_id}")
+        index[node_id] = node
+        for child in node["layout"]:
+            visit(child)
+        for template in node.get("collection", {}).get("templates", {}).values():
+            visit(template)
+
+    visit(document["root"])
+    for partial in partials:
+        mount = partial.get("mount", {})
+        if mount.get("mode") != "new":
+            raise ValueError("只支持 mount.mode=new")
+        parent = index.get(mount.get("parent"))
+        if parent is None:
+            raise ValueError(f"父节点不存在: {mount.get('parent')}")
+        root = deepcopy(partial["root"])
+        expected = f"{parent['chain']}.{root['id']}"
+        if root["chain"] != expected:
+            raise ValueError(f"局部树 chain 不匹配: {root['chain']} != {expected}")
+        parent["layout"].append(root)
+        visit(root)
+
+    def sort_layout(node: dict[str, Any]) -> None:
+        node["layout"].sort(key=lambda child: child["order"])
+        for child in node["layout"]:
+            sort_layout(child)
+        for template in node.get("collection", {}).get("templates", {}).values():
+            sort_layout(template)
+
+    sort_layout(document["root"])
+    return document
+
+
 __all__ = [
     "FORMAT",
     "NAV_KIND",
@@ -326,6 +369,7 @@ __all__ = [
     "NavEntry",
     "base_document",
     "build_page",
+    "compose",
     "content_partial",
     "nav_partials",
     "tree_id",

@@ -58,7 +58,6 @@ class Ui:
         # 事件回调运行期间由 ui 负责交新 view，set_page 不要再另推一份。
         self._in_event = False
         self._tree_handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
-        self._tree_generation = 0
         self._slots = SlotView(
             names=lambda: list(self._pages),
             info=self._page_info,
@@ -128,15 +127,10 @@ class Ui:
         if current is None:
             raise LookupError(f"当前页不在侧表里: {active}")
         name = active.removeprefix("page.")
-        self._tree_generation += 1
-        generation = self._tree_generation
         handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
-        counter = 0
 
-        def register(callback: Callable[[dict[str, Any]], None]) -> str:
-            nonlocal counter
-            counter += 1
-            handler = f"tree:{generation}:{counter}"
+        def register(callback: Callable[[dict[str, Any]], None], node_id: str, event: str) -> str:
+            handler = f"tree:{node_id}:{event}"
             handlers[handler] = callback
             return handler
 
