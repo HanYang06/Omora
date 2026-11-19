@@ -1,6 +1,8 @@
 # 结构：窗口、页面、层、布局
 
-> 状态：**已定**；layout 字段表是【建议】。S3-c 已落会话层的 pages/active 与 route 意图（active 切换）；S3-d 已落渲染层按 id 的换页协调（`page_switch`）与跨父 move 复用；S6.4 已接主会话；窗口骨架收进结构文件（结构文件与加载器已落）；页面参数仍待。
+> 状态：**历史**（Slot 时期，代码已随 2026-11-20 拆桥删除）。保留当时的契约 / 设计记录，
+> 不再代表代码现状；现行唯一格式是 V1 树（`dendro.tree/1`），见 [tree-runtime](tree-runtime.md) /
+> [tree-ops](tree-ops.md) / [runtime-semantics](runtime-semantics.md)。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md)
 > 相关：[rules.md](rules.md) · [updates.md](updates.md) · `runtime.md`（待写）
 

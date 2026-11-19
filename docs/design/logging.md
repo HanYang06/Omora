@@ -41,8 +41,8 @@ target=log  method=write_many  args={entries: [{proc, ch, lvl, msg, data}, ...]}
   "proc": "kernel",
   "ch": "ideas",
   "lvl": "info",
-  "msg": "ui.event",
-  "data": { "handler": "ideas:2:5", "ms": 1.4 }
+  "msg": "tree.event",
+  "data": { "handler": "tree:3f2a9c:click", "ms": 1.4 }
 }
 ```
 
@@ -50,8 +50,8 @@ target=log  method=write_many  args={entries: [{proc, ch, lvl, msg, data}, ...]}
 `data` 里。终端上是同一行：
 
 ```
-23:50:01.123 K ideas  ui.event        handler=ideas:2:5 ms=1.4
-23:50:01.160 E render render.received page=ideas nodes=31 ms=1.1
+23:50:01.123 K ui     ui.tree         page=ideas ms=1.4
+23:50:01.160 E tree   tree.push.failed err="ops 应用失败"
 ```
 
 `K` / `E` 分别是内核和引擎，后面是通道。
@@ -64,12 +64,9 @@ target=log  method=write_many  args={entries: [{proc, ch, lvl, msg, data}, ...]}
 | ---- | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
 | 内核 | `boot`     | `config.unclaimed` / `boot.started` / `boot.media.started`                                                               |
 | 内核 | `<插件名>` | `plugin.installed` / `plugin.removed` / `plugin.failed`                                                                  |
-| 内核 | `ui`       | `ui.render` / `ui.event` / `ui.event.unknown`                                                                            |
+| 内核 | `ui`       | `ui.tree` / `tree.event.stale` / `tree.event.unknown`                                                                    |
 | 内核 | `net`      | `net.connected` / `net.disconnected` / `net.call.failed` / `net.slow_call` / `net.dropped`（trace）/ `net.call`（trace） |
-| 引擎 | `conn`     | `conn.open` / `conn.closed` / `conn.failed` / `capability.report_failed`                                                 |
-| 引擎 | `render`   | `render.received`（页名、节点数、耗时）                                                                                  |
-| 引擎 | `event`    | `event.sent`（handler、payload 的键）                                                                                    |
-| 引擎 | `media`    | `media.failed`                                                                                                           |
+| 引擎 | `tree`     | `tree.load.failed` / `tree.event.failed` / `tree.push.failed` / `tree.unavailable` / `tree.prepare.failed`               |
 
 帧级别的 `net:call` 默认是 `trace`，量太大，需要时单独开。
 

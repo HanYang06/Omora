@@ -1,7 +1,8 @@
 # 运行时语义：数据、行为、权限、协议、持久化、失败
 
-> 状态：**V1 口径已定**（2026-11-18）。`rules.md` / `permissions.md` / `wire.md` 是 Slot 时期的设计，
-> V1 的运行时以本文为准；实现按 [TODO](../todo.md) 逐项落。
+> 状态：**现状**（2026-11-20）。V1 是唯一文档格式与默认入口，Slot 文档运行时已删除；
+> `rules.md` / `permissions.md` 是 Slot 时期的历史设计。V1 的运行时以本文为准，
+> 实现按 [TODO](../todo.md) 逐项落。
 > 相关：[V1 树](../planning/v1-tree.md) · [V1 运行时](tree-runtime.md) · [V1 ops](tree-ops.md) · [构建](build.md)
 
 ## 0. 一条主线
@@ -10,12 +11,14 @@
 - **所有变化走同一条管线**：
 
 ```text
-来源 → ops（base, seq）→ 宿主 guard → applyOps → changed → 运行时 patch → DOM
-                         ↘ 拒绝 / 失败 → diagnostics；版本不匹配 → document 全量
+来源 → ops（base, seq）→ applyOps → changed → 运行时 patch → DOM
+                         ↘ 拒绝 / 失败 → diagnostics；差分表达不了 → 整树（tree）兜底
 ```
 
-- **版本由宿主唯一分配**；来源只声明“我基于哪个版本”。
-- 全量 `document` 只有三种用途：首次加载、重连、版本不匹配。
+- 当前实现里，来源改完状态后重建整页文档，再与上一棵文档差分；发出去的只是 ops。
+  “脏节点产线”是 TODO，不是已实现。
+- **版本由来源 / 宿主顺序分配**：每个 ops 批量带 `base` / `document` / `seq`。
+- 全量 `kind:"tree"` 用于首次加载、重连、切页，以及差分表达不了时的整树兜底。
 
 ## 1. 数据权威
 
@@ -33,6 +36,8 @@
 - 绑定：`bind` 的路径是 `<source>[.<path>]`；集合模板内是 `item.<field>`。
   `collection.source` 直接对应 `data[source].items`。
 - 集合实例由运行时按 `source + key + template` 派生，**不进文档**；条目变化只走 `data` op。
+- 现状：TS 有 `data` op 的**文档层**（revision 幂等 / 过期诊断）与集合原语；
+  Python 产线还没发 `data` op，`bind` / `changes` / 集合消费未接（见 [TODO](../todo.md)）。
 
 ## 2. 行为模型
 
@@ -64,14 +69,14 @@
 
 ## 4. 协议
 
-四种帧：
+语义上是四种东西（线上由 `call / result / error / event` 承载，见 [wire](wire.md)）：
 
-| 帧            | 方向                 | 用途                                                      |
-| ------------- | -------------------- | --------------------------------------------------------- |
-| `document`    | 宿主 → 客户端        | 全量文档（带 `page` / `version`）；加载、重连、版本不匹配 |
-| `ops`         | 来源 → 宿主          | 所有变化；`data` 是其中一种 op，不单独成帧                |
-| `dispatch`    | 客户端 → 来源        | 事件回传（handler + payload + base）                      |
-| `diagnostics` | 宿主 → 来源 / 客户端 | 拒绝、失败、告警；带 `code / path / source`               |
+| 帧            | 方向                 | 用途                                                           |
+| ------------- | -------------------- | -------------------------------------------------------------- |
+| `document`    | 宿主 → 客户端        | 全量：当前实现是 `ui.tree` 返回 `kind:"tree"`（base + 局部树） |
+| `ops`         | 来源 → 宿主          | 差分变化；`data` 是其中一种 op，不单独成帧                     |
+| `dispatch`    | 客户端 → 来源        | 事件回传（handler + payload）                                  |
+| `diagnostics` | 宿主 → 来源 / 客户端 | 拒绝、失败、告警；带 `code / path / source`                    |
 
 - **版本权在宿主**：来源带 `base`；不匹配 → 宿主回 `document`，来源基于新版本重来。
 - `seq` 每个来源单调；同一 `(source, seq)` 重复到达是 no-op。
@@ -82,7 +87,7 @@
 ## 5. 持久化
 
 - 引擎**不持久化文档**：durable 数据归 store，文档版本只在运行时有效。
-- 唯一的“快照”是构建产物（`dist/tree/` + manifest）。
+- 唯一的“快照”是构建产物（`dist/tree/` + manifest）；默认主会话不读它，从 Python 拉 `ui.tree`。
 - schema：`/1` 内加可选字段不破坏；破坏性改动 → `/2` + `migrateDocument`；
   未知 schema → 诊断 + 全量重载。
 - 重连快照 = 来源重新交全量文档；V1 不做引擎侧 journal / cache。
@@ -115,10 +120,10 @@
 
 ## 8. 与旧文档的关系
 
-- `rules.md`：触发 / 效果闭集保留，作为 v2 规则设计的边界；V1 不实现树内规则。
-- `permissions.md`：能力 / 主体模型属于宿主策略；V1 引擎既不维护 owner，也不判定权限，只留 guard 钩子。
-- `wire.md`：payload 形状保留作参考；V1 的帧集合以本文 §4 为准。
-- `collection.md` / `updates.md`：语义一致；V1 的 data 投影见 §1。
+- `rules.md` / `permissions.md`：Slot 时期的历史设计；V1 的边界以本文为准。
+- `wire.md`：已改写为 V1 的 payload 形状（tree / ops / ui.changed / 事件回传）。
+- `collection.md` / `updates.md`：Slot 时期的集合 / 更新设计；V1 的 data 投影见 §1，
+  ops 形状见 [tree-ops](tree-ops.md)。
 
 ## 9. 未定
 

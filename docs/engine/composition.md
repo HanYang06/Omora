@@ -1,6 +1,8 @@
 # 组合：编译与链接
 
-> 状态：**决定报错**；机制【建议】。S2 已落第一版链接器（形状校验、多轮挂载、order/容量/replace 与诊断）和构建期门禁；S4 已落链接期权限（`E-PERMISSION`，见 §10）；`before/after`、slot 排序策略、按 kind 的 props schema 未实现。窗口骨架的基准来自结构文件 `root-tree.json` 单一来源（[structure.md](structure.md) §1.1）。
+> 状态：**历史**（Slot 时期，代码已随 2026-11-20 拆桥删除）。保留当时的契约 / 设计记录，
+> 不再代表代码现状；现行唯一格式是 V1 树（`dendro.tree/1`），见 [tree-runtime](tree-runtime.md) /
+> [tree-ops](tree-ops.md) / [runtime-semantics](runtime-semantics.md)。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md)
 > 相关：[updates.md](updates.md) · [permissions.md](permissions.md) · `runtime.md`（待写）
 

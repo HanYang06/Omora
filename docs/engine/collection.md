@@ -1,6 +1,8 @@
 # 集合绑定：用数据实例化已声明的结构
 
-> 状态：**建议**（作者已认同方向，细节未定稿）；S3-a 已落实例化与 keyed reconcile 原语（`src/engine/collections/collection.ts`），数据路由与主会话渲染已接（S6）；嵌套集合 / 窗口化仍未做。V1 形状已进 `dendro.tree/1`（§10），运行期实例化未接。
+> 状态：**历史**（Slot 时期，代码已随 2026-11-20 拆桥删除）。保留当时的契约 / 设计记录，
+> 不再代表代码现状；现行唯一格式是 V1 树（`dendro.tree/1`），见 [tree-runtime](tree-runtime.md) /
+> [tree-ops](tree-ops.md) / [runtime-semantics](runtime-semantics.md)。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [rules.md](rules.md)
 > 相关：[updates.md](updates.md) · [composition.md](composition.md)
 >
@@ -136,8 +138,12 @@ Slot 的 `collection` 原样进 V1 节点，字段同名同义：
 ```
 
 - `templates` 是唯一允许在 `layout` 之外出现节点的地方：它是具名模板表，不是第二套嵌套。
+- `virtual: true` 时不实例化条目：运行时把 `data[source].items` 投影给 kind 的 `props.items`，
+  `templates` 可省；只给窗口化 kind（`virtual-list`）用。
 - 模板节点参与 id / chain 唯一性检查，但**不能**作为 partial 的 `mount.parent`——组合器报
   `E-PARENT-MISSING`（模板不挂载）。
 - 组合器把模板子树一起索引：模板里的 id / chain 撞上已组合树 → `E-COLLISION`。
-- 已落：schema、Python / TS 形状校验、Python 语义（模板身份）、组合器。
-- 未落：运行期实例化、`data` op、keyed reconcile——引擎内部下一段。
+- 已落：schema、Python / TS 形状校验、Python 语义（模板身份）、组合器；V1 挂载期实例化
+  （`engine/tree/collection.ts`）、replace 按 key 复用、data op 定向 reconcile
+  （`engine/tree/runtime_collections.ts`）。
+- 未落：嵌套集合、窗口化、`changes` 增量。

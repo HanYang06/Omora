@@ -1,87 +1,97 @@
-# 测试：不变量与验收
+# 测试：分层、命令与覆盖范围
 
-> 状态：**建议**；S2 已补编译诊断测试（每个已落 E- 码一条失败路径）、乱序/幂等/原子性质测试与跨语言 `local-trees` fixture 契约测试；S3-a 已补索引/ops/集合原语测试与 `ops` fixture 契约测试；S3-b 已补 data router 与 `data` fixture 契约测试；S3-c 已补标量绑定、session/route/全量替换与 `route` fixture 契约测试；S3-d 已补 Slot 渲染桥/换页分类/会话水合与 fixture→DOM 集成 spike；S3-e 已补跨父 move 复用、Slot 预览入口与生命周期账本原语测试；S4 已补权限薄层（链接期+运行期）、EngineRuntime/指标/审计、来源宿主、local-trees 全量更新与 DocumentView 集成测试；Slot 预览改走 EngineRuntime/DocumentView 后行为测试不变；SourceEngine / SourceHost.load / renderer 节点统计已有独立测试。
-> 依赖：[README](README.md) · [composition.md](composition.md) · [updates.md](updates.md) · [collection.md](collection.md)
-> 相关：[omora-testing skill](../../.agents/skills/omora-testing/SKILL.md)
+> 状态：**现状**（2026-11-20）。Slot 时期的测试随拆桥删除；现有测试全部围绕
+> V1 树、插件行为与共享组件。**测试证明行为，不证明类型 / 非空 / 覆盖率数字**。
+> 相关：[树运行时](tree-runtime.md) · [ops](tree-ops.md) · [构建](build.md) · [CI](../design/ci.md)
 
-## 0. 一句话
+## 1. 三层
 
-契约靠**性质**钉住，不靠覆盖率凑数：每条不变量都要有一个能失败的测试。
+| 层         | 证明什么                                            | 位置                                  |
+| ---------- | --------------------------------------------------- | ------------------------------------- |
+| Python     | 内核 / 插件 / SDK / socket 端到端                   | 各 package 的 `tests/`、`app/*/tests` |
+| TS 单元    | 树文档应用、运行时 patch、组件 DOM 行为、构建门禁   | `app/ui-engine/tests/`                |
+| Playwright | 真浏览器里的 V1 树预览、虚拟列表、原生 dialog、a11y | `app/ui-engine/tests/visual/`         |
 
-## 1. 不变量
+Python 侧当前收集 **465** 条；TS `vitest` **499** 条；Playwright **4** 条（tree 预览
 
-| #   | 性质     | 怎么测                                         |
-| --- | -------- | ---------------------------------------------- |
-| 1   | 编译确定 | 同一组局部树，任意到达顺序，根树与诊断一致     |
-| 2   | 歧义必错 | 同 slot 同位置且无显式顺序 → 编译失败          |
-| 3   | 收敛     | 任意更新序列后的文档 == 终态全量编译的文档     |
-| 4   | 幂等     | 同 revision 数据、同 id 局部树重复到达结果不变 |
-| 5   | 原子     | 批量更新全成或全败，只涨一个版本               |
-| 6   | 身份保持 | 未涉及兄弟不重挂；列表同 key 跨更新是同一实例  |
-| 7   | 集合等价 | 任意增量列表 == 用最终数据全量实例化           |
-| 8   | 可导出   | 任意时刻文档 + 索引可 dump 且可读              |
-| 9   | 权限必检 | 越权操作拒绝且文档不变                         |
+- 其无障碍、virtual、dialog；默认主会话要连 Python，不在浏览器测试里跑）。
 
-## 2. 测试层次
+## 2. 本地命令
 
-| 层     | 内容                                    | 例子                         |
-| ------ | --------------------------------------- | ---------------------------- |
-| 单元   | 纯函数：链接、索引、reconcile、规则匹配 | 顺序歧义、keyed reconcile    |
-| 契约   | 同一 fixture 两侧结论一致               | Python 序列化 vs TS 解析     |
-| 性质   | 随机更新序列 vs 全量重建                | 收敛 / 幂等                  |
-| 集成   | 来源 + 引擎 + 渲染                      | 换页协调、数据更新、卸载清理 |
-| 端到端 | 真进程 + WebSocket                      | 现有 smoke 路径              |
+```bash
+uv sync
+pnpm install
 
-## 3. fixture
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest --cov=app --cov=packages --cov-report=term-missing
+uv run mypy -p omora.cli -p omora.core -p omora.sdk
+uv run mypy -m omora.store -m omora.manager -m omora.media -m omora.ui \
+  -m omora.audio -m omora.video -m omora.ideas -m omora.projects \
+  -m omora.requirements -m omora.net
+uv run mypy app/boot/__init__.py app/main.py app/boot/tests app/core/tests app/sdk/tests \
+  packages/audio/tests packages/ideas/tests packages/manager/tests packages/media/tests \
+  packages/net/tests packages/store/tests packages/ui/tests packages/video/tests
 
-- 节点/文档形状：全量文档、局部树、数据更新、ops。
-- 诊断：每种 `E-*` 一个最小复现。
-- 集合：插入/更新/删除/移动/模板切换/坏条目。
-- 换页：home → detail → back 的保留/替换/取消。
-- 生成 HTML fixture 前先保证 JSON 可读可 diff。
+pnpm exec eslint app/ui-engine/src app/ui-engine/shell/main.cjs
+pnpm exec prettier --check .
+pnpm --dir app/ui-engine exec tsc --noEmit
+pnpm --dir app/ui-engine exec vitest run --coverage --configLoader runner
+pnpm --dir app/ui-engine exec playwright test
+```
 
-## 4. 编译诊断测试
+覆盖率地板：Python 95%（当前 96.9%）；TS 见 `vite.config.ts` 的 `test.coverage.thresholds`。
+Playwright 本地默认用系统 Edge；CI 用 Playwright Chromium 并跳过像素比对，DOM 与 axe 照跑。
 
-每个诊断码至少：**能触发、消息含现场、不产出半成品文档**。
+## 3. 钉住什么（按层）
 
-S2 已落：`app/ui-engine/tests/link/*.test.ts` 覆盖 `E-PAYLOAD` / `E-ID-DUPLICATE` / `E-SLOT-AMBIGUOUS` / `E-SLOT-CAPACITY` / `E-TARGET-MISSING` / `E-CYCLE`；`vite build` 的 `buildStart` 门禁拿共享 fixture 复现冲突（冲突时构建失败）。`static_ui.py --check` 仍只查骨架数据是否最新；S6.5 起启动骨架也在构建期编译，编译门禁在 TS 构建（`parseView` + `link`，`src/build/slot-skeleton.ts`）与 `skeleton_html.py` 的产物检查。
+### 3.1 V1 文档与 ops（`tests/engine/tree/`）
 
-S3-a 已落：`tests/engine/**/*.test.ts` 覆盖三张索引（id / parent+order / source）、共享 `ops.json` 的原子应用与版本（`E-VERSION`）、每个 op 诊断失败路径、入参不变与终态收敛；`collection.test.ts` 覆盖实例化、增量与全量等价、同 key 身份稳定、坏条目隔离。
+- `apply.test.ts`：版本 / 原子 / 路径复制 / `changed`、chain / id / order、
+  data op 文档层（成功 / 幂等 / 过期 / 坏载荷回滚）。
+- `ops.test.ts`：与 Python 共用的 `tree-ops.json` 五个 op 形状；`parseOps` 接受同一份 fixture。
+- `runtime.test.ts` / `replace.test.ts` / `runtime_ops.test.ts`：`TreeRuntime` 的
+  mount / replace / unmount / dispose、setProps / mount / unmount / replace 的最小 patch、
+  失败回滚与元素复用。
+- `view.test.ts` / `registry.test.ts`：TreeView 薄入口、渲染器注册表。
 
-S3-b 已落：`tests/engine/updates/data.test.ts` 覆盖共享 `data.json` 的标量 / 集合全量 / 集合增量、revision 幂等、多消费者、坏条目隔离、非法信封原子失败、入参不变；跨语言由 Python `test_data.py` 钉住序列化逐字段一致。
+### 3.2 适配与构建（`tests/app/tree/`、`tests/build/`）
 
-S4 续落（二）：`engine_local.test.ts` 覆盖 applyLocalTrees 重链/版本+1/水合/指标/权限拒绝/非法 payload/dispose；`kinds.test.ts` 覆盖 layout token → CSS 变量/data 属性与 update 清理；`preview.test.ts` 在预览改用 DocumentView 后原 6 条行为断言全过。
+- `tree_document.test.ts`：真实 ideas 空态（`static-tree.json` → compose）挂出
+  app / 4 条导航 / 页面文案。
+- `tree_renderer.test.ts` / `tree_host.test.ts` / `tree_collection.test.ts`：
+  Kind 适配、placement / a11y / i18n、子挂载点稳定性、collection 投影。
+- `live_event.test.ts`：`ui.tree` 首帧、`ui.tree_event` 回 ops 原地 patch、
+  整树回退 replace、焦点保留、`ui.changed` 推送。
+- `compose.test.ts` / `artifacts.test.ts` / `vite-tree*.test.ts`：构建期 compose、
+  `dist/tree/` 产物形状、dev 与 build 产物一致。
+- `main.test.ts`：默认入口只有 V1 树；`?engine=tree` / `virtual` / `dialog`。
 
-S4 续落：`host/sources.test.ts` 覆盖来源注册/更新/移除、死引用级联、歧义/容量 fail closed、dispose；`host/audit.test.ts` 覆盖审计顺序/容量/副本；`engine.test.ts` 补注入 clock 的 apply 耗时、deny 审计、noteRender；`link/link_permission.test.ts` 与 `link/base_grant.test.ts` 覆盖链接期挂载/replace 权限、扁平 grant 归一化；`app/view.test.ts` 补渲染计数。
+### 3.3 组件（`tests/components/`）
 
-S4 已落：`permissions.test.ts` / `ops_permissions.test.ts` 覆盖 grant token、默认分层、五类 op 拒绝与 data 消费者拒绝、批量原子；`engine.test.ts` 覆盖 createEngine 水合、applyOps/applyData/applyFull、指标、监听、dispose 与之后拒绝；`metrics.test.ts` 覆盖计数器/诊断快照；`app/view.test.ts` 覆盖引擎↔DOM 自动重画、同 id 不重挂、权限拒绝视图不动、dispose 清容器与账本。链接期权限、observe/intercept 未实现，故无对应测试。
+全部 `Kind` 的 DOM 行为：标签 / class / 属性、事件 handler id、销毁清理；
+虚拟列表窗口化、原生 dialog 模态与 Esc、音频 / 视频捕获（含设备与上传规则）。
+组件的通用 DOM 协调器 `renderer/renderer.ts` 保留给这批单测。
 
-S3-e 已落：`tests/renderer/renderer_move.test.ts` 覆盖同 id+type 跨父 move、整棵子树 move、move+重排+删除+新增的 cleanup、childrenHosts 多槽、换 type 重建、重复 id、无 id 路径规则、dispose 递归清理，以及共享 Slot 文档 `applyFull` 换页后卡片元素复用；`tests/app/preview.test.ts` 覆盖 `?engine=slot` 解析、示例文档渲染、切页、加卡片不重挂与入口接线；`tests/host/lifecycle.test.ts` 覆盖逆序/错误隔离/幂等/fail-safe。
+### 3.4 Python
 
-S3-d 已落：`tests/renderer/bridge.test.ts`、`tests/components/kinds.test.ts`、`tests/app/slot_render.test.ts` 覆盖桥的字段搬运/不展开模板、Slot 原生 kind（layout.flow / page-link 事件）、命名空间别名、整棵 fixture 根渲染；`tests/engine/document/page_switch.test.ts` 覆盖 keep/move/replace/cancel/add 与确定性；`hydrate.test.ts` 覆盖数据投影物化/缺失/坏条目；`tests/app/spike.test.ts` 覆盖 session→水合→DOM、数据更新与全量替换后同 id 元素复用、换页分类与渲染切页。跨父 move 的 DOM 复用未实现。
+- 内核 / SDK：插件生命周期、scope / page / when / bind 契约、协议帧。
+- 插件：每个系统插件的行为（ideas 的捕捉 / 搜索 / 详情、manager 设置页、媒体通道等）。
+- socket 端到端（`app/boot/tests/test_loop.py`）：真内核 + 真插件 + 真 WS 连接，
+  走 `ui.tree` 首帧、`ui.tree_event` 事件、媒体 HTTP 通道与 manager 开关。
+- 构建门禁：`scripts/tests/` 钉住 tree schema、静态输入、产物校验、预算、文档链接。
 
-S3-c 已落：`tests/engine/updates/data.test.ts` 补标量 `in`/`bind` 绑定（单/多 input、嵌套路径、解析不到保留、props 未变不换节点、多消费者、revision 幂等）；`session.test.ts` 覆盖共享 `document.json` 接管、`route.json` 应用、两页切页/缺页原子失败、route+树 op 混批、全量替换版本规则；跨语言由 Python `test_update.py` 的 RouteOp 与 `route.json` 钉住。渲染接入仍未实现。
+## 4. 已删除的 Slot 测试
 
-## 5. 集合与身份测试
+随 Slot 路径删除：Slot 文档 / 链接器 / 宿主 / 数据路由 / 绑定 / 换页，
+以及 `?engine=slot` 预览、Slot 启动骨架的测试与 Playwright 基线。
+插件与端到端测试没有删行为断言：它们改成用 `ui.tree` / `ui.tree_event` 驱动。
 
-- 同 key 更新后局部状态保留（用一个计数 state 验证）。
-- 顺序变化只 move，不重挂。
-- 一条坏条目不连累其余。
+## 5. 不变量（继续钉）
 
-## 6. 性能与预算
-
-- 组合/链接耗时、补丁字节与 op 数、一次更新的重渲染节点数进基线。
-- 与旧实现实测对照：事件重画不再产生 handler 换代全量补丁。
-- 预算超了先看是不是契约退化，不是直接调大预算。
-
-## 7. 门禁
-
-本地按 [docs/design/ci.md](../design/ci.md) 逐条跑；跨语言 fixture 必须进 CI。覆盖率是探针，不是目标；禁止用类型判断/非空判断凑覆盖率（见 omora-testing skill）。
-
-## 8. 反模式
-
-- 只测“函数没抛异常”；
-- 用 mock 掉引擎内部，测不到组合/更新语义；
-- 用快照全量对比掩盖身份丢失；
-- 没有失败路径的测试。
-  S5 起步补：`engine_sources.test.ts` 覆盖从 local-trees 建 SourceEngine、register/remove/整组替换、权限拒绝、dispose 与之后拒绝；`sources_load.test.ts` 覆盖 host 整组 load 与 requesterFor；`renderer_stats.test.ts` / `engine_render_stats.test.ts` 覆盖 created/updated/reused/removed 与指标累加。
+- 同一份输入 → 同一份文档（compose 确定性）。
+- ops 原子：任一失败整批不生效，旧文档与 DOM 不变。
+- 最小更新：未触碰的兄弟保持原引用，DOM 元素复用。
+- 幂等：同 revision 的 data op、重复到达的 ops 是 no-op。
+- 失败不静默：诊断带 code / path / message。
+- 事件 → DOM 的工作量不随总节点数增长（复杂度斜率，护栏待进 CI）。
