@@ -88,11 +88,16 @@ Project 看板字段：
 - 过期 issue：超过一个阶段没动，移回 Backlog 或关闭并写原因。
 - 文档事实来源变更仍需作者确认（见 AGENTS.md “停下来问”）。
 
-## 8. 首次落地清单
+## 8. 首次落地
 
-1. 建 labels（type/area/size/epic/needs-decision/blocked）。
-2. 建 milestones（M1–M6、0.2）。
-3. 从 TODO / [engine-capabilities](../planning/engine-capabilities.md) 建 M1–M6 的 epic issue 与首批 task issue。
-4. 建 Project 看板，挂自动加入与 Status 字段。
-5. 加 `.github/release.yml` 与 issue 模板。
-6. 旧 PR 不回填 issue；新 PR 必须关联。
+已做（2026-11-20）：
+
+- labels：`type:*`、`area:*`、`size:*`、`epic`、`needs-decision`、`blocked`。
+- milestones：M1 生产地基、M2 布局、M3 层与焦点、M4 组件广度、M5 i18n/主题/动效、M6 交互与工程、0.2 发布。
+- issues：#159–#173 为任务，#174–#180 为里程碑 epic（M1 = #180）。
+- 本 PR 带 `.github/ISSUE_TEMPLATE` 与 `.github/release.yml`。
+
+待做：
+
+- Project 看板需要 `gh auth refresh -s project,read:project`（或在网页建），建好后挂自动加入与 Status 字段。
+- 旧 PR 不回填 issue；新 PR 必须关联。
