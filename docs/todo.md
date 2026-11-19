@@ -13,7 +13,14 @@
 
 ## Next
 
-- [ ] **权限 / 审计接 V1** — owner: engine — next: 引擎留 `guard(op, context)` 注入点；策略 / 审计归宿主，不把能力名塞进引擎。
+- [ ] **布局 vocabulary** — owner: engine — next: flow/grid/stack/scroll/gap/align 描述词映射 CSS；不自研布局算法；仪表盘/瀑布流真实需求出现再评估 gridstack/muuri。
+- [ ] **层 / 焦点** — owner: engine — next: 平台 dialog/popover/inert + `@floating-ui/dom` 定位 + `focus-trap`；Zag dialog/menu/popover 状态机，DOM 仍由 kind 建。
+- [ ] **组件广度（Zag adapter）** — owner: engine — next: 先做 `zag_adapter`；按 net-delete 顺序换 combobox/tabs/accordion → select/tooltip/toast/tree-view；表格用 `@tanstack/table-core`；每个替换记录净行数，净增不合并。
+- [ ] **i18n 完整化** — owner: engine — next: message 参数、复数/select、locale 切换、catalog 抽取；`i18n` schema additive；至少一页可切 locale。
+- [ ] **主题 / 动效** — owner: engine — next: CSS token + 暗色（`open-props`）；列表进出用 `auto-animate`，层用 CSS 过渡；不自研设计系统/动画引擎。
+- [ ] **交互增强** — owner: engine — next: `sortablejs` 做灵感排序/置顶/跨容器；`tinykeys` + command registry 做快捷键与命令面板。
+- [ ] **工程护栏** — owner: engine — next: 树检查器/DevTools、schema 单一来源生成；斜率测试（已列 Now）跑进 CI。
+- [ ] **GitHub 工作流落地** — owner: lead — next: labels / milestones / issues / project 按 [GitHub 工作流](design/github.md) 建起来；PR 用 `Closes #` 关联，release notes 按 type label 生成。
 - [ ] **远程 / 运行后来源** — owner: engine — next: `ui.changed` 通道已在；来源注册 / 热更新 / 媒体登记还没接，先定来源账本形状。
 - [ ] **Idea 闭环** — owner: ideas — next: 补标签、灵感 ↔ 灵感 / 项目的关联、转写进搜索。
 - [ ] **Project 闭环** — owner: projects — next: 建项目、关联灵感 / 需求、状态推进、归档复盘。
