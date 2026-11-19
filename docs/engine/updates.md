@@ -1,6 +1,8 @@
 # 更新：三种输入粒度
 
-> 状态：**已定**；S3-a 已落全量（经链接器）与局部树 ops（原子应用、版本/base、changed）；S3-b 已落纯数据更新（data router：revision 幂等 + 集合全量/增量 + changed）；S3-c 已落标量绑定（in/bind → props）、会话层 route 执行与全量文档替换；S4 已落 EngineRuntime.applyLocalTrees（全部局部树重新链接 → 替换树 → 水合），全量更新在引擎内闭环；S3-d/S3-e 已接渲染（Slot 桥 / 换页协调 / 跨父 move），S6.4 起主会话默认走 Slot（Slot 路径不再是预览）；applyOps 已做路径复制（结构共享）+ Slot→Node 缓存，未变兄弟整棵跳过。主会话已接 props + 结构（mount / move / unmount）的 view → ops 增量，以及多 source 的 view.data → 一次 applyDataBatch（原子、单次 publish）；DocumentView 端到端测试钉住增量的 DOM stats（0 新建 / 路径更新 / 其余复用）；collection 模板变化走 replace，叶子 props 删键走 replace；有子节点的 props 删键仍走全量。未接：页面参数消费。
+> 状态：**历史**（Slot 时期，代码已随 2026-11-20 拆桥删除）。保留当时的契约 / 设计记录，
+> 不再代表代码现状；现行唯一格式是 V1 树（`dendro.tree/1`），见 [tree-runtime](tree-runtime.md) /
+> [tree-ops](tree-ops.md) / [runtime-semantics](runtime-semantics.md)。
 > 依赖：[addressing.md](addressing.md) · [composition.md](composition.md)
 > 相关：[collection.md](collection.md) · `runtime.md`（待写） · `testing.md`（待写）
 

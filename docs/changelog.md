@@ -2,6 +2,13 @@
 
 > 只记已经完成、可验证的变化。方向在 [路线图](roadmap.md)，未完成在 [TODO](todo.md)。
 
+## 2026-11-20
+
+- **拆桥：Slot 删除**：TS 侧删除 `dendro.ui/1` 文档运行时、链接期组合、EngineRuntime/DocumentView、启动骨架、Slot 组件 / 契约 / 测试；Python 侧删除 `_slot.py`、`ui.render` / `ui.event` / `ui.snapshot` 与 `omora.sdk.document` 文档运行时；默认入口只走 V1 树。
+- **V1 主路径收口**：`ui.tree` 首帧 / 重连、`ui.tree_event` 回差分 ops（表达不了回整树）、`ui.changed` 推异步变化；设备上报在拉树前完成；`?engine=tree` 预览、virtual / dialog 组件预览保留。
+- **ops 与数据**：`data` op 文档层（revision 幂等 / 过期诊断）、运行时 `setProps` / `mount` / `unmount` / `replace`；当前 `tree_event` 产线只发前三种，差分表达不了回整树。
+- **文档切到 V1 事实来源**：README / AGENTS / ARCHITECTURE、engine 索引、wire、testing、renderer、components、build、layering、项目现状、V1 树、roadmap、TODO 全部改口径；Slot 设计文档标记为历史，ADR / archive / 本日志保留原样。
+
 ## 2026-11-18
 
 - **架构定论**：ADR-0004 确立「静态结构 + 最小节点更新」为目标架构，V1 分阶段接管默认入口；ADR-0003 被取代。新增 [项目现状](planning/state-of-project.md)、[V1 树](planning/v1-tree.md)、[决策机制](planning/decision-process.md)；路线图改为现期 / 近期 / 长期 / 展望，TODO 按新阶段重排。

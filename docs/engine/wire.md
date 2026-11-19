@@ -1,189 +1,130 @@
-# 线上形状：文档、更新与数据
+# 线上形状：V1 树、ops 与异步变化
 
-> 状态：**已落**；S1.1 契约类型、S2 `local-trees`、S3-a `ops`、S3-b `data`、S3-c `route`、S6.1 主会话 `view` 的 Python/TS 线上形状已落且已接主会话（共享 fixture `local-trees.json` / `ops.json` / `data.json` / `route.json` / `view.json`）；事件 / `dispatch` 的增量帧形状仍是 §9 的未定项。
-> 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [updates.md](updates.md) · [collection.md](collection.md)
-> 相关：[docs/design/protocol.md](../design/protocol.md)（帧、传输、订阅）
->
-> **V1 口径**：帧集合是 `document / ops / dispatch / diagnostics`，`data` 是 op 不是独立帧；
-> 见 [runtime-semantics.md](runtime-semantics.md) §4。
+> 状态：**现状**（2026-11-20）。V1 树（`dendro.tree/1`）是唯一文档格式；
+> 线上只有三种 payload：`tree`（全量构建输入）、`ops`（差分更新）、
+> `ui.changed` 推送（ops 或整树）。帧 / 传输 / 订阅仍归
+> [协议设计](../design/protocol.md)；运行时语义见 [runtime-semantics](runtime-semantics.md) §4。
+> 相关：[tree-ops.md](tree-ops.md) · [tree-runtime.md](tree-runtime.md) · [build.md](build.md)
 
 ## 0. 范围
 
-本文只写 **Dendrolink 的 payload 形状**：文档、局部树登记、数据更新、操作。帧类型、连接、订阅、错误帧仍归 [协议设计](../design/protocol.md)；不新增帧类型。
+本文只写引擎 payload 的形状与调用方式，不定义新帧类型。连接层仍是
+`call / result / error / event` 四种帧（net 插件实现）；内核不解析。
 
-## 1. schema 与版本
+## 1. 全量：`ui.tree`
 
-- 文档信封带 `"schema": "dendro.ui/1"`。
-- 文档版本单调递增；每个更新带 `base` 与 `seq`。
-- 数据源有独立 `revision`，同 revision 幂等。
-- 版本对不上时客户端请求全量；“永远有全量兜底”保持不变。
-
-## 2. 全量文档
+首帧、重连、切页、版本对不上时，客户端拉一页的构建输入：
 
 ```jsonc
 {
-  "schema": "dendro.ui/1",
-  "document": { "id": "dendro.window", "kind": "dendro:window", "children": [] },
-  "pages": [{ "id": "page.ideas", "label": "灵感", "route": "/ideas", "owner": "ideas" }],
-  "active": "page.ideas",
-  "data": {
-    "ideas.feed": { "revision": 5, "items": [{ "id": "42", "template": "item" }] },
+  "kind": "tree",
+  "name": "ideas",
+  "title": "灵感",
+  "route": "/ideas",
+  "base": {
+    "schema": "dendro.tree/1",
+    "version": 1,
+    "root": {/* node */},
+    "pages": [],
+    "active": "",
+    "data": {},
   },
-  "version": 17,
-}
-```
-
-- `document` 是权威根树的序列化；组合与派生已完成，客户端只应用。
-- `data` 是当前数据文档的投影；集合条目不内联进树。
-
-## 3. 局部树登记 / 全量重组
-
-来源登记自己的局部树；全量更新重交整组：
-
-```jsonc
-{
-  "kind": "local-trees",
-  "seq": 3,
-  "trees": [
-    { "owner": "ideas", "root": {}, "mountAt": "dendro.window.page", "order": 10 },
-    { "owner": "projects", "root": {}, "mountAt": "dendro.window.nav", "order": 20 },
+  "partials": [
+    {
+      "schema": "dendro.tree/1",
+      "source": "ui",
+      "mount": { "parent": "…", "mode": "new" },
+      "root": {/* node */},
+    },
+    {
+      "schema": "dendro.tree/1",
+      "source": "ideas",
+      "mount": { "parent": "…", "mode": "new" },
+      "root": {/* node */},
+    },
   ],
 }
 ```
 
-引擎编译/链接后产出新文档；失败则保留上一棵合法文档并回诊断。
+- `base` 是这一页的骨架（`app` 根 + 导航 / 主区 + 页面容器 + 页面侧表），
+  `partials` 是导航条目与页面内容局部树；形状与构建期 `build_page` 完全同构。
+- 客户端用 `link/tree_compose.composeTree(base, partials)` 得到唯一文档后挂载；
+  冲突 / chain 错是 `E-* ` 诊断，不产出半棵树。
+- 同一份输入也由 `scripts/static_tree.py` 在构建期产出（`dist/tree/`），
+  `?engine=tree` 预览消费的是构建产物；默认主会话消费 Python 的 `ui.tree`。
 
-S2 已落的最小形状：`kind` 必填；`seq` 是非负整数；`trees[]` 每项 `owner` / `root` / `mountAt` / `order` / `seq` 必填，`root.owner` 必须等于 `owner`；`replace` 只在 true 时出现（解析后归一成布尔）。Python 序列化在 `omora.sdk.local_tree.serialize_local_trees`，TS 解析/链接在 `src/link/parse.ts`、`src/link/link.ts`，两侧以同一份 fixture 对齐。
+## 2. 差分：`ui.tree_event` → ops
 
-## 4. 数据更新
-
-标量：
-
-```jsonc
-{
-  "kind": "data",
-  "owner": "net",
-  "source": "session.status",
-  "revision": 8,
-  "value": { "connected": true },
-}
-```
-
-集合：
-
-```jsonc
-{
-  "kind": "data",
-  "owner": "ideas",
-  "source": "ideas.feed",
-  "revision": 6,
-  "changes": [{ "kind": "insert", "key": "43", "at": 0, "item": { "id": "43" } }],
-}
-```
-
-## 5. 更新操作（ops）
+用户事件的回包有两种：
 
 ```jsonc
 {
   "kind": "ops",
-  "document": 17,
-  "base": 16,
-  "seq": 42,
+  "document": 2,
+  "base": 1,
+  "seq": 1,
   "ops": [
-    { "op": "update", "id": "ideas.search", "props": { "value": "录音" } },
-    { "op": "mount", "slot": "ideas.feed", "at": 0, "node": {} },
-    { "op": "move", "id": "ideas.feed#42", "slot": "ideas.rail", "at": 3 },
-    { "op": "unmount", "id": "ideas.feed#7" },
-    { "op": "replace", "id": "ideas.main", "node": {} },
-    { "op": "route", "page": "page.detail", "params": { "id": "42" } },
+    { "op": "setProps", "id": "…", "props": { "text": "新入口" } },
+    { "op": "mount", "parent": "…", "node": {/* node */} },
+    { "op": "unmount", "id": "…" },
   ],
 }
 ```
 
-| op        | 目标    | 语义                                    |
-| --------- | ------- | --------------------------------------- |
-| `update`  | id      | 改 props / 数据 / 局部状态              |
-| `mount`   | slot id | 在指定位置插一棵子树                    |
-| `move`    | id      | 改变父/槽位/顺序                        |
-| `unmount` | id      | 删除子树并跑清理                        |
-| `replace` | id      | 整棵替换                                |
-| `route`   | page    | 路由意图；由引擎展开成 page slot 的协调 |
-| `data`    | source  | 数据更新（见 §4）                       |
+- **当前产线只发 `setProps` / `mount` / `unmount`**：`setProps` 浅合并 `settings`，
+  `mount` 按父 id 插子树，`unmount` 摘子树。ops 按声明序应用，`document = base + 1`。
+- **差分表达不了就回整树**：结构字段、`order`、同级相对顺序变化时，
+  `kind:"tree"` 走 `ui.tree` 同一形状，客户端整棵替换。客户端必须同时处理两种回包。
+- `replace` / `data` 两种 op 的形状与应用端已实现（见 [tree-ops.md](tree-ops.md)），
+  但 Python 的 `tree_event` 目前不产它们；不要按“已在线”写。
 
-S3-a 已落 `update` / `mount` / `move` / `unmount` / `replace` 的 Python 序列化（`omora.sdk.update.serialize_ops`）与 TS 解析/原子应用（`src/engine/document/ops.ts`），base/document 版本语义为 `base == 当前版本` 且 `document == base + 1`；`route` 与 `data` op 还没接。共享 fixture：`app/sdk/tests/fixtures/ops.json`。
+## 3. 异步变化：`ui.changed`
 
-S3-b 已落 §4 的三种 data 负载：Python `omora.sdk.data.serialize_data_updates`、TS `src/engine/updates/data.ts`（parse + revision 幂等 + 集合全量/增量），共享 fixture `app/sdk/tests/fixtures/data.json`。
+`set_page` / `refresh_page` 之后，如果改的是当前页，Python 通过 event 帧推
+`topic = "ui.changed"`：
 
-S3-c 已落 route op：Python `omora.sdk.update.RouteOp`、TS `src/engine/document/session.ts` 的 `applySessionOps`（先校验目标页，再应用树 ops，再改 active；`params` 只做形状校验），共享 fixture `app/sdk/tests/fixtures/route.json`。全量文档用 `document.json` 作为共享形状，`createSession` / `applyFull` 已经接上。
+- payload 与 §2 完全同形：能差分就是 `kind:"ops"`，表达不了就是 `kind:"tree"`；
+- 客户端与事件回包共用一条串行队列，ops 就地 patch、整树替换；
+- 首帧 / 重连仍走 `ui.tree`，推送不承担全量职责。
 
-## 6. 诊断与错误
+## 4. 事件回传
 
-- 编译/链接诊断码见 [composition.md](composition.md)；运行期诊断用同一套码。
-- 非法更新用 `error` 帧回；`code` 用诊断码或协议错误码，`message` 给人看。
-- 诊断不得让连接断开或根树失效。
-
-## 7. 与现有协议的关系
-
-- 仍只有 `call / result / error / event` 四种帧。
-- `ui.render` / `ui.event` / `ui.snapshot` 语义：全量走 render，变化走 snapshot，事件走 event；
-  payload 是主会话视图（§8）或文档 / ops / data。旧“页面快照 + 路径补丁”已随 legacy 删除。
-
-## 8. 主会话视图负载（S6）
-
-主会话的 `ui.render` / `ui.event` / `ui.snapshot` 交一份完整视图：局部树 + 页面侧表 +
-数据文档 + 版本；权威根树仍由 TS 链接器在本地链接，Python 不产出整棵根树。
+渲染层把节点的 `on` 映射成 handler id（不透明字符串）。点击后客户端调：
 
 ```jsonc
-{
-  "kind": "view",
-  "schema": "dendro.ui/1",
-  "version": 17,
-  "localTrees": { "kind": "local-trees", "seq": 3, "trees": [] },
-  "pages": [
-    { "id": "page.ideas", "label": "灵感", "route": "/ideas", "owner": "ideas", "icon": "ideas" },
-  ],
-  "active": "page.ideas",
-  "data": {},
-}
+{ "handler": "tree:<nodeId>:click", "payload": {} }
 ```
 
-- `version` 从 1 单调递增；引擎按全量替换应用，旧版本拒绝（`E-VERSION`）。
-- `pages` / `active` 与全量文档同规则：id 唯一、字段非空，`active` 必须在 `pages` 里
-  （没有页面时为空串）。
-- `localTrees` 就是 §3 的 payload：同一套 Slot 校验、全局 id 唯一、
-  `E-PAYLOAD` / `E-ID-DUPLICATE`。
-- `data` 是数据文档投影；第一版可以为空对象。
-- 这是主会话的**全量兜底**：第一版每个事件都交整份视图（重链 + 全量替换），渲染层按 id
-  复用 DOM；增量（ops / data）作为后续优化，不改帧类型。
-- 跨语言契约：`app/sdk/tests/fixtures/view.json`，Python `serialize_view` 与 TS
-  `parseView` 必须得到同一结论。
+目标方法是 `ui.tree_event`。未知 handler → 宿主回失败诊断（`LookupError`），不静默；
+上一代 handler 留一次宽限（组件卸载时排队的提交不能丢）。
 
-事件仍走 `ui.event` 的 `{handler, payload}`：Slot 的 `events` 把事件名映射到 handler id，
-渲染层原样回传；`dispatch` 效果与异步推送的增量形状留到实现时再定。
+## 5. 诊断与失败
 
-Python 出口只有 Slot 一种，`ui.render` / `ui.event` 不再需要迁移期标记；`?engine=slot` 只是
-前端内置 fixture 预览（不经过 Python），与线上形状无关。
+- Python 侧诊断：`{code, path, source?, message}`，形状错误、组合失败、未知 handler、
+  过期 data revision 都带现场。
+- TS 侧：文档形状 / compose 冲突在挂载前拒绝；ops 形状 `E-PAYLOAD`、版本 `E-VERSION`、
+  目标缺失 / chain / order 错误整批不生效；运行时 patch 失败整批回滚，保留旧树。
+- 诊断不使连接断开，也不让旧树失效；客户端保留最后一份合法文档。
 
-## 9. 未定
+## 6. 跨语言契约
 
-- 首次连接是否需要 schema 握手；
-- 大文档的分块传输；
-- 多客户端会话标识是否进帧；
-- Slot 事件 → 来源处理（`dispatch`）的帧形状；
-- 页面侧表（pages / active）与 local-trees payload 的关系；
-- Slot 节点状态（`state`）是否上线。
+- V1 文档形状：`schema/tree/tree.schema.json`（Python `sdk/tree.py`、TS `contract/tree.ts`
+  共用；正负例在 `schema/tree/example` / `invalid`）。
+- ops 形状：`app/sdk/tests/fixtures/tree-ops.json`；Python `sdk/tree_ops.py` 与
+  TS `engine/tree/ops.ts` 必须接受同一份 fixture。
+- 树构建输入：构建期 `build_page` 与运行期 `ui.tree` 同形，由
+  `tests/build/tree/compose.test.ts`、`tests/app/tree/tree_document.test.ts` 钉住。
 
-## 10. 运行后来源推送（S7）
+## 7. 与帧集合的关系
 
-运行后来源走已有 `ui.snapshot` event（不新增帧类型）：
+[runtime-semantics](runtime-semantics.md) §4 用 `document / ops / dispatch / diagnostics`
+描述“引擎语义上的四种东西”。当前线上没有单独的 `document` / `dispatch` 帧：
+全量是 `ui.tree` 的 result，ops 是 `ui.tree_event` 的 result 或 `ui.changed` 的 event，
+事件回传是一次普通 call，诊断随 result / event / error 回来。传输与订阅由 net 插件负责。
 
-```jsonc
-{ "kind": "source", "trees": [/* §3 的局部树 */], "removed": ["runtime.clock"] }
-```
+## 8. 未定
 
-- 按 `owner` 整组替换该来源的局部树；不在 `trees` 里的 owner 不动；`removed` 撤来源并级联撤树。
-- 失败回诊断、保留上一棵好树（SourceHost 语义）；客户端用 `SourceEngine.registerSource` /
-  `removeSource`。
-- 客户端整体替换主视图时用 `keepOwners` 保留这些来源，不让 Python 的主视图把它们冲掉。
-- 示例：`app/ui-engine/src/app/runtime_sources/clock.ts`（自动发现 + 每秒热更新）——加一个文件
-  即加界面，不改引擎源码。
+- Python 侧 `data` op 产线（document.data 与集合实例）什么时候接；
+- 页面参数 / route op（当前换页 = 拉另一页的 `ui.tree`）；
+- 重连增量日志 / 追赶（当前直接拉全量）；
+- 多客户端会话标识是否进帧。

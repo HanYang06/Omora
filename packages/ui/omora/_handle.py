@@ -15,18 +15,18 @@ if TYPE_CHECKING:
 
 
 class PageHandle:
-    """页面对象：插件自己交树（推送式），不再把 build 回调交给 ui。"""
+    """页面对象：插件自己交树（推送式），下一次 tree() / tree_event 用它重建。"""
 
     def __init__(self, ui: Ui, name: str) -> None:
         self._ui = ui
         self.name = name
 
     def set(self, page: Page) -> None:
-        """交这一页当前的树；客户端正在看它就直接推过去。"""
+        """交这一页当前的树；下一次 tree() / tree_event 按它重建。"""
         self._ui.set_page(self.name, page)
 
     def refresh(self) -> None:
-        """把这一页当前那棵树再交一次（数据变了、树也重建过时用）。"""
+        """校验这一页还在；真正的重建发生在下一次 tree()。"""
         self._ui.refresh_page(self.name)
 
     def rebuild(self, builder: Callable[[], Page]) -> None:

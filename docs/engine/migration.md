@@ -1,6 +1,8 @@
 # 迁移：旧实现（legacy）→ Dendrolink
 
-> 状态：**已完成**；S0–S6 全部落，legacy 快照路径已删除。后续多来源 / 运行后来源见 §6 的 S7。
+> 状态：**历史记录**。Slot 迁移已完成；Slot 本身也已在 2026-11-20 拆桥中删除，
+> V1 树是唯一格式与默认入口（见 [tree-runtime](tree-runtime.md) / [tree-ops](tree-ops.md) /
+> [runtime-semantics](runtime-semantics.md)）。本文件保留 S0–S7 的迁移过程记录。
 > 依赖：[README](README.md) · [runtime.md](runtime.md) · [wire.md](wire.md)
 > 相关：[docs/planning/change-program.md](../planning/change-program.md)（仓库结构迁移，已合并）
 

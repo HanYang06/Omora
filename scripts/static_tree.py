@@ -3,8 +3,7 @@
     uv run python scripts/static_tree.py            # 重写产物
     uv run python scripts/static_tree.py --check    # 只校验是否最新（CI）
 
-和 `static_ui.py` 的分工：那边产 Slot 首帧骨架（当前默认入口），这边产 V1 构建输入；
-Vite 构建期把输入 compose 成每页一份 `dendro.tree/1` 文档，放进 `dist/tree/`。
+Vite 构建期把这份输入 compose 成每页一份 `dendro.tree/1` 文档，放进 `dist/tree/`。
 """
 
 from __future__ import annotations
@@ -52,24 +51,17 @@ def system_kernel() -> Iterator[Kernel]:
 def collect(kernel: Kernel) -> dict[str, Any]:
     """每一页：内容树 → base + 导航 / 内容局部树；返回整份构建输入。"""
     ui = kernel.resolve("ui")
-    listing: list[dict[str, Any]] = ui.render()["pages"]
+    listing = ui.pages()
     if not listing:
         raise LookupError("没有登记任何页面")
-    entries = [
-        NavEntry(
-            name=str(item["id"]).removeprefix("page."),
-            title=str(item["label"]),
-            icon=None if item.get("icon") is None else str(item["icon"]),
-        )
-        for item in listing
-    ]
+    entries = [NavEntry(name=item.name, title=item.label, icon=item.icon) for item in listing]
     pages = [
         build_page(
             name=entry.name,
             title=entry.title,
             route=f"/{entry.name}",
             page=ui.page_tree(entry.name),
-            owner=str(item["owner"]),
+            owner=item.owner,
             nav=entries,
         )
         for item, entry in zip(listing, entries, strict=True)

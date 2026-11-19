@@ -43,10 +43,84 @@ def _kernel(tmp_path: Path, *, captures: bool = True) -> Kernel:
     return kernel
 
 
+def _find_tree_node(node: dict[str, Any], node_id: str) -> dict[str, Any] | None:
+    if node["id"] == node_id:
+        return node
+    for child in node["layout"]:
+        found = _find_tree_node(child, node_id)
+        if found is not None:
+            return found
+    for template in node.get("collection", {}).get("templates", {}).values():
+        found = _find_tree_node(template, node_id)
+        if found is not None:
+            return found
+    return None
+
+
+def _as_slot(node: dict[str, Any]) -> dict[str, Any]:
+    """V1 节点 → 测试视图节点（kind / props / events / children）。"""
+    return {
+        "kind": "dendro:" + str(node["kind"]),
+        "props": dict(node["settings"]),
+        "events": dict(node["on"]),
+        "children": [_as_slot(child) for child in node["layout"]],
+    }
+
+
+def _adapt_tree(ui: Any, frame: dict[str, Any] | None = None) -> dict[str, Any]:
+    """把 ui 当前这棵树摊成旧 view 形状，测试体只认页面内容。"""
+    document = ui.current_document
+    if document is None:
+        raise AssertionError("tree 还没构建")
+    page = _find_tree_node(document["root"], document["active"])
+    if page is None:
+        raise AssertionError("tree 里没有 active 页")
+    pages = [
+        {
+            "id": "page." + info.name,
+            "label": info.label,
+            "route": "/" + info.name,
+            "owner": info.owner,
+            "icon": info.icon,
+        }
+        for info in ui.pages()
+    ]
+    active = ui.active_page
+    return {
+        "kind": "view",
+        "version": (1 if frame is None or "document" not in frame else int(frame["document"])),
+        "frame": frame,
+        "active": None if active is None else "page." + active,
+        "pages": pages,
+        "localTrees": {
+            "trees": [
+                {
+                    "mountAt": PAGE_MOUNT_AT,
+                    "root": {
+                        "kind": "dendro:page",
+                        "props": {},
+                        "events": {},
+                        "children": [_as_slot(page["layout"][0])],
+                    },
+                }
+            ]
+        },
+    }
+
+
+def _tree_view(ui: Any, page: str | None = None) -> dict[str, Any]:
+    """整页兜底：重建当前页（或指定页）。"""
+    if page is None:
+        ui.tree()
+    else:
+        ui.tree(page)
+    return _adapt_tree(ui)
+
+
 def _fire(ui: Any, handler: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    """发一次事件：result 直接就是派发之后的新 view。"""
-    view: dict[str, Any] = ui.event(str(handler), payload or {})
-    return view
+    """发一次事件：回包是 ops 帧，随后把这次重建的树摊成测试视图。"""
+    frame = ui.tree_event(str(handler), payload or {})
+    return _adapt_tree(ui, frame)
 
 
 def _walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
@@ -131,21 +205,23 @@ def _heading(view: dict[str, Any]) -> str:
 
 
 def _click_tile(ui: Any, title: str) -> Any:
-    return _fire(ui, _tiles(ui.render())[title]["events"]["click"])
+    return _fire(ui, _tiles(_tree_view(ui))[title]["events"]["click"])
 
 
 def _click_chip(ui: Any, text: str) -> Any:
-    return _fire(ui, _chips(ui.render())[text]["events"]["click"])
+    return _fire(ui, _chips(_tree_view(ui))[text]["events"]["click"])
 
 
 def _click_button(ui: Any, text: str) -> Any:
-    hits = [node for node in _nodes(_main(ui.render()), "button") if node["props"]["text"] == text]
+    hits = [
+        node for node in _nodes(_main(_tree_view(ui)), "button") if node["props"]["text"] == text
+    ]
     assert hits, f"主区里没有按钮: {text}"
     return _fire(ui, hits[0]["events"]["click"])
 
 
 def _open_rail(ui: Any, title: str) -> Any:
-    hits = [row for row in _nodes(_rail(ui.render()), "item") if row["props"]["title"] == title]
+    hits = [row for row in _nodes(_rail(_tree_view(ui)), "item") if row["props"]["title"] == title]
     assert hits, f"索引栏里没有: {title}"
     return _fire(ui, hits[0]["events"]["click"])
 
@@ -158,22 +234,22 @@ def _pin(ui: Any, title: str) -> Any:
 
 def _capture_text(ui: Any, value: str) -> Any:
     _click_tile(ui, "文字")
-    field = _nodes(_main(ui.render()), "input")[0]
+    field = _nodes(_main(_tree_view(ui)), "input")[0]
     return _fire(ui, field["events"]["submit"], {"value": value})
 
 
 def _type(ui: Any, value: str) -> Any:
-    return _fire(ui, _search_node(ui.render())["events"]["query"], {"value": value})
+    return _fire(ui, _search_node(_tree_view(ui))["events"]["query"], {"value": value})
 
 
 def _submit(ui: Any, value: str) -> Any:
-    return _fire(ui, _search_node(ui.render())["events"]["submit"], {"value": value})
+    return _fire(ui, _search_node(_tree_view(ui))["events"]["submit"], {"value": value})
 
 
 def test_the_page_is_a_split_of_a_rail_and_a_main_area_with_the_ideas_icon(
     tmp_path: Path,
 ) -> None:
-    view = _kernel(tmp_path).resolve("ui").render()
+    view = _tree_view(_kernel(tmp_path).resolve("ui"))
 
     side, main = _split(view)
 
@@ -191,7 +267,7 @@ def test_the_page_is_a_split_of_a_rail_and_a_main_area_with_the_ideas_icon(
 def test_the_home_is_three_regions_with_the_toolbar_and_feed_in_a_panel(
     tmp_path: Path,
 ) -> None:
-    view = _kernel(tmp_path).resolve("ui").render()
+    view = _tree_view(_kernel(tmp_path).resolve("ui"))
     main = _main(view)
     _, tiles_row, panel, hotkey = main["children"]
 
@@ -214,7 +290,7 @@ def test_the_rail_lists_every_idea_newest_first_and_the_feed_sits_in_the_panel(
     for title in ("牛奶 A", "牛奶 B", "写周报"):
         _capture_text(ui, title)
 
-    view = ui.render()
+    view = _tree_view(ui)
     panel = _main(view)["children"][2]
 
     assert _rail_titles(view) == ["写周报", "牛奶 B", "牛奶 A"]
@@ -226,7 +302,7 @@ def test_the_rail_only_navigates_and_carries_no_actions(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
     _capture_text(ui, "买牛奶")
 
-    rail = _rail(ui.render())
+    rail = _rail(_tree_view(ui))
 
     assert _nodes(rail, "button") == []
     assert _nodes(rail, "item")[0]["events"]["click"]
@@ -248,7 +324,7 @@ def test_the_feed_is_newest_first_and_pinning_moves_a_card_to_the_top(tmp_path: 
     for title in ("牛奶 A", "牛奶 B", "写周报"):
         _capture_text(ui, title)
 
-    assert _cards(ui.render()) == ["写周报", "牛奶 B", "牛奶 A"]
+    assert _cards(_tree_view(ui)) == ["写周报", "牛奶 B", "牛奶 A"]
 
     home = _pin(ui, "牛奶 A")
 
@@ -392,7 +468,7 @@ def test_a_result_carries_the_snippet_the_time_and_the_media_kind(tmp_path: Path
     _click_button(ui, "← 返回")
     uploaded = kernel.resolve("media").save(b"video", "video/webm")
     _click_tile(ui, "视频")
-    recorder = _nodes(_main(ui.render()), "video_capture")[0]
+    recorder = _nodes(_main(_tree_view(ui)), "video_capture")[0]
     _fire(
         ui,
         recorder["events"]["submit"],
