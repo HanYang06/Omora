@@ -3,11 +3,11 @@ import { defineConfig } from "@playwright/test";
 /**
  * 视觉与无障碍回归：跑在 Vite dev server 上，不连 Python。
  *
- * 两个入口都是内置 fixture / 构建产物：
- * - `?engine=slot`：Slot 预览（preview_document）；
- * - `?engine=tree`：V1 树产物（dev 由 vite-tree-dev 现算）。
+ * 预览入口都是内置 fixture / 构建产物：
+ * - `?engine=tree`：V1 树产物（dev 由 vite-tree-dev 现算）；
+ * - `?engine=virtual` / `?engine=dialog`：虚拟列表与原生 dialog 预览。
  *
- * 默认入口（live）要连 Python，不在这里跑。
+ * 默认入口（tree-live）要连 Python，不在这里跑。
  * 本地默认用系统 Edge，省掉 207MB 的 Chromium 下载；CI 用 `playwright install chromium`，
  * 并设 `PLAYWRIGHT_CHANNEL=chromium` 或留空。
  */

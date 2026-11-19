@@ -4,7 +4,6 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const axePath = require.resolve("axe-core");
 
-const WINDOW = '[data-type="dendro:window"]';
 const APP = '[data-type="app"]';
 
 interface AxeViolation {
@@ -13,12 +12,6 @@ interface AxeViolation {
   help: string;
 }
 
-test("Slot 预览：首帧可渲染", async ({ page }) => {
-  await page.goto("/?engine=slot");
-  await expect(page.locator(WINDOW)).toBeVisible();
-  await expect(page).toHaveScreenshot("slot-preview.png");
-});
-
 test("V1 树预览：四页导航 + 页面可挂载", async ({ page }) => {
   await page.goto("/?engine=tree");
   await expect(page.locator(APP)).toBeVisible();
@@ -26,9 +19,9 @@ test("V1 树预览：四页导航 + 页面可挂载", async ({ page }) => {
   await expect(page).toHaveScreenshot("tree-preview.png");
 });
 
-test("无障碍：首屏没有 critical 违规", async ({ page }) => {
-  await page.goto("/?engine=slot");
-  await expect(page.locator(WINDOW)).toBeVisible();
+test("无障碍：V1 树预览首屏没有 critical 违规", async ({ page }) => {
+  await page.goto("/?engine=tree");
+  await expect(page.locator(APP)).toBeVisible();
   await page.addScriptTag({ path: axePath });
   const violations = await page.evaluate(async (): Promise<AxeViolation[]> => {
     const axe = (

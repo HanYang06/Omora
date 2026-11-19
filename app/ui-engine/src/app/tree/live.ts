@@ -72,15 +72,12 @@ export class TreeLiveApp {
   private host: HTMLElement | null = null;
   private container: HTMLElement | null = null;
   private loading = false;
-  private unavailable = false;
   private queue: Promise<void> = Promise.resolve();
   private readonly log: Logger;
 
   constructor(
     private readonly connection: TreeConnection,
     logger: Logger,
-    /** `ui.tree` 不存在时的退路（旧 Slot 主会话）。 */
-    private readonly onUnavailable?: () => void,
   ) {
     this.log = logger.child("tree");
   }
@@ -93,7 +90,7 @@ export class TreeLiveApp {
     container.append(host);
     this.host = host;
     this.connection.subscribeStatus((status) => {
-      if (status === "open" && !this.unavailable) {
+      if (status === "open") {
         void this.load();
       }
     });
@@ -121,14 +118,9 @@ export class TreeLiveApp {
       }
       this.show(payload);
     } catch (error) {
-      if (
-        error instanceof CallError &&
-        error.code === "unknown_method" &&
-        this.onUnavailable !== undefined
-      ) {
-        this.unavailable = true;
-        this.log.info("tree.unavailable", { method: "ui.tree" });
-        this.onUnavailable();
+      if (error instanceof CallError && error.code === "unknown_method") {
+        this.log.error("tree.unavailable", { method: "ui.tree" });
+        host.textContent = "V1 树不可用：Python 端没有 ui.tree";
         return;
       }
       const text = error instanceof Error ? error.message : String(error);
@@ -190,7 +182,10 @@ export class TreeLiveApp {
     target?.focus();
   }
 
-  private restoreScroll(host: HTMLElement, scrolls: ReadonlyArray<{ id: string; top: number }>): void {
+  private restoreScroll(
+    host: HTMLElement,
+    scrolls: ReadonlyArray<{ id: string; top: number }>,
+  ): void {
     for (const { id, top } of scrolls) {
       const target = [...host.querySelectorAll<HTMLElement>("[data-node-id]")].find(
         (element) => element.dataset.nodeId === id,

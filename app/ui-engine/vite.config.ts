@@ -1,16 +1,14 @@
 import { defineConfig } from "vitest/config";
-import { staticSkeletonPlugin } from "./src/build/vite-plugin";
-import { linkerGatePlugin } from "./src/build/vite-linker";
 import { treeArtifactsPlugin } from "./src/build/vite-tree";
 import { treeDevPlugin } from "./src/build/vite-tree-dev";
 
 /**
- * 配置里 import 了引擎源码（启动骨架编译在 `src/build/`，链接期门禁在 `src/build/`）。
- * bundle loader 会把引擎整张模块图打进配置并对无扩展名 import 报 native-loader 警告；
- * 统一走 runner loader 让 Vite 在加载时现转，pnpm scripts / CI / `omora dev` 都带这个参数。
+ * 配置里 import 了引擎源码（V1 构建产物在 `src/build/`）。bundle loader 会把引擎整张
+ * 模块图打进配置并对无扩展名 import 报 native-loader 警告；统一走 runner loader 让 Vite
+ * 在加载时现转，pnpm scripts / CI / `omora dev` 都带这个参数。
  */
 export default defineConfig({
-  plugins: [staticSkeletonPlugin(), linkerGatePlugin(), treeArtifactsPlugin(), treeDevPlugin()],
+  plugins: [treeArtifactsPlugin(), treeDevPlugin()],
   test: {
     environment: "node",
     include: ["tests/**/*.test.{ts,tsx}"],

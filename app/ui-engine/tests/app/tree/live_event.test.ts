@@ -128,7 +128,9 @@ describe("TreeLiveApp 事件回源", () => {
 
     const call = connection.calls.find((item) => item.method === "tree_event");
     expect(call?.args).toEqual({ handler: "h1", payload: {} });
-    expect(container.querySelector<HTMLElement>('[data-type="button"]')?.textContent).toBe("已归档");
+    expect(container.querySelector<HTMLElement>('[data-type="button"]')?.textContent).toBe(
+      "已归档",
+    );
 
     app.dispose();
     container.remove();
@@ -181,22 +183,17 @@ describe("TreeLiveApp 事件回源", () => {
     container.remove();
   });
 
-  it("ui.tree 不存在时回退 Slot", async () => {
-    const connection = new FakeConnection(
-      [],
-      new CallError("unknown_method", "ui 没有方法 tree"),
-    );
-    let fellBack = false;
-    const app = new TreeLiveApp(connection, createLogger({ enabled: false }), () => {
-      fellBack = true;
-    });
+  it("ui.tree 不存在时不回退：页面显示不可用", async () => {
+    const connection = new FakeConnection([], new CallError("unknown_method", "ui 没有方法 tree"));
+    const app = new TreeLiveApp(connection, createLogger({ enabled: false }));
     const container = document.createElement("div");
     document.body.append(container);
 
     app.mount(container);
     await tick();
 
-    expect(fellBack).toBe(true);
+    expect(container.textContent).toBe("V1 树不可用：Python 端没有 ui.tree");
+    expect(connection.calls.filter((call) => call.method === "tree_event")).toEqual([]);
 
     app.dispose();
     container.remove();
