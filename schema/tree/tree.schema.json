@@ -117,7 +117,20 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "a11y": {
+          "$ref": "#/$defs/a11y"
         }
+      }
+    },
+    "a11y": {
+      "type": "object",
+      "description": "作者声明的无障碍语义：渲染器落到元素上，覆盖组件默认值。只接语义，不接 CSS。",
+      "additionalProperties": false,
+      "properties": {
+        "role": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 }
       }
     },
     "collection": {

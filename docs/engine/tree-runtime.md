@@ -42,6 +42,7 @@ components/*（现有 38 个 kind，不改）
 | `slot`     | 内联样式    | `size.width/height` → width / height（数字 px，`fill` → 100%），`align` → align-self |
 | `collection.virtual` | `props.items` | 不实例化条目；把 `data[source].items` 投影给 kind（窗口化用） |
 | `i18n` | props（解析后） | prop → message key；从 `document.messages` 解析，缺 key 保留原值 |
+| `a11y` | （不搬） | `role` / `label` / `description` → `role` / `aria-label` / `aria-description`，覆盖组件默认值 |
 
 **没有 Slot 的 `layout`（flow / gap / scroll / capacity）**：V1 里布局由 kind 表达
 （`column` / `row` / `list`…），placement 只管尺寸与对齐。这是两套格式的语义差，不是遗漏。
