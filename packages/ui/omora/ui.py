@@ -57,6 +57,8 @@ class Ui:
         self._ctx = ctx
         # 事件回调运行期间由 ui 负责交新 view，set_page 不要再另推一份。
         self._in_event = False
+        self._tree_handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
+        self._tree_generation = 0
         self._slots = SlotView(
             names=lambda: list(self._pages),
             info=self._page_info,
@@ -134,6 +136,18 @@ class Ui:
             )
             for item in pages
         ]
+        self._tree_generation += 1
+        generation = self._tree_generation
+        handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
+        counter = 0
+
+        def register(callback: Callable[[dict[str, Any]], None]) -> str:
+            nonlocal counter
+            counter += 1
+            handler = f"tree:{generation}:{counter}"
+            handlers[handler] = callback
+            return handler
+
         built = build_page(
             name=name,
             title=str(current["label"]),
@@ -141,8 +155,22 @@ class Ui:
             page=self.page_tree(name),
             owner=str(current["owner"]),
             nav=nav,
+            register=register,
         )
+        self._tree_handlers = handlers
         return {"kind": "tree", **built}
+
+    def tree_event(self, handler: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        """tree 的 handler 派发：执行后交一份新 tree（handler id 换代）。"""
+        callback = self._tree_handlers.get(handler)
+        if callback is None:
+            raise LookupError(f"未知 handler: {handler}")
+        self._in_event = True
+        try:
+            callback({} if payload is None else payload)
+        finally:
+            self._in_event = False
+        return self.tree()
 
     def event(self, handler: str, payload: dict[str, Any]) -> dict[str, Any]:
         """把载荷交给 handler；result 是派发之后当前页的新 view。"""

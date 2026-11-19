@@ -140,6 +140,58 @@ def test_tree_rejects_unknown_page() -> None:
         ui.tree("nope")
 
 
+def _tree_handler(node: dict[str, Any], event: str = "click") -> str | None:
+    handler = cast(dict[str, str], node.get("on", {})).get(event)
+    if handler is not None:
+        return handler
+    for child in cast(list[dict[str, Any]], node.get("layout", [])):
+        found = _tree_handler(child, event)
+        if found is not None:
+            return found
+    return None
+
+
+def test_tree_registers_handlers_and_dispatches() -> None:
+    seen: list[dict[str, Any]] = []
+    state = {"n": 0}
+
+    def bump(payload: dict[str, Any]) -> None:
+        state["n"] += 1
+        seen.append(payload)
+
+    def build() -> Page:
+        return Page(content=Column(Button(str(state["n"]), on_click=bump)))
+
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(build))
+    ui: Ui = kernel.resolve("ui")
+
+    tree = ui.tree()
+    content = cast(dict[str, Any], tree["partials"][-1]["root"])
+    handler = _tree_handler(content)
+    assert handler is not None
+
+    next_tree = ui.tree_event(handler, {"value": 1})
+
+    assert state["n"] == 1
+    assert seen == [{"value": 1}]
+    next_content = cast(dict[str, Any], next_tree["partials"][-1]["root"])
+    assert next_content["layout"][0]["settings"]["text"] == "1"
+    assert _tree_handler(next_content) != handler
+
+
+def test_tree_event_rejects_unknown_handler() -> None:
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(_simple, label="首页"))
+    ui: Ui = kernel.resolve("ui")
+    ui.tree()
+
+    with pytest.raises(LookupError):
+        ui.tree_event("tree:404", {})
+
+
 def test_a_handler_receives_the_payload() -> None:
     seen: list[dict[str, Any]] = []
 

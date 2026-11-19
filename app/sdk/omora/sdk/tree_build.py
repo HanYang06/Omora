@@ -7,8 +7,8 @@ V1 节点，本模块随之删除。它只搬形状，不解释业务：
   页面容器；
 - id 由逻辑 key 经 blake2b 派生（16 位小写十六进制），同一页重建得到同一批 id；
 - chain = 父 chain + '.' + id；order 按兄弟下标 ×10（同级唯一且升序）；
-- settings 是 Node 字段里「不是 children、不是 callable、不是 None」的那些；事件暂时不
-  进树（`on` 为空），等运行时接上再绑；`bind` / `emit` 也是空对象；
+- settings 是 Node 字段里「不是 children、不是 callable、不是 None」的那些；传了
+  `register` 时，`on_*` callable 换成 handler id 写进 `on`；构建期不传，`on` 为空；
 - 每页产出：一份 base document（骨架 + 这一页的容器 + 页面侧表）、导航局部树（每个页面
   一条）、页面内容局部树。
 
@@ -19,7 +19,7 @@ base 里已经含这一页的容器与 `pages` / `active`，所以 `composeTree(
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, fields
 from typing import Any
 
@@ -83,6 +83,7 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
     title: str | None = None,
     settings: dict[str, Any] | None = None,
     slot: dict[str, Any] | None = None,
+    on: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """一个 `dendro.tree/1` 节点；字段与 schema 的 node 一一对应。"""
     record: dict[str, Any] = {
@@ -93,7 +94,7 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
         "layout": layout,
         "settings": {} if settings is None else settings,
         "bind": {},
-        "on": {},
+        "on": {} if on is None else on,
         "emit": {},
     }
     if title is not None:
@@ -103,12 +104,23 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
     return record
 
 
-def _ui_node(node: Node, *, parent_chain: str, key: str, order: int) -> dict[str, Any]:
-    """legacy Node → V1 节点：children 进 layout，callable 丢掉（运行时再绑），其余进 settings。"""
+Register = Callable[[Callable[[dict[str, Any]], None]], str]
+
+
+def _ui_node(
+    node: Node,
+    *,
+    parent_chain: str,
+    key: str,
+    order: int,
+    register: Register | None = None,
+) -> dict[str, Any]:
+    """legacy Node → V1 节点：children 进 layout，on_* 换成 handler id，其余进 settings。"""
     node_id = tree_id(key)
     chain = _chain(parent_chain, node_id)
     settings: dict[str, Any] = {}
     layout: list[dict[str, Any]] = []
+    on: dict[str, str] = {}
     for field in fields(node):
         value: Any = getattr(node, field.name)
         if field.name == "children":
@@ -118,10 +130,13 @@ def _ui_node(node: Node, *, parent_chain: str, key: str, order: int) -> dict[str
                     parent_chain=chain,
                     key=f"{key}/{index}",
                     order=(index + 1) * ORDER_STEP,
+                    register=register,
                 )
                 for index, child in enumerate(value)
             ]
         elif callable(value):
+            if register is not None and field.name.startswith("on_"):
+                on[field.name[3:]] = register(value)
             continue
         elif value is not None:
             settings[field.name] = value
@@ -132,6 +147,7 @@ def _ui_node(node: Node, *, parent_chain: str, key: str, order: int) -> dict[str
         order=order,
         layout=layout,
         settings=settings,
+        on=on,
     )
 
 
@@ -242,7 +258,13 @@ def nav_partials(entries: Sequence[NavEntry], *, active: str) -> list[dict[str, 
     return partials
 
 
-def content_partial(page: Page, *, name: str, owner: str) -> dict[str, Any]:
+def content_partial(
+    page: Page,
+    *,
+    name: str,
+    owner: str,
+    register: Register | None = None,
+) -> dict[str, Any]:
     """页面内容局部树：挂在 base 的页面容器里。"""
     if not isinstance(page, Page):
         raise TypeError("page 必须是 omora.sdk.ui.Page")
@@ -253,6 +275,7 @@ def content_partial(page: Page, *, name: str, owner: str) -> dict[str, Any]:
         parent_chain=_page_chain(name),
         key=f"{PAGE_KEY_PREFIX}/{name}/content",
         order=ORDER_STEP,
+        register=register,
     )
     return {
         "schema": SCHEMA,
@@ -270,6 +293,7 @@ def build_page(  # noqa: PLR0913 —— 一页的构建输入
     page: Page,
     owner: str,
     nav: Sequence[NavEntry],
+    register: Register | None = None,
 ) -> dict[str, Any]:
     """一页的构建输入：base + 局部树（导航 + 内容）。"""
     return {
@@ -279,7 +303,7 @@ def build_page(  # noqa: PLR0913 —— 一页的构建输入
         "base": base_document(name=name, title=title, route=route),
         "partials": [
             *nav_partials(nav, active=name),
-            content_partial(page, name=name, owner=owner),
+            content_partial(page, name=name, owner=owner, register=register),
         ],
     }
 
