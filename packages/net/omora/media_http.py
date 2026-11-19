@@ -83,11 +83,13 @@ class MediaHttp:
         try:
             response = await handler(request)
         except _HttpError as exc:
-            response = _error(exc.status, "bad request")
+            # _HttpError 的 message 是这里自己给客户端看的，原样回。
+            response = _error(exc.status, exc.message)
         except web.HTTPException:
             raise
         except Exception:
             # 旧实现把意外异常也回成 JSON 500；不让 aiohttp 换成纯文本。
+            # 但不能回 str(exc)：异常细节可能带路径等内部信息（CodeQL）。
             response = _error(500, "internal server error")
         # v0 边界（protocol.md §7）：没有 keep-alive，一问一答就关连接。
         response.force_close()
@@ -159,6 +161,8 @@ class _HttpError(Exception):
     def __init__(self, status: int, message: str) -> None:
         super().__init__(message)
         self.status = status
+        # 给客户端看的消息单独存；避免把异常对象本身当成可回传内容。
+        self.message = message
 
 
 def _json(value: dict[str, Any]) -> bytes:

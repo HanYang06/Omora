@@ -235,11 +235,13 @@ def test_an_unexpected_media_failure_is_500_json(tmp_path: Path) -> None:
 
     status, headers, payload = asyncio.run(scenario())
 
+    # 意外异常只回通用消息，不把异常细节漏给客户端。
     assert (status, headers["content-type"], json.loads(payload)) == (
         500,
         "application/json",
-        {"error": "读不了: x"},
+        {"error": "internal server error"},
     )
+    assert "读不了" not in payload.decode("utf-8")
 
 
 def test_the_dev_origin_gets_cors_and_others_do_not(tmp_path: Path) -> None:
