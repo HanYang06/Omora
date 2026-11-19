@@ -20,6 +20,7 @@
 | `ts-lint`      | `eslint`、`prettier --check`                                              | lint / 格式不合规        |
 | `ts-types`     | `tsc --noEmit`                                                            | 类型错误                 |
 | `ts-tests`     | `vitest run --coverage`，上传 Cobertura                                   | 行为回归或覆盖率低于地板 |
+| `visual`       | Playwright 界面冒烟 + axe（CI 跳过像素比对，跨平台字体不同）              | 页面结构或无障碍回归     |
 | `security`     | `uv audit`、`pnpm audit`、`actionlint`、`zizmor`、dependency review       | 依赖或 workflow 风险     |
 | `build`        | `vite build`（含启动骨架与链接期门禁）、编译骨架 HTML、体量预算、文档断链 | 构建或仓库规则失败       |
 | `windows`      | Windows 上跑 pytest 与 tsc                                                | 平台相关回归             |
@@ -90,6 +91,7 @@ pnpm exec eslint app/ui-engine/src app/ui-engine/shell/main.cjs
 pnpm exec prettier --check .
 pnpm --dir app/ui-engine exec tsc --noEmit
 pnpm --dir app/ui-engine exec vitest run --coverage --configLoader runner
+pnpm --dir app/ui-engine exec playwright test
 
 # 仓库级检查（build job，先跑 pnpm --dir app/ui-engine build）
 uv run python scripts/keys.py --check
@@ -103,5 +105,7 @@ uv run python scripts/smoke.py
 uv run python scripts/budget.py
 uv run python scripts/docs_links.py
 ```
+
+本地默认用系统 Edge（未设 `CI`、未设 `PLAYWRIGHT_CHANNEL` 时 config 取 `msedge`），跑完整截图比对；CI 用 Playwright 自带的 Chromium，并加 `--ignore-snapshots` 跳过像素比对——Linux runner 的字体与 Windows 基线不一致，像素门禁会在 CI 里误报，DOM 与 axe 仍然照跑。截图基线目前只在本地维护。Playwright 会按 `playwright.config.ts` 自己起 `pnpm dev`（端口 5199），不需要手动开 dev server。
 
 提交信息由 `.githooks/commit-msg` 管；推送前 `.githooks/pre-push` 会拒绝推 `main`。
