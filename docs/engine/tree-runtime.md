@@ -67,6 +67,7 @@ components/*（现有 38 个 kind，不改）
 - `?engine=tree` 已接：读 `/tree/manifest.json` + 页面文档 → `mountTreeDocument`；
   dev 由 `build/vite-tree-dev.ts` 供文件，`vite preview` / 部署读 `dist/tree/`。
   入口在 `app/tree/preview.ts`，失败会把原因写在页面上。
+- `?engine=tree-live`：连 Python，拉 `ui.tree`，链接期 compose 后挂载；当前只读（事件不回源）。
 - 默认入口还没切（仍走 Slot 主会话）。
 - 导航从 `settings.route` 出发的跳转没接：静态产物没有 handler，导航是禁用态。
 - `collection` 挂载期实例化 + `data` op 定向 reconcile 已接（`bind` 解析进 settings，同 key 复用元素）；`changes` 增量、嵌套集合、窗口化未接。

@@ -42,7 +42,7 @@ DOM 复用省的是“创建元素”，不是“序列化、传输、链接、�
 | 能力                              | 状态                         | 证据                                                                               |
 | --------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------- |
 | 节点契约 + schema + 跨语言校验    | 已落                         | `schema/tree/`、`contract/tree.ts`、`sdk/tree.py`                                  |
-| 构建期 compose + 诊断             | 已落                         | `build/tree/compose.ts`（E-COLLISION / E-PARENT-MISSING / E-TREE-CHAIN）           |
+| 构建期 compose + 诊断             | 已落                         | `link/tree_compose.ts`（E-COLLISION / E-PARENT-MISSING / E-TREE-CHAIN）           |
 | 真实页面构建期 compose            | 已落（四页）                 | `scripts/static_tree.py` → `dist/tree/pages/*.json`                                |
 | 构建门禁（compose / 语义 / kind） | 已落                         | `build/vite-tree.ts`、`scripts/tree_artifacts.py`、`E-TREE-KIND`                   |
 | collection 声明字段               | 已落（运行期未接）           | schema `collection`、`sdk/tree.py`、`compose.ts`                                   |

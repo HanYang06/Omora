@@ -28,9 +28,9 @@
  * - E-MOUNT-UNSUPPORTED：`mount.mode` 是 `overlay`；V1 build composer 未实现。
  */
 
-import { validateTree } from "../../contract/tree";
-import type { TreeDiagnosticCode } from "../../contract/tree";
-import type { Document, Node, Partial } from "../../contract/tree_generated";
+import { validateTree } from "../contract/tree";
+import type { TreeDiagnosticCode } from "../contract/tree";
+import type { Document, Node, Partial } from "../contract/tree_generated";
 
 /** 组合器自己定义的语义诊断码；shape 诊断码沿用 `contract/tree`。 */
 export type TreeComposeDiagnosticCode =

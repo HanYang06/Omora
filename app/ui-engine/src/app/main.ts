@@ -4,8 +4,8 @@ import { LiveSlotApp } from "./live";
 import "../styles/styles.css";
 import "../styles/media.css";
 
-/** 入口模式：默认主会话 Slot；`?engine=slot` / `tree` / `virtual` 是内置预览。 */
-export type EngineMode = "preview" | "tree" | "virtual" | "dialog" | "live";
+/** 入口模式：默认主会话 Slot；`?engine=slot` / `tree` / `tree-live` / `virtual` / `dialog` 是内置预览。 */
+export type EngineMode = "preview" | "tree" | "tree-live" | "virtual" | "dialog" | "live";
 
 /**
  * 解析入口模式（可单独测试）：
@@ -20,6 +20,9 @@ export function engineMode(search: string): EngineMode {
   }
   if (engine === "tree") {
     return "tree";
+  }
+  if (engine === "tree-live") {
+    return "tree-live";
   }
   if (engine === "virtual") {
     return "virtual";
@@ -97,6 +100,23 @@ function startTree(container: HTMLElement): void {
     });
 }
 
+/** 运行期 V1 树：连 Python，拉 ui.tree，compose 后挂载（只读桥）。 */
+function startTreeLive(container: HTMLElement): void {
+  void import("./tree/live")
+    .then(({ TreeLiveApp }) => {
+      const connection = new Connection();
+      const logger = createLogger({
+        call: (target, method, args) => connection.call(target, method, args),
+      });
+      new TreeLiveApp(connection, logger).mount(container);
+    })
+    .catch((error: unknown) => {
+      const text = error instanceof Error ? error.message : String(error);
+      container.textContent = "V1 树主会话加载失败：" + text;
+      console.error("[omora] V1 树主会话加载失败:", error);
+    });
+}
+
 /**
  * 启动入口：默认走主会话 Slot 运行时（连 Python）；`?engine=slot` / `?engine=tree`
  * 分别是内置 Slot 预览与 V1 产物预览。
@@ -111,6 +131,10 @@ export function bootstrap(container: HTMLElement, search: string): void {
   }
   if (mode === "tree") {
     startTree(container);
+    return;
+  }
+  if (mode === "tree-live") {
+    startTreeLive(container);
     return;
   }
   if (mode === "virtual") {
