@@ -60,14 +60,15 @@
 - **推送式**：`ui.page(...)` 返回页面对象；`handle.set(tree)` 交树，状态变了再交一次。
 - **重建钩子**：`handle.rebuild(build)` 登记重建回调——客户端明确要一页（导航 / 首次 render）时由 ui 调一次，
   用来吸收"插件后来才装上"这类外部变化。
-- **只填自己的**：一页的树归登记它的插件；当前没有跨插件的键 / 贡献机制。多来源组合的目标模型是
-  链接期局部树（[composition](engine/composition.md)），随运行后来源一起做。
-- UI 出口是 Slot 视图：Python 把 Node 树升成 Slot 局部树，TS 链接成权威根树再渲染（S6）。
+- **只填自己的**：一页的树归登记它的插件；当前没有跨插件的键 / 贡献机制。
+- UI 出口是 V1 树：Python 把 Node 树经 `omora.sdk.tree_build` 升成 `dendro.tree/1` 的
+  base + 局部树（`ui.tree`），TS 构建期 / 运行时 compose 后挂载；事件经 `ui.tree_event`
+  回差异 ops，能差分就 patch、差分不了回整树。
 
 写法（界面库是 Python 包，内核不 import 它）：
 
 ```python
-from omora.sdk.ui import Button, Column, Item, Page, Slot
+from omora.sdk.ui import Button, Column, Item, Page
 
 
 class Ideas:
@@ -80,7 +81,6 @@ class Ideas:
         return Page(
             meta=f"{len(self.store.items())} 条",
             content=Column(
-                Slot(key="ideas.home.after_capture"),
                 *[
                     Item(i.title, Button("归档", on_click=self.archive(i)), meta=i.when)
                     for i in self.store.items()
@@ -145,33 +145,28 @@ class Ideas:
 - **TS 写能力也是正路。** npm 生态摆在那，没有理由拦。但别在 TS 里存真相——server 形态没有 TS 进程。
 - **混合插件没有额外规则。** 它就是把上面两条各走一遍；两边靠同一个名字对齐。
 
-## 6. 渲染引擎（Dendrolink）与 TS 插件
+## 6. 渲染引擎（V1 树）与 TS 插件
 
-渲染引擎在 `app/ui-engine/`。契约层已升级为独立命名的 UI 文档运行时 **Dendrolink**
-（树链引擎）：Slot 契约、链接期组合、三级更新、权限薄层、EngineRuntime/SourceEngine、
-DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engine/README.md)，
-目录与依赖方向见 [layering.md](engine/layering.md)，实现状态与缺口见 README §6。
+渲染引擎在 `app/ui-engine/`。界面只有一种格式 **`dendro.tree/1`**（V1 树）：
+静态结构 + 最小节点更新。旧 Slot 文档运行时（`dendro.ui/1`、链接期组合、
+EngineRuntime/DocumentView、启动骨架）已删除，作为历史留在
+[ADR-0004](engine/decisions/0004-static-tree-minimal-updates.md)、
+[archive](engine/archive/) 与 [changelog](changelog.md)。
 
-**默认入口已走 Slot 主会话**（Python 产局部树 → TS 链接 → EngineRuntime/DocumentView），
-启动首帧也由 Slot 链接编译；`?engine=slot` 只是内置 fixture 预览。legacy 快照路径（旧壳、
-补丁、贡献组合、`_diff.py`）已在 S6.5 删除。规则执行（`reactions`）与 schema 单一来源还没落。
+**默认入口是 V1 树主会话**（`tree-live`）：连 Python，拉 `ui.tree`（一页的
+base + 局部树），TS 用 `link/tree_compose` compose 成唯一文档后挂到 DOM。
+事件走 `ui.tree_event`：Python 回差分 ops 就地 patch，差分表达不了时回整树；
+`ui.changed` 推同一套 ops / 整树，用于 `set_page` / `refresh_page` 之后的异步变化。
+首帧不再预编译，连接后挂载。
 
-**V1 树目标架构（2026-11-18）**：`dendro.tree/1` 的契约、Python/TS 校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已落地，用来修掉「每事件全树重建 + 运行时组织树」的结构缺陷。它分阶段接管默认入口，旧 Slot（`dendro.ui/1`）逐步退场（[ADR-0004](engine/decisions/0004-static-tree-minimal-updates.md)）；目标链路与现状见 [V1 树](planning/v1-tree.md)。
-
-- 唯一原语 Slot：窗口 / 页面 / 层 / 布局 / 组件都是 kind 不同的 Slot。
-- 局部树在链接期组合成权威根树，冲突是编译错误。
-- 支持全量 / 纯数据 / 局部树三种更新；稳定 id 寻址。
-- 结构与规则两张平级：事件/数据 → 反应；集合绑定用模板实例化。
-
-### 窗口、页面与 Slot（现状）
-
-- **窗口骨架**是链接基准：`dendro.window` 下两个区域——`dendro.window.nav`（56px 图标栏）与
-  `dendro.window.page`（主区）。结构只在
-  [`app/sdk/omora/sdk/root-tree.json`](../app/sdk/omora/sdk/root-tree.json) 定义（结构文件与加载器已落），代码不各写一份。
-- **页面**是一个可导航的 Slot 根（`page.<name>`），页面来源把局部树按 `mountAt` 挂到窗口区域；
-  页面侧表、当前页与数据文档随主会话 view 一起给。
-- **事件**带 handler id 回传；handler 由 Python ui 插件登记，事件处理完返回新 view。
-- 自带一个 TS 插件宿主（未做）：管运行后来源，也管母页面；见 [组合](engine/composition.md)。
+- 唯一原语是树节点：固定 `id` / `chain` / `order`，一个 kind 一种实现。
+- 结构在构建期 compose（`scripts/static_tree.py` → `dist/tree/`），运行时只 mount / patch。
+- `ui.tree_event` 当前产线只发 `setProps` / `mount` / `unmount`；表达不了的变化回整树。
+- 页面仍由插件用 `omora.sdk.ui` 的 Page / Node 写，经 `tree_build` 桥升成 V1 树；
+  插件直接产 V1 节点是后续的事。
+- 权限 / 审计 / 回源规则不在引擎：V1 引擎不认识 `grant` / `settings.open`；
+  宿主策略还没接（见 [runtime-semantics](engine/runtime-semantics.md) §3）。
+- 运行后来源、远程来源、树内规则（`reactions`）未接。
 
 默认母页面是**三栏**：56px 图标栏（页面导航，每页一个图标）+ 主区。索引栏与主区由页面
 自己用 `Split` 排，页面内容铺满主区，不再走 720px 居中的一页纸。区域、模式与词表见
@@ -190,8 +185,8 @@ DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engi
 - 下行：视图树（`result`）与主动推送（`event`）。
 - 事件回传：handler id + 载荷。
 - 订阅：客户端声明关心哪些 topic，net 只把订阅过的 `event` 发给它；断线即清空，重连由客户端重放。
-- 增量：每次视图带版本号；变化走 `ui.snapshot`，与调用结果携带同一份视图形状；版本对不上就重新要全量。
-- 视图负载：`view` = `localTrees`（局部树）+ `pages` + `active` + `data` + `version`，权威根树由 TS 链接器本地链接（[wire §8](engine/wire.md)）。旧快照字段 `pages` / `page` / `meta` / `content` / `contributions` / `topics` 已随 legacy 在 S6.5 删除。
+- 增量：首帧 / 重连走 `ui.tree` 拉整页；事件与异步变化走 ops（`ui.tree_event` / `ui.changed`），带 `base` / `document` / `seq`；差分表达不了时直接回整树（`kind:"tree"`）。
+- 负载：`tree` = `name` / `title` / `route` / `base` / `partials`；`ops` = 按 id 改文档的批量；TS 本地 compose / apply，DOM 只 patch 被触碰的子树。形状见 [wire](engine/wire.md)。
 
 规矩：
 
@@ -235,7 +230,7 @@ DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engi
 | `app/core/`      | 内核：插件宿主（四个词）；package `omora-core`                   | Python  |
 | `app/sdk/`       | 插件 API（SDK）：Context / Plugin / UI 节点 / 协议；`omora-sdk`  | Python  |
 | `packages/`      | 系统插件：`omora-plugin-*`，uv workspace 的 member               | Python  |
-| `app/ui-engine/` | 渲染引擎 + 桌面壳；Dendrolink 契约见 `docs/engine/README.md`     | TS / JS |
+| `app/ui-engine/` | 渲染引擎 + 桌面壳；V1 树契约见 `docs/engine/README.md`           | TS / JS |
 | 运行后插件目录   | 单独装、可卸的插件                                               | 待定    |
 | `schema/`        | 机器可读契约：`dendro.tree/1` / `omora.scope/1` / `omora.page/1` | JSON    |
 | `docs/`          | 事实来源，架构文档在这里                                         | —       |
@@ -249,6 +244,7 @@ DOM 渲染器（38 个 kind）都已落；契约见 [docs/engine/README.md](engi
 5. 领域插件：灵感 / 项目 / 需求，按需要长，不按表拆。已落。
 6. 插件管理器：清单、`[tool.omora]` 条件、开关落 store、设置页。已落。
 7. 第二个插件证明组合；最后才是 server 形态。
+8. V1 树成为唯一格式与默认入口；旧 Slot 路径删除。已落。
 
 ## 12. 明确不做
 

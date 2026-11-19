@@ -1,6 +1,8 @@
 # 运行时：分层、生命周期与失败
 
-> 状态：**已定，S3–S4 已落**；分层名称是【建议】。S3-a–e 已落文档状态/三张索引、ops、data router、绑定/session、Slot 渲染桥/水合/换页分类、跨父 move 与预览；S4 已落 EngineRuntime（session + ledger + metrics + render stats）、DocumentView、权限薄层（链接期 + 运行期 + applyFull）、来源宿主（SourceHost + load/requesterFor）、来源模式引擎（SourceEngine）、审计与耗时指标；阶段 2 已把 `runtime/` 拆成 `engine/` 与 `host/`，权限检查改为 host 注入 guard，分层整改已完成；S7.1 运行后来源示例（自动发现 + 热更新）已落，S6.4 起主会话已走 Slot。仍待：多客户端、来源 activate / 回滚账本与网络帧接线。
+> 状态：**历史**（Slot 时期，代码已随 2026-11-20 拆桥删除）。保留当时的契约 / 设计记录，
+> 不再代表代码现状；现行唯一格式是 V1 树（`dendro.tree/1`），见 [tree-runtime](tree-runtime.md) /
+> [tree-ops](tree-ops.md) / [runtime-semantics](runtime-semantics.md)。
 > 依赖：[contract.md](contract.md) · [composition.md](composition.md) · [updates.md](updates.md)
 > 相关：[components.md](components.md) · [wire.md](wire.md) · [testing.md](testing.md)
 

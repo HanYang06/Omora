@@ -1,30 +1,23 @@
 import { Connection } from "./connection";
 import { reportDevicesOnce } from "./device_report";
 import { createLogger } from "./log";
-import { LiveSlotApp } from "./live";
 import { TreeLiveApp } from "./tree/live";
 import "../styles/styles.css";
 import "../styles/media.css";
 
-/** 入口模式：默认主会话 Slot；`?engine=slot` / `tree` / `tree-live` / `virtual` / `dialog` 是内置预览。 */
-export type EngineMode = "preview" | "tree" | "tree-live" | "virtual" | "dialog" | "live";
+/** 入口模式：默认 V1 树主会话；`?engine=tree` / `tree-live` / `virtual` / `dialog` 是内置预览。 */
+export type EngineMode = "tree" | "tree-live" | "virtual" | "dialog";
 
 /**
  * 解析入口模式（可单独测试）：
- * - `engine=slot` → 内置 Slot 文档预览（不连 Python，用打包进来的 fixture 视图）；
  * - `engine=tree` → V1 构建产物预览（读 `/tree/`，挂 TreeRuntime）；
- * - 其它（含空查询）→ 主会话 Slot 运行时（连 Python，默认）。
+ * - `engine=virtual` / `engine=dialog` → 组件预览（不连 Python）；
+ * - 其它（含空查询、`engine=tree-live`、未知值）→ V1 树主会话（连 Python）。
  */
 export function engineMode(search: string): EngineMode {
   const engine = new URLSearchParams(search).get("engine");
-  if (engine === "slot") {
-    return "preview";
-  }
   if (engine === "tree") {
     return "tree";
-  }
-  if (engine === "tree-live") {
-    return "tree-live";
   }
   if (engine === "virtual") {
     return "virtual";
@@ -32,48 +25,19 @@ export function engineMode(search: string): EngineMode {
   if (engine === "dialog") {
     return "dialog";
   }
-  return "live";
+  return "tree-live";
 }
 
-export function wantsTree(search: string): boolean {
-  return engineMode(search) === "tree";
-}
-
-export function wantsPreview(search: string): boolean {
-  return engineMode(search) === "preview";
-}
-
-export function wantsLive(search: string): boolean {
-  return engineMode(search) === "live";
-}
-
-/**
- * 主会话入口：优先 V1 树；`ui.tree` 不存在时退回 Slot。
- * 两条路径共用一条连接，Slot 只是迁移期的兜底。
- */
-function startLive(container: HTMLElement): void {
+/** 主会话入口：只走 V1 树（连 Python，拉 ui.tree）；不再退回 Slot。 */
+function startTreeLive(container: HTMLElement): void {
   const connection = new Connection();
   const logger = createLogger({
     call: (target, method, args) => connection.call(target, method, args),
   });
   const tree = new TreeLiveApp(connection, logger, {
-    onUnavailable: () => {
-      new LiveSlotApp(connection, logger).mount(container);
-    },
     prepare: () => reportDevicesOnce(connection),
   });
   tree.mount(container);
-}
-
-/** Slot 运行时只在需要时拉：preview 是独立 chunk，不进主 chunk。 */
-function startPreview(container: HTMLElement): void {
-  void import("./preview")
-    .then((preview) => {
-      preview.mountPreview(container);
-    })
-    .catch((error: unknown) => {
-      console.error("[omora] Slot 预览入口加载失败:", error);
-    });
 }
 
 /** 虚拟列表预览：1000 行，验证只挂窗口内的行。 */
@@ -111,41 +75,16 @@ function startTree(container: HTMLElement): void {
     });
 }
 
-/** 运行期 V1 树：连 Python，拉 ui.tree，compose 后挂载（只读桥）。 */
-function startTreeLive(container: HTMLElement): void {
-  void import("./tree/live")
-    .then(({ TreeLiveApp }) => {
-      const connection = new Connection();
-      const logger = createLogger({
-        call: (target, method, args) => connection.call(target, method, args),
-      });
-      new TreeLiveApp(connection, logger).mount(container);
-    })
-    .catch((error: unknown) => {
-      const text = error instanceof Error ? error.message : String(error);
-      container.textContent = "V1 树主会话加载失败：" + text;
-      console.error("[omora] V1 树主会话加载失败:", error);
-    });
-}
-
 /**
- * 启动入口：默认走主会话 Slot 运行时（连 Python）；`?engine=slot` / `?engine=tree`
- * 分别是内置 Slot 预览与 V1 产物预览。
+ * 启动入口：默认走 V1 树主会话（连 Python）；`?engine=tree` / `virtual` / `dialog`
+ * 是内置预览，不连 Python。
  *
  * 单独导出便于入口级测试；HTML 加载本模块时 `#root` 一定在。
  */
 export function bootstrap(container: HTMLElement, search: string): void {
   const mode = engineMode(search);
-  if (mode === "preview") {
-    startPreview(container);
-    return;
-  }
   if (mode === "tree") {
     startTree(container);
-    return;
-  }
-  if (mode === "tree-live") {
-    startTreeLive(container);
     return;
   }
   if (mode === "virtual") {
@@ -156,7 +95,7 @@ export function bootstrap(container: HTMLElement, search: string): void {
     startDialog(container);
     return;
   }
-  startLive(container);
+  startTreeLive(container);
 }
 
 // 被测试 / 工具 import 时没有 #root，不能起副作用；真正入口（index.html）一定有。

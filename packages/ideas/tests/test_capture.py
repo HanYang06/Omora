@@ -51,10 +51,84 @@ def _kernel(tmp_path: Path, *, captures: bool = True) -> Kernel:
     return kernel
 
 
+def _find_tree_node(node: dict[str, Any], node_id: str) -> dict[str, Any] | None:
+    if node["id"] == node_id:
+        return node
+    for child in node["layout"]:
+        found = _find_tree_node(child, node_id)
+        if found is not None:
+            return found
+    for template in node.get("collection", {}).get("templates", {}).values():
+        found = _find_tree_node(template, node_id)
+        if found is not None:
+            return found
+    return None
+
+
+def _as_slot(node: dict[str, Any]) -> dict[str, Any]:
+    """V1 节点 → 测试视图节点（kind / props / events / children）。"""
+    return {
+        "kind": "dendro:" + str(node["kind"]),
+        "props": dict(node["settings"]),
+        "events": dict(node["on"]),
+        "children": [_as_slot(child) for child in node["layout"]],
+    }
+
+
+def _adapt_tree(ui: Any, frame: dict[str, Any] | None = None) -> dict[str, Any]:
+    """把 ui 当前这棵树摊成旧 view 形状，测试体只认页面内容。"""
+    document = ui.current_document
+    if document is None:
+        raise AssertionError("tree 还没构建")
+    page = _find_tree_node(document["root"], document["active"])
+    if page is None:
+        raise AssertionError("tree 里没有 active 页")
+    pages = [
+        {
+            "id": "page." + info.name,
+            "label": info.label,
+            "route": "/" + info.name,
+            "owner": info.owner,
+            "icon": info.icon,
+        }
+        for info in ui.pages()
+    ]
+    active = ui.active_page
+    return {
+        "kind": "view",
+        "version": (1 if frame is None or "document" not in frame else int(frame["document"])),
+        "frame": frame,
+        "active": None if active is None else "page." + active,
+        "pages": pages,
+        "localTrees": {
+            "trees": [
+                {
+                    "mountAt": PAGE_MOUNT_AT,
+                    "root": {
+                        "kind": "dendro:page",
+                        "props": {},
+                        "events": {},
+                        "children": [_as_slot(page["layout"][0])],
+                    },
+                }
+            ]
+        },
+    }
+
+
+def _tree_view(ui: Any, page: str | None = None) -> dict[str, Any]:
+    """整页兜底：重建当前页（或指定页）。"""
+    if page is None:
+        ui.tree()
+    else:
+        ui.tree(page)
+    return _adapt_tree(ui)
+
+
 def _fire(ui: Any, handler: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    """发一次事件：result 直接就是派发之后的新 view。"""
-    view: dict[str, Any] = ui.event(str(handler), payload or {})
-    return view
+    """发一次事件：回包是 ops 帧，随后把这次重建的树摊成测试视图。"""
+    frame = ui.tree_event(str(handler), payload or {})
+    return _adapt_tree(ui, frame)
 
 
 def _walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
@@ -122,18 +196,20 @@ def _pin_clock(monkeypatch: Any) -> None:
 
 
 def _click_tile(ui: Any, title: str) -> Any:
-    return _fire(ui, _tiles(ui.render())[title]["events"]["click"])
+    return _fire(ui, _tiles(_tree_view(ui))[title]["events"]["click"])
 
 
 def _click_rail(ui: Any, title: str) -> Any:
-    rail = _content(ui.render())["children"][0]
+    rail = _content(_tree_view(ui))["children"][0]
     hits = [row for row in _nodes(rail, "item") if row["props"]["title"] == title]
     assert hits, f"索引栏里没有: {title}"
     return _fire(ui, hits[0]["events"]["click"])
 
 
 def _click_button(ui: Any, text: str) -> Any:
-    hits = [node for node in _nodes(_main(ui.render()), "button") if node["props"]["text"] == text]
+    hits = [
+        node for node in _nodes(_main(_tree_view(ui)), "button") if node["props"]["text"] == text
+    ]
     assert hits, f"主区里没有按钮: {text}"
     return _fire(ui, hits[0]["events"]["click"])
 
@@ -141,7 +217,7 @@ def _click_button(ui: Any, text: str) -> Any:
 def _recording(ui: Any, tile: str, node_type: str) -> tuple[str, dict[str, Any]]:
     """点 Tile 进工作区，交出录制组件的提交 handler 与节点本身。"""
     _click_tile(ui, tile)
-    node = _nodes(_main(ui.render()), node_type)[0]
+    node = _nodes(_main(_tree_view(ui)), node_type)[0]
     return str(node["events"]["submit"]), node
 
 
@@ -159,7 +235,7 @@ def test_clicking_a_tile_turns_the_capture_region_into_a_workspace_in_place(
 ) -> None:
     ui = _kernel(tmp_path).resolve("ui")
     _click_tile(ui, "文字")
-    field = _nodes(_main(ui.render()), "input")[0]
+    field = _nodes(_main(_tree_view(ui)), "input")[0]
     _fire(ui, field["events"]["submit"], {"value": "买牛奶"})
 
     workspace = _click_tile(ui, "录音")
@@ -316,7 +392,7 @@ def test_collapsing_while_recording_stores_the_take_without_reopening_the_bar(
     # 宽限期只容一代：中间不能再画，否则那份旧 id 就作废了。
     _fire(ui, collapse)
     _fire(ui, handler, _audio_take(uploaded, 3))
-    settled = ui.render()
+    settled = _tree_view(ui)
 
     assert _cards(settled) == ["语音 11-11 03:41"]
     assert list(_tiles(settled)) == ["录音", "视频", "文字"]
@@ -358,14 +434,14 @@ def test_the_capture_tiles_follow_the_capture_plugins_and_the_media_channel(
     """没装 audio / video 只有文字；装上插件但没有媒体通道也出不了录制的 Tile。"""
     kernel = _kernel(tmp_path, captures=False)
     ui = kernel.resolve("ui")
-    assert list(_tiles(ui.render())) == ["文字"]
+    assert list(_tiles(_tree_view(ui))) == ["文字"]
 
     kernel.install(AudioPlugin())
     kernel.install(VideoPlugin())
-    assert list(_tiles(ui.render())) == ["文字"]
+    assert list(_tiles(_tree_view(ui))) == ["文字"]
 
     kernel.install(_Net())
-    assert list(_tiles(ui.render())) == ["录音", "视频", "文字"]
+    assert list(_tiles(_tree_view(ui))) == ["录音", "视频", "文字"]
 
 
 def test_naming_a_saved_take_renames_the_record(tmp_path: Path, monkeypatch: Any) -> None:

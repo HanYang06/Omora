@@ -1,8 +1,10 @@
 # V1 更新操作（ops）
 
-> 状态：**形状 + 文档层应用 + 运行时最小更新 / `data` 文档层已落**（2026-11-19）；
+> 状态：**现状**（2026-11-20）。形状 + 文档层应用 + 运行时最小更新 /
+> `data` 文档层已落。Python 的 `tree_event` 产线只发 `setProps` / `mount` / `unmount`，
+> 表达不了就回整树；`replace` / `data` 形状与应用端已实现但产线暂未发。
 > collection 实例化、`bind` 与 `changes` 增量还没接。
-> 相关：[V1 树](../planning/v1-tree.md) · [V1 运行时](tree-runtime.md) · [updates.md](updates.md)
+> 相关：[V1 树](../planning/v1-tree.md) · [V1 运行时](tree-runtime.md) · [wire](wire.md)
 
 ## 0. 一句话
 
@@ -39,7 +41,8 @@ ops 是“按 id 改一份已存在的 `dendro.tree/1` 文档”的批量：不�
 
 - 空 `ops` 合法：不改变结构，但仍推进版本。
 - 节点载荷仍是完整 `dendro.tree/1` node（带 chain）；ops 不另造一套节点形状。
-- `data` 的三种载荷与 Slot 的 data 形状同义：标量 `value`、全量 `items`、增量 `changes`。
+- `data` 的三种载荷与 Slot 时期的 data 形状同义：标量 `value`、全量 `items`、
+  增量 `changes`（`changes` 产线未接，遇到整批 `E-PAYLOAD`）。
 
 ## 2. 版本与失败
 
@@ -78,6 +81,7 @@ ops 是“按 id 改一份已存在的 `dendro.tree/1` 文档”的批量：不�
 
 还没做：
 
-- `data` 的消费语义已接：collection 实例化、keyed reconcile、`bind` 投影；`changes` 增量未接。
-- 数据变更后的订阅 / 通知（宿主回头接）。
-- 权限 / 审计：不在引擎，归宿主策略。
+- `data` 的产线与消费语义：Python 还没发 `data` op；collection 实例化 / keyed
+  reconcile / `bind` 投影、`changes` 增量未接。
+- `replace` / `data` op 的产线：形状与应用端已落，`tree_event` 差分暂不产这两种。
+- 权限 / 审计：不在引擎，归宿主策略（V1 宿主侧还没接）。

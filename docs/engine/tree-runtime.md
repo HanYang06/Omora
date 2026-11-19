@@ -1,8 +1,8 @@
 # V1 运行时：DOM 宿主与组件适配
 
-> 状态：**已落**（2026-11-18）。V1 文档能在 DOM 里挂载、替换、卸载；组件层不重写。
-> 运行时还没接默认入口，`dist/tree` 也还没被 app 消费。
-> 相关：[构建](build.md) · [V1 树](../planning/v1-tree.md) · [renderer.md](renderer.md)
+> 状态：**现状**（2026-11-20）。V1 树是默认入口；`ui.tree` 首帧、`ui.tree_event`
+> 事件、`ui.changed` 异步变化都已接主会话，`?engine=tree` 预览消费 `dist/tree`。
+> 相关：[构建](build.md) · [V1 树](../planning/v1-tree.md) · [renderer.md](renderer.md) · [wire](wire.md)
 
 ## 0. 一句话
 
@@ -63,14 +63,16 @@ components/*（现有 38 个 kind，不改）
 - `engine/tree/runtime_ops.test.ts`：`applyOps` 的 `setProps` 只更新目标元素；`mount / unmount`
   只动目标子树、兄弟元素引用不变；`replace` 换子树；版本不一致 / 目标缺失整批拒绝。
 
-## 5. 预览与还没接的
+## 5. 入口与还没接的
 
-- `?engine=tree` 已接：读 `/tree/manifest.json` + 页面文档 → `mountTreeDocument`；
+- **默认入口**（`tree-live`）已切：连接 → 上报设备 → `ui.tree` 拉首帧 → compose 挂载；
+  事件走 `ui.tree_event`（ops 就地 patch / 整树 replace）；异步变化订阅 `ui.changed`；
+  replace 前后保留焦点与滚动位置。
+- `?engine=tree` 预览：读 `/tree/manifest.json` + 页面文档 → `mountTreeDocument`；
   dev 由 `build/vite-tree-dev.ts` 供文件，`vite preview` / 部署读 `dist/tree/`。
-  入口在 `app/tree/preview.ts`，失败会把原因写在页面上。
-- `?engine=tree-live`：连 Python，拉 `ui.tree`，链接期 compose 后挂载；点击走 `ui.tree_event` → 新树整棵 replace（不是 ops）；replace 前后保留焦点与滚动位置。
-- 默认入口还没切（仍走 Slot 主会话）。
-- 导航从 `settings.route` 出发的跳转没接：静态产物没有 handler，导航是禁用态。
-- `collection` 挂载期实例化 + `data` op 定向 reconcile 已接（`bind` 解析进 settings，同 key 复用元素）；`changes` 增量、嵌套集合、窗口化未接。
-- `setProps / mount / unmount / replace` 已接（只动目标子树）；
-  `data` 文档层已接（写 `document.data`、revision 幂等 / 过期诊断），运行时没有要 patch 的节点。
+- `?engine=virtual` / `?engine=dialog` 是组件预览，不连 Python。
+- 导航从 `settings.route` 出发的跳转还没接：静态产物没有 handler，导航在预览里是禁用态。
+- 事件产线只发 `setProps / mount / unmount`，表达不了回整树；Python 侧没有脏节点产线。
+- `data` 文档层已接（写 `document.data`、revision 幂等 / 过期诊断），运行时没有 data
+  patch 阶段；collection / bind / `changes` 的产线与消费未接。
+- 权限 / 审计 / 树内规则未接。

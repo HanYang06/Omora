@@ -9,11 +9,83 @@ from websockets.asyncio.client import ClientConnection, connect
 
 import omora._capture as ideas_capture
 from boot import Config, build
+from omora.sdk.tree_build import compose
 
 MANIFEST = ("store", "manager", "media", "ui", "audio", "video", "ideas", "net")
 SAVED_AT = datetime(2026, 11, 11, 3, 41)
 PAGE_MOUNT_AT = "dendro.window.page"
 NAV_MOUNT_AT = "dendro.window.nav"
+
+
+def _find_tree_node(node: dict[str, Any], node_id: str) -> dict[str, Any] | None:
+    if node["id"] == node_id:
+        return node
+    for child in node["layout"]:
+        found = _find_tree_node(child, node_id)
+        if found is not None:
+            return found
+    return None
+
+
+def _as_slot(node: dict[str, Any]) -> dict[str, Any]:
+    """V1 节点 → 测试视图节点（kind / props / events / children）。"""
+    return {
+        "kind": "dendro:" + str(node["kind"]),
+        "props": dict(node["settings"]),
+        "events": dict(node["on"]),
+        "children": [_as_slot(child) for child in node["layout"]],
+    }
+
+
+def _tree_view(payload: dict[str, Any], frame: dict[str, Any] | None = None) -> dict[str, Any]:
+    """ui.tree 的构建输入 → 旧 view 形状，测试体只认页面内容。"""
+    document = compose(cast(dict[str, Any], payload["base"]), cast(list[Any], payload["partials"]))
+    active = str(payload["name"])
+    page = _find_tree_node(document["root"], document["active"])
+    if page is None:
+        raise AssertionError("tree 里没有 active 页")
+    navs = [
+        _as_slot(cast(dict[str, Any], partial["root"]))
+        for partial in cast(list[dict[str, Any]], payload["partials"])
+        if partial["source"] == "ui"
+    ]
+    pages = [
+        {
+            "id": "page." + str(link["props"]["route"]).strip("/"),
+            "label": str(link["props"]["label"]),
+        }
+        for link in navs
+    ]
+    return {
+        "kind": "view",
+        "version": 1 if frame is None or "document" not in frame else int(frame["document"]),
+        "frame": frame,
+        "active": "page." + active,
+        "pages": pages,
+        "localTrees": {
+            "trees": [
+                {
+                    "mountAt": NAV_MOUNT_AT,
+                    "root": {
+                        "kind": "dendro:nav",
+                        "props": {},
+                        "events": {},
+                        "children": navs,
+                    },
+                },
+                {
+                    "mountAt": PAGE_MOUNT_AT,
+                    "root": {
+                        "id": "page." + active,
+                        "kind": "dendro:page",
+                        "props": {},
+                        "events": {},
+                        "children": [_as_slot(page["layout"][0])],
+                    },
+                },
+            ]
+        },
+    }
 
 
 def _walk(slot: dict[str, Any]) -> list[dict[str, Any]]:
@@ -68,19 +140,30 @@ async def _request(
     return reply["value"]
 
 
+async def _tree(ws: ClientConnection, frame_id: str, page: str | None = None) -> dict[str, Any]:
+    """拉当前页（或指定页）的 V1 构建输入，摊成测试视图。"""
+    args = {} if page is None else {"page": page}
+    value = await _request(ws, frame_id, "ui", "tree", args)
+    assert value["kind"] == "tree", value
+    return _tree_view(cast(dict[str, Any], value))
+
+
 async def _event(
     ws: ClientConnection,
     frame_id: str,
     handler: str,
     payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """发一次 ui.event：result 直接就是派发之后的新 view（不再有 patch 帧）。"""
-
-    value = await _request(
-        ws, frame_id, "ui", "event", {"handler": handler, "payload": payload or {}}
+    """发一次 tree_event：回包是 ops（或整树回退），再拉一次树摊成测试视图。"""
+    frame = await _request(
+        ws, frame_id, "ui", "tree_event", {"handler": handler, "payload": payload or {}}
     )
-    assert value["kind"] == "view", value
-    return cast(dict[str, Any], value)
+    assert frame["kind"] in {"ops", "tree"}, frame
+    if frame["kind"] == "ops":
+        assert frame["document"] == frame["base"] + 1, frame
+    value = await _request(ws, frame_id + "t", "ui", "tree", {})
+    assert value["kind"] == "tree", value
+    return _tree_view(cast(dict[str, Any], value), frame)
 
 
 def _media_port(net: Any) -> int:
@@ -154,33 +237,33 @@ def test_clicking_archive_over_the_socket_updates_the_page(tmp_path: Path) -> No
         port = await net.serve()
         try:
             async with connect(f"ws://127.0.0.1:{port}") as ws:
-                empty = await _request(ws, "1", "ui", "render", {})
+                empty = await _tree(ws, "1")
                 tile = _find(empty, "tile", "click", title="文字")
                 assert tile is not None
 
                 pushed = await _event(ws, "2", tile)
-                assert pushed["version"] == empty["version"] + 1
+                assert pushed["frame"]["kind"] in {"ops", "tree"}
 
-                capture_page = await _request(ws, "3", "ui", "render", {})
+                capture_page = await _tree(ws, "3")
                 capture = _find(capture_page, "input", "submit")
                 assert capture is not None
 
                 pushed = await _event(ws, "4", capture, {"value": "买牛奶"})
                 assert "买牛奶" in json.dumps(pushed, ensure_ascii=False)
 
-                before = await _request(ws, "5", "ui", "render", {})
+                before = await _tree(ws, "5")
                 opened = _find(before, "item", "click", title="买牛奶")
                 assert opened is not None
 
                 await _event(ws, "6", opened)
 
-                detail = await _request(ws, "7", "ui", "render", {})
+                detail = await _tree(ws, "7")
                 handler = _find(detail, "button", "click", text="归档")
                 assert handler is not None
 
                 await _event(ws, "8", handler)
 
-                after = await _request(ws, "9", "ui", "render", {})
+                after = await _tree(ws, "9")
                 return empty, before, after
         finally:
             await net.stop()
@@ -200,9 +283,9 @@ def test_switching_pages_over_the_socket_keeps_the_current_page(tmp_path: Path) 
         port = await net.serve()
         try:
             async with connect(f"ws://127.0.0.1:{port}") as ws:
-                ideas = await _request(ws, "1", "ui", "render", {})
-                plugins = await _request(ws, "2", "ui", "render", {"page": "plugins"})
-                again = await _request(ws, "3", "ui", "render", {})
+                ideas = await _tree(ws, "1")
+                plugins = await _tree(ws, "2", "plugins")
+                again = await _tree(ws, "3")
                 back = await _event(ws, "4", _nav_handler(plugins, "灵感"))
                 return ideas, plugins, again, back
         finally:
@@ -215,8 +298,12 @@ def test_switching_pages_over_the_socket_keeps_the_current_page(tmp_path: Path) 
     assert _page_root(plugins)["id"] == "page.plugins"
     assert "page.plugins" in [page["id"] for page in plugins["pages"]]
     assert again["active"] == "page.plugins"
-    assert [ideas["version"], plugins["version"], again["version"], back["version"]] == [1, 2, 3, 4]
-    assert back["active"] == "page.ideas"
+    assert [ideas["active"], plugins["active"], again["active"], back["active"]] == [
+        "page.ideas",
+        "page.plugins",
+        "page.plugins",
+        "page.ideas",
+    ]
 
 
 def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path, monkeypatch: Any) -> None:
@@ -234,13 +321,13 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path, monkeypatc
             assert status == 201, payload
             audio_id = str(json.loads(payload)["media_id"])
             async with connect(f"ws://127.0.0.1:{port}") as ws:
-                before = await _request(ws, "1", "ui", "render", {})
+                before = await _tree(ws, "1")
                 tile = _find(before, "tile", "click", title="录音")
                 assert tile is not None
 
                 await _event(ws, "2", tile)
 
-                capture_page = await _request(ws, "3", "ui", "render", {})
+                capture_page = await _tree(ws, "3")
                 handler = _find(capture_page, "audio_capture", "submit")
                 assert handler is not None
 
@@ -251,13 +338,13 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path, monkeypatc
                     {"media": audio_id, "mime": "audio/webm", "seconds": 2.0},
                 )
 
-                after = await _request(ws, "5", "ui", "render", {})
+                after = await _tree(ws, "5")
                 opened = _find(after, "item", "click", title="语音 11-11 03:41")
                 assert opened is not None
 
                 await _event(ws, "6", opened)
 
-                detail = await _request(ws, "7", "ui", "render", {})
+                detail = await _tree(ws, "7")
                 media_id = str(_slots(detail, "audio")[0]["props"]["media"])
                 loaded = await _request(ws, "8", "media", "load", {"media_id": media_id})
                 assert isinstance(loaded, dict)
@@ -284,13 +371,13 @@ def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path, monkeypa
             assert status == 201, payload
             media_id = str(json.loads(payload)["media_id"])
             async with connect(f"ws://127.0.0.1:{port}") as ws:
-                before = await _request(ws, "1", "ui", "render", {})
+                before = await _tree(ws, "1")
                 tile = _find(before, "tile", "click", title="视频")
                 assert tile is not None
 
                 await _event(ws, "2", tile)
 
-                capture_page = await _request(ws, "3", "ui", "render", {})
+                capture_page = await _tree(ws, "3")
                 handler = _find(capture_page, "video_capture", "submit")
                 assert handler is not None
 
@@ -301,13 +388,13 @@ def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path, monkeypa
                     {"media": media_id, "mime": "video/webm", "seconds": 4},
                 )
 
-                after = await _request(ws, "5", "ui", "render", {})
+                after = await _tree(ws, "5")
                 opened = _find(after, "item", "click", title="视频 11-11 03:41")
                 assert opened is not None
 
                 await _event(ws, "6", opened)
 
-                detail = await _request(ws, "7", "ui", "render", {})
+                detail = await _tree(ws, "7")
                 src = str(_slots(detail, "video")[0]["props"]["src"])
                 fetched = await _get(src)
                 return after, fetched

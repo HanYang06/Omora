@@ -1,6 +1,8 @@
 # 寻址：id、身份、索引与更新集合
 
-> 状态：**已定**。S3-a 已落三张索引（`DocumentIndex`）；S4–S6 起运行时更新管线已接主会话；`code` / `addr` 身份字段已进 Slot 契约（可选）；Python UI 升 Slot 与静态骨架已派生，集合模板 / 通用 Node key 仍待；`addr` 已进 `DocumentIndex`，旧 addr redirect / 墓碑与结构变化后的 addr 重算已落；ops / 渲染仍按 `id`；`source/path` 路径级索引仍未落。
+> 状态：**历史**（Slot 时期，代码已随 2026-11-20 拆桥删除）。保留当时的契约 / 设计记录，
+> 不再代表代码现状；现行唯一格式是 V1 树（`dendro.tree/1`），见 [tree-runtime](tree-runtime.md) /
+> [tree-ops](tree-ops.md) / [runtime-semantics](runtime-semantics.md)。
 > 依赖：[contract.md](contract.md)
 > 相关：[structure.md](structure.md) · [updates.md](updates.md) · [permissions.md](permissions.md)
 

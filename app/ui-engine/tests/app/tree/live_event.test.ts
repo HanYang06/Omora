@@ -5,6 +5,7 @@ import type { Node as TreeNode } from "../../../src/contract/tree_generated";
 import { CallError } from "../../../src/app/connection";
 import { createLogger } from "../../../src/app/log";
 import {
+  CHANGED_TOPIC,
   TreeLiveApp,
   type TreeBuildPayload,
   type TreeConnection,
@@ -78,7 +79,9 @@ function opsPayload(text: string): TreeOpsPayload {
 
 class FakeConnection implements TreeConnection {
   readonly calls: Array<{ target: string; method: string; args: JsonObject }> = [];
+  readonly subscriptions: string[][] = [];
   private listener: ((status: ConnectionStatus) => void) | undefined;
+  private readonly listeners = new Map<string, (payload: JsonObject) => void>();
   private readonly trees: Array<TreeBuildPayload | TreeOpsPayload>;
   private readonly treeError: Error | undefined;
 
@@ -102,6 +105,22 @@ class FakeConnection implements TreeConnection {
 
   subscribeStatus(listener: (status: ConnectionStatus) => void): void {
     this.listener = listener;
+  }
+
+  onEvent(topic: string, listener: (payload: JsonObject) => void): () => void {
+    this.listeners.set(topic, listener);
+    return () => {
+      this.listeners.delete(topic);
+    };
+  }
+
+  subscribe(topics: string[]): Promise<unknown> {
+    this.subscriptions.push(topics);
+    return Promise.resolve({ topics });
+  }
+
+  emit(topic: string, payload: JsonObject): void {
+    this.listeners.get(topic)?.(payload);
   }
 
   connect(): void {
@@ -183,6 +202,28 @@ describe("TreeLiveApp 事件回源", () => {
     container.remove();
   });
 
+  it("ui.changed 推送时原地 patch", async () => {
+    const connection = new FakeConnection([payload("归档")]);
+    const app = new TreeLiveApp(connection, createLogger({ enabled: false }));
+    const container = document.createElement("div");
+    document.body.append(container);
+
+    app.mount(container);
+    await tick();
+    const before = container.querySelector<HTMLElement>('[data-node-id="' + BUTTON + '"]');
+
+    connection.emit(CHANGED_TOPIC, opsPayload("已归档") as unknown as JsonObject);
+    await tick();
+
+    const after = container.querySelector<HTMLElement>('[data-node-id="' + BUTTON + '"]');
+    expect(after).toBe(before);
+    expect(after?.textContent).toBe("已归档");
+    expect(connection.subscriptions).toContainEqual([CHANGED_TOPIC]);
+
+    app.dispose();
+    container.remove();
+  });
+
   it("prepare 在拉树之前跑一次", async () => {
     const connection = new FakeConnection([payload("归档")]);
     let prepared = false;
@@ -211,21 +252,17 @@ describe("TreeLiveApp 事件回源", () => {
     container.remove();
   });
 
-  it("ui.tree 不存在时回退 Slot", async () => {
+  it("ui.tree 不存在时不回退：页面显示不可用", async () => {
     const connection = new FakeConnection([], new CallError("unknown_method", "ui 没有方法 tree"));
-    let fellBack = false;
-    const app = new TreeLiveApp(connection, createLogger({ enabled: false }), {
-      onUnavailable: () => {
-        fellBack = true;
-      },
-    });
+    const app = new TreeLiveApp(connection, createLogger({ enabled: false }));
     const container = document.createElement("div");
     document.body.append(container);
 
     app.mount(container);
     await tick();
 
-    expect(fellBack).toBe(true);
+    expect(container.textContent).toBe("V1 树不可用：Python 端没有 ui.tree");
+    expect(connection.calls.filter((call) => call.method === "tree_event")).toEqual([]);
 
     app.dispose();
     container.remove();
