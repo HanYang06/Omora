@@ -34,6 +34,8 @@ import {
 } from "./runtime_apply";
 import { mergeCollectionInstances, reorderCollections } from "./runtime_collections";
 import { applyMountedUpdate } from "./runtime_update";
+
+const DEFAULT_LOCALE = "zh-CN";
 import { validateDocument } from "./validate";
 
 function toRuntimeDiagnostic(diagnostic: ApplyDiagnostic | OpsDiagnostic): TreeRuntimeDiagnostic {
@@ -185,7 +187,11 @@ export class TreeRuntime {
       dataSources.size === 0
         ? null
         : mergeCollectionInstances(this.byId, applied, dataSources);
-    const context = this.newContext(applied.document.data);
+    const context = this.newContext(
+      applied.document.data,
+      applied.document.messages ?? {},
+      applied.document.locale ?? DEFAULT_LOCALE,
+    );
     const updated = applyMountedUpdate(
       { byId: this.byId, context },
       reconciled?.applied ?? applied,
@@ -215,7 +221,11 @@ export class TreeRuntime {
     if (this.isDisposed || this.root === null) {
       return;
     }
-    const context = this.newContext(this.current?.data ?? {});
+    const context = this.newContext(
+      this.current?.data ?? {},
+      this.current?.messages ?? {},
+      this.current?.locale ?? DEFAULT_LOCALE,
+    );
     unmountTree(context, this.root);
     const diagnostics = context.cleanup;
     this.clearState();
@@ -237,7 +247,11 @@ export class TreeRuntime {
     oldRoot: MountedNode | null,
     oldById: Map<string, MountedNode> | undefined,
   ): TreeMountResult {
-    const context = this.newContext(document.data);
+    const context = this.newContext(
+      document.data,
+      document.messages ?? {},
+      document.locale ?? DEFAULT_LOCALE,
+    );
     const applied = applyDocument(context, document, oldRoot, oldById);
     if (!applied.ok) {
       this.clearState();
@@ -250,8 +264,12 @@ export class TreeRuntime {
     return { ok: true };
   }
 
-  private newContext(data: Record<string, unknown> = {}): TreeApplyContext {
-    return { host: this.host, renderers: this.renderers, data, cleanup: [] };
+  private newContext(
+    data: Record<string, unknown> = {},
+    messages: Record<string, string> = {},
+    locale: string = DEFAULT_LOCALE,
+  ): TreeApplyContext {
+    return { host: this.host, renderers: this.renderers, data, messages, locale, cleanup: [] };
   }
 
   private clearState(): void {

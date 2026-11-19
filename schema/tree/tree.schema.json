@@ -109,6 +109,14 @@
         },
         "collection": {
           "$ref": "#/$defs/collection"
+        },
+        "i18n": {
+          "type": "object",
+          "description": "prop 名 → message key；渲染前从 document.messages 解析，解析不到保留 settings 原值。",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -217,6 +225,17 @@
         },
         "data": {
           "type": "object"
+        },
+        "messages": {
+          "type": "object",
+          "description": "当前 locale 的 message 表；节点 i18n 的 key 在这里查。",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "locale": {
+          "type": "string",
+          "minLength": 1
         },
         "ledger": {
           "type": "object",

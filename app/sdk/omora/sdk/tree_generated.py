@@ -51,6 +51,7 @@ class Node:
     title: str | None = None
     slot: Placement | None = None
     collection: Collection | None = None
+    i18n: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -89,6 +90,8 @@ class Document:
     pages: tuple[Page, ...]
     active: str
     data: Mapping[str, Any]
+    messages: Mapping[str, str] = field(default_factory=dict)
+    locale: str | None = None
     ledger: Mapping[str, LedgerEntry] = field(default_factory=dict)
 
 

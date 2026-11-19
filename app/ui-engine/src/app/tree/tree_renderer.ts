@@ -27,7 +27,16 @@ import type {
 } from "../../engine/tree/types";
 import { treeKinds } from "../../components/tree_kinds";
 import type { Kind, KindRegistry, Node as LegacyNode, RenderContext } from "../../renderer/types";
+import IntlMessageFormat from "intl-messageformat";
 import { DomTreeHost } from "./tree_host";
+
+const DEFAULT_LOCALE = "zh-CN";
+
+interface DocumentSnapshot {
+  readonly data: Record<string, unknown>;
+  readonly messages: Record<string, string>;
+  readonly locale: string;
+}
 
 function asElement(output: TreeOutput): HTMLElement {
   if (!(output instanceof HTMLElement)) {
@@ -40,13 +49,30 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function propsOf(node: TreeNode, data: Record<string, unknown>): Record<string, unknown> {
-  if (node.collection?.virtual !== true) {
-    return node.settings;
+function formatMessage(template: string, locale: string): string {
+  try {
+    const formatted = new IntlMessageFormat(template, locale).format();
+    return Array.isArray(formatted) ? formatted.join("") : String(formatted);
+  } catch {
+    return template;
   }
-  const entry = data[node.collection.source];
-  const items = isRecord(entry) && Array.isArray(entry.items) ? entry.items : [];
-  return { ...node.settings, items };
+}
+
+function propsOf(node: TreeNode, snapshot: DocumentSnapshot): Record<string, unknown> {
+  const props: Record<string, unknown> = { ...node.settings };
+  if (node.collection?.virtual === true) {
+    const entry = snapshot.data[node.collection.source];
+    props.items = isRecord(entry) && Array.isArray(entry.items) ? entry.items : [];
+  }
+  if (node.i18n !== undefined) {
+    for (const [prop, key] of Object.entries(node.i18n)) {
+      const template = snapshot.messages[key];
+      if (template !== undefined) {
+        props[prop] = formatMessage(template, snapshot.locale);
+      }
+    }
+  }
+  return props;
 }
 
 function handlersOf(on: Record<string, unknown>): Record<string, string> {
@@ -60,21 +86,21 @@ function handlersOf(on: Record<string, unknown>): Record<string, string> {
 }
 
 /** 直接子节点浅搬：kind 读子节点数据时（tabs / search）能拿到 props / events。 */
-function shallowChild(node: TreeNode): LegacyNode {
+function shallowChild(node: TreeNode, snapshot: DocumentSnapshot): LegacyNode {
   return {
     type: node.kind,
-    props: node.settings,
+    props: propsOf(node, snapshot),
     children: [],
     id: node.id,
     events: handlersOf(node.on),
   };
 }
 
-function toLegacyNode(node: TreeNode, data: Record<string, unknown>): LegacyNode {
+function toLegacyNode(node: TreeNode, snapshot: DocumentSnapshot): LegacyNode {
   return {
     type: node.kind,
-    props: propsOf(node, data),
-    children: node.layout.map(shallowChild),
+    props: propsOf(node, snapshot),
+    children: node.layout.map((child) => shallowChild(child, snapshot)),
     id: node.id,
     events: handlersOf(node.on),
   };
@@ -133,13 +159,17 @@ function childHostsOf(kind: Kind, el: HTMLElement, node: LegacyNode): HTMLElemen
 /** 一个 V1 节点的渲染器：mount / update / unmount 都用同一个 Kind 实例。 */
 export function createTreeKindRenderer(kind: Kind, context: RenderContext): NodeRenderer {
   let childHost: DomTreeHost | null = null;
-  let data: Record<string, unknown> = {};
+  let snapshot: DocumentSnapshot = { data: {}, messages: {}, locale: DEFAULT_LOCALE };
   return {
-    setData(next: Record<string, unknown>): void {
-      data = next;
+    setData(
+      data: Record<string, unknown>,
+      messages: Record<string, string> = {},
+      locale: string = DEFAULT_LOCALE,
+    ): void {
+      snapshot = { data, messages, locale };
     },
     mount(node: TreeNode): NodeRendererMount {
-      const legacy = toLegacyNode(node, data);
+      const legacy = toLegacyNode(node, snapshot);
       const el = kind.create(legacy, context);
       applyPlacement(el, node.slot);
       const hosts = childHostsOf(kind, el, legacy);
@@ -148,7 +178,7 @@ export function createTreeKindRenderer(kind: Kind, context: RenderContext): Node
     },
     update(node: TreeNode, output: TreeOutput): void {
       const el = asElement(output);
-      const legacy = toLegacyNode(node, data);
+      const legacy = toLegacyNode(node, snapshot);
       kind.update?.(el, legacy, context);
       applyPlacement(el, node.slot);
       if (childHost !== null) {

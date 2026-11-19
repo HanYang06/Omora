@@ -27,6 +27,9 @@ export interface TreeApplyContext {
   readonly renderers: RendererRegistry;
   /** 当前文档的 data 快照；collection 展开用它。 */
   readonly data: Record<string, unknown>;
+  /** 当前 locale 的 message 表；节点 i18n 解析用它。 */
+  readonly messages: Record<string, string>;
+  readonly locale: string;
   /** 被隔离掉的清理失败（renderer.unmount / host.unmount 抛错）写进这里。 */
   readonly cleanup: TreeRuntimeDiagnostic[];
 }
@@ -180,7 +183,7 @@ function buildNode(
     childHost = old.childHost;
     reusedFrom = old;
     invoke(path, () => {
-      renderer.setData?.(context.data);
+      renderer.setData?.(context.data, context.messages, context.locale);
       renderer.update(node, output);
     });
   } else {
@@ -191,7 +194,7 @@ function buildNode(
       ]);
     }
     renderer = invoke(path, () => factory(node));
-    renderer.setData?.(context.data);
+    renderer.setData?.(context.data, context.messages, context.locale);
     const created = invoke(path, () => renderer.mount(node));
     output = created.output;
     childHost = created.host;
