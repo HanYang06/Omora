@@ -47,11 +47,7 @@ export interface NodeRenderer {
   update(node: TreeNode, output: TreeOutput): void;
   unmount(node: TreeNode, output: TreeOutput): void;
   /** 渲染前注入当前文档快照；data 驱动 / i18n 的 kind 用。 */
-  setData?(
-    data: Record<string, unknown>,
-    messages?: Record<string, string>,
-    locale?: string,
-  ): void;
+  setData?(data: Record<string, unknown>, messages?: Record<string, string>, locale?: string): void;
 }
 
 /** 按节点建渲染器；registry 只按 kind 查找，未知 kind 返回 undefined。 */

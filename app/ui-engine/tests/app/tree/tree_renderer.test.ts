@@ -160,9 +160,9 @@ describe("V1 DOM 适配器", () => {
     untranslated.messages = {};
     const fallback = mount(untranslated);
 
-    expect(
-      fallback.container.querySelector<HTMLElement>('[data-type="text"]')?.textContent,
-    ).toBe("占位");
+    expect(fallback.container.querySelector<HTMLElement>('[data-type="text"]')?.textContent).toBe(
+      "占位",
+    );
     fallback.runtime.dispose();
     fallback.container.remove();
   });

@@ -177,9 +177,7 @@ describe("V1 collection 挂载期实例化", () => {
         { id: "b", template: "item", title: "乙" },
       ]),
     );
-    const [elementA, elementB] = [
-      ...container.querySelectorAll<HTMLElement>('[data-type="text"]'),
-    ];
+    const [elementA, elementB] = [...container.querySelectorAll<HTMLElement>('[data-type="text"]')];
 
     const result = runtime.applyOps({
       kind: "ops",
@@ -292,7 +290,11 @@ describe("V1 collection 挂载期实例化", () => {
           op: "data",
           source: "virtual.items",
           revision: 2,
-          items: [{ id: "a", title: "甲" }, { id: "b", title: "乙" }, { id: "c", title: "丙" }],
+          items: [
+            { id: "a", title: "甲" },
+            { id: "b", title: "乙" },
+            { id: "c", title: "丙" },
+          ],
         },
       ],
     });

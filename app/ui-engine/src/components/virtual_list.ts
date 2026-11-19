@@ -91,9 +91,7 @@ function render(state: VirtualListState): void {
   state.spacer.style.height = String(state.virtualizer.getTotalSize()) + "px";
 }
 
-function optionsOf(
-  state: VirtualListState,
-): VirtualizerOptions<HTMLDivElement, HTMLElement> {
+function optionsOf(state: VirtualListState): VirtualizerOptions<HTMLDivElement, HTMLElement> {
   return {
     count: state.items.length,
     getScrollElement: () => state.root,
