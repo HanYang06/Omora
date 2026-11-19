@@ -20,7 +20,7 @@
 - [ ] **主题 / 动效** — owner: engine — next: CSS token + 暗色（`open-props`）；列表进出用 `auto-animate`，层用 CSS 过渡；不自研设计系统/动画引擎。
 - [ ] **交互增强** — owner: engine — next: `sortablejs` 做灵感排序/置顶/跨容器；`tinykeys` + command registry 做快捷键与命令面板。
 - [ ] **工程护栏** — owner: engine — next: 树检查器/DevTools、schema 单一来源生成；斜率测试（已列 Now）跑进 CI。
-- [ ] **GitHub 工作流落地** — owner: lead — next: labels / milestones / issues / project 按 [GitHub 工作流](design/github.md) 建起来；PR 用 `Closes #` 关联，release notes 按 type label 生成。
+- [ ] **GitHub 工作流维护** — owner: lead — next: labels / milestones / issues 已建；Project 不启用；每周 triage 标签/里程碑，PR 用 `Closes #` 关联。
 - [ ] **远程 / 运行后来源** — owner: engine — next: `ui.changed` 通道已在；来源注册 / 热更新 / 媒体登记还没接，先定来源账本形状。
 - [ ] **Idea 闭环** — owner: ideas — next: 补标签、灵感 ↔ 灵感 / 项目的关联、转写进搜索。
 - [ ] **Project 闭环** — owner: projects — next: 建项目、关联灵感 / 需求、状态推进、归档复盘。

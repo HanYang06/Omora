@@ -6,15 +6,15 @@
 
 ## 1. 分工
 
-| 载体      | 回答什么                   | 粒度                     |
-| --------- | -------------------------- | ------------------------ |
-| Roadmap   | 方向、阶段、退出条件       | 月 / 季度                |
-| Milestone | 一个阶段的范围与完成度     | M1–M6 / 0.2              |
-| Issue     | 要解决的问题 + 验收 + 依赖 | 一个可验收交付物         |
-| Project   | 现在谁在做什么、卡在哪     | 看板 / 表格              |
-| PR        | 怎么实现、怎么验证         | 一个 issue（或一个系列） |
-| TODO      | 当前 2 周的短队列          | 只放正在做/马上做的      |
-| Changelog | 已完成的事实               | 发布时                   |
+| 载体            | 回答什么                   | 粒度                                       |
+| --------------- | -------------------------- | ------------------------------------------ |
+| Roadmap         | 方向、阶段、退出条件       | 月 / 季度                                  |
+| Milestone       | 一个阶段的范围与完成度     | M1–M6 / 0.2                                |
+| Issue           | 要解决的问题 + 验收 + 依赖 | 一个可验收交付物                           |
+| Project（可选） | 现在谁在做什么、卡在哪     | 看板；暂不启用，用 issues + milestone 代替 |
+| PR              | 怎么实现、怎么验证         | 一个 issue（或一个系列）                   |
+| TODO            | 当前 2 周的短队列          | 只放正在做/马上做的                        |
+| Changelog       | 已完成的事实               | 发布时                                     |
 
 **Issue 不是 commit 的镜像。** 一个 issue 可以对应多个 commit / 多个 PR；不要给每个切片开 issue，也不要在没有 issue 的情况下开大 PR（紧急小修除外，事后补 issue）。
 
@@ -58,22 +58,16 @@
 - 一个 issue 被拆成多个 PR 时，PR 用 `Part of #N`，最后一个 `Closes #N`。
 - 不做 retro-issue：不为 150 个历史 PR 补 issue；只给当前 roadmap / 新工作建。
 
-## 5. Projects
+## 5. Projects（不启用）
 
-Project 看板字段：
+作者判断 GitHub Project 面板不好用，**不启用**。状态跟踪改用：
 
-| 字段      | 值                                                       |
-| --------- | -------------------------------------------------------- |
-| Status    | Backlog / Ready / In progress / In review / Done         |
-| Area      | engine / sdk / plugins / net / ui-shell / docs / tooling |
-| Milestone | M1–M6 / 0.2                                              |
-| Size      | S / M / L                                                |
-| Owner     | 人 / agent 名                                            |
+- issue 标签（`type:` / `area:` / `size:` / `blocked` / `needs-decision`）；
+- milestone 进度（M1–M6 / 0.2）；
+- PR 的 `Closes #` 自动关 issue；
+- 需要看“谁在做什么”时，用 `gh issue list --assignee` / `--label` 过滤。
 
-视图：Board（按 Status）、Roadmap（按 Milestone）、Table（按 Area / Size）。
-自动化：新 issue/PR 自动加入；PR 打开 → In review；PR merge → Done（用 `Closes` 关 issue）。
-
-> `gh` 需要 `project` scope：`gh auth refresh -s project`；也可以直接在网页建。
+不建 Project、不要求 `project` scope；以后真想用再按需补。
 
 ## 6. Release notes
 
@@ -97,7 +91,7 @@ Project 看板字段：
 - issues：#159–#173 为任务，#174–#180 为里程碑 epic（M1 = #180）。
 - 本 PR 带 `.github/ISSUE_TEMPLATE` 与 `.github/release.yml`。
 
-待做：
+约定：
 
-- Project 看板需要 `gh auth refresh -s project,read:project`（或在网页建），建好后挂自动加入与 Status 字段。
+- Project 不启用（面板不好用）；用 issue 标签 + milestone 进度代替。
 - 旧 PR 不回填 issue；新 PR 必须关联。
