@@ -72,7 +72,9 @@ export type TreeRuntimeDiagnosticCode =
   | "E-VERSION" // base 与当前文档版本不一致
   | "E-TARGET-MISSING" // ops 的目标不在已挂载树里
   | "E-TREE-ORDER" // 同级 order 冲突
-  | "E-DATA-STALE"; // data revision 落后于当前，已忽略
+  | "E-DATA-STALE" // data revision 落后于当前，已忽略
+  | "E-TEMPLATE" // 集合条目 / 模板不合法，条目被跳过
+  | "E-ID-DUPLICATE"; // 集合条目 key 重复，只保留第一条
 
 /** 一条挂载诊断；path 是文档的 JSON Pointer（根为 ""），能带现场就带。 */
 export interface TreeRuntimeDiagnostic {

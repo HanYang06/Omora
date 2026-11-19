@@ -174,7 +174,7 @@ export class TreeRuntime {
     if (!applied.ok) {
       return this.fail(applied.diagnostics.map(toRuntimeDiagnostic));
     }
-    const context = this.newContext();
+    const context = this.newContext(applied.document.data);
     const updated = applyMountedUpdate({ byId: this.byId, context }, applied, parsed.batch);
     if (!updated.ok) {
       return this.fail([...updated.diagnostics, ...context.cleanup]);
@@ -191,7 +191,7 @@ export class TreeRuntime {
     if (this.isDisposed || this.root === null) {
       return;
     }
-    const context = this.newContext();
+    const context = this.newContext(this.current?.data ?? {});
     unmountTree(context, this.root);
     const diagnostics = context.cleanup;
     this.clearState();
@@ -213,7 +213,7 @@ export class TreeRuntime {
     oldRoot: MountedNode | null,
     oldById: Map<string, MountedNode> | undefined,
   ): TreeMountResult {
-    const context = this.newContext();
+    const context = this.newContext(document.data);
     const applied = applyDocument(context, document, oldRoot, oldById);
     if (!applied.ok) {
       this.clearState();
@@ -226,8 +226,8 @@ export class TreeRuntime {
     return { ok: true };
   }
 
-  private newContext(): TreeApplyContext {
-    return { host: this.host, renderers: this.renderers, cleanup: [] };
+  private newContext(data: Record<string, unknown> = {}): TreeApplyContext {
+    return { host: this.host, renderers: this.renderers, data, cleanup: [] };
   }
 
   private clearState(): void {
