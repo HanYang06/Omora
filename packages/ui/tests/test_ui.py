@@ -214,8 +214,71 @@ def test_tree_on_a_page_sets_active_and_falls_back_after_removal() -> None:
     assert ui.active_page == "b"
 
     kernel.uninstall("pb")
-    assert ui.active_page is None
+    assert ui.active_page == "a"
     assert ui.tree()["name"] == "a"
+
+
+def test_set_page_on_active_page_pushes_ui_changed(monkeypatch: pytest.MonkeyPatch) -> None:
+    frames: list[tuple[str, dict[str, Any]]] = []
+    monkeypatch.setattr(
+        "omora.ui.emit", lambda _ctx, topic, payload, **_kw: frames.append((topic, payload))
+    )
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(_simple))
+    ui: Ui = kernel.resolve("ui")
+    ui.tree()
+
+    ui.set_page("main", Page(content=Column(Text("新"))))
+
+    assert frames
+    topic, payload = frames[-1]
+    assert topic == "ui.changed"
+    assert payload["kind"] in {"tree", "ops"}
+
+
+def test_set_page_on_inactive_page_does_not_push(monkeypatch: pytest.MonkeyPatch) -> None:
+    frames: list[tuple[str, dict[str, Any]]] = []
+    monkeypatch.setattr(
+        "omora.ui.emit", lambda _ctx, topic, payload, **_kw: frames.append((topic, payload))
+    )
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(_simple, page="main", label="首页", name="pa"))
+    kernel.install(_PagePlugin(_simple, page="other", label="其他", name="pb"))
+    ui: Ui = kernel.resolve("ui")
+    ui.tree("main")
+
+    ui.set_page("other", Page(content=Column(Text("别的页"))))
+
+    assert frames == []
+
+
+def test_set_page_inside_event_does_not_push(monkeypatch: pytest.MonkeyPatch) -> None:
+    frames: list[tuple[str, dict[str, Any]]] = []
+    monkeypatch.setattr(
+        "omora.ui.emit", lambda _ctx, topic, payload, **_kw: frames.append((topic, payload))
+    )
+    ui_ref: list[Ui] = []
+
+    def build() -> Page:
+        def change(_payload: dict[str, Any]) -> None:
+            ui_ref[0].set_page("main", Page(content=Column(Text("改完"))))
+
+        return Page(content=Column(Button("改", on_click=change)))
+
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(build))
+    ui: Ui = kernel.resolve("ui")
+    ui_ref.append(ui)
+    tree = ui.tree()
+    handler = _tree_handler(cast(dict[str, Any], tree["partials"][-1]["root"]))
+    assert handler is not None
+
+    ui.tree_event(handler, {})
+
+    assert frames == []
 
 
 def _removable_page(state: dict[str, Any], seen: list[dict[str, Any]]) -> Callable[[], Page]:

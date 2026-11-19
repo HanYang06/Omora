@@ -4,8 +4,8 @@
 按页产出 `dendro.tree/1` 的 base + 局部树（导航 + 内容）；事件经稳定 handler id
 派发，回包是“上一棵树 → 新树”的差分 ops。client 首帧 / 整页兜底走 `tree()`。
 
-异步变化（set_page / refresh_page）不再推整份 view；下一次 tree() 会按最新页面
-状态重建。推送帧留给 V1 主路径的 data op / 后续来源通道。
+异步变化（set_page / refresh_page）在 active 页上推一帧 `ui.changed`：能差分就
+推 ops，表达不了就推整树。`tree()` 仍是首帧 / 重连的全量入口。
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from typing import Any
 
 from omora.core.log import Log, NullLog
 from omora.sdk import Context
+from omora.sdk.realtime import emit
 from omora.sdk.tree_build import NavEntry, build_page, compose
 from omora.sdk.tree_diff import diff_documents, needs_full
 from omora.sdk.ui import Page
@@ -25,6 +26,8 @@ from ._handle import PageHandle
 
 Builder = Callable[[], Page]
 Counter = Callable[[], int]
+
+CHANGED_TOPIC = "ui.changed"
 
 
 @dataclass(frozen=True)
@@ -61,9 +64,12 @@ class _Page:
 
 
 class Ui:
-    def __init__(self, log: Log | None = None) -> None:
+    def __init__(self, log: Log | None = None, ctx: Context | None = None) -> None:
         self._pages: dict[str, _Page] = {}
         self._log = log if log is not None else NullLog()
+        self._ctx = ctx
+        self._in_event = False
+        self._pushing = False
         # 页面列表与 active 由 Ui 自己管：tree() 按它选页，导航回调改它。
         self._active: str | None = None
         self._tree_handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
@@ -95,17 +101,22 @@ class Ui:
             self._pages.pop(name, None)
             if self._active == name:
                 self._active = None
+                self._push()
 
         ctx.effect(remove)
         return PageHandle(self, name)
 
     def set_page(self, name: str, page: Page) -> None:
-        """插件交来一页当前的树；下一次 tree() / tree_event 用它重建。"""
+        """插件交来一页当前的树；active 页立即推一帧 `ui.changed`。"""
         self._entry(name).tree = page
+        if self._active is None or name == self._active:
+            self._push()
 
     def refresh_page(self, name: str) -> None:
-        """校验这一页还在；真正的重建发生在下一次 tree()。"""
+        """让 active 页按最新状态重建，并推一帧 `ui.changed`。"""
         self._entry(name)
+        if self._active is None or name == self._active:
+            self._push()
 
     def bind_rebuild(self, name: str, builder: Builder) -> None:
         self._entry(name).rebuild = builder
@@ -157,7 +168,11 @@ class Ui:
             self._log.info("tree.event.stale", handler=handler, page=self._active)
         if self._tree_document is None:
             raise RuntimeError("tree 还没挂载")
-        callback({} if payload is None else payload)
+        self._in_event = True
+        try:
+            callback({} if payload is None else payload)
+        finally:
+            self._in_event = False
         before = self._tree_document
         base = self._tree_version
         built, after = self._build_tree(None)
@@ -260,12 +275,44 @@ class Ui:
             return entry.tree
         raise LookupError(f"页面还没交树: {name}")
 
+    def _push(self) -> None:
+        """active 页的异步变化：能差分推 ops，表达不了推整树。"""
+        if self._ctx is None or self._tree_document is None:
+            return
+        if self._in_event or self._pushing:
+            return
+        self._pushing = True
+        try:
+            before = self._tree_document
+            base = self._tree_version
+            built, after = self._build_tree(None)
+            if needs_full(before, after):
+                self._tree_document = after
+                self._tree_version = int(after.get("version", 1))
+                self._tree_seq = 0
+                payload: dict[str, Any] = {"kind": "tree", **built}
+            else:
+                ops = diff_documents(before, after)
+                self._tree_document = after
+                self._tree_version = base + 1
+                self._tree_seq += 1
+                payload = {
+                    "kind": "ops",
+                    "document": self._tree_version,
+                    "base": base,
+                    "seq": self._tree_seq,
+                    "ops": ops,
+                }
+            emit(self._ctx, CHANGED_TOPIC, payload)
+        finally:
+            self._pushing = False
+
 
 class UiPlugin:
     name = "ui"
 
     def apply(self, ctx: Context) -> None:
-        ctx.provide("ui", Ui(ctx.log))
+        ctx.provide("ui", Ui(ctx.log, ctx))
 
 
-__all__ = ["PageHandle", "PageInfo", "Ui", "UiPlugin"]
+__all__ = ["CHANGED_TOPIC", "PageHandle", "PageInfo", "Ui", "UiPlugin"]
