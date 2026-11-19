@@ -1,6 +1,6 @@
 # 集合绑定：用数据实例化已声明的结构
 
-> 状态：**建议**（作者已认同方向，细节未定稿）；S3-a 已落实例化与 keyed reconcile 原语（`src/engine/collections/collection.ts`），数据路由与主会话渲染已接（S6）；嵌套集合 / 窗口化仍未做。V1 形状已进 `dendro.tree/1`（§10），挂载期实例化 + replace 按 key 复用已接；data op 触发的 reconcile 未接。
+> 状态：**建议**（作者已认同方向，细节未定稿）；S3-a 已落实例化与 keyed reconcile 原语（`src/engine/collections/collection.ts`），数据路由与主会话渲染已接（S6）；嵌套集合 / 窗口化仍未做。V1 形状已进 `dendro.tree/1`（§10），挂载期实例化、replace 按 key 复用与 data op 定向 reconcile 已接；嵌套集合 / 窗口化未接。
 > 依赖：[contract.md](contract.md) · [addressing.md](addressing.md) · [rules.md](rules.md)
 > 相关：[updates.md](updates.md) · [composition.md](composition.md)
 >
@@ -140,5 +140,6 @@ Slot 的 `collection` 原样进 V1 节点，字段同名同义：
   `E-PARENT-MISSING`（模板不挂载）。
 - 组合器把模板子树一起索引：模板里的 id / chain 撞上已组合树 → `E-COLLISION`。
 - 已落：schema、Python / TS 形状校验、Python 语义（模板身份）、组合器；V1 挂载期实例化
-  （`engine/tree/collection.ts`）与 replace 时按 key 复用元素。
-- 未落：`data` op 触发的 reconcile、嵌套集合、窗口化。
+  （`engine/tree/collection.ts`）、replace 按 key 复用、data op 定向 reconcile
+  （`engine/tree/runtime_collections.ts`）。
+- 未落：嵌套集合、窗口化、`changes` 增量。

@@ -78,6 +78,6 @@ ops 是“按 id 改一份已存在的 `dendro.tree/1` 文档”的批量：不�
 
 还没做：
 
-- `data` 的消费语义：collection 实例化、keyed reconcile、`bind` 投影；`changes` 增量。
+- `data` 的消费语义已接：collection 实例化、keyed reconcile、`bind` 投影；`changes` 增量未接。
 - 数据变更后的订阅 / 通知（宿主回头接）。
 - 权限 / 审计：不在引擎，归宿主策略。

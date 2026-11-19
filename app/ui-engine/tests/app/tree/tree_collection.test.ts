@@ -129,6 +129,85 @@ describe("V1 collection 挂载期实例化", () => {
     first.container.remove();
   });
 
+  it("data op 按 key 增量 reconcile：同 key 复用、新 key 挂载、旧 key 卸载、顺序跟随数据", () => {
+    const { container, runtime } = mount(
+      docOf([
+        { id: "a", template: "item", title: "甲" },
+        { id: "b", template: "item", title: "乙" },
+      ]),
+    );
+    const before = [...container.querySelectorAll<HTMLElement>('[data-type="text"]')];
+    const elementA = before[0];
+    const elementB = before[1];
+
+    const result = runtime.applyOps({
+      kind: "ops",
+      document: 2,
+      base: 1,
+      seq: 1,
+      ops: [
+        {
+          op: "data",
+          source: "ideas.feed",
+          revision: 2,
+          items: [
+            { id: "b", template: "item", title: "乙改" },
+            { id: "c", template: "item", title: "丙" },
+          ],
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.ok ? result.changed : []).toEqual([]);
+    const after = [...container.querySelectorAll<HTMLElement>('[data-type="text"]')];
+    expect(after.map((el) => el.textContent)).toEqual(["乙改", "丙"]);
+    expect(after[0]).toBe(elementB);
+    expect(after.includes(elementA as HTMLElement)).toBe(false);
+
+    runtime.dispose();
+    container.remove();
+  });
+
+  it("data op 只换顺序时移动已有元素，不重建", () => {
+    const { container, runtime } = mount(
+      docOf([
+        { id: "a", template: "item", title: "甲" },
+        { id: "b", template: "item", title: "乙" },
+      ]),
+    );
+    const [elementA, elementB] = [
+      ...container.querySelectorAll<HTMLElement>('[data-type="text"]'),
+    ];
+
+    const result = runtime.applyOps({
+      kind: "ops",
+      document: 2,
+      base: 1,
+      seq: 2,
+      ops: [
+        {
+          op: "data",
+          source: "ideas.feed",
+          revision: 2,
+          items: [
+            { id: "b", template: "item", title: "乙" },
+            { id: "a", template: "item", title: "甲" },
+          ],
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    const after = [...container.querySelectorAll<HTMLElement>('[data-type="text"]')];
+    expect(after.map((el) => el.textContent)).toEqual(["乙", "甲"]);
+    expect(after[0]).toBe(elementB);
+    expect(after[1]).toBe(elementA);
+
+    runtime.dispose();
+    container.remove();
+  });
+
   it("坏条目只丢自己并记 E-TEMPLATE / E-ID-DUPLICATE", () => {
     const { container, runtime } = mount(
       docOf([

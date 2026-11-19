@@ -131,7 +131,10 @@ export function expandCollection(
       return;
     }
     seen.add(key);
-    nodes.push(instantiate(template, slot.id + "#" + key, slot.chain + "." + key, raw));
+    const id = slot.id + "#" + key;
+    const instance = instantiate(template, id, slot.chain + "." + id, raw);
+    instance.order = index;
+    nodes.push(instance);
   });
   return { nodes, diagnostics };
 }

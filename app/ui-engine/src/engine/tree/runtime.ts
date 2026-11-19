@@ -32,6 +32,7 @@ import {
   type MountedNode,
   type TreeApplyContext,
 } from "./runtime_apply";
+import { mergeCollectionInstances, reorderCollections } from "./runtime_collections";
 import { applyMountedUpdate } from "./runtime_update";
 import { validateDocument } from "./validate";
 
@@ -174,16 +175,39 @@ export class TreeRuntime {
     if (!applied.ok) {
       return this.fail(applied.diagnostics.map(toRuntimeDiagnostic));
     }
+    const dataSources = new Set<string>();
+    for (const op of parsed.batch.ops) {
+      if (op.op === "data") {
+        dataSources.add(op.source);
+      }
+    }
+    const reconciled =
+      dataSources.size === 0
+        ? null
+        : mergeCollectionInstances(this.byId, applied, dataSources);
     const context = this.newContext(applied.document.data);
-    const updated = applyMountedUpdate({ byId: this.byId, context }, applied, parsed.batch);
+    const updated = applyMountedUpdate(
+      { byId: this.byId, context },
+      reconciled?.applied ?? applied,
+      parsed.batch,
+    );
     if (!updated.ok) {
       return this.fail([...updated.diagnostics, ...context.cleanup]);
     }
+    const reorderDiagnostics =
+      reconciled === null ? [] : reorderCollections(reconciled.collections);
     // 只更新被触碰的目标节点；未触碰祖先的 MountedNode.node 仍是旧对象。
     // 语义以 this.current（新文档）为准；祖先的 kind / chain 不变，不影响复用判断。
     this.current = applied.document;
-    this.lastDiagnostics = [...applied.diagnostics, ...context.cleanup];
-    return { ok: true, changed: updated.changed };
+    this.lastDiagnostics = [
+      ...applied.diagnostics,
+      ...(reconciled?.diagnostics ?? []),
+      ...reorderDiagnostics,
+      ...context.cleanup,
+    ];
+    // data 只改数据：实例 id 不对外暴露，公开 changed 仍只含结构节点。
+    const structural = new Set(applied.changed);
+    return { ok: true, changed: updated.changed.filter((id) => structural.has(id)) };
   }
 
   /** 卸掉整棵树（后序渲染器），runtime 保持可用。未挂载 / 已 dispose 时是空操作。 */
