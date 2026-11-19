@@ -8,6 +8,7 @@ import {
   TreeLiveApp,
   type TreeBuildPayload,
   type TreeConnection,
+  type TreeOpsPayload,
 } from "../../../src/app/tree/live";
 
 const ROOT = "aaaaaaaaaaaaaaaa";
@@ -65,13 +66,23 @@ function twoPayload(archived: string, pinned: string): TreeBuildPayload {
   };
 }
 
+function opsPayload(text: string): TreeOpsPayload {
+  return {
+    kind: "ops",
+    document: 2,
+    base: 1,
+    seq: 1,
+    ops: [{ op: "setProps", id: BUTTON, props: { text } }],
+  };
+}
+
 class FakeConnection implements TreeConnection {
   readonly calls: Array<{ target: string; method: string; args: JsonObject }> = [];
   private listener: ((status: ConnectionStatus) => void) | undefined;
-  private readonly trees: TreeBuildPayload[];
+  private readonly trees: Array<TreeBuildPayload | TreeOpsPayload>;
   private readonly treeError: Error | undefined;
 
-  constructor(trees: TreeBuildPayload[], treeError?: Error) {
+  constructor(trees: Array<TreeBuildPayload | TreeOpsPayload>, treeError?: Error) {
     this.trees = trees;
     this.treeError = treeError;
   }
@@ -144,6 +155,27 @@ describe("TreeLiveApp 事件回源", () => {
     const nextPin = container.querySelector<HTMLElement>('[data-node-id="' + BUTTON_B + '"]');
     expect(nextPin).not.toBe(pin);
     expect(document.activeElement).toBe(nextPin);
+
+    app.dispose();
+    container.remove();
+  });
+
+  it("tree_event 回 ops 时原地 patch，不整树替换", async () => {
+    const connection = new FakeConnection([payload("归档"), opsPayload("已归档")]);
+    const app = new TreeLiveApp(connection, createLogger({ enabled: false }));
+    const container = document.createElement("div");
+    document.body.append(container);
+
+    app.mount(container);
+    await tick();
+    const before = container.querySelector<HTMLElement>('[data-node-id="' + BUTTON + '"]');
+
+    before?.click();
+    await tick();
+
+    const after = container.querySelector<HTMLElement>('[data-node-id="' + BUTTON + '"]');
+    expect(after).toBe(before);
+    expect(after?.textContent).toBe("已归档");
 
     app.dispose();
     container.remove();

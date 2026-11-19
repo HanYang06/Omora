@@ -36,6 +36,23 @@ export function isTreeBuild(value: unknown): value is TreeBuildPayload {
   return record.kind === "tree" && record.base !== undefined && Array.isArray(record.partials);
 }
 
+/** `ui.tree_event` 的 ops 回包：只带差异，客户端在已挂树上打补丁。 */
+export interface TreeOpsPayload {
+  readonly kind: "ops";
+  readonly document: number;
+  readonly base: number;
+  readonly seq: number;
+  readonly ops: readonly unknown[];
+}
+
+export function isTreeOps(value: unknown): value is TreeOpsPayload {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return record.kind === "ops" && Array.isArray(record.ops);
+}
+
 /** 组合并挂载；组合失败直接抛，带诊断，不留半棵树。 */
 export function mountTreeBuild(
   container: HTMLElement,
@@ -198,8 +215,18 @@ export class TreeLiveApp {
       handler,
       payload: payload ?? {},
     });
+    if (isTreeOps(next)) {
+      if (this.runtime === null) {
+        throw new Error("树还没挂载，不能应用 ops");
+      }
+      const applied = this.runtime.applyOps(next);
+      if (!applied.ok) {
+        throw new Error("ops 应用失败: " + JSON.stringify(applied.diagnostics));
+      }
+      return;
+    }
     if (!isTreeBuild(next)) {
-      throw new Error("ui.tree_event 返回的不是树构建输入");
+      throw new Error("ui.tree_event 返回的既不是 ops，也不是树构建输入");
     }
     this.show(next);
   }
