@@ -1,8 +1,9 @@
 /**
  * 运行期 V1 树：调 `ui.tree` 拿 base + 局部树，链接期 compose 后挂到 DOM。
  *
- * 事件走 `ui.tree_event`：派发后拿一份新树，整棵 replace（ops 回包下一步）。
- * 事件串行执行，失败保留旧树并记日志；replace 前后保留焦点与滚动位置。
+ * 事件走 `ui.tree_event`：回 ops 就地 patch，回整树才 replace。
+ * 异步变化订阅 `ui.changed`：Python 推 ops / 整树，和事件共用一条串行队列。
+ * 失败保留旧树并记日志；replace 前后保留焦点与滚动位置。
  */
 
 import type { ConnectionStatus, JsonObject } from "../../contract/protocol";
@@ -14,12 +15,17 @@ import { CallError } from "../connection";
 import type { Logger } from "../log";
 import { mountTreeDocument } from "./tree_renderer";
 
-/** 树主会话只需要连接的三件事；`Connection` 结构上满足它，测试可以打桩。 */
+/** 树主会话只需要连接的几件事；`Connection` 结构上满足它，测试可以打桩。 */
 export interface TreeConnection {
   call(target: string, method: string, args: JsonObject): Promise<unknown>;
   subscribeStatus(listener: (status: ConnectionStatus) => void): void;
+  onEvent(topic: string, listener: (payload: JsonObject) => void): () => void;
+  subscribe(topics: string[]): Promise<unknown>;
   connect(): void;
 }
+
+/** Python 推异步变化的 topic：`set_page` / `refresh_page` 之后。 */
+export const CHANGED_TOPIC = "ui.changed";
 
 /** 树主会话的宿主钩子：首帧前的一次性准备。 */
 export interface TreeLiveOptions {
@@ -79,6 +85,8 @@ export class TreeLiveApp {
   private container: HTMLElement | null = null;
   private loading = false;
   private prepared = false;
+  private subscribed = false;
+  private offPush: (() => void) | null = null;
   private queue: Promise<void> = Promise.resolve();
   private readonly log: Logger;
   private readonly options: TreeLiveOptions;
@@ -99,6 +107,9 @@ export class TreeLiveApp {
     host.className = "dendro-tree-live-host";
     container.append(host);
     this.host = host;
+    this.offPush = this.connection.onEvent(CHANGED_TOPIC, (payload) => {
+      this.onPush(payload);
+    });
     this.connection.subscribeStatus((status) => {
       if (status === "open") {
         void this.load();
@@ -108,6 +119,8 @@ export class TreeLiveApp {
   }
 
   dispose(): void {
+    this.offPush?.();
+    this.offPush = null;
     this.runtime?.dispose();
     this.runtime = null;
     this.container?.replaceChildren();
@@ -122,6 +135,15 @@ export class TreeLiveApp {
     this.loading = true;
     const host = this.host;
     try {
+      if (!this.subscribed) {
+        this.subscribed = true;
+        try {
+          await this.connection.subscribe([CHANGED_TOPIC]);
+        } catch (error) {
+          const text = error instanceof Error ? error.message : String(error);
+          this.log.warning("tree.subscribe.failed", { err: text });
+        }
+      }
       if (!this.prepared) {
         this.prepared = true;
         try {
@@ -229,20 +251,36 @@ export class TreeLiveApp {
       handler,
       payload: payload ?? {},
     });
-    if (isTreeOps(next)) {
+    this.applyFrame(next);
+  }
+
+  private onPush(payload: JsonObject): void {
+    this.queue = this.queue
+      .then(() => {
+        this.applyFrame(payload);
+      })
+      .catch((error: unknown) => {
+        const text = error instanceof Error ? error.message : String(error);
+        this.log.error("tree.push.failed", { err: text });
+      });
+  }
+
+  private applyFrame(frame: unknown): void {
+    if (isTreeOps(frame)) {
       if (this.runtime === null) {
         throw new Error("树还没挂载，不能应用 ops");
       }
-      const applied = this.runtime.applyOps(next);
+      const applied = this.runtime.applyOps(frame);
       if (!applied.ok) {
         throw new Error("ops 应用失败: " + JSON.stringify(applied.diagnostics));
       }
       return;
     }
-    if (!isTreeBuild(next)) {
-      throw new Error("ui.tree_event 返回的既不是 ops，也不是树构建输入");
+    if (isTreeBuild(frame)) {
+      this.show(frame);
+      return;
     }
-    this.show(next);
+    throw new Error("未知的树帧");
   }
 
   private context(): RenderContext {
