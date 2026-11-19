@@ -181,6 +181,30 @@ def test_tree_registers_handlers_and_dispatches() -> None:
     assert _tree_handler(next_content) != handler
 
 
+def test_tree_nav_handlers_switch_page() -> None:
+    kernel = Kernel()
+    kernel.install(UiPlugin())
+    kernel.install(_PagePlugin(_simple, page="main", label="首页", name="a"))
+    kernel.install(_PagePlugin(_simple, page="other", label="其他", name="b"))
+    ui: Ui = kernel.resolve("ui")
+
+    tree = ui.tree()
+    navs = [partial for partial in tree["partials"] if partial["source"] == "ui"]
+    assert len(navs) == 2
+    other = next(partial for partial in navs if partial["root"]["settings"]["label"] == "其他")
+    assert other["root"]["settings"]["active"] is False
+    handler = other["root"]["on"]["click"]
+
+    next_tree = ui.tree_event(handler)
+
+    assert next_tree["name"] == "other"
+    next_navs = [partial for partial in next_tree["partials"] if partial["source"] == "ui"]
+    other_next = next(
+        partial for partial in next_navs if partial["root"]["settings"]["label"] == "其他"
+    )
+    assert other_next["root"]["settings"]["active"] is True
+
+
 def test_tree_event_rejects_unknown_handler() -> None:
     kernel = Kernel()
     kernel.install(UiPlugin())

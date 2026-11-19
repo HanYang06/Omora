@@ -40,11 +40,12 @@ NAV_KIND = "page-link"
 
 @dataclass(frozen=True)
 class NavEntry:
-    """导航里的一条页面入口：构建期只需要名字、标题与图标。"""
+    """导航里的一条页面入口：名字、标题、图标，以及可选的点击回调。"""
 
     name: str
     title: str
     icon: str | None = None
+    on_click: Callable[[dict[str, Any]], None] | None = None
 
 
 def tree_id(key: str) -> str:
@@ -219,7 +220,12 @@ def base_document(*, name: str, title: str, route: str) -> dict[str, Any]:
     }
 
 
-def nav_partials(entries: Sequence[NavEntry], *, active: str) -> list[dict[str, Any]]:
+def nav_partials(
+    entries: Sequence[NavEntry],
+    *,
+    active: str,
+    register: Register | None = None,
+) -> list[dict[str, Any]]:
     """导航局部树：每个页面一条，挂进骨架的导航容器；active 标当前页。"""
     _text(active, "nav.active")
     nav_id = tree_id(NAV_KEY)
@@ -239,6 +245,9 @@ def nav_partials(entries: Sequence[NavEntry], *, active: str) -> list[dict[str, 
         }
         if entry.icon is not None:
             settings["icon"] = _text(entry.icon, f"nav.{name}.icon")
+        on: dict[str, str] = {}
+        if register is not None and entry.on_click is not None:
+            on["click"] = register(entry.on_click)
         partials.append(
             {
                 "schema": SCHEMA,
@@ -252,6 +261,7 @@ def nav_partials(entries: Sequence[NavEntry], *, active: str) -> list[dict[str, 
                     order=(index + 1) * ORDER_STEP,
                     layout=[],
                     settings=settings,
+                    on=on,
                 ),
             }
         )
@@ -302,7 +312,7 @@ def build_page(  # noqa: PLR0913 —— 一页的构建输入
         "route": _text(route, "page.route"),
         "base": base_document(name=name, title=title, route=route),
         "partials": [
-            *nav_partials(nav, active=name),
+            *nav_partials(nav, active=name, register=register),
             content_partial(page, name=name, owner=owner, register=register),
         ],
     }

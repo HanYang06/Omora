@@ -119,7 +119,7 @@ class Ui:
     def tree(self, page: str | None = None) -> dict[str, Any]:
         """当前页的 V1 树构建输入（base + 局部树）；V1 主路径的迁移桥，构建期同款。
 
-        只搬形状：事件 callable 不进树，运行时先读后写；TS 侧 compose 后挂载。
+        只搬形状：事件 callable 经 register 换成 handler id；TS 侧 compose 后挂载。
         """
         view = self._slots.render(page)
         active = str(view["active"])
@@ -128,14 +128,6 @@ class Ui:
         if current is None:
             raise LookupError(f"当前页不在侧表里: {active}")
         name = active.removeprefix("page.")
-        nav = [
-            NavEntry(
-                name=str(item["id"]).removeprefix("page."),
-                title=str(item["label"]),
-                icon=None if item.get("icon") is None else str(item["icon"]),
-            )
-            for item in pages
-        ]
         self._tree_generation += 1
         generation = self._tree_generation
         handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
@@ -148,6 +140,20 @@ class Ui:
             handlers[handler] = callback
             return handler
 
+        def nav_entry(item: dict[str, Any]) -> NavEntry:
+            target = str(item["id"]).removeprefix("page.")
+
+            def navigate(_payload: dict[str, Any], target: str = target) -> None:
+                self._slots.activate(target)
+
+            return NavEntry(
+                name=target,
+                title=str(item["label"]),
+                icon=None if item.get("icon") is None else str(item["icon"]),
+                on_click=navigate,
+            )
+
+        nav = [nav_entry(item) for item in pages]
         built = build_page(
             name=name,
             title=str(current["label"]),

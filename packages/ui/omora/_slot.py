@@ -122,6 +122,11 @@ class SlotView:
         )
         return view
 
+    def activate(self, name: str) -> None:
+        """切换当前页；页面必须已登记。"""
+        self._info(name)
+        self._active = name
+
     def event(self, handler: str, payload: dict[str, Any]) -> dict[str, Any]:
         """先派发（含上一代宽限），再把当前页的新 view 交回去。"""
         callback = self._handlers.get(handler)
