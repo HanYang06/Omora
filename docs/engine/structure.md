@@ -22,7 +22,7 @@
 
 | 项       | 说明                                                                                                                                 |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| 文件     | （已随 Slot 路径删除；V1 树骨架由 `omora.sdk.tree_build.base_document` 生成）                                                     |
+| 文件     | （已随 Slot 路径删除；V1 树骨架由 `omora.sdk.tree_build.base_document` 生成）                                                        |
 | 内容     | `schema` / `version` / `root`（`dendro.window` 根 + `nav` 图标栏 + `page` 主区）/ `anchors`                                          |
 | 依赖方向 | Python 与 TS 的加载器**只读**它；结构文件不依赖任何一侧代码，单向                                                                    |
 | 改法     | 只改这一份文件，不在两侧各写一份常量；加载器校验 schema / version、根节点形状与 `dendro:window` kind、id 唯一、`anchors` 指向真实 id |
