@@ -1,5 +1,10 @@
 packages:
   - "app/ui-engine"
+allowBuilds:
+  # electron-builder 的 Squirrel 目标（electron-winstaller）只需 install 脚本挑
+  # 7z 架构；项目只用 NSIS，显式拒绝，免得 pnpm 因未批准的构建脚本让 install 失败。
+  electron-winstaller: false
+
 auditConfig:
   # GHSA-fc5q-39xc-vjpf: picomatch ReDoS, dev-only, no patched release
   # as of 2026-11-17. Recheck by 2026-12-31 and remove when fixed.
