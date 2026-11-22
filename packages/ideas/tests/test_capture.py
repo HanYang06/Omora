@@ -66,13 +66,23 @@ def _find_tree_node(node: dict[str, Any], node_id: str) -> dict[str, Any] | None
 
 
 def _as_slot(node: dict[str, Any]) -> dict[str, Any]:
-    """V1 节点 → 测试视图节点（kind / props / events / children）。"""
-    return {
+    """V1 节点 → 测试视图节点（kind / props / events / children / collection）。"""
+    slot: dict[str, Any] = {
         "kind": "dendro:" + str(node["kind"]),
         "props": dict(node["settings"]),
         "events": dict(node["on"]),
         "children": [_as_slot(child) for child in node["layout"]],
     }
+    collection = node.get("collection")
+    if isinstance(collection, dict):
+        slot["collection"] = {
+            **collection,
+            "templates": {
+                str(name): _as_slot(template)
+                for name, template in dict(collection.get("templates", {})).items()
+            },
+        }
+    return slot
 
 
 def _adapt_tree(ui: Any, frame: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -100,6 +110,7 @@ def _adapt_tree(ui: Any, frame: dict[str, Any] | None = None) -> dict[str, Any]:
         "frame": frame,
         "active": None if active is None else "page." + active,
         "pages": pages,
+        "data": dict(document.get("data", {})),
         "localTrees": {
             "trees": [
                 {
@@ -164,12 +175,20 @@ def _main(view: dict[str, Any]) -> dict[str, Any]:
     return main
 
 
+def _data_items(view: dict[str, Any], source: str) -> list[dict[str, Any]]:
+    entry = view["data"].get(source)
+    if not isinstance(entry, dict):
+        return []
+    items = entry.get("items")
+    return [dict(item) for item in items] if isinstance(items, list) else []
+
+
 def _rail_titles(view: dict[str, Any]) -> list[str]:
-    return [str(row["props"]["title"]) for row in _nodes(_content(view)["children"][0], "item")]
+    return [str(item["title"]) for item in _data_items(view, "ideas.rail")]
 
 
 def _cards(view: dict[str, Any]) -> list[str]:
-    return [str(card["props"]["title"]) for card in _nodes(_main(view), "card")]
+    return [str(item["title"]) for item in _data_items(view, "ideas.feed")]
 
 
 def _tiles(view: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -199,11 +218,22 @@ def _click_tile(ui: Any, title: str) -> Any:
     return _fire(ui, _tiles(_tree_view(ui))[title]["events"]["click"])
 
 
+def _collection_click(view: dict[str, Any], source: str) -> str:
+    for slot in _walk(_content(view)):
+        collection = slot.get("collection")
+        if isinstance(collection, dict) and collection.get("source") == source:
+            template = collection["templates"]["item"]
+            handler = template["events"].get("click")
+            assert handler, f"{source} 的模板没有 click"
+            return str(handler)
+    raise AssertionError(f"页面里没有集合: {source}")
+
+
 def _click_rail(ui: Any, title: str) -> Any:
-    rail = _content(_tree_view(ui))["children"][0]
-    hits = [row for row in _nodes(rail, "item") if row["props"]["title"] == title]
+    view = _tree_view(ui)
+    hits = [item for item in _data_items(view, "ideas.rail") if item["title"] == title]
     assert hits, f"索引栏里没有: {title}"
-    return _fire(ui, hits[0]["events"]["click"])
+    return _fire(ui, _collection_click(view, "ideas.rail"), {"item": hits[0]["id"]})
 
 
 def _click_button(ui: Any, text: str) -> Any:

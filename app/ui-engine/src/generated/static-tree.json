@@ -198,7 +198,43 @@
                 "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.4f92399372e20125",
                 "kind": "rail",
                 "order": 10,
-                "layout": [],
+                "layout": [
+                  {
+                    "id": "1b40d5f697ed1190",
+                    "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.4f92399372e20125.1b40d5f697ed1190",
+                    "kind": "column",
+                    "order": 10,
+                    "layout": [],
+                    "settings": {},
+                    "bind": {},
+                    "on": {},
+                    "emit": {},
+                    "collection": {
+                      "source": "ideas.rail",
+                      "key": "id",
+                      "select": "template",
+                      "templates": {
+                        "item": {
+                          "id": "fe5ac6077bf73a27",
+                          "chain": "774cd5671b9ad811.1a99fbf45836c39e.fca56174e5ff50cf.beeb99ae14a069f0.4f92399372e20125.1b40d5f697ed1190.fe5ac6077bf73a27",
+                          "kind": "item",
+                          "order": 10,
+                          "layout": [],
+                          "settings": {
+                            "meta": "",
+                            "title": ""
+                          },
+                          "bind": {
+                            "title": "item.title",
+                            "meta": "item.meta"
+                          },
+                          "on": {},
+                          "emit": {}
+                        }
+                      }
+                    }
+                  }
+                ],
                 "settings": {
                   "title": "全部灵感"
                 },

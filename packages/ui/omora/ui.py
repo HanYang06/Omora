@@ -205,7 +205,7 @@ class Ui:
         事件 callable 经 register 换成稳定 handler id；TS 侧 compose 后挂载。
         这里保存 compose 后的文档，作为下一次 tree_event 差分的基准。
         """
-        built, document = self._build_tree(page)
+        built, document = self._build_tree(page, with_data=True)
         self._tree_document = document
         self._tree_version = int(document.get("version", 1))
         self._tree_seq = 0
@@ -242,7 +242,7 @@ class Ui:
             self._tree_document = after
             self._tree_version = int(after.get("version", 1))
             self._tree_seq = 0
-            return {"kind": "tree", **built}
+            return {"kind": "tree", **self._with_data(built)}
         ops = diff_documents(before, after)
         ops.extend(data_ops)
         self._tree_document = after
@@ -256,8 +256,13 @@ class Ui:
             "ops": ops,
         }
 
-    def _build_tree(self, page: str | None) -> tuple[dict[str, Any], dict[str, Any]]:
-        """组装一页的 base + 局部树，并 compose 成可对比的完整文档。"""
+    def _build_tree(
+        self, page: str | None, *, with_data: bool = False
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """组装一页的 base + 局部树，并 compose 成可对比的完整文档。
+
+        数据不进每次事件的构造：列表条目是数据，不是页面节点，整树才需要带着它。
+        """
         name = self._resolve(page)
         started = time.perf_counter()
         entry = self._entry(name)
@@ -288,7 +293,6 @@ class Ui:
             owner=entry.owner,
             nav=nav,
             register=register,
-            data=entry.data,
         )
         self._previous_handlers = self._tree_handlers
         self._tree_handlers = handlers
@@ -297,7 +301,17 @@ class Ui:
             page=name,
             ms=(time.perf_counter() - started) * 1000,
         )
-        return built, compose(built["base"], built["partials"])
+        document = compose(built["base"], built["partials"])
+        # 本地文档始终指向页面数据快照；wire 上只有整树带 data，事件只带 ops。
+        document["data"] = entry.data
+        if with_data:
+            built["base"]["data"] = entry.data
+        return built, document
+
+    def _with_data(self, built: dict[str, Any]) -> dict[str, Any]:
+        """整树回退时把页面数据快照塞进 base（引用，不深拷）。"""
+        built["base"]["data"] = self._entry(str(self._active)).data
+        return built
 
     def _resolve(self, page: str | None) -> str:
         """显式页 → 校验；否则 active（还登记着）→ 第一页。"""
@@ -353,7 +367,7 @@ class Ui:
                 self._tree_version = int(after.get("version", 1))
                 self._tree_seq = 0
                 self._pending_data = []
-                payload: dict[str, Any] = {"kind": "tree", **built}
+                payload: dict[str, Any] = {"kind": "tree", **self._with_data(built)}
             else:
                 ops = diff_documents(before, after)
                 ops.extend(op_wire(op) for op in self._pending_data)

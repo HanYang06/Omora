@@ -28,13 +28,23 @@ def _find_tree_node(node: dict[str, Any], node_id: str) -> dict[str, Any] | None
 
 
 def _as_slot(node: dict[str, Any]) -> dict[str, Any]:
-    """V1 节点 → 测试视图节点（kind / props / events / children）。"""
-    return {
+    """V1 节点 → 测试视图节点（kind / props / events / children / collection）。"""
+    slot: dict[str, Any] = {
         "kind": "dendro:" + str(node["kind"]),
         "props": dict(node["settings"]),
         "events": dict(node["on"]),
         "children": [_as_slot(child) for child in node["layout"]],
     }
+    collection = node.get("collection")
+    if isinstance(collection, dict):
+        slot["collection"] = {
+            **collection,
+            "templates": {
+                str(name): _as_slot(template)
+                for name, template in dict(collection.get("templates", {})).items()
+            },
+        }
+    return slot
 
 
 def _tree_view(payload: dict[str, Any], frame: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -62,6 +72,7 @@ def _tree_view(payload: dict[str, Any], frame: dict[str, Any] | None = None) -> 
         "frame": frame,
         "active": "page." + active,
         "pages": pages,
+        "data": dict(document.get("data", {})),
         "localTrees": {
             "trees": [
                 {
@@ -113,8 +124,32 @@ def _find(view: dict[str, Any], kind: str, event: str, **props: Any) -> str | No
     return None
 
 
+def _data_items(view: dict[str, Any], source: str) -> list[dict[str, Any]]:
+    entry = view["data"].get(source)
+    if not isinstance(entry, dict):
+        return []
+    items = entry.get("items")
+    return [dict(item) for item in items] if isinstance(items, list) else []
+
+
 def _titles(view: dict[str, Any]) -> list[str]:
-    return [str(slot["props"]["title"]) for slot in _slots(view, "item")]
+    return [str(item["title"]) for item in _data_items(view, "ideas.rail")]
+
+
+def _open_idea(
+    view: dict[str, Any], title: str, source: str = "ideas.rail"
+) -> tuple[str, dict[str, Any]]:
+    """集合条目共用一个 handler：点哪条由 payload.item 决定。"""
+    hits = [item for item in _data_items(view, source) if item.get("title") == title]
+    assert hits, f"列表里没有: {title}"
+    handler: str | None = None
+    for slot in _walk(_page_root(view)):
+        collection = slot.get("collection")
+        if isinstance(collection, dict) and collection.get("source") == source:
+            handler = collection["templates"]["item"]["events"].get("click")
+            break
+    assert handler, f"{source} 的模板没有 click"
+    return str(handler), {"item": hits[0]["id"]}
 
 
 def _nav_handler(view: dict[str, Any], label: str) -> str:
@@ -252,10 +287,9 @@ def test_clicking_archive_over_the_socket_updates_the_page(tmp_path: Path) -> No
                 assert "买牛奶" in json.dumps(pushed, ensure_ascii=False)
 
                 before = await _tree(ws, "5")
-                opened = _find(before, "item", "click", title="买牛奶")
-                assert opened is not None
+                opened, open_payload = _open_idea(before, "买牛奶")
 
-                await _event(ws, "6", opened)
+                await _event(ws, "6", opened, open_payload)
 
                 detail = await _tree(ws, "7")
                 handler = _find(detail, "button", "click", text="归档")
@@ -339,10 +373,9 @@ def test_audio_capture_and_media_load_over_the_socket(tmp_path: Path, monkeypatc
                 )
 
                 after = await _tree(ws, "5")
-                opened = _find(after, "item", "click", title="语音 11-11 03:41")
-                assert opened is not None
+                opened, open_payload = _open_idea(after, "语音 11-11 03:41")
 
-                await _event(ws, "6", opened)
+                await _event(ws, "6", opened, open_payload)
 
                 detail = await _tree(ws, "7")
                 media_id = str(_slots(detail, "audio")[0]["props"]["media"])
@@ -389,10 +422,9 @@ def test_video_capture_uploads_over_http_and_plays_back(tmp_path: Path, monkeypa
                 )
 
                 after = await _tree(ws, "5")
-                opened = _find(after, "item", "click", title="视频 11-11 03:41")
-                assert opened is not None
+                opened, open_payload = _open_idea(after, "视频 11-11 03:41")
 
-                await _event(ws, "6", opened)
+                await _event(ws, "6", opened, open_payload)
 
                 detail = await _tree(ws, "7")
                 src = str(_slots(detail, "video")[0]["props"]["src"])

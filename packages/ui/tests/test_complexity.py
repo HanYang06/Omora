@@ -1,19 +1,16 @@
-"""事件路径的复杂度：ops 只带被改的节点，节点处理量被棘轮钉住。
+"""事件路径的复杂度：ops 只带被改的节点，节点型页面的处理量不超线性。
 
 这里不测时间（CI 会抖），测的是“一次事件处理了几个节点”。
-同一个页面里只改一个节点时：
 
-- 协议层已经是 O(k)：回包只有 1 个 setProps；
-- 计算层现在仍是 O(N)：整页重建 + compose + 四遍文档遍历；
-- 目标（#159 / #160）是让处理量不随页面规模增长，那条现在是 xfail。
+节点型页面本来就有 N 个节点（结构就是 N 个节点），所以这条只钉 compose / diff
+不超线性。数据驱动的页面（列表走 collection）的 O(k) 验收在
+`packages/ideas/tests/test_complexity.py`：50 条和 500 条，页面树一样大。
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any
-
-import pytest
 
 from omora.core.context import Context
 from omora.core.kernel import Kernel
@@ -85,19 +82,3 @@ def test_event_node_work_stays_within_a_linear_budget() -> None:
             ui.tree_event(handler, {})
 
         assert meter.total <= 14 * count, f"{count} 条文本处理了 {meter.total} 个节点"
-
-
-@pytest.mark.xfail(
-    strict=True,
-    reason="O(k) 产线未落（#159 / #160）：事件仍处理整页；这条绿了就把 xfail 删掉",
-)
-def test_event_node_work_is_independent_of_page_size() -> None:
-    """目标：100 条和 800 条，一次事件处理的节点数一样（只跟被改的子树有关）。"""
-    totals: list[int] = []
-    for count in (100, 800):
-        ui, handler = _mount(count)
-        with measuring() as meter:
-            ui.tree_event(handler, {})
-        totals.append(meter.total)
-
-    assert totals[1] <= 64
