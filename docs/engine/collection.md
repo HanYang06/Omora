@@ -110,7 +110,10 @@
 - 条目级错误在界面上的呈现；
 - 大数据量下的窗口化（只实例化可见条目）是否属于引擎能力。
 
-## 9. S3-a 实现（已落）
+## 9. S3-a 实现（Slot 时期，代码已删）
+
+> 历史：本节路径（`engine/collections/`、`engine/updates/data.ts`）随 2026-11-20 拆桥删除；
+> 现行实现见 §10 与 `engine/tree/collection.ts`、`engine/tree/runtime_collections.ts`。
 
 - 代码：`app/ui-engine/src/engine/collections/collection.ts` —— `instantiateCollection(slot, items)` 与 `applyCollectionChanges(slot, items, changes)`。
 - id 派生：条目根 `<collectionSlotId>#<itemKey>`，子节点 `<父实例 id>/<模板节点 id>`；同 key 跨更新 id 稳定，不同 key 不撞。
@@ -145,5 +148,7 @@ Slot 的 `collection` 原样进 V1 节点，字段同名同义：
 - 组合器把模板子树一起索引：模板里的 id / chain 撞上已组合树 → `E-COLLISION`。
 - 已落：schema、Python / TS 形状校验、Python 语义（模板身份）、组合器；V1 挂载期实例化
   （`engine/tree/collection.ts`）、replace 按 key 复用、data op 定向 reconcile
-  （`engine/tree/runtime_collections.ts`）。
-- 未落：嵌套集合、窗口化、`changes` 增量。
+  （`engine/tree/runtime_collections.ts`）；Python 侧 `PageHandle.data` 发 data op
+  （`value` / `items`），整树 / 重连时 `base.data` 带快照。
+- 未落：Python 编写端还不能写 collection slot（templates + bind）；`changes` 增量；
+  嵌套集合、窗口化。

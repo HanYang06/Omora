@@ -1,9 +1,9 @@
 # V1 更新操作（ops）
 
-> 状态：**现状**（2026-11-20）。形状 + 文档层应用 + 运行时最小更新 /
+> 状态：**现状**（2026-11-22）。形状 + 文档层应用 + 运行时最小更新 /
 > `data` 文档层已落。Python 的 `tree_event` 产线只发 `setProps` / `mount` / `unmount`，
-> 表达不了就回整树；`replace` / `data` 形状与应用端已实现但产线暂未发。
-> collection 实例化、`bind` 与 `changes` 增量还没接。
+> 表达不了就回整树；`replace` 形状与应用端已实现但产线未发；
+> `data` 由 `PageHandle.data` 单独发（不经过差分），`changes` 增量还没接。
 > 相关：[V1 树](../planning/v1-tree.md) · [V1 运行时](tree-runtime.md) · [wire](wire.md)
 
 ## 0. 一句话
@@ -83,5 +83,8 @@ ops 是“按 id 改一份已存在的 `dendro.tree/1` 文档”的批量：不�
 
 - `data` 的产线与消费语义：Python 还没发 `data` op；collection 实例化 / keyed
   reconcile / `bind` 投影、`changes` 增量未接。
-- `replace` / `data` op 的产线：形状与应用端已落，`tree_event` 差分暂不产这两种。
+- `replace` 的产线：形状与应用端已落，`tree_event` 差分暂不产。
+- `data` 的发射端：`PageHandle.data(source, value=… | items=…)` 直接产一帧 data op
+  （revision 按 source 递增），整树 / 重连时 `base.data` 带同一份快照；
+  `changes` 增量仍然遇整批 `E-PAYLOAD`，collection 的 Python 编写端也还没接。
 - 权限 / 审计：不在引擎，归宿主策略（V1 宿主侧还没接）。

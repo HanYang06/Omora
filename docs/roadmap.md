@@ -28,10 +28,14 @@
 
 **目标**：把“协议已经最小、计算仍全量”的落差补上，让默认入口的链路真正 O(k)。
 
-- Python 脏节点产线：事件后只算被改的节点，不再整页重建再差分。
-- data / collection 产线起步：Python 发 `data` op；collection 实例化 / bind / changes。
-- 复杂度护栏：事件 → DOM 的工作量不随总节点数增长，进 CI。
+- 复杂度护栏：事件 → DOM 的工作量不随总节点数增长，进 CI（先按计数棘轮，O(k) 目标用 strict xfail 记账）。
+- data / collection 产线起步：Python 发 `data` op；collection 实例化 / bind / changes；ideas feed 用上。
 - 类型检查后半：per-kind settings schema、on / bind 引用、warning 码。
+- Python 脏节点产线（#159）：按 [ADR-0005](engine/decisions/0005-data-collection-before-dirty-nodes.md) **后置**——
+  ideas 的 N 在列表，列表 O(k) 靠 keyed collection，不靠脏子树；记为已知债。
+
+顺序不是偏好：实测列表 id 按位置漂、ops 没有 `move`，先做脏节点救不了置顶 / 插入 / 删除。
+详见 [ADR-0005](engine/decisions/0005-data-collection-before-dirty-nodes.md)。
 
 **退出条件**：
 
@@ -118,11 +122,12 @@
 
 ## 7. 阶段门禁记录
 
-| 日期       | 阶段         | 结论                                                                              | 动作                                                   |
-| ---------- | ------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| 2026-11-18 | 定基         | 引擎先完善；静态结构 + 最小更新是目标架构；Idea/Project 闭环长期做                | ADR-0004                                               |
-| 2026-11-20 | 拆桥         | Slot 删除；V1 树是唯一格式与默认入口；下一步脏节点产线 + data/collection + 护栏   | 两条拆桥分支                                           |
-| 2026-11-20 | 能力补齐规划 | 权限/审计不做（页面差异归插件）；布局/层焦点/组件/i18n/主题/交互按 M2–M6 轮子优先 | [engine-capabilities](planning/engine-capabilities.md) |
+| 日期       | 阶段         | 结论                                                                                        | 动作                                                                    |
+| ---------- | ------------ | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 2026-11-18 | 定基         | 引擎先完善；静态结构 + 最小更新是目标架构；Idea/Project 闭环长期做                          | ADR-0004                                                                |
+| 2026-11-20 | 拆桥         | Slot 删除；V1 树是唯一格式与默认入口；下一步脏节点产线 + data/collection + 护栏             | 两条拆桥分支                                                            |
+| 2026-11-20 | 能力补齐规划 | 权限/审计不做（页面差异归插件）；布局/层焦点/组件/i18n/主题/交互按 M2–M6 轮子优先           | [engine-capabilities](planning/engine-capabilities.md)                  |
+| 2026-11-22 | 产线排序     | 实测列表身份按位置漂、置顶出 O(N) 个 op；现期改为护栏 → data/collection → 类型检查 → 脏节点 | [ADR-0005](engine/decisions/0005-data-collection-before-dirty-nodes.md) |
 
 ## 8. 关联
 

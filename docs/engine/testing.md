@@ -94,4 +94,5 @@ Playwright 本地默认用系统 Edge；CI 用 Playwright Chromium 并跳过像�
 - 最小更新：未触碰的兄弟保持原引用，DOM 元素复用。
 - 幂等：同 revision 的 data op、重复到达的 ops 是 no-op。
 - 失败不静默：诊断带 code / path / message。
-- 事件 → DOM 的工作量不随总节点数增长（复杂度斜率，护栏待进 CI）。
+- 事件 → DOM 的工作量不随总节点数增长（复杂度斜率）：`packages/ui/tests/test_complexity.py`
+  按 build / compose / walk 计数，线性棘轮进 CI；O(k) 目标是 strict xfail，绿了会失败、迫使删标记。

@@ -80,16 +80,19 @@ V1 引擎是一个 **V1 树文档运行时**：
 - 主会话：默认入口 V1 树（`ui.tree` 首帧、`ui.tree_event` 事件、`ui.changed` 异步变化）、
   导航与 handler 登记、设备上报；`?engine=tree` 产物预览、`virtual` / `dialog` 组件预览；
 - 组件：38 个 kind + `app` + `page-link`（`treeKinds`）、a11y / i18n / placement 适配；
+- 事件复杂度计量与棘轮：`sdk/tree_meter.py`（build / compose / walk 三阶段计数）+
+  `packages/ui/tests/test_complexity.py`；
+- `PageHandle.data` 发 `data` op（`value` / `items`，revision 按 source 递增），整树 / 重连时 `base.data` 带快照；
 - 旧 Slot 路径、`dendro.ui/1` 契约、Slot 测试与构建脚本全部删除。
 
 **还没落**：
 
 - Python 发射端仍按“改完重建整页 → 差分”出 ops，没有脏节点产线；
-- `data` / collection 的产线：TS 有文档层与集合原语，Python 还没发 `data` op；
-- `bind` / `changes` 增量、嵌套集合、窗口化之上的数据消费；
+- collection 的 Python 编写端（templates + bind）与 per-item 事件接线；
+- `changes` 增量（现在整批 `E-PAYLOAD`）、嵌套集合、窗口化之上的数据消费；
 - 树内规则（`reactions`）、权限 / 审计接 V1、远程 / 运行后来源；
 - per-kind `settings` schema、`on` / `bind` 引用校验（现在只查 kind 存在性）；
-- 复杂度护栏（事件 → DOM 不随总节点数增长）进 CI；
+- 复杂度护栏的 O(k) 收紧：现在只有线性棘轮 + strict xfail 目标（见 ADR-0005）；
 - schema 单一来源（Python / TS 词表仍两份手写）。
 
 ## 5. 术语
