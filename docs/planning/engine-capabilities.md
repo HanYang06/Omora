@@ -15,30 +15,30 @@
 
 ## 1. 能力矩阵
 
-| 能力                   | 现状                                         | 做法                                               | 轮子                                                                    | 规模 | 里程碑 |
-| ---------------------- | -------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------- | ---- | ------ |
-| 脏节点产线             | 事件后整页重建再差分（ADR-0005 后置）        | 结构型变更再评估；列表走 collection                | 无（自写）                                                              | L    | M1     |
-| data / collection 产线 | TS 已落；Python 能发 data，不能写 collection | 编写端 templates + bind；`changes`；ideas 用上     | 无（自写）                                                              | L    | M1     |
-| 类型检查后半           | 只查 kind 存在性                             | per-kind settings schema、on/bind 引用、warning 码 | JSON Schema 已有                                                        | M    | M1     |
-| 复杂度护栏             | 棘轮已进 CI（线性上界 + O(k) strict xfail）  | 随 collection 把目标收紧成常数断言                 | 自写斜率测试                                                            | M    | M1     |
-| 布局                   | 只有 `slot.size/align`                       | 声明式 flow/grid/stack/scroll/gap → CSS            | CSS 本身；gridstack/muuri 仅按需                                        | S/M  | M2     |
-| 层 / 焦点              | 原生 `<dialog>`                              | popover/menu/tooltip + focus scope + 定位          | `@floating-ui/dom`、`focus-trap`、Zag dialog/menu/popover               | M    | M3     |
-| 组件广度               | 38 kind；tabs/accordion/combobox 手写或缺失  | 统一 adapter，逐个换；先量净行数                   | Zag：tabs / accordion / select / combobox / tooltip / toast / tree-view | L    | M4     |
-| 表格                   | 无                                           | headless 表格                                      | `@tanstack/table-core`                                                  | M    | M4     |
-| i18n 完整化            | prop→key 静态渲染                            | 参数/复数/select、locale 切换、catalog             | `@formatjs/intl`、`@formatjs/cli`、已有 `intl-messageformat`            | M    | M5     |
-| 主题                   | 浅色                                         | CSS 变量 + token；暗色 `[data-theme]`              | `open-props`                                                            | S    | M5     |
-| 动效                   | 无                                           | 列表进出 + 层过渡                                  | `@formkit/auto-animate` + CSS                                           | S    | M5     |
-| 拖拽排序               | 无                                           | 列表排序 / 置顶 / 跨容器                           | `sortablejs`                                                            | M    | M6     |
-| 快捷键                 | 插件级 hotkey                                | 引擎 command 注册 + 快捷键                         | `tinykeys`；命令面板复用 Zag combobox                                   | M    | M6     |
-| 工程护栏               | 部分                                         | DevTools/树检查器、schema 单一来源、斜率测试       | 无（自写）                                                              | M    | M6     |
-| 0.2 发布               | 未发                                         | schema 冻结、迁移 runner、安装包、release notes    | `electron-updater`（发布后接）                                          | M    | 0.2    |
+| 能力                   | 现状                                        | 做法                                               | 轮子                                                                    | 规模 | 里程碑 |
+| ---------------------- | ------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------- | ---- | ------ |
+| 脏节点产线             | 事件后整页重建再差分（ADR-0005 后置）       | 结构型变更再评估；列表走 collection                | 无（自写）                                                              | L    | M1     |
+| data / collection 产线 | 已落：Python 发 data + 能写 collection      | `changes` 增量；插入 / 删除的整列重排              | 无（自写）                                                              | L    | M1     |
+| 类型检查后半           | 只查 kind 存在性                            | per-kind settings schema、on/bind 引用、warning 码 | JSON Schema 已有                                                        | M    | M1     |
+| 复杂度护栏             | 已进 CI：棘轮 + ideas 常数断言              | 换页面时照抄同一套断言                             | 自写斜率测试                                                            | M    | M1     |
+| 布局                   | 只有 `slot.size/align`                      | 声明式 flow/grid/stack/scroll/gap → CSS            | CSS 本身；gridstack/muuri 仅按需                                        | S/M  | M2     |
+| 层 / 焦点              | 原生 `<dialog>`                             | popover/menu/tooltip + focus scope + 定位          | `@floating-ui/dom`、`focus-trap`、Zag dialog/menu/popover               | M    | M3     |
+| 组件广度               | 38 kind；tabs/accordion/combobox 手写或缺失 | 统一 adapter，逐个换；先量净行数                   | Zag：tabs / accordion / select / combobox / tooltip / toast / tree-view | L    | M4     |
+| 表格                   | 无                                          | headless 表格                                      | `@tanstack/table-core`                                                  | M    | M4     |
+| i18n 完整化            | prop→key 静态渲染                           | 参数/复数/select、locale 切换、catalog             | `@formatjs/intl`、`@formatjs/cli`、已有 `intl-messageformat`            | M    | M5     |
+| 主题                   | 浅色                                        | CSS 变量 + token；暗色 `[data-theme]`              | `open-props`                                                            | S    | M5     |
+| 动效                   | 无                                          | 列表进出 + 层过渡                                  | `@formkit/auto-animate` + CSS                                           | S    | M5     |
+| 拖拽排序               | 无                                          | 列表排序 / 置顶 / 跨容器                           | `sortablejs`                                                            | M    | M6     |
+| 快捷键                 | 插件级 hotkey                               | 引擎 command 注册 + 快捷键                         | `tinykeys`；命令面板复用 Zag combobox                                   | M    | M6     |
+| 工程护栏               | 部分                                        | DevTools/树检查器、schema 单一来源、斜率测试       | 无（自写）                                                              | M    | M6     |
+| 0.2 发布               | 未发                                        | schema 冻结、迁移 runner、安装包、release notes    | `electron-updater`（发布后接）                                          | M    | 0.2    |
 
 ## 2. 各里程碑
 
 ### M1 生产地基（最先）
 
-- 复杂度护栏：计数棘轮进 CI，随 collection 收紧成 O(k) 断言。
-- `data` op 产线 + collection 编写端 / bind / changes；ideas feed 用上。
+- 复杂度护栏：计数棘轮 + ideas 页常数断言进 CI。
+- `data` op 产线 + collection 编写端 / bind；ideas rail / feed 用上；`changes` 增量后补。
 - 类型检查后半。
 - 脏节点产线后置（ADR-0005）：列表 O(k) 靠 keyed collection，不靠脏子树。
 - **退出**：ideas 一页捕获/搜索/详情走 O(k)；data op 有跨语言 fixture；斜率测试挡全树重算；全量门禁绿。

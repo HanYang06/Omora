@@ -28,7 +28,7 @@
 
 **目标**：把“协议已经最小、计算仍全量”的落差补上，让默认入口的链路真正 O(k)。
 
-- 复杂度护栏：事件 → DOM 的工作量不随总节点数增长，进 CI（先按计数棘轮，O(k) 目标用 strict xfail 记账）。
+- 复杂度护栏：事件 → DOM 的工作量不随总节点数增长，进 CI（计数棘轮 + ideas 页常数断言）。
 - data / collection 产线起步：Python 发 `data` op；collection 实例化 / bind / changes；ideas feed 用上。
 - 类型检查后半：per-kind settings schema、on / bind 引用、warning 码。
 - Python 脏节点产线（#159）：按 [ADR-0005](engine/decisions/0005-data-collection-before-dirty-nodes.md) **后置**——

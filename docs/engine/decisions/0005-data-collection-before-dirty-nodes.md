@@ -28,7 +28,7 @@
 根因在树的身份与顺序：
 
 - id 按兄弟下标派生（`tree_build._ui_node` 用 `f"{key}/{index}"`），插入 / 重排会让后面所有 item 的 id 漂；
-- `keyed()`（`sdk/node_key.py`）被 ideas 用来标列表项，但 **tree_build 不读 `id_key`**：
+- `keyed()`（`sdk/node_key.py`，本次一并删除）被 ideas 用来标列表项，但 **tree_build 不读 `id_key`**：
   实测 `[A,B]` 与 `[B,A]` 得到的 id 完全对调，那个"稳定 key"目前是装饰；
 - ops 没有 `move`，`order` 是结构字段 → 同级顺序变化只能整树回退，或者像上面那样按位置错分配。
 
@@ -46,8 +46,9 @@ ideas 的 N 恰恰在两张列表（rail + feed）。列表的正解是 keyed co
    事件 payload 带 `item = key`，不覆盖调用方已有的 `item`；payload 本来不透明，线协议形状不变。
 5. **`changes` 增量暂不接**：data op 先发 `items` 全量，DOM 侧按 key reconcile；
    字节与序列化仍是 O(N)，记为已知债，等真实数据量说话。
-6. **护栏不测绝对值，测计数**：build / compose / walk 三阶段节点数；
-   先按"线性上界"棘轮进 CI，O(k) 目标用 `xfail(strict=True)` 记录——它绿了会失败，迫使删标记。
+6. **护栏不测绝对值，测计数**：build / compose / walk 三阶段节点数。
+   节点型页面按"线性上界"棘轮；数据型页面（ideas）用常数断言验收：50 条与 500 条灵感，
+   页面树一样大、重交一次树的处理量一样多。
 
 ## 后果
 
@@ -61,7 +62,7 @@ ideas 的 N 恰恰在两张列表（rail + feed）。列表的正解是 keyed co
 
 - `changes` 未接期间 data op 的字节是 O(N)；要如实写进 PR 与文档，不假装已经 O(k)。
 - collection 的模板事件身份是一个新约定（`item` 字段），插件要按它取条目 key。
-- `xfail(strict=True)` 是临时记账，不是长期护栏；collection 落地后必须收紧成常数断言。
+- 常数断言只覆盖 ideas；新页面接 collection 时要照抄同一套断言，否则它只是"这一页的测试"。
 
 **风险与缓解**：
 

@@ -6,13 +6,13 @@
 
 ## Now
 
-- [ ] **复杂度护栏进 CI** — owner: engine — next: 已落 build / compose / walk 计数 + 线性上界棘轮（`packages/ui/tests/test_complexity.py`）；下一步把 strict xfail 的 O(k) 目标随 collection 收紧成常数断言。
-- [ ] **V1 data / collection 产线** — owner: engine — next: Python 已能发 `data` op（`PageHandle.data`，整树 base 带快照）；下一步 SDK 能写 collection slot（templates + bind）、ideas feed 用上、per-item 事件带 `item` key，最后接 `changes` 增量。
+- [ ] **V1 data / collection 产线** — owner: engine — next: 已落 data op、collection 编写端（templates + bind）、per-item 事件与 ideas rail / feed；剩 `changes` 增量（items 全量仍 O(N)）。
+- [ ] **集合重排的 DOM 步长** — owner: engine — next: 插入 / 删除 / 置顶仍按 index 重排整列（`reorderCollections` 对每个位移实例发 `host.update`）；改成按位移做 DOM move，并给重排加常数断言——这是 #162「事件 → DOM」那半还没盖住的地方。
 - [ ] **V1 类型检查后半** — owner: engine — next: per-kind `settings` schema、`on` / `bind` 引用、warning 码；现在只查 kind 存在性。
 
 ## Next
 
-- [ ] **Python 脏节点产线** — owner: engine — next: 按 [ADR-0005](engine/decisions/0005-data-collection-before-dirty-nodes.md) 后置；只对结构型列表有意义，等 collection 落地后再评估；不要把 `keyed()` 当解（`tree_build` 不读 `id_key`，且它只稳 id 不稳 order）。
+- [ ] **Python 脏节点产线** — owner: engine — next: 按 [ADR-0005](engine/decisions/0005-data-collection-before-dirty-nodes.md) 后置；只对结构型列表有意义，等有真实页面需要再评估；`keyed()` 已删——它只稳 id 不稳 order。
 - [ ] **布局 vocabulary** — owner: engine — next: flow/grid/stack/scroll/gap/align 描述词映射 CSS；不自研布局算法；仪表盘/瀑布流真实需求出现再评估 gridstack/muuri。
 - [ ] **层 / 焦点** — owner: engine — next: 平台 dialog/popover/inert + `@floating-ui/dom` 定位 + `focus-trap`；Zag dialog/menu/popover 状态机，DOM 仍由 kind 建。
 - [ ] **组件广度（Zag adapter）** — owner: engine — next: 先做 `zag_adapter`；按 net-delete 顺序换 combobox/tabs/accordion → select/tooltip/toast/tree-view；表格用 `@tanstack/table-core`；每个替换记录净行数，净增不合并。
