@@ -150,5 +150,10 @@ Slot 的 `collection` 原样进 V1 节点，字段同名同义：
   （`engine/tree/collection.ts`）、replace 按 key 复用、data op 定向 reconcile
   （`engine/tree/runtime_collections.ts`）；Python 侧 `PageHandle.data` 发 data op
   （`value` / `items`），整树 / 重连时 `base.data` 带快照。
+- data op 的运行时 reconcile 是**定向**的：同 key 实例先比内容（order 不参与），内容没变
+  就不进 `changed`；变化的那条只更新新旧共有节点与新增 / 消失的最上层根，模板里的嵌套节点
+  跟着更新；位置没变的实例连宿主 `update` 都不发（`engine/tree/runtime_collections.ts`）。
+- 集合实例的事件 payload 带 `item = <实例 key>`（`app/tree/tree_renderer.ts`）；模板 handler id
+  仍然共享。实例 key 里不能有 `/`（id / chain 的既有假设）。
 - 未落：Python 编写端还不能写 collection slot（templates + bind）；`changes` 增量；
-  嵌套集合、窗口化。
+  嵌套集合、窗口化；插入 / 删除 / 单条移动仍按 index 重排整列。

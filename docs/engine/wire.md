@@ -75,8 +75,9 @@
   `mount` 按父 id 插子树，`unmount` 摘子树。ops 按声明序应用，`document = base + 1`。
 - **差分表达不了就回整树**：结构字段、`order`、同级相对顺序变化时，
   `kind:"tree"` 走 `ui.tree` 同一形状，客户端整棵替换。客户端必须同时处理两种回包。
-- `replace` / `data` 两种 op 的形状与应用端已实现（见 [tree-ops.md](tree-ops.md)），
-  但 Python 的 `tree_event` 目前不产它们；不要按“已在线”写。
+- `data` 由 `PageHandle.data` 单独发（见 [tree-ops.md](tree-ops.md)）：差分只管结构，
+  `tree_event` / `ui.changed` 都会把回调里交的 data op 搭同一批带回去。
+- `replace` 的形状与应用端已实现，但 Python 的 `tree_event` 目前不产它；不要按“已在线”写。
 
 ## 3. 异步变化：`ui.changed`
 
@@ -94,6 +95,11 @@
 ```jsonc
 { "handler": "tree:<nodeId>:click", "payload": {} }
 ```
+
+- 集合实例（id 形如 `<slotId>#<key>`）**不单独生成 handler**：模板的 handler id 所有实例共享，
+  运行时在 payload 里补 `item = <实例 key>`，插件靠它分辨点的是哪一条；调用方 payload 已有
+  `item` 时保留调用方的值。非实例节点不带这个键。
+- 实例 key 由 collection 数据的 key 字段来；id / chain 以 `/` 分段，所以 key 里不能有 `/`。
 
 目标方法是 `ui.tree_event`。未知 handler → 宿主回失败诊断（`LookupError`），不静默；
 上一代 handler 留一次宽限（组件卸载时排队的提交不能丢）。
