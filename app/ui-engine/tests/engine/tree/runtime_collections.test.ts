@@ -15,8 +15,10 @@ const PAGE = "bbbbbbbbbbbbbbbb";
 const FEED = "cccccccccccccccc";
 const CARD = "dddddddddddddddd";
 const TITLE = "eeeeeeeeeeeeeeee";
+const TEXT_TEMPLATE = "ffffffffffffffff";
 const SOURCE = "ideas.feed";
-const KINDS = ["app", "column", "card", "text"] as const;
+const CARD_KINDS = ["app", "column", "card", "text"] as const;
+const TEXT_KINDS = ["app", "column", "text"] as const;
 
 function node(
   id: string,
@@ -55,13 +57,21 @@ function cardTemplate(): Node {
   });
 }
 
-function feedNode(): Node {
+/** 一条只有一个节点的模板：插入 / 删除的宿主调用数好数。 */
+function textTemplate(): Node {
+  return node(TEXT_TEMPLATE, ROOT + "." + PAGE + "." + FEED + "." + TEXT_TEMPLATE, "text", 10, {
+    settings: { text: "占位" },
+    bind: { text: "item.title" },
+  });
+}
+
+function feedNode(template: Node = cardTemplate()): Node {
   return node(FEED, ROOT + "." + PAGE + "." + FEED, "column", 10, {
     collection: {
       source: SOURCE,
       key: "id",
       select: "template",
-      templates: { item: cardTemplate() },
+      templates: { item: template },
     },
   });
 }
@@ -74,14 +84,14 @@ function itemsOf(count: number, changedIndex = -1, changedTitle = "改"): Record
   }));
 }
 
-function documentOf(items: Record<string, unknown>[]): Document {
+function documentOf(items: Record<string, unknown>[], template: Node = cardTemplate()): Document {
   return {
     schema: "dendro.tree/1",
     version: 1,
     root: node(ROOT, ROOT, "app", 0, {
       layout: [
         node(PAGE, ROOT + "." + PAGE, "column", 10, {
-          layout: [feedNode()],
+          layout: [feedNode(template)],
         }),
       ],
     }),
@@ -95,71 +105,149 @@ function batch(base: number, document: number, ops: unknown[]): Record<string, u
   return { kind: "ops", base, document, seq: 1, ops };
 }
 
-interface Step {
-  readonly touched: number;
-  readonly touchedIds: string[];
+function dataOp(items: Record<string, unknown>[], revision = 2): Record<string, unknown> {
+  return { op: "data", source: SOURCE, revision, items };
+}
+
+interface HostStep {
+  readonly hostCalls: number;
+  readonly reorderCalls: number;
+  readonly rendererCalls: number;
   readonly diagnostics: string[];
 }
 
-/** 挂 N 条，只改 changedIndex 一条，返回渲染器 / 宿主被调用过的节点。 */
-function measureStep(count: number, changedIndex: number): Step {
-  const harness: FakeHarness = fakeHarness({ kinds: KINDS });
-  const runtime = new TreeRuntime({ host: harness.host, renderers: harness.renderers });
-  const mounted = runtime.mount(documentOf(itemsOf(count)));
-  expect(mounted.ok).toBe(true);
-  harness.resetCalls();
-
-  const result = runtime.applyOps(
-    batch(1, 2, [
-      {
-        op: "data",
-        source: SOURCE,
-        revision: 2,
-        items: itemsOf(count, changedIndex, "条目 " + String(changedIndex) + " 改"),
-      },
-    ]),
-  );
-  expect(result.ok).toBe(true);
-
-  const calls = [...harness.rendererCalls, ...harness.hostCalls];
-  const step: Step = {
-    touched: calls.length,
-    touchedIds: calls.map((call) => call.id),
+function stepOf(harness: FakeHarness, runtime: TreeRuntime): HostStep {
+  return {
+    hostCalls: harness.hostCalls.length,
+    reorderCalls: harness.reorderCalls.length,
+    rendererCalls: harness.rendererCalls.length,
     diagnostics: runtime.diagnostics.map((diagnostic) => diagnostic.code),
   };
+}
+
+/** 挂 N 条 text 实例并清空调用记录，供重排步长测量。 */
+function mountedText(count: number): { harness: FakeHarness; runtime: TreeRuntime } {
+  const harness: FakeHarness = fakeHarness({ kinds: TEXT_KINDS });
+  const runtime = new TreeRuntime({ host: harness.host, renderers: harness.renderers });
+  expect(runtime.mount(documentOf(itemsOf(count), textTemplate())).ok).toBe(true);
+  harness.resetCalls();
+  return { harness, runtime };
+}
+
+/** 末条置顶：只提交一次重排。 */
+function measurePin(count: number): HostStep {
+  const { harness, runtime } = mountedText(count);
+  const items = itemsOf(count);
+  const last = items[count - 1];
+  const reordered = last === undefined ? items : [last, ...items.slice(0, count - 1)];
+  const result = runtime.applyOps(batch(1, 2, [dataOp(reordered)]));
+  expect(result.ok).toBe(true);
+  const step = stepOf(harness, runtime);
+  runtime.dispose();
+  return step;
+}
+
+/** 头部插入一个 key：只挂 1 个实例。 */
+function measureHeadInsert(count: number): HostStep {
+  const { harness, runtime } = mountedText(count);
+  const inserted = [{ id: "fresh", template: "item", title: "新条目" }, ...itemsOf(count)];
+  const result = runtime.applyOps(batch(1, 2, [dataOp(inserted)]));
+  expect(result.ok).toBe(true);
+  const step = stepOf(harness, runtime);
+  runtime.dispose();
+  return step;
+}
+
+/** 删中间一条：只卸 1 个实例。 */
+function measureDelete(count: number): HostStep {
+  const { harness, runtime } = mountedText(count);
+  const middle = Math.floor(count / 2);
+  const remaining = itemsOf(count).filter((_item, index) => index !== middle);
+  const result = runtime.applyOps(batch(1, 2, [dataOp(remaining)]));
+  expect(result.ok).toBe(true);
+  const step = stepOf(harness, runtime);
   runtime.dispose();
   return step;
 }
 
 describe("data op → keyed collection reconcile 的步长", () => {
   it("只改一条：N=100 与 N=800 触碰的节点数相同，且只落在变化条目的实例上", () => {
-    const small = measureStep(100, 42);
-    const large = measureStep(800, 42);
-
-    const changed = FEED + "#k42";
-    const expected = new Set([changed, changed + "/" + TITLE]);
-    expect(new Set(small.touchedIds)).toEqual(expected);
-    expect(new Set(large.touchedIds)).toEqual(expected);
-    expect(small.touched).toBe(large.touched);
-    expect(small.touched).toBeLessThanOrEqual(8);
-    expect(small.diagnostics).toEqual([]);
-    expect(large.diagnostics).toEqual([]);
-  });
-
-  it("条目内容没变、只推进 revision：不碰任何渲染器与宿主", () => {
-    const harness: FakeHarness = fakeHarness({ kinds: KINDS });
+    const harness: FakeHarness = fakeHarness({ kinds: CARD_KINDS });
     const runtime = new TreeRuntime({ host: harness.host, renderers: harness.renderers });
     expect(runtime.mount(documentOf(itemsOf(100))).ok).toBe(true);
     harness.resetCalls();
 
-    const result = runtime.applyOps(
-      batch(1, 2, [{ op: "data", source: SOURCE, revision: 2, items: itemsOf(100) }]),
-    );
+    const result = runtime.applyOps(batch(1, 2, [dataOp(itemsOf(100, 42, "条目 42 改"))]));
+    expect(result.ok).toBe(true);
+
+    const changed = FEED + "#k42";
+    const expected = new Set([changed, changed + "/" + TITLE]);
+    const touchedIds = harness.rendererCalls.map((call) => call.id);
+    expect(new Set(touchedIds)).toEqual(expected);
+    expect(harness.rendererCalls).toHaveLength(2);
+    expect(harness.hostCalls).toEqual([]);
+    expect(harness.reorderCalls).toEqual([]);
+    expect(runtime.diagnostics).toEqual([]);
+    runtime.dispose();
+  });
+
+  it("条目内容没变、只推进 revision：不碰任何渲染器与宿主", () => {
+    const harness: FakeHarness = fakeHarness({ kinds: CARD_KINDS });
+    const runtime = new TreeRuntime({ host: harness.host, renderers: harness.renderers });
+    expect(runtime.mount(documentOf(itemsOf(100))).ok).toBe(true);
+    harness.resetCalls();
+
+    const result = runtime.applyOps(batch(1, 2, [dataOp(itemsOf(100))]));
 
     expect(result.ok).toBe(true);
     expect(harness.rendererCalls).toEqual([]);
     expect(harness.hostCalls).toEqual([]);
+    expect(harness.reorderCalls).toEqual([]);
     expect(runtime.diagnostics).toEqual([]);
     runtime.dispose();
+  });
+});
+
+describe("集合重排：批量提交 + 最小移动（宿主调用数不随集合规模增长）", () => {
+  it("末条置顶：只提交一次重排，N=100 与 N=800 宿主调用数相同", () => {
+    const small = measurePin(100);
+    const large = measurePin(800);
+
+    expect(small.reorderCalls).toBe(1);
+    expect(small.hostCalls).toBe(0);
+    expect(small.rendererCalls).toBe(0);
+    expect(large.reorderCalls).toBe(small.reorderCalls);
+    expect(large.hostCalls).toBe(small.hostCalls);
+    expect(large.rendererCalls).toBe(small.rendererCalls);
+    expect(small.diagnostics).toEqual([]);
+    expect(large.diagnostics).toEqual([]);
+  });
+
+  it("头部插入：只挂 1 个实例，N=100 与 N=800 宿主调用数相同", () => {
+    const small = measureHeadInsert(100);
+    const large = measureHeadInsert(800);
+
+    expect(small.rendererCalls).toBe(1);
+    expect(small.hostCalls).toBe(1);
+    expect(small.reorderCalls).toBeLessThanOrEqual(2);
+    expect(large.rendererCalls).toBe(small.rendererCalls);
+    expect(large.hostCalls).toBe(small.hostCalls);
+    expect(large.reorderCalls).toBe(small.reorderCalls);
+    expect(small.diagnostics).toEqual([]);
+    expect(large.diagnostics).toEqual([]);
+  });
+
+  it("删除一条：只卸 1 个实例，N=100 与 N=800 宿主调用数相同", () => {
+    const small = measureDelete(100);
+    const large = measureDelete(800);
+
+    expect(small.rendererCalls).toBe(1);
+    expect(small.hostCalls).toBe(1);
+    expect(small.reorderCalls).toBeLessThanOrEqual(1);
+    expect(large.rendererCalls).toBe(small.rendererCalls);
+    expect(large.hostCalls).toBe(small.hostCalls);
+    expect(large.reorderCalls).toBe(small.reorderCalls);
+    expect(small.diagnostics).toEqual([]);
+    expect(large.diagnostics).toEqual([]);
   });
 });

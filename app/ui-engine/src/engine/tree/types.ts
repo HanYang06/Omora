@@ -21,12 +21,16 @@ export interface TreeChildHandle {
 
 /**
  * 宿主：一个能安放子节点的位置。根宿主由调用方提供，其余由渲染器在 mount 时给出。
- * 三个动作都只作用于**直接子节点**，不递归；宿主只负责排布与摘除。
+ * 四个动作都只作用于**直接子节点**，不递归；宿主只负责排布与摘除。
+ *
+ * `reorder` 是批量重排入口：children 是当前全部直接子节点的最终顺序，宿主一次提交、
+ * 只移动真正需要移动的元素。单节点 `update` 仍保留给只改一个下标的场景。
  */
 export interface TreeHost {
   mount(child: TreeChildHandle, index: number): void;
   update(child: TreeChildHandle, index: number): void;
   unmount(child: TreeChildHandle): void;
+  reorder(children: readonly TreeChildHandle[]): void;
 }
 
 /** 渲染器 mount 的产物。 */

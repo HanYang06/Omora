@@ -80,7 +80,12 @@ export function mergeCollectionInstances(
   };
 }
 
-/** 按数据顺序重排已挂载的实例；order 归位成 0..n-1，供下一批插入使用。 */
+/**
+ * 按数据顺序重排已挂载的实例；order 归位成 0..n-1，供下一批插入使用。
+ *
+ * 顺序没变就一个宿主调用都不发；要重排时一次 `host.reorder` 提交全部子节点，
+ * 由宿主用 LIS 只移动真正需要移动的元素。
+ */
 export function reorderCollections(
   collections: CollectionReconcile["collections"],
 ): TreeRuntimeDiagnostic[] {
@@ -92,29 +97,29 @@ export function reorderCollections(
     }
     const current = mounted.children;
     const byId = new Map(current.map((child) => [child.node.id, child]));
-    const previous = new Map(current.map((child, index) => [child.node.id, index]));
     const ordered = order
       .map((id) => byId.get(id))
       .filter((child): child is MountedNode => child !== undefined);
+    const unchanged =
+      ordered.length === current.length &&
+      ordered.every((child, index) => current[index] === child);
     mounted.children = ordered;
     ordered.forEach((child, index) => {
-      const moved = previous.get(child.node.id) !== index;
       child.node = { ...child.node, order: index };
       child.handle = { node: child.node, output: child.handle.output };
-      if (!moved) {
-        // 位置没变：宿主一个调用都不发，数据变化不该带来整列重排。
-        return;
-      }
-      try {
-        host.update(child.handle, index);
-      } catch (error) {
-        diagnostics.push({
-          code: "E-TREE-RENDER",
-          path: child.path,
-          message: "集合重排失败: " + (error instanceof Error ? error.message : String(error)),
-        });
-      }
     });
+    if (unchanged) {
+      continue;
+    }
+    try {
+      host.reorder(ordered.map((child) => child.handle));
+    } catch (error) {
+      diagnostics.push({
+        code: "E-TREE-RENDER",
+        path: mounted.path,
+        message: "集合重排失败: " + (error instanceof Error ? error.message : String(error)),
+      });
+    }
   }
   return diagnostics;
 }

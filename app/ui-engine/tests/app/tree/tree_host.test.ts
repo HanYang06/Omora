@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Node } from "../../../src/contract/tree_generated";
 import type { TreeChildHandle } from "../../../src/engine/tree/types";
 import { DomTreeHost } from "../../../src/app/tree/tree_host";
@@ -94,5 +94,59 @@ describe("DomTreeHost", () => {
 
     treeHost.replaceHosts([first, second]);
     expect(() => treeHost.replaceHosts([document.createElement("div")])).toThrow(/不能更换/);
+  });
+
+  it("reorder 批量提交：末条置顶只 insertBefore 一次，顺序正确", () => {
+    const host = document.createElement("div");
+    const treeHost = new DomTreeHost([host]);
+    const first = child("1111111111111111", "一");
+    const second = child("2222222222222222", "二");
+    const third = child("3333333333333333", "三");
+    const fourth = child("4444444444444444", "四");
+    [first, second, third, fourth].forEach((item, index) => treeHost.mount(item, index));
+    const spy = vi.spyOn(host, "insertBefore");
+
+    treeHost.reorder([fourth, first, second, third]);
+
+    expect(idsIn(host)).toEqual([
+      "4444444444444444",
+      "1111111111111111",
+      "2222222222222222",
+      "3333333333333333",
+    ]);
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+
+  it("reorder 任意排列：最终顺序与给定顺序一致，元素不重建", () => {
+    const host = document.createElement("div");
+    const treeHost = new DomTreeHost([host]);
+    const first = child("1111111111111111", "一");
+    const second = child("2222222222222222", "二");
+    const third = child("3333333333333333", "三");
+    const fourth = child("4444444444444444", "四");
+    [first, second, third, fourth].forEach((item, index) => treeHost.mount(item, index));
+    const firstEl = elementOf(first);
+
+    treeHost.reorder([third, first, fourth, second]);
+
+    expect(idsIn(host)).toEqual([
+      "3333333333333333",
+      "1111111111111111",
+      "4444444444444444",
+      "2222222222222222",
+    ]);
+    expect(elementOf(first)).toBe(firstEl);
+  });
+
+  it("reorder 需要全部直接子节点：少给一个直接抛", () => {
+    const host = document.createElement("div");
+    const treeHost = new DomTreeHost([host]);
+    const first = child("1111111111111111", "一");
+    const second = child("2222222222222222", "二");
+    treeHost.mount(first, 0);
+    treeHost.mount(second, 1);
+
+    expect(() => treeHost.reorder([first])).toThrow(/全部直接子节点/);
   });
 });

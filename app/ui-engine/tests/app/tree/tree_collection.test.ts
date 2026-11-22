@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Document, Node } from "../../../src/contract/tree_generated";
 import type { Kind, KindRegistry, RenderContext } from "../../../src/renderer/types";
 import { treeKinds } from "../../../src/components/tree_kinds";
@@ -615,6 +615,130 @@ describe("集合实例的事件 payload", () => {
     field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 
     expect(events).toEqual([{ handler: "capture", payload: { value: "新灵感", item: "b" } }]);
+    runtime.dispose();
+    container.remove();
+  });
+});
+/* ------------------------------------------------------------------ */
+/* 集合重排：批量提交 + 最小 DOM 移动                                    */
+/* ------------------------------------------------------------------ */
+
+function hostOf(container: HTMLElement): HTMLElement {
+  const host = container.querySelector<HTMLElement>('[data-node-id="' + FEED + '"]');
+  if (host === null) {
+    throw new Error("找不到 collection 宿主");
+  }
+  return host;
+}
+
+function childIds(host: HTMLElement): string[] {
+  return [...host.children].map((el) => (el as HTMLElement).dataset.nodeId ?? "?");
+}
+
+function childElements(host: HTMLElement): Map<string, HTMLElement> {
+  const found = new Map<string, HTMLElement>();
+  for (const el of host.children) {
+    const element = el as HTMLElement;
+    const id = element.dataset.nodeId;
+    if (id !== undefined) {
+      found.set(id, element);
+    }
+  }
+  return found;
+}
+
+function reorderDoc(keys: string[]): ReturnType<typeof mount> {
+  return mount(
+    docOf(
+      keys.map((key, index) => ({ id: key, template: "item", title: "条目 " + String(index) })),
+    ),
+  );
+}
+
+function applyItems(
+  runtime: ReturnType<typeof mountTreeDocument>,
+  keys: string[],
+  revision = 2,
+): void {
+  const result = runtime.applyOps({
+    kind: "ops",
+    document: revision,
+    base: revision - 1,
+    seq: 1,
+    ops: [
+      {
+        op: "data",
+        source: "ideas.feed",
+        revision,
+        items: keys.map((key, index) => ({
+          id: key,
+          template: "item",
+          title: "条目 " + String(index),
+        })),
+      },
+    ],
+  });
+  expect(result.ok).toBe(true);
+}
+
+describe("集合重排：批量提交 + 最小 DOM 移动", () => {
+  it("末条置顶：新顺序正确，只 insertBefore 一次，元素全部复用", () => {
+    const { container, runtime } = reorderDoc(["a", "b", "c", "d"]);
+    const host = hostOf(container);
+    const before = childElements(host);
+    const spy = vi.spyOn(host, "insertBefore");
+
+    applyItems(runtime, ["d", "a", "b", "c"]);
+
+    expect(childIds(host)).toEqual([FEED + "#d", FEED + "#a", FEED + "#b", FEED + "#c"]);
+    expect(spy).toHaveBeenCalledTimes(1);
+    const after = childElements(host);
+    for (const [id, element] of before) {
+      expect(after.get(id)).toBe(element);
+    }
+    spy.mockRestore();
+    runtime.dispose();
+    container.remove();
+  });
+
+  it("头部插入：只挂 1 个新实例，已有元素一次都不移动", () => {
+    const { container, runtime } = reorderDoc(["a", "b", "c"]);
+    const host = hostOf(container);
+    const before = childElements(host);
+    const spy = vi.spyOn(host, "insertBefore");
+
+    applyItems(runtime, ["x", "a", "b", "c"]);
+
+    expect(childIds(host)).toEqual([FEED + "#x", FEED + "#a", FEED + "#b", FEED + "#c"]);
+    const after = childElements(host);
+    const inserted = after.get(FEED + "#x");
+    expect(inserted).toBeDefined();
+    const movedElements = spy.mock.calls.map((call) => call[0] as HTMLElement);
+    expect(movedElements.length).toBeGreaterThan(0);
+    expect(movedElements.every((element) => element === inserted)).toBe(true);
+    for (const [id, element] of before) {
+      expect(after.get(id)).toBe(element);
+    }
+    spy.mockRestore();
+    runtime.dispose();
+    container.remove();
+  });
+
+  it("删除一条：只卸 1 个实例，其余元素不移动", () => {
+    const { container, runtime } = reorderDoc(["a", "b", "c"]);
+    const host = hostOf(container);
+    const before = childElements(host);
+    const spy = vi.spyOn(host, "insertBefore");
+
+    applyItems(runtime, ["a", "c"]);
+
+    expect(childIds(host)).toEqual([FEED + "#a", FEED + "#c"]);
+    expect(spy).not.toHaveBeenCalled();
+    const after = childElements(host);
+    expect(after.get(FEED + "#a")).toBe(before.get(FEED + "#a"));
+    expect(after.get(FEED + "#c")).toBe(before.get(FEED + "#c"));
+    expect(after.has(FEED + "#b")).toBe(false);
+    spy.mockRestore();
     runtime.dispose();
     container.remove();
   });
