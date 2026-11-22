@@ -5,9 +5,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import TYPE_CHECKING
+from collections.abc import Callable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 
+from omora.sdk.tree_ops import UNSET
 from omora.sdk.ui import Page
 
 if TYPE_CHECKING:
@@ -28,6 +29,16 @@ class PageHandle:
     def refresh(self) -> None:
         """校验这一页还在；真正的重建发生在下一次 tree()。"""
         self._ui.refresh_page(self.name)
+
+    def data(
+        self,
+        source: str,
+        *,
+        value: Any = UNSET,
+        items: Sequence[Mapping[str, Any]] | None = None,
+    ) -> None:
+        """交一个数据源的新值：active 页立即推 data op，否则随下一次整树带过去。"""
+        self._ui.push_data(self.name, source, value=value, items=items)
 
     def rebuild(self, builder: Callable[[], Page]) -> None:
         """登记重建回调：客户端明确要这一页时由 ui 调一次，吸收插件装卸这类外部变化。"""

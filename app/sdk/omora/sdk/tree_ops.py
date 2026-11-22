@@ -25,6 +25,7 @@ from .tree_generated import ID_PATTERN
 
 _ID = re.compile(ID_PATTERN)
 _UNSET = object()
+UNSET = _UNSET
 
 
 def _is_int(value: object) -> bool:
@@ -212,6 +213,11 @@ def serialize_ops(
     }
 
 
+def op_wire(op: Op) -> dict[str, Any]:
+    """一条 op → 线上形状；与 `serialize_ops` 共用同一份序列化。"""
+    return _serialize_op(op)
+
+
 __all__ = [
     "DataOp",
     "MountOp",
@@ -219,5 +225,6 @@ __all__ = [
     "ReplaceOp",
     "SetPropsOp",
     "UnmountOp",
+    "op_wire",
     "serialize_ops",
 ]

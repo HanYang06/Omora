@@ -167,8 +167,14 @@ def _page_chain(name: str) -> str:
     )
 
 
-def base_document(*, name: str, title: str, route: str) -> dict[str, Any]:
-    """一页的骨架文档：app 根 + 导航 / 主区 + 这一页的容器；页面侧表只有这一页。"""
+def base_document(
+    *, name: str, title: str, route: str, data: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """一页的骨架文档：app 根 + 导航 / 主区 + 这一页的容器；页面侧表只有这一页。
+
+    `data` 是这一页当前的数据源快照：整树回退 / 重连时客户端要拿回同样的数据，
+    不能只靠之前的 data op。
+    """
     _text(name, "page.name")
     _text(title, "page.title")
     _text(route, "page.route")
@@ -220,7 +226,7 @@ def base_document(*, name: str, title: str, route: str) -> dict[str, Any]:
         "root": root,
         "pages": [{"id": page_id, "title": title, "route": route}],
         "active": page_id,
-        "data": {},
+        "data": {} if data is None else deepcopy(data),
     }
 
 
@@ -308,13 +314,14 @@ def build_page(  # noqa: PLR0913 —— 一页的构建输入
     owner: str,
     nav: Sequence[NavEntry],
     register: Register | None = None,
+    data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """一页的构建输入：base + 局部树（导航 + 内容）。"""
     return {
         "name": _text(name, "page.name"),
         "title": _text(title, "page.title"),
         "route": _text(route, "page.route"),
-        "base": base_document(name=name, title=title, route=route),
+        "base": base_document(name=name, title=title, route=route, data=data),
         "partials": [
             *nav_partials(nav, active=name, register=register),
             content_partial(page, name=name, owner=owner, register=register),
