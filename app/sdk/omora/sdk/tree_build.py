@@ -25,7 +25,7 @@ from dataclasses import dataclass, fields
 from typing import Any
 
 from .tree_meter import bump
-from .ui import Node, Page
+from .ui import Collection, Node, Page
 
 SCHEMA = "dendro.tree/1"
 FORMAT = "omora.tree.build/1"
@@ -86,7 +86,9 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
     title: str | None = None,
     settings: dict[str, Any] | None = None,
     slot: dict[str, Any] | None = None,
+    bind: dict[str, str] | None = None,
     on: dict[str, str] | None = None,
+    collection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """一个 `dendro.tree/1` 节点；字段与 schema 的 node 一一对应。"""
     bump("build")
@@ -97,7 +99,7 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
         "order": order,
         "layout": layout,
         "settings": {} if settings is None else settings,
-        "bind": {},
+        "bind": {} if bind is None else bind,
         "on": {} if on is None else on,
         "emit": {},
     }
@@ -105,10 +107,48 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
         record["title"] = title
     if slot is not None:
         record["slot"] = slot
+    if collection is not None:
+        record["collection"] = collection
     return record
 
 
 Register = Callable[[Callable[[dict[str, Any]], None], str, str], str]
+
+
+def _collection_node(
+    node: Collection,
+    *,
+    parent_chain: str,
+    key: str,
+    order: int,
+    register: Register | None = None,
+) -> dict[str, Any]:
+    """集合槽：模板各建一棵不挂载的子树（chain 挂在槽下面），条目由运行时展开。"""
+    node_id = tree_id(key)
+    chain = _chain(parent_chain, node_id)
+    templates = {
+        name: _ui_node(
+            template,
+            parent_chain=chain,
+            key=f"{key}/template/{name}",
+            order=ORDER_STEP,
+            register=register,
+        )
+        for name, template in node.templates
+    }
+    return _node_record(
+        node_id=node_id,
+        chain=chain,
+        kind=node.type,
+        order=order,
+        layout=[],
+        collection={
+            "source": node.source,
+            "key": node.key,
+            "select": node.select,
+            "templates": templates,
+        },
+    )
 
 
 def _ui_node(
@@ -120,6 +160,10 @@ def _ui_node(
     register: Register | None = None,
 ) -> dict[str, Any]:
     """legacy Node → V1 节点：children 进 layout，on_* 换成 handler id，其余进 settings。"""
+    if isinstance(node, Collection):
+        return _collection_node(
+            node, parent_chain=parent_chain, key=key, order=order, register=register
+        )
     node_id = tree_id(key)
     chain = _chain(parent_chain, node_id)
     settings: dict[str, Any] = {}
@@ -152,6 +196,7 @@ def _ui_node(
         order=order,
         layout=layout,
         settings=settings,
+        bind=dict(getattr(node, "bind_props", {})) or None,
         on=on,
     )
 
