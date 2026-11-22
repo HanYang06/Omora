@@ -10,10 +10,13 @@ from collections.abc import Iterator
 from copy import deepcopy
 from typing import Any
 
+from .tree_meter import bump
+
 Node = dict[str, Any]
 
 
 def _walk(node: Node, parent: str | None) -> Iterator[tuple[str, Node, str | None]]:
+    bump("walk")
     yield node["id"], node, parent
     for child in node["layout"]:
         yield from _walk(child, node["id"])

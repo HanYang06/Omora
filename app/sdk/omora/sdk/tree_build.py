@@ -24,6 +24,7 @@ from copy import deepcopy
 from dataclasses import dataclass, fields
 from typing import Any
 
+from .tree_meter import bump
 from .ui import Node, Page
 
 SCHEMA = "dendro.tree/1"
@@ -88,6 +89,7 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
     on: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """一个 `dendro.tree/1` 节点；字段与 schema 的 node 一一对应。"""
+    bump("build")
     record: dict[str, Any] = {
         "id": node_id,
         "chain": chain,
@@ -326,6 +328,7 @@ def compose(base: dict[str, Any], partials: Sequence[dict[str, Any]]) -> dict[st
     index: dict[str, dict[str, Any]] = {}
 
     def visit(node: dict[str, Any]) -> None:
+        bump("compose")
         node_id = node["id"]
         if node_id in index:
             raise ValueError(f"节点 id 重复: {node_id}")
@@ -351,6 +354,7 @@ def compose(base: dict[str, Any], partials: Sequence[dict[str, Any]]) -> dict[st
         visit(root)
 
     def sort_layout(node: dict[str, Any]) -> None:
+        bump("compose")
         node["layout"].sort(key=lambda child: child["order"])
         for child in node["layout"]:
             sort_layout(child)
