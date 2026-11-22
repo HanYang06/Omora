@@ -18,7 +18,7 @@
 | 能力                   | 现状                                        | 做法                                               | 轮子                                                                    | 规模 | 里程碑 |
 | ---------------------- | ------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------- | ---- | ------ |
 | 脏节点产线             | 事件后整页重建再差分（ADR-0005 后置）       | 结构型变更再评估；列表走 collection                | 无（自写）                                                              | L    | M1     |
-| data / collection 产线 | 已落：Python 发 data + 能写 collection      | `changes` 增量；插入 / 删除的整列重排              | 无（自写）                                                              | L    | M1     |
+| data / collection 产线 | 已落：Python 发 data + 能写 collection      | `changes` 增量                                     | 无（自写）                                                              | L    | M1     |
 | 类型检查后半           | 只查 kind 存在性                            | per-kind settings schema、on/bind 引用、warning 码 | JSON Schema 已有                                                        | M    | M1     |
 | 复杂度护栏             | 已进 CI：棘轮 + ideas 常数断言              | 换页面时照抄同一套断言                             | 自写斜率测试                                                            | M    | M1     |
 | 布局                   | 只有 `slot.size/align`                      | 声明式 flow/grid/stack/scroll/gap → CSS            | CSS 本身；gridstack/muuri 仅按需                                        | S/M  | M2     |

@@ -157,5 +157,7 @@ Slot 的 `collection` 原样进 V1 节点，字段同名同义：
   跟着更新；位置没变的实例连宿主 `update` 都不发（`engine/tree/runtime_collections.ts`）。
 - 集合实例的事件 payload 带 `item = <实例 key>`（`app/tree/tree_renderer.ts`）；模板 handler id
   仍然共享。实例 key 里不能有 `/`（id / chain 的既有假设）。
-- 未落：`changes` 增量（现在每次发 items 全量，字节仍 O(N)）；嵌套集合、窗口化；
-  插入 / 删除 / 单条移动仍按 index 重排整列。
+- 重排是批量的：`host.reorder(children)` 一次提交全部直接子节点，`DomTreeHost` 用
+  LIS 挑出「相对顺序已经对」的元素，只对 LIS 之外的元素 `insertBefore`——末条置顶只移 1 个，
+  头部插入 0 次移动，删除 0 次移动（`app/tree/tree_host.ts`）。
+- 未落：`changes` 增量（现在每次发 items 全量，字节仍 O(N)）；嵌套集合、窗口化。

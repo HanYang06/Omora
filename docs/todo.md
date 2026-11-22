@@ -7,7 +7,6 @@
 ## Now
 
 - [ ] **V1 data / collection 产线** — owner: engine — next: 已落 data op、collection 编写端（templates + bind）、per-item 事件与 ideas rail / feed；剩 `changes` 增量（items 全量仍 O(N)）。
-- [ ] **集合重排的 DOM 步长** — owner: engine — next: 插入 / 删除 / 置顶仍按 index 重排整列（`reorderCollections` 对每个位移实例发 `host.update`）；改成按位移做 DOM move，并给重排加常数断言——这是 #162「事件 → DOM」那半还没盖住的地方。
 - [ ] **V1 类型检查后半** — owner: engine — next: per-kind `settings` schema、`on` / `bind` 引用、warning 码；现在只查 kind 存在性。
 
 ## Next

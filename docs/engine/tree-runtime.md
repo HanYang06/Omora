@@ -77,6 +77,8 @@ components/*（现有 38 个 kind，不改）
 - `data` 文档层已接（写 `document.data`、revision 幂等 / 过期诊断），运行时按 source
   定向 reconcile keyed collection：内容没变的实例一个 DOM 调用都不发，变化的那条只碰
   自己的实例子树（含模板里的嵌套节点）；集合实例的事件 payload 带 `item`（实例 key）。
-- 还没接：`changes` 增量（整批 `E-PAYLOAD`）、collection 的 Python 编写端、嵌套集合、
-  窗口化；插入 / 删除 / 单条移动仍按 index 重排整列（index-based host API 的既有代价）。
+- 重排步长：`host.reorder` 批量提交，宿主用 LIS 只移动必要元素；末条置顶 1 次
+  `insertBefore`、头部插入 0 次移动、删除 0 次移动。
+- 还没接：`changes` 增量（整批 `E-PAYLOAD`）、嵌套集合、窗口化；挂载期与整树 replace 仍是
+  逐节点 `host.update`（同一类剩余整列提交）。
 - 权限 / 审计 / 树内规则未接。
