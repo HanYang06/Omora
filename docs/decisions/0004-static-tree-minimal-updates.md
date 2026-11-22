@@ -2,7 +2,7 @@
 
 - **状态**：已接受（2026-11-18）
 - **决策者**：项目作者 + Lead
-- **相关**：[ADR-0003](0003-v1-tree-is-a-spike.md)（被取代）、[路线图](../../roadmap.md)、[V1 树](../../planning/v1-tree.md)
+- **相关**：[ADR-0003](0003-v1-tree-is-a-spike.md)（被取代）、[路线图](../roadmap.md)、[V1 树](../planning/v1-tree.md)
 
 ## 背景
 

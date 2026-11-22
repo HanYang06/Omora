@@ -3,7 +3,7 @@
 > 状态：**历史**（Slot 时期，代码已随 2026-11-20 拆桥删除）。保留当时的契约 / 设计记录，
 > 不再代表代码现状；现行唯一格式是 V1 树（`dendro.tree/1`），见 [tree-runtime](tree-runtime.md) /
 > [tree-ops](tree-ops.md) / [runtime-semantics](runtime-semantics.md)。
-> 依赖：[README](README.md) · [ADR-0001](decisions/0001-name.md)
+> 依赖：[README](README.md) · [ADR-0001](../decisions/0001-name.md)
 > 相关：[addressing.md](addressing.md) · [structure.md](structure.md) · [rules.md](rules.md) · [composition.md](composition.md)
 
 ## 0. 一句话

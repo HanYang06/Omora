@@ -2,7 +2,7 @@
 
 本地优先的灵感与项目管理工具：灵感、项目、需求互相可追溯。默认本地跑；网页形态（server）未实现，远期再看。
 
-> 正在从零重写。界面只有一种格式 **V1 树（`dendro.tree/1`）**，默认入口就是 V1 树主会话：Python 产 base + 局部树，TS compose 后按 id 最小更新；旧 Slot（`dendro.ui/1`）已删除（[ADR-0004](docs/engine/decisions/0004-static-tree-minimal-updates.md)、[更新日志](docs/changelog.md)）。方向见 [路线图](docs/roadmap.md)，现状见 [项目现状](docs/planning/state-of-project.md)，队列见 [TODO](docs/todo.md)。
+> 正在从零重写。界面只有一种格式 **V1 树（`dendro.tree/1`）**，默认入口就是 V1 树主会话：Python 产 base + 局部树，TS compose 后按 id 最小更新；旧 Slot（`dendro.ui/1`）已删除（[ADR-0004](docs/decisions/0004-static-tree-minimal-updates.md)、[更新日志](docs/changelog.md)）。方向见 [路线图](docs/roadmap.md)，现状见 [项目现状](docs/planning/state-of-project.md)，队列见 [TODO](docs/todo.md)。
 
 ## 架构
 

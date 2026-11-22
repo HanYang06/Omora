@@ -2,7 +2,7 @@
 
 - **状态**：**被取代**（2026-11-18，[ADR-0004](0004-static-tree-minimal-updates.md)）
 - **决策者**：项目作者 + Lead
-- **相关**：[路线图](../../roadmap.md)、[V1 树](../../planning/v1-tree.md)、[README](../README.md)
+- **相关**：[路线图](../roadmap.md)、[V1 树](../planning/v1-tree.md)、[README](../engine/README.md)
 
 > 本文保留历史：V1 曾被定位为“扫雷、不接管、到期归档”。ADR-0004 已改为“目标架构、分阶段接管”；本文的定位不再有效。
 

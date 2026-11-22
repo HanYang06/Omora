@@ -4,10 +4,10 @@
 >
 > 状态：**V1 树（`dendro.tree/1`）是唯一格式与默认入口**（2026-11-20）。
 > 旧 Slot 文档运行时（`dendro.ui/1`、链接期组合、EngineRuntime/DocumentView、启动骨架）已删除；
-> 它的设计记录保留在 [decisions/](decisions/)、[archive/](archive/)、[migration.md](migration.md)
+> 它的设计记录保留在 [decisions/](../decisions/)、[archive/](archive/)、[migration.md](migration.md)
 > 与 [changelog](../changelog.md)，不再代表代码现状。
-> 命名决定见 [ADR-0001](decisions/0001-name.md)，V1 的架构决定见
-> [ADR-0004](decisions/0004-static-tree-minimal-updates.md)。
+> 命名决定见 [ADR-0001](../decisions/0001-name.md)，V1 的架构决定见
+> [ADR-0004](../decisions/0004-static-tree-minimal-updates.md)。
 
 ## 1. 它现在是什么
 
@@ -114,7 +114,7 @@ V1 引擎是一个 **V1 树文档运行时**：
 | S5–S6 | 来源宿主、渲染节点统计、Slot 主会话、启动骨架 | 代码已删，记录在 migration |
 | S7    | 运行后来源示例                                | 随 Slot 删除，未迁 V1      |
 
-逐条进度注记在 [migration.md](migration.md) §1；按 [ADR-0004](decisions/0004-static-tree-minimal-updates.md)，
+逐条进度注记在 [migration.md](migration.md) §1；按 [ADR-0004](../decisions/0004-static-tree-minimal-updates.md)，
 V1 取代 Slot，不再维护双路径。
 
 ## 7. 文档状态约定

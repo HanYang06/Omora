@@ -3,7 +3,7 @@
 > 状态：**现状**（2026-11-20）。构建期把真实页面 compose 成每页一份 `dendro.tree/1` 文档，
 > 产物在 `dist/tree/`，由 `?engine=tree` 预览消费。默认主会话不读构建产物：它连 Python
 > 拉 `ui.tree`，两者同形。
-> 相关：[V1 树](../planning/v1-tree.md) · [wire](wire.md) · [ADR-0004](decisions/0004-static-tree-minimal-updates.md)
+> 相关：[V1 树](../planning/v1-tree.md) · [wire](wire.md) · [ADR-0004](../decisions/0004-static-tree-minimal-updates.md)
 
 ## 0. 一句话
 

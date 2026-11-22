@@ -134,7 +134,7 @@
 
 旧 Slot（`dendro.ui/1`）的 S0–S6 仍是当前默认运行路径。新的 `dendro.tree/1` 是**目标架构**：树契约/校验、`omora.scope/1` node scope、`omora.page/1` Page/State/When/Bind、build-time composer、runtime mount 已作为独立模块落地；结构层成立，最小节点 ops 与协议层未接。
 
-迁移分阶段：先冻结 ops 形状与跨语言 fixture，再 Python 发射端、TS 应用端、真实页面构建期 compose，然后逐页迁插件，最后删旧 Slot 默认路径。目标链路见 [V1 树](../planning/v1-tree.md)，决定见 [ADR-0004](../engine/decisions/0004-static-tree-minimal-updates.md)。
+迁移分阶段：先冻结 ops 形状与跨语言 fixture，再 Python 发射端、TS 应用端、真实页面构建期 compose，然后逐页迁插件，最后删旧 Slot 默认路径。目标链路见 [V1 树](../planning/v1-tree.md)，决定见 [ADR-0004](../decisions/0004-static-tree-minimal-updates.md)。
 
 ## 8. 未决
 
