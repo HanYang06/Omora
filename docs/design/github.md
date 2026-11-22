@@ -54,6 +54,22 @@
 
 - **一个 issue 一个可验收交付物**；Epic issue 用子 issue 或 checklist 串里程碑。
 - 模板：背景 / 目标 / 验收 / 依赖 / 轮子 / 非目标 / 风险。
+
+### 4.1 标题格式
+
+与 commit / PR 同一套：`type(scope): subject`。
+
+| 段      | 取值                                                                                                   |
+| ------- | ------------------------------------------------------------------------------------------------------ |
+| type    | `feat` / `fix` / `refactor` / `perf` / `test` / `docs` / `chore` / `epic`（`epic` 只给里程碑父 issue） |
+| scope   | `area:` 标签的值：`engine` / `sdk` / `plugins` / `net` / `ui-shell` / `docs` / `tooling`               |
+| subject | 4–50 字符，说"要交付什么"；不加句号，不写"（epic）""WIP""待办"                                         |
+
+例：`feat(engine): 节点 css 字段与作用域注入`、`epic(engine): M1 生产地基`。
+
+- 为什么：标题与标签、commit、PR 一致，`gh issue list` 一眼看出 type 与 area；
+  标题只写交付物，阶段 / 状态交给 milestone 与 label。
+- 迁移：存量 issue 在 2026-11-22 一次性改名；之后新建 issue 必须按格式，triage 先看标题。
 - 优先用 `Closes #N` 关联 PR；PR 描述里贴验证命令与输出。
 - 一个 issue 被拆成多个 PR 时，PR 用 `Part of #N`，最后一个 `Closes #N`。
 - 不做 retro-issue：不为 150 个历史 PR 补 issue；只给当前 roadmap / 新工作建。

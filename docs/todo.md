@@ -11,7 +11,10 @@
 
 ## Next
 
-- [ ] **Python 脏节点产线** — owner: engine — next: 按 [ADR-0005](engine/decisions/0005-data-collection-before-dirty-nodes.md) 后置；只对结构型列表有意义，等有真实页面需要再评估；`keyed()` 已删——它只稳 id 不稳 order。
+- [ ] **Python 脏节点产线** — owner: engine — next: 按 [ADR-0005](decisions/0005-data-collection-before-dirty-nodes.md) 后置；只对结构型列表有意义，等有真实页面需要再评估；`keyed()` 已删——它只稳 id 不稳 order。
+- [ ] **事件性能观测（先量再优化）** — owner: engine — next: dev 下记录每次事件的 build / compose / walk 节点数与序列化字节，拿 ideas 真实页面量一遍；有数据再决定缓存 / 特化，不造 JIT。
+- [ ] **节点 css 字段** — owner: engine — next: 见 #183；先定作用域 / 去重 / 长度上限的契约，再动 schema。
+- [ ] **受约束的 code 逃生舱** — owner: engine — next: 见 #184；触发条件写在 issue 里，触发前不动 schema。
 - [ ] **布局 vocabulary** — owner: engine — next: flow/grid/stack/scroll/gap/align 描述词映射 CSS；不自研布局算法；仪表盘/瀑布流真实需求出现再评估 gridstack/muuri。
 - [ ] **层 / 焦点** — owner: engine — next: 平台 dialog/popover/inert + `@floating-ui/dom` 定位 + `focus-trap`；Zag dialog/menu/popover 状态机，DOM 仍由 kind 建。
 - [ ] **组件广度（Zag adapter）** — owner: engine — next: 先做 `zag_adapter`；按 net-delete 顺序换 combobox/tabs/accordion → select/tooltip/toast/tree-view；表格用 `@tanstack/table-core`；每个替换记录净行数，净增不合并。
