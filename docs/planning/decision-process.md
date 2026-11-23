@@ -23,8 +23,8 @@
 
 ## 2. ADR 放哪、怎么写
 
-- 位置：`docs/engine/decisions/`（已有 0001–0004）。
-- 文件名：`NNNN-短名.md`，编号递增。
+- 位置：`docs/decisions/`（跨模块，不属于 `docs/engine/`）；规则见 [decisions/README](../decisions/README.md)。
+- 文件名：`NNNN-短名.md`，编号递增、不复用。
 - 一条 ADR 只回答一个决定；实现细节留给设计文档。
 - 模板：标题 / 状态 / 决策者 / 相关 / 背景 / 决定 / 后果（得到、要自己负责、风险与缓解）/ 被否掉的方案 / 验收。
 - 状态四档：提议、已接受、已废弃、被取代。**被否掉的方案不删**，写清为什么否。
@@ -61,13 +61,13 @@
 
 ## 6. 文档单一状态源
 
-| 问题               | 只看                              |
-| ------------------ | --------------------------------- |
-| 方向、阶段、门禁   | [路线图](../roadmap.md)           |
-| 现在有什么、哪坏了 | [现状](state-of-project.md)       |
-| 未完成的工作       | [TODO](../todo.md)                |
-| 已完成             | [changelog](../changelog.md)      |
-| 为什么这么定       | [decisions](../engine/decisions/) |
+| 问题               | 只看                         |
+| ------------------ | ---------------------------- |
+| 方向、阶段、门禁   | [路线图](../roadmap.md)      |
+| 现在有什么、哪坏了 | [现状](state-of-project.md)  |
+| 未完成的工作       | [TODO](../todo.md)           |
+| 已完成             | [changelog](../changelog.md) |
+| 为什么这么定       | [decisions](../decisions/)   |
 
 其他文档（README、ARCHITECTURE、engine 系列）只链接，不复述阶段状态。
 

@@ -4,6 +4,9 @@
 
 ## 2026-11-22
 
+- **ADR 移出引擎目录**：`docs/engine/decisions/` → `docs/decisions/`（跨模块决定不该挂在某个子系统下）；新增 `docs/decisions/README.md`（何时写、状态、编号、谁拍板），`decision-process` 与全部链接同步。
+- **Issue 标题治理**：统一成 `type(scope): subject`（与 commit / PR 同一套），22 个存量 issue 一次性改名，规则写进 `docs/design/github.md` §4.1。
+- **转义舱规划**：`css` 字段（#183，先做，低风险）、受约束的 `code`（#184，叶子节点 + 窄 API + 信任分级，触发条件写在 issue）。
 - **产线排序（ADR-0005）**：实测列表身份按位置漂、置顶出 O(N) 个 setProps；现期改为护栏 → data / collection → 类型检查 → 脏节点，#159 后置并记为已知债。
 - **复杂度护栏进 CI**：`sdk/tree_meter.py` 按 build / compose / walk 三阶段计数；节点型页面钉线性上界（`packages/ui/tests/test_complexity.py`），ideas 页钉常数（`packages/ideas/tests/test_page_complexity.py`：50 / 500 条页面树一样大）。
 - **data 产线**：`PageHandle.data(source, value=… | items=…)`，revision 按 source 递增；整树 / 重连时 `base.data` 带快照，事件回调里交的数据搭本次回包（#182）。

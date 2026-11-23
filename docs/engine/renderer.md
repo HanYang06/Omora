@@ -2,7 +2,7 @@
 
 > 状态：**现状**（2026-11-20）。生产路径 = V1 运行时 → `app/tree/tree_renderer` →
 > `Kind` 组件；`renderer/renderer.ts` 的通用 DOM 协调器保留给组件单测，不再承载 Slot 主路径。
-> 决策见 [ADR-0002](decisions/0002-no-react-dom-renderer.md)。
+> 决策见 [ADR-0002](../decisions/0002-no-react-dom-renderer.md)。
 > 相关：[tree-runtime.md](tree-runtime.md) · [components.md](components.md) · [layering.md](layering.md)
 
 ## 0. 一句话

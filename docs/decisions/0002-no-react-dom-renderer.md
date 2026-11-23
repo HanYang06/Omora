@@ -2,7 +2,7 @@
 
 - **状态**：已接受（2026-11-13）
 - **决策者**：项目作者 + Lead
-- **相关**：[README](../README.md)、[renderer.md](../renderer.md)、迁移计划
+- **相关**：[README](../engine/README.md)、[renderer.md](../engine/renderer.md)、迁移计划
 
 ## 背景
 

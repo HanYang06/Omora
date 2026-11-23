@@ -2,8 +2,8 @@
 
 - **状态**：已接受（2026-11-22）
 - **决策者**：项目作者 + Lead
-- **相关**：[ADR-0004](0004-static-tree-minimal-updates.md)（目标架构）、[路线图](../../roadmap.md)、
-  [V1 树](../../planning/v1-tree.md)、[ops](../../engine/tree-ops.md)、[collection](../../engine/collection.md)
+- **相关**：[ADR-0004](0004-static-tree-minimal-updates.md)（目标架构）、[路线图](../roadmap.md)、
+  [V1 树](../planning/v1-tree.md)、[ops](../engine/tree-ops.md)、[collection](../engine/collection.md)
 
 ## 背景
 

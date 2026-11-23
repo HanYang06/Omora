@@ -150,7 +150,7 @@ class Ideas:
 渲染引擎在 `app/ui-engine/`。界面只有一种格式 **`dendro.tree/1`**（V1 树）：
 静态结构 + 最小节点更新。旧 Slot 文档运行时（`dendro.ui/1`、链接期组合、
 EngineRuntime/DocumentView、启动骨架）已删除，作为历史留在
-[ADR-0004](engine/decisions/0004-static-tree-minimal-updates.md)、
+[ADR-0004](decisions/0004-static-tree-minimal-updates.md)、
 [archive](engine/archive/) 与 [changelog](changelog.md)。
 
 **默认入口是 V1 树主会话**（`tree-live`）：连 Python，拉 `ui.tree`（一页的
