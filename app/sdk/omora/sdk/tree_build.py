@@ -24,7 +24,8 @@ from copy import deepcopy
 from dataclasses import dataclass, fields
 from typing import Any
 
-from .ui import Node, Page
+from .tree_meter import bump
+from .ui import Collection, Node, Page
 
 SCHEMA = "dendro.tree/1"
 FORMAT = "omora.tree.build/1"
@@ -85,9 +86,12 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
     title: str | None = None,
     settings: dict[str, Any] | None = None,
     slot: dict[str, Any] | None = None,
+    bind: dict[str, str] | None = None,
     on: dict[str, str] | None = None,
+    collection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """一个 `dendro.tree/1` 节点；字段与 schema 的 node 一一对应。"""
+    bump("build")
     record: dict[str, Any] = {
         "id": node_id,
         "chain": chain,
@@ -95,7 +99,7 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
         "order": order,
         "layout": layout,
         "settings": {} if settings is None else settings,
-        "bind": {},
+        "bind": {} if bind is None else bind,
         "on": {} if on is None else on,
         "emit": {},
     }
@@ -103,10 +107,48 @@ def _node_record(  # noqa: PLR0913 —— 节点字段与 schema 一致
         record["title"] = title
     if slot is not None:
         record["slot"] = slot
+    if collection is not None:
+        record["collection"] = collection
     return record
 
 
 Register = Callable[[Callable[[dict[str, Any]], None], str, str], str]
+
+
+def _collection_node(
+    node: Collection,
+    *,
+    parent_chain: str,
+    key: str,
+    order: int,
+    register: Register | None = None,
+) -> dict[str, Any]:
+    """集合槽：模板各建一棵不挂载的子树（chain 挂在槽下面），条目由运行时展开。"""
+    node_id = tree_id(key)
+    chain = _chain(parent_chain, node_id)
+    templates = {
+        name: _ui_node(
+            template,
+            parent_chain=chain,
+            key=f"{key}/template/{name}",
+            order=ORDER_STEP,
+            register=register,
+        )
+        for name, template in node.templates
+    }
+    return _node_record(
+        node_id=node_id,
+        chain=chain,
+        kind=node.type,
+        order=order,
+        layout=[],
+        collection={
+            "source": node.source,
+            "key": node.key,
+            "select": node.select,
+            "templates": templates,
+        },
+    )
 
 
 def _ui_node(
@@ -118,6 +160,10 @@ def _ui_node(
     register: Register | None = None,
 ) -> dict[str, Any]:
     """legacy Node → V1 节点：children 进 layout，on_* 换成 handler id，其余进 settings。"""
+    if isinstance(node, Collection):
+        return _collection_node(
+            node, parent_chain=parent_chain, key=key, order=order, register=register
+        )
     node_id = tree_id(key)
     chain = _chain(parent_chain, node_id)
     settings: dict[str, Any] = {}
@@ -150,6 +196,7 @@ def _ui_node(
         order=order,
         layout=layout,
         settings=settings,
+        bind=dict(getattr(node, "bind_props", {})) or None,
         on=on,
     )
 
@@ -165,8 +212,14 @@ def _page_chain(name: str) -> str:
     )
 
 
-def base_document(*, name: str, title: str, route: str) -> dict[str, Any]:
-    """一页的骨架文档：app 根 + 导航 / 主区 + 这一页的容器；页面侧表只有这一页。"""
+def base_document(
+    *, name: str, title: str, route: str, data: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """一页的骨架文档：app 根 + 导航 / 主区 + 这一页的容器；页面侧表只有这一页。
+
+    `data` 是这一页当前的数据源快照：整树回退 / 重连时客户端要拿回同样的数据，
+    不能只靠之前的 data op。
+    """
     _text(name, "page.name")
     _text(title, "page.title")
     _text(route, "page.route")
@@ -218,7 +271,7 @@ def base_document(*, name: str, title: str, route: str) -> dict[str, Any]:
         "root": root,
         "pages": [{"id": page_id, "title": title, "route": route}],
         "active": page_id,
-        "data": {},
+        "data": {} if data is None else deepcopy(data),
     }
 
 
@@ -306,13 +359,14 @@ def build_page(  # noqa: PLR0913 —— 一页的构建输入
     owner: str,
     nav: Sequence[NavEntry],
     register: Register | None = None,
+    data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """一页的构建输入：base + 局部树（导航 + 内容）。"""
     return {
         "name": _text(name, "page.name"),
         "title": _text(title, "page.title"),
         "route": _text(route, "page.route"),
-        "base": base_document(name=name, title=title, route=route),
+        "base": base_document(name=name, title=title, route=route, data=data),
         "partials": [
             *nav_partials(nav, active=name, register=register),
             content_partial(page, name=name, owner=owner, register=register),
@@ -326,6 +380,7 @@ def compose(base: dict[str, Any], partials: Sequence[dict[str, Any]]) -> dict[st
     index: dict[str, dict[str, Any]] = {}
 
     def visit(node: dict[str, Any]) -> None:
+        bump("compose")
         node_id = node["id"]
         if node_id in index:
             raise ValueError(f"节点 id 重复: {node_id}")
@@ -351,6 +406,7 @@ def compose(base: dict[str, Any], partials: Sequence[dict[str, Any]]) -> dict[st
         visit(root)
 
     def sort_layout(node: dict[str, Any]) -> None:
+        bump("compose")
         node["layout"].sort(key=lambda child: child["order"])
         for child in node["layout"]:
             sort_layout(child)

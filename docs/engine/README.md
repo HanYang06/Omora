@@ -70,7 +70,7 @@ V1 引擎是一个 **V1 树文档运行时**：
 
 ## 4. 实现状态（与代码的差距）
 
-**已落**（2026-11-20）：
+**已落**（2026-11-22）：
 
 - `dendro.tree/1` 契约、schema、Python / TS 校验、跨语言示例；
 - 构建期 compose 与门禁：真实四页 → `dist/tree/`，kind 存在性、chain / id / order / pages 校验；
@@ -80,17 +80,19 @@ V1 引擎是一个 **V1 树文档运行时**：
 - 主会话：默认入口 V1 树（`ui.tree` 首帧、`ui.tree_event` 事件、`ui.changed` 异步变化）、
   导航与 handler 登记、设备上报；`?engine=tree` 产物预览、`virtual` / `dialog` 组件预览；
 - 组件：38 个 kind + `app` + `page-link`（`treeKinds`）、a11y / i18n / placement 适配；
+- 事件复杂度计量与棘轮：`sdk/tree_meter.py`（build / compose / walk 三阶段计数）+
+  `packages/ui/tests/test_complexity.py`；
+- `PageHandle.data` 发 `data` op（`value` / `items`，revision 按 source 递增），整树 / 重连时 `base.data` 带快照；
+- collection 编写端（`Collection` + `bound()`）与 per-item 事件身份（payload `item`）；
+  ideas 的 rail / feed 改走 collection + data，页面树与条目数无关；
 - 旧 Slot 路径、`dendro.ui/1` 契约、Slot 测试与构建脚本全部删除。
 
 **还没落**：
 
-- Python 发射端仍按“改完重建整页 → 差分”出 ops，没有脏节点产线；
-- `data` / collection 的产线：TS 有文档层与集合原语，Python 还没发 `data` op；
-- `bind` / `changes` 增量、嵌套集合、窗口化之上的数据消费；
+- Python 发射端仍按“改完重建整页 → 差分”出 ops，没有脏节点产线（ADR-0005 后置）；
+- `changes` 增量（现在整批 `E-PAYLOAD`，items 全量仍 O(N)）、嵌套集合、窗口化之上的数据消费；
 - 树内规则（`reactions`）、权限 / 审计接 V1、远程 / 运行后来源；
 - per-kind `settings` schema、`on` / `bind` 引用校验（现在只查 kind 存在性）；
-- 复杂度护栏（事件 → DOM 不随总节点数增长）进 CI；
-- schema 单一来源（Python / TS 词表仍两份手写）。
 
 ## 5. 术语
 

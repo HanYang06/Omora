@@ -18,6 +18,7 @@ from omora.sdk import Context
 from omora.sdk.ui import (
     Button,
     Chip,
+    Collection,
     Column,
     Empty,
     Handler,
@@ -82,15 +83,54 @@ class IdeasPlugin:
             searchable=["title"],
             pinned="pinned",
         )
-        state: dict[str, Any] = {"mode": HOME, "query": "", "open": None, "filter": "all"}
+        state: dict[str, Any] = {
+            "mode": HOME,
+            "query": "",
+            "open": None,
+            "filter": "all",
+            # 列表是数据，不是页面节点：这一页的节点数与条目数无关。
+            "items": [],
+            "feed": [],
+        }
         handle: Any = None
 
+        def item(record: Any) -> dict[str, Any]:
+            """一条灵感 → 集合条目；模板用 bound() 把它投影成标题 / 时间。"""
+            return {
+                "id": str(record.id),
+                "template": "item",
+                "title": record.title,
+                "meta": _views.meta(record, media),
+            }
+
+        def push_items() -> None:
+            """列表变了才推数据：结构不动，客户端按 key 只改动的那些条目。"""
+            if handle is None:
+                return
+            handle.data("ideas.rail", items=[item(record) for record in state["items"]])
+            handle.data("ideas.feed", items=[item(record) for record in state["feed"]])
+
         def refresh() -> None:
-            """状态变了就重交一次树；客户端没在看这一页时 ui 不会推。"""
+            """结构变了（模式 / 查询 / 空态）：只重交页面树的形状。"""
             if handle is not None:
                 handle.set(build())
 
-        capture = _capture.Capture(ideas, media, audio_service, video_service, changed=refresh)
+        def refresh_items() -> None:
+            """store 变了：重新取条目、推数据；页面形状只跟着空态 / 计数走。"""
+            state["items"] = records()
+            state["feed"] = filtered(state["items"])
+            push_items()
+            refresh()
+
+        def refilter() -> None:
+            """筛选只看内存里的条目，不必回 store 再取一遍。"""
+            state["feed"] = filtered(state["items"])
+            push_items()
+            refresh()
+
+        capture = _capture.Capture(
+            ideas, media, audio_service, video_service, changed=refresh_items
+        )
         history: list[tuple[str, str | None]] = []
         found: list[Any] = []
 
@@ -115,7 +155,7 @@ class IdeasPlugin:
         def choose(key: str) -> Handler:
             def run(_: dict[str, Any]) -> None:
                 state["filter"] = key
-                refresh()
+                refilter()
 
             return run
 
@@ -145,10 +185,17 @@ class IdeasPlugin:
 
             return run
 
+        def open_item(payload: dict[str, Any]) -> None:
+            """集合条目共用一个 handler：运行时把条目 key 放进 payload.item。"""
+            record_id = str(payload.get("item", ""))
+            if record_id:
+                go(DETAIL, record_id)
+                refresh()
+
         def pin(record_id: str, pinned: bool) -> Handler:
             def run(_: dict[str, Any]) -> None:
                 ideas.update(record_id, pinned=not pinned)
-                refresh()
+                refresh_items()
 
             return run
 
@@ -156,7 +203,7 @@ class IdeasPlugin:
             def run(_: dict[str, Any]) -> None:
                 ideas.update(record_id, archived=True)
                 go(HOME)
-                refresh()
+                refresh_items()
 
             return run
 
@@ -199,19 +246,20 @@ class IdeasPlugin:
             )
 
         def rail() -> Rail:
+            # 索引栏也是一个集合槽：条目再多，这一页的节点数不变。
             return Rail(
                 "全部灵感",
-                *[_views.rail_item(record, opener(record.id)) for record in records()],
+                Collection("ideas.rail", "id", {"item": _views.rail_template(open_item)}),
             )
 
-        def feed(items: list[Any]) -> Node:
-            if not items:
+        def feed() -> Node:
+            if not state["feed"]:
                 title, hint = _EMPTY[str(state["filter"])]
                 return Empty(title, hint)
-            return Column(*[_views.card(record, media, opener(record.id)) for record in items])
+            return Collection("ideas.feed", "id", {"item": _views.card_template(open_item)})
 
         def home() -> Page:
-            items = records()
+            items = state["items"]
             chips = [
                 Chip(text=label, active=str(state["filter"]) == key, on_click=choose(key))
                 for key, label in _CHIPS
@@ -220,7 +268,7 @@ class IdeasPlugin:
                 content=Column(
                     search_bar(True),
                     capture.region(),
-                    Panel(Row(*chips), feed(filtered(items))),
+                    Panel(Row(*chips), feed()),
                     # 常驻在捕捉区外面：工作区换形态时它不能被卸载，否则收不到松手。
                     Hotkey(key="space", on_press=capture.hold_start, on_release=capture.hold_end),
                 ),
@@ -291,7 +339,7 @@ class IdeasPlugin:
             icon="ideas",
         )
         handle.rebuild(build)
-        refresh()
+        refresh_items()
 
 
 __all__ = ["IdeasPlugin"]

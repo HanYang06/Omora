@@ -6,20 +6,19 @@
 
 ## Now
 
-- [ ] **Python 脏节点产线** — owner: engine — next: 事件后别再重建整页；`tree_build` 记录脏节点、只算被改的子树并产 ops；拿 ideas 一页量复杂度斜率。
-- [ ] **V1 data / collection 产线** — owner: engine — next: Python 发 `data` op；collection 实例化 / `bind` / `changes` 增量；坏条目 `E-TEMPLATE`。
+- [ ] **V1 data / collection 产线** — owner: engine — next: 已落 data op、collection 编写端（templates + bind）、per-item 事件与 ideas rail / feed；剩 `changes` 增量（items 全量仍 O(N)）。
 - [ ] **V1 类型检查后半** — owner: engine — next: per-kind `settings` schema、`on` / `bind` 引用、warning 码；现在只查 kind 存在性。
-- [ ] **复杂度护栏进 CI** — owner: engine — next: 加斜率测试，事件 → DOM 的工作量不得随总节点数增长。
 
 ## Next
 
+- [ ] **Python 脏节点产线** — owner: engine — next: 按 [ADR-0005](engine/decisions/0005-data-collection-before-dirty-nodes.md) 后置；只对结构型列表有意义，等有真实页面需要再评估；`keyed()` 已删——它只稳 id 不稳 order。
 - [ ] **布局 vocabulary** — owner: engine — next: flow/grid/stack/scroll/gap/align 描述词映射 CSS；不自研布局算法；仪表盘/瀑布流真实需求出现再评估 gridstack/muuri。
 - [ ] **层 / 焦点** — owner: engine — next: 平台 dialog/popover/inert + `@floating-ui/dom` 定位 + `focus-trap`；Zag dialog/menu/popover 状态机，DOM 仍由 kind 建。
 - [ ] **组件广度（Zag adapter）** — owner: engine — next: 先做 `zag_adapter`；按 net-delete 顺序换 combobox/tabs/accordion → select/tooltip/toast/tree-view；表格用 `@tanstack/table-core`；每个替换记录净行数，净增不合并。
 - [ ] **i18n 完整化** — owner: engine — next: message 参数、复数/select、locale 切换、catalog 抽取；`i18n` schema additive；至少一页可切 locale。
 - [ ] **主题 / 动效** — owner: engine — next: CSS token + 暗色（`open-props`）；列表进出用 `auto-animate`，层用 CSS 过渡；不自研设计系统/动画引擎。
 - [ ] **交互增强** — owner: engine — next: `sortablejs` 做灵感排序/置顶/跨容器；`tinykeys` + command registry 做快捷键与命令面板。
-- [ ] **工程护栏** — owner: engine — next: 树检查器/DevTools、schema 单一来源生成；斜率测试（已列 Now）跑进 CI。
+- [ ] **工程护栏** — owner: engine — next: 树检查器/DevTools、schema 单一来源生成；斜率测试见 Now（棘轮已进 CI）。
 - [ ] **GitHub 工作流维护** — owner: lead — next: labels / milestones / issues 已建；Project 不启用；每周 triage 标签/里程碑，PR 用 `Closes #` 关联。
 - [ ] **远程 / 运行后来源** — owner: engine — next: `ui.changed` 通道已在；来源注册 / 热更新 / 媒体登记还没接，先定来源账本形状。
 - [ ] **Idea 闭环** — owner: ideas — next: 补标签、灵感 ↔ 灵感 / 项目的关联、转写进搜索。

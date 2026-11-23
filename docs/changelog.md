@@ -2,6 +2,17 @@
 
 > 只记已经完成、可验证的变化。方向在 [路线图](roadmap.md)，未完成在 [TODO](todo.md)。
 
+## 2026-11-22
+
+- **产线排序（ADR-0005）**：实测列表身份按位置漂、置顶出 O(N) 个 setProps；现期改为护栏 → data / collection → 类型检查 → 脏节点，#159 后置并记为已知债。
+- **复杂度护栏进 CI**：`sdk/tree_meter.py` 按 build / compose / walk 三阶段计数；节点型页面钉线性上界（`packages/ui/tests/test_complexity.py`），ideas 页钉常数（`packages/ideas/tests/test_page_complexity.py`：50 / 500 条页面树一样大）。
+- **data 产线**：`PageHandle.data(source, value=… | items=…)`，revision 按 source 递增；整树 / 重连时 `base.data` 带快照，事件回调里交的数据搭本次回包（#182）。
+- **collection 编写端**：SDK 新增 `Collection(source, key, templates)` 与 `bound(node, prop="item.x")`；`tree_build` 把模板子树挂在槽下、bind 写进节点（#182）。
+- **集合条目身份与最小步长**：实例节点事件 payload 带 `item`（模板 handler 共享）；data op 的 reconcile 收到最小步长——内容没变的实例不碰 DOM，变化的那条只更新自己的子树（顺带修模板嵌套节点不刷新），位置没变的实例不发宿主 update（#182）。
+- **ideas 改数据驱动**：rail / feed 各一个 collection（`ideas.rail` / `ideas.feed`），pin / archive / 筛选只推数据、不再重交页面；页面节点数与条目数无关（#182）。
+- **重排的最小移动**：`host.reorder` 批量提交 + LIS 挑出不用动的元素——末条置顶 1 次 `insertBefore`（N=100 / 800 宿主调用数相同），头部插入 0 次移动，删除 0 次移动（#182）。
+- **文档**：新增 ADR-0005；wire 补 `item` 与 key 约束；collection / tree-ops / tree-runtime / README / v1-tree / capabilities / testing 同步；修 `collection.md` 指向已删 `engine/updates/data.ts` 的漂移。
+
 ## 2026-11-20
 
 - **拆桥：Slot 删除**：TS 侧删除 `dendro.ui/1` 文档运行时、链接期组合、EngineRuntime/DocumentView、启动骨架、Slot 组件 / 契约 / 测试；Python 侧删除 `_slot.py`、`ui.render` / `ui.event` / `ui.snapshot` 与 `omora.sdk.document` 文档运行时；默认入口只走 V1 树。

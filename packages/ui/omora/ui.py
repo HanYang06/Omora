@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -20,6 +20,7 @@ from omora.sdk import Context
 from omora.sdk.realtime import emit
 from omora.sdk.tree_build import NavEntry, build_page, compose
 from omora.sdk.tree_diff import diff_documents, needs_full
+from omora.sdk.tree_ops import UNSET, DataOp, op_wire, serialize_ops
 from omora.sdk.ui import Page
 
 from ._handle import PageHandle
@@ -61,6 +62,10 @@ class _Page:
         self.rebuild: Builder | None = None
         self.count = count
         self.icon = icon
+        # 数据源快照：整树回退 / 重连时 base.data 要带回去，不能只靠之前的 data op。
+        self.data: dict[str, Any] = {}
+        # 每个 source 各涨各的 revision；客户端用它做幂等与过期判定。
+        self.revisions: dict[str, int] = {}
 
 
 class Ui:
@@ -78,6 +83,8 @@ class Ui:
         self._tree_document: dict[str, Any] | None = None
         self._tree_version = 0
         self._tree_seq = 0
+        # 事件回调里交上来的 data op：跟进这次事件的 ops 一起回包，不单独推一帧。
+        self._pending_data: list[DataOp] = []
 
     def page(  # noqa: PLR0913, PLR0917 —— 页面登记的声明式参数
         self,
@@ -118,6 +125,56 @@ class Ui:
         if self._active is None or name == self._active:
             self._push()
 
+    def push_data(
+        self,
+        name: str,
+        source: str,
+        *,
+        value: Any = UNSET,
+        items: Sequence[Mapping[str, Any]] | None = None,
+    ) -> None:
+        """交一个数据源的新值；active 页立即推一帧 data op。
+
+        revision 由这个 source 自己涨，值没变也涨（客户端按 revision 幂等）。
+        客户端不在看这一页、或这次调用发生在事件回调里，就只记快照：
+        数据随下一次整树 / 本次事件回包带过去，不单独推帧。
+        """
+        entry = self._entry(name)
+        if items is not None and value is not UNSET:
+            raise ValueError("data 必须且只能有 value / items 之一")
+        revision = entry.revisions.get(source, 0) + 1
+        op = (
+            DataOp(source=source, revision=revision, items=items)
+            if items is not None
+            else DataOp(source=source, revision=revision, value=value)
+        )
+        entry.revisions[source] = revision
+        entry.data[source] = (
+            {"revision": revision, "items": list(op.items)}
+            if op.items is not None
+            else {"revision": revision, "value": op.value}
+        )
+        if self._active is not None and name != self._active:
+            return
+        if self._in_event or self._pushing:
+            self._pending_data.append(op)
+            return
+        self._emit_data(name, op)
+
+    def _emit_data(self, name: str, op: DataOp) -> None:
+        """把一条 data op 作为独立一帧推出去；文档版本涨 1。"""
+        if self._ctx is None or self._tree_document is None:
+            return
+        self._tree_document.setdefault("data", {})[op.source] = self._entry(name).data[op.source]
+        base = self._tree_version
+        self._tree_version = base + 1
+        self._tree_seq += 1
+        emit(
+            self._ctx,
+            CHANGED_TOPIC,
+            serialize_ops([op], document=self._tree_version, base=base, seq=self._tree_seq),
+        )
+
     def bind_rebuild(self, name: str, builder: Builder) -> None:
         self._entry(name).rebuild = builder
 
@@ -148,7 +205,7 @@ class Ui:
         事件 callable 经 register 换成稳定 handler id；TS 侧 compose 后挂载。
         这里保存 compose 后的文档，作为下一次 tree_event 差分的基准。
         """
-        built, document = self._build_tree(page)
+        built, document = self._build_tree(page, with_data=True)
         self._tree_document = document
         self._tree_version = int(document.get("version", 1))
         self._tree_seq = 0
@@ -176,14 +233,18 @@ class Ui:
         before = self._tree_document
         base = self._tree_version
         built, after = self._build_tree(None)
+        data_ops = [op_wire(op) for op in self._pending_data]
+        self._pending_data = []
         if needs_full(before, after):
             # 差分表达不了的变化回退整树：直接用这次重建的树，别再 build 一代——
             # 多 build 一次会把上一代 handler 的宽限提前用掉。
+            # 数据已经在 after.data 里，整树就是最新快照，不再补 data op。
             self._tree_document = after
             self._tree_version = int(after.get("version", 1))
             self._tree_seq = 0
-            return {"kind": "tree", **built}
+            return {"kind": "tree", **self._with_data(built)}
         ops = diff_documents(before, after)
+        ops.extend(data_ops)
         self._tree_document = after
         self._tree_version = base + 1
         self._tree_seq += 1
@@ -195,8 +256,13 @@ class Ui:
             "ops": ops,
         }
 
-    def _build_tree(self, page: str | None) -> tuple[dict[str, Any], dict[str, Any]]:
-        """组装一页的 base + 局部树，并 compose 成可对比的完整文档。"""
+    def _build_tree(
+        self, page: str | None, *, with_data: bool = False
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """组装一页的 base + 局部树，并 compose 成可对比的完整文档。
+
+        数据不进每次事件的构造：列表条目是数据，不是页面节点，整树才需要带着它。
+        """
         name = self._resolve(page)
         started = time.perf_counter()
         entry = self._entry(name)
@@ -235,7 +301,17 @@ class Ui:
             page=name,
             ms=(time.perf_counter() - started) * 1000,
         )
-        return built, compose(built["base"], built["partials"])
+        document = compose(built["base"], built["partials"])
+        # 本地文档始终指向页面数据快照；wire 上只有整树带 data，事件只带 ops。
+        document["data"] = entry.data
+        if with_data:
+            built["base"]["data"] = entry.data
+        return built, document
+
+    def _with_data(self, built: dict[str, Any]) -> dict[str, Any]:
+        """整树回退时把页面数据快照塞进 base（引用，不深拷）。"""
+        built["base"]["data"] = self._entry(str(self._active)).data
+        return built
 
     def _resolve(self, page: str | None) -> str:
         """显式页 → 校验；否则 active（还登记着）→ 第一页。"""
@@ -290,9 +366,12 @@ class Ui:
                 self._tree_document = after
                 self._tree_version = int(after.get("version", 1))
                 self._tree_seq = 0
-                payload: dict[str, Any] = {"kind": "tree", **built}
+                self._pending_data = []
+                payload: dict[str, Any] = {"kind": "tree", **self._with_data(built)}
             else:
                 ops = diff_documents(before, after)
+                ops.extend(op_wire(op) for op in self._pending_data)
+                self._pending_data = []
                 self._tree_document = after
                 self._tree_version = base + 1
                 self._tree_seq += 1

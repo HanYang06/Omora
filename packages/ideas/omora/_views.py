@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from omora.sdk.node_key import keyed
+from omora.sdk.node_bind import bound
 from omora.sdk.ui import (
     Audio,
     Button,
@@ -27,11 +27,9 @@ from omora.sdk.ui import (
 from ._format import snippet, when
 
 
-def rail_item(record: Any, on_click: Handler) -> Item:
-    """索引栏的一行：时间 + 标题，整行可点；置顶 / 归档只在详情里做。"""
-    return keyed(
-        Item(record.title, meta=when(record.created_at), on_click=on_click), str(record.id)
-    )
+def rail_template(on_click: Handler) -> Item:
+    """索引栏一行的模板：标题 / 时间从条目投影，点哪行由事件 payload 的 item 决定。"""
+    return bound(Item("", meta="", on_click=on_click), title="item.title", meta="item.meta")
 
 
 def back_bar(handler: Handler) -> Node:
@@ -75,9 +73,9 @@ def saved(  # noqa: PLR0913 —— 面板装配的命名参数
     return Panel(*rows)
 
 
-def card(record: Any, media: Any, on_click: Handler) -> Card:
-    """feed 里的一张卡：标题 + 时间（含语音 / 视频标记），点整张进详情。"""
-    return keyed(Card(record.title, meta=meta(record, media), on_click=on_click), str(record.id))
+def card_template(on_click: Handler) -> Card:
+    """feed 里一张卡的模板：标题 / 时间从条目投影；媒体只在详情里放。"""
+    return bound(Card("", meta="", on_click=on_click), title="item.title", meta="item.meta")
 
 
 def result(record: Any, query: str, media: Any, on_click: Handler) -> Result:

@@ -129,6 +129,12 @@ export interface HostCall {
   readonly index?: number;
 }
 
+/** 一次批量重排；ids 是宿主收到的最终直接子节点顺序。 */
+export interface ReorderCall {
+  readonly host: string;
+  readonly ids: readonly string[];
+}
+
 export interface FakeHarnessOptions {
   /** 额外 / 替换注册的 kind；默认 EXAMPLE_KINDS。 */
   readonly kinds?: readonly string[];
@@ -149,6 +155,7 @@ export interface FakeHarness {
   readonly renderers: NodeRendererRegistry;
   readonly rendererCalls: RendererCall[];
   readonly hostCalls: HostCall[];
+  readonly reorderCalls: ReorderCall[];
   /** 清空调用记录（mount 之后用，只关注后续增量）。 */
   resetCalls(): void;
   /** 某节点收到的渲染器调用序列，如 ["update"] / ["mount", "unmount"]。 */
@@ -161,22 +168,25 @@ export interface FakeHarness {
 export function fakeHarness(options: FakeHarnessOptions = {}): FakeHarness {
   const rendererCalls: RendererCall[] = [];
   const hostCalls: HostCall[] = [];
+  const reorderCalls: ReorderCall[] = [];
   const noChildHostKinds = new Set(options.noChildHostKinds ?? []);
   const renderers = new NodeRendererRegistry();
   for (const kind of options.kinds ?? EXAMPLE_KINDS) {
     renderers.register(
       kind,
-      fakeRendererFactory(kind, rendererCalls, hostCalls, options, noChildHostKinds),
+      fakeRendererFactory(kind, rendererCalls, hostCalls, reorderCalls, options, noChildHostKinds),
     );
   }
   return {
-    host: fakeHost("root", hostCalls, options.failHostMountOn),
+    host: fakeHost("root", hostCalls, reorderCalls, options.failHostMountOn),
     renderers,
     rendererCalls,
     hostCalls,
+    reorderCalls,
     resetCalls(): void {
       rendererCalls.length = 0;
       hostCalls.length = 0;
+      reorderCalls.length = 0;
     },
     rendererOps(id: string): string[] {
       return rendererCalls.filter((call) => call.id === id).map((call) => call.op);
@@ -187,8 +197,16 @@ export function fakeHarness(options: FakeHarnessOptions = {}): FakeHarness {
   };
 }
 
-/** 假宿主：只把 mount / update / unmount 记进调用日志；可选按 id 让 mount 抛错。 */
-export function fakeHost(label: string, calls: HostCall[], failMountOn?: string): TreeHost {
+/**
+ * 假宿主：只把 mount / update / unmount / reorder 记进调用日志；可选按 id 让 mount 抛错。
+ * reorder 记成一次调用（不是每个子节点一条），批量语义才数得清。
+ */
+export function fakeHost(
+  label: string,
+  calls: HostCall[],
+  reorderCalls: ReorderCall[],
+  failMountOn?: string,
+): TreeHost {
   return {
     mount(child: TreeChildHandle, index: number): void {
       if (child.node.id === failMountOn) {
@@ -202,6 +220,9 @@ export function fakeHost(label: string, calls: HostCall[], failMountOn?: string)
     unmount(child: TreeChildHandle): void {
       calls.push({ op: "unmount", id: child.node.id, host: label });
     },
+    reorder(children: readonly TreeChildHandle[]): void {
+      reorderCalls.push({ host: label, ids: children.map((child) => child.node.id) });
+    },
   };
 }
 
@@ -209,6 +230,7 @@ function fakeRendererFactory(
   kind: string,
   rendererCalls: RendererCall[],
   hostCalls: HostCall[],
+  reorderCalls: ReorderCall[],
   options: FakeHarnessOptions,
   noChildHostKinds: ReadonlySet<string>,
 ): NodeRendererFactory {
@@ -223,7 +245,7 @@ function fakeRendererFactory(
           output: current.id,
           host: noChildHostKinds.has(kind)
             ? null
-            : fakeHost("h:" + current.id, hostCalls, options.failHostMountOn),
+            : fakeHost("h:" + current.id, hostCalls, reorderCalls, options.failHostMountOn),
         };
       },
       update(current): void {

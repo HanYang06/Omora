@@ -65,13 +65,23 @@ def _find_tree_node(node: dict[str, Any], node_id: str) -> dict[str, Any] | None
 
 
 def _as_slot(node: dict[str, Any]) -> dict[str, Any]:
-    """V1 节点 → 测试视图节点（kind / props / events / children）。"""
-    return {
+    """V1 节点 → 测试视图节点（kind / props / events / children / collection）。"""
+    slot: dict[str, Any] = {
         "kind": "dendro:" + str(node["kind"]),
         "props": dict(node["settings"]),
         "events": dict(node["on"]),
         "children": [_as_slot(child) for child in node["layout"]],
     }
+    collection = node.get("collection")
+    if isinstance(collection, dict):
+        slot["collection"] = {
+            **collection,
+            "templates": {
+                str(name): _as_slot(template)
+                for name, template in dict(collection.get("templates", {})).items()
+            },
+        }
+    return slot
 
 
 def _adapt_tree(ui: Any, frame: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -99,6 +109,7 @@ def _adapt_tree(ui: Any, frame: dict[str, Any] | None = None) -> dict[str, Any]:
         "frame": frame,
         "active": None if active is None else "page." + active,
         "pages": pages,
+        "data": dict(document.get("data", {})),
         "localTrees": {
             "trees": [
                 {
@@ -174,8 +185,16 @@ def _texts(node: dict[str, Any]) -> list[str]:
     return [str(child["props"]["text"]) for child in _nodes(node, "text")]
 
 
+def _data_items(view: dict[str, Any], source: str) -> list[dict[str, Any]]:
+    entry = view["data"].get(source)
+    if not isinstance(entry, dict):
+        return []
+    items = entry.get("items")
+    return [dict(item) for item in items] if isinstance(items, list) else []
+
+
 def _cards(view: dict[str, Any]) -> list[str]:
-    return [str(card["props"]["title"]) for card in _nodes(_main(view), "card")]
+    return [str(item["title"]) for item in _data_items(view, "ideas.feed")]
 
 
 def _pin_clock(monkeypatch: Any) -> None:

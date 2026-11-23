@@ -72,7 +72,13 @@ components/*（现有 38 个 kind，不改）
   dev 由 `build/vite-tree-dev.ts` 供文件，`vite preview` / 部署读 `dist/tree/`。
 - `?engine=virtual` / `?engine=dialog` 是组件预览，不连 Python。
 - 导航从 `settings.route` 出发的跳转还没接：静态产物没有 handler，导航在预览里是禁用态。
-- 事件产线只发 `setProps / mount / unmount`，表达不了回整树；Python 侧没有脏节点产线。
-- `data` 文档层已接（写 `document.data`、revision 幂等 / 过期诊断），运行时没有 data
-  patch 阶段；collection / bind / `changes` 的产线与消费未接。
+- 事件产线只发 `setProps / mount / unmount`，表达不了回整树；Python 侧没有脏节点产线
+  （[ADR-0005](decisions/0005-data-collection-before-dirty-nodes.md) 后置）。
+- `data` 文档层已接（写 `document.data`、revision 幂等 / 过期诊断），运行时按 source
+  定向 reconcile keyed collection：内容没变的实例一个 DOM 调用都不发，变化的那条只碰
+  自己的实例子树（含模板里的嵌套节点）；集合实例的事件 payload 带 `item`（实例 key）。
+- 重排步长：`host.reorder` 批量提交，宿主用 LIS 只移动必要元素；末条置顶 1 次
+  `insertBefore`、头部插入 0 次移动、删除 0 次移动。
+- 还没接：`changes` 增量（整批 `E-PAYLOAD`）、嵌套集合、窗口化；挂载期与整树 replace 仍是
+  逐节点 `host.update`（同一类剩余整列提交）。
 - 权限 / 审计 / 树内规则未接。

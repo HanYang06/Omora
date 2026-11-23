@@ -58,13 +58,23 @@ def _find_tree_node(node: dict[str, Any], node_id: str) -> dict[str, Any] | None
 
 
 def _as_slot(node: dict[str, Any]) -> dict[str, Any]:
-    """V1 节点 → 测试视图节点（kind / props / events / children）。"""
-    return {
+    """V1 节点 → 测试视图节点（kind / props / events / children / collection）。"""
+    slot: dict[str, Any] = {
         "kind": "dendro:" + str(node["kind"]),
         "props": dict(node["settings"]),
         "events": dict(node["on"]),
         "children": [_as_slot(child) for child in node["layout"]],
     }
+    collection = node.get("collection")
+    if isinstance(collection, dict):
+        slot["collection"] = {
+            **collection,
+            "templates": {
+                str(name): _as_slot(template)
+                for name, template in dict(collection.get("templates", {})).items()
+            },
+        }
+    return slot
 
 
 def _adapt_tree(ui: Any, frame: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -92,6 +102,7 @@ def _adapt_tree(ui: Any, frame: dict[str, Any] | None = None) -> dict[str, Any]:
         "frame": frame,
         "active": None if active is None else "page." + active,
         "pages": pages,
+        "data": dict(document.get("data", {})),
         "localTrees": {
             "trees": [
                 {
@@ -170,12 +181,36 @@ def _titles(node: dict[str, Any], node_type: str) -> list[str]:
     return [str(child["props"]["title"]) for child in _nodes(node, node_type)]
 
 
+def _data_items(view: dict[str, Any], source: str) -> list[dict[str, Any]]:
+    """集合条目的快照：列表是数据，不再是页面节点。"""
+    entry = view["data"].get(source)
+    if not isinstance(entry, dict):
+        return []
+    items = entry.get("items")
+    return [dict(item) for item in items] if isinstance(items, list) else []
+
+
 def _rail_titles(view: dict[str, Any]) -> list[str]:
-    return _titles(_rail(view), "item")
+    return [str(item["title"]) for item in _data_items(view, "ideas.rail")]
 
 
 def _cards(view: dict[str, Any]) -> list[str]:
-    return _titles(_main(view), "card")
+    return [str(item["title"]) for item in _data_items(view, "ideas.feed")]
+
+
+def _collection(view: dict[str, Any], source: str) -> dict[str, Any]:
+    for slot in _walk(_content(view)):
+        collection = slot.get("collection")
+        if isinstance(collection, dict) and collection.get("source") == source:
+            return slot
+    raise AssertionError(f"页面里没有集合: {source}")
+
+
+def _collection_click(view: dict[str, Any], source: str) -> str:
+    template = _collection(view, source)["collection"]["templates"]["item"]
+    handler = template["events"].get("click")
+    assert handler, f"{source} 的模板没有 click"
+    return str(handler)
 
 
 def _tiles(view: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -221,9 +256,10 @@ def _click_button(ui: Any, text: str) -> Any:
 
 
 def _open_rail(ui: Any, title: str) -> Any:
-    hits = [row for row in _nodes(_rail(_tree_view(ui)), "item") if row["props"]["title"] == title]
+    view = _tree_view(ui)
+    hits = [item for item in _data_items(view, "ideas.rail") if item["title"] == title]
     assert hits, f"索引栏里没有: {title}"
-    return _fire(ui, hits[0]["events"]["click"])
+    return _fire(ui, _collection_click(view, "ideas.rail"), {"item": hits[0]["id"]})
 
 
 def _pin(ui: Any, title: str) -> Any:
@@ -295,17 +331,18 @@ def test_the_rail_lists_every_idea_newest_first_and_the_feed_sits_in_the_panel(
 
     assert _rail_titles(view) == ["写周报", "牛奶 B", "牛奶 A"]
     assert _kind(panel) == "panel"
-    assert _titles(panel, "card") == ["写周报", "牛奶 B", "牛奶 A"]
+    assert _cards(view) == ["写周报", "牛奶 B", "牛奶 A"]
 
 
 def test_the_rail_only_navigates_and_carries_no_actions(tmp_path: Path) -> None:
     ui = _kernel(tmp_path).resolve("ui")
     _capture_text(ui, "买牛奶")
 
-    rail = _rail(_tree_view(ui))
+    view = _tree_view(ui)
+    rail = _rail(view)
 
     assert _nodes(rail, "button") == []
-    assert _nodes(rail, "item")[0]["events"]["click"]
+    assert _collection_click(view, "ideas.rail")
 
 
 def test_clicking_a_rail_row_opens_the_detail_and_back_returns_home(tmp_path: Path) -> None:

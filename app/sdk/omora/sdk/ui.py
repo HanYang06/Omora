@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields
 from typing import Any, ClassVar
 
@@ -236,6 +236,45 @@ class Rail(Node):
     def __init__(self, title: str, *items: Node) -> None:
         object.__setattr__(self, "title", title)
         object.__setattr__(self, "children", tuple(items))
+
+
+@dataclass(frozen=True, init=False)
+class Collection(Node):
+    """集合槽：按 data source 的 items 展开 templates 里的模板。
+
+    条目是一条数据，不是页面节点：模板只写一次，实例由运行时按 key 展开，所以
+    列表多长都不影响这一页的节点数。模板里用 `bound()` 把条目字段投影到 settings，
+    `select` 指定条目用哪个字段选模板（缺省 `template`）。
+    """
+
+    type: ClassVar[str] = "column"
+    source: str
+    key: str
+    select: str
+    templates: tuple[tuple[str, Node], ...]
+
+    def __init__(
+        self,
+        source: str,
+        key: str,
+        templates: Mapping[str, Node],
+        *,
+        select: str = "template",
+    ) -> None:
+        for name, value in (("source", source), ("key", key), ("select", select)):
+            if not isinstance(value, str) or value.strip() == "":
+                raise ValueError(f"Collection.{name} 必须是非空字符串")
+        if not templates:
+            raise ValueError("Collection 至少要有一个模板")
+        for name, template in templates.items():
+            if not isinstance(name, str) or name.strip() == "":
+                raise ValueError("Collection 模板名必须是非空字符串")
+            if not isinstance(template, Node):
+                raise TypeError("Collection 模板必须是 omora.sdk.ui.Node")
+        object.__setattr__(self, "source", source)
+        object.__setattr__(self, "key", key)
+        object.__setattr__(self, "select", select)
+        object.__setattr__(self, "templates", tuple(templates.items()))
 
 
 @dataclass(frozen=True)

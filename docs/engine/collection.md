@@ -110,7 +110,10 @@
 - 条目级错误在界面上的呈现；
 - 大数据量下的窗口化（只实例化可见条目）是否属于引擎能力。
 
-## 9. S3-a 实现（已落）
+## 9. S3-a 实现（Slot 时期，代码已删）
+
+> 历史：本节路径（`engine/collections/`、`engine/updates/data.ts`）随 2026-11-20 拆桥删除；
+> 现行实现见 §10 与 `engine/tree/collection.ts`、`engine/tree/runtime_collections.ts`。
 
 - 代码：`app/ui-engine/src/engine/collections/collection.ts` —— `instantiateCollection(slot, items)` 与 `applyCollectionChanges(slot, items, changes)`。
 - id 派生：条目根 `<collectionSlotId>#<itemKey>`，子节点 `<父实例 id>/<模板节点 id>`；同 key 跨更新 id 稳定，不同 key 不撞。
@@ -145,5 +148,16 @@ Slot 的 `collection` 原样进 V1 节点，字段同名同义：
 - 组合器把模板子树一起索引：模板里的 id / chain 撞上已组合树 → `E-COLLISION`。
 - 已落：schema、Python / TS 形状校验、Python 语义（模板身份）、组合器；V1 挂载期实例化
   （`engine/tree/collection.ts`）、replace 按 key 复用、data op 定向 reconcile
-  （`engine/tree/runtime_collections.ts`）。
-- 未落：嵌套集合、窗口化、`changes` 增量。
+  （`engine/tree/runtime_collections.ts`）；Python 侧 `PageHandle.data` 发 data op
+  （`value` / `items`），整树 / 重连时 `base.data` 带快照。
+- 编写端已落：`Collection(source, key, templates)` + `bound(node, prop="item.x")`；
+  ideas 的 rail / feed 各用一个 source，条目不再进页面节点（`packages/ideas/omora/ideas.py`）。
+- data op 的运行时 reconcile 是**定向**的：同 key 实例先比内容（order 不参与），内容没变
+  就不进 `changed`；变化的那条只更新新旧共有节点与新增 / 消失的最上层根，模板里的嵌套节点
+  跟着更新；位置没变的实例连宿主 `update` 都不发（`engine/tree/runtime_collections.ts`）。
+- 集合实例的事件 payload 带 `item = <实例 key>`（`app/tree/tree_renderer.ts`）；模板 handler id
+  仍然共享。实例 key 里不能有 `/`（id / chain 的既有假设）。
+- 重排是批量的：`host.reorder(children)` 一次提交全部直接子节点，`DomTreeHost` 用
+  LIS 挑出「相对顺序已经对」的元素，只对 LIS 之外的元素 `insertBefore`——末条置顶只移 1 个，
+  头部插入 0 次移动，删除 0 次移动（`app/tree/tree_host.ts`）。
+- 未落：`changes` 增量（现在每次发 items 全量，字节仍 O(N)）；嵌套集合、窗口化。

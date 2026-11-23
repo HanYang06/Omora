@@ -216,7 +216,7 @@ export function applyMountedUpdate(
         byId.set(id, mounted);
         addedIds.add(id);
       }
-      reindex(entry.parent, entry.host);
+      reorderChildren(entry.host, entry.parent);
     }
     for (const id of updated) {
       if (addedIds.has(id)) {
@@ -266,7 +266,7 @@ function removeMounted(
   for (const id of mountedIds(node)) {
     byId.delete(id);
   }
-  reindex(parent, host);
+  reorderChildren(host, parent);
 }
 
 function fail(diagnostics: TreeRuntimeDiagnostic[]): MountedUpdateResult {
@@ -299,10 +299,9 @@ function insertionIndex(parent: MountedNode, order: number): number {
   return parent.children.length;
 }
 
-function reindex(parent: MountedNode, host: TreeHost): void {
-  parent.children.forEach((child, index) => {
-    host.update(child.handle, index);
-  });
+/** 结构变动后把同级顺序一次性交给宿主；index 归位到数组下标，宿主自己决定谁要动。 */
+function reorderChildren(host: TreeHost, parent: MountedNode): void {
+  host.reorder(parent.children.map((child) => child.handle));
 }
 
 function mountedIds(node: MountedNode): string[] {

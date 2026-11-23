@@ -184,10 +184,46 @@ function childHostsOf(kind: Kind, el: HTMLElement, node: LegacyNode): HTMLElemen
   return hosts.filter((host): host is HTMLElement => host !== null);
 }
 
+/**
+ * 集合实例 id = `<slotId>#<key>`，模板子节点 id = `<实例 id>/<模板节点 id>`。
+ * 事件回传的 `item` 就是实例 key：模板 handler id 由所有实例共享，插件靠它分辨点的是哪条。
+ */
+function instanceItemKey(id: string): string | undefined {
+  const hash = id.indexOf("#");
+  if (hash < 0) {
+    return undefined;
+  }
+  const rest = id.slice(hash + 1);
+  const slash = rest.indexOf("/");
+  return slash < 0 ? rest : rest.slice(0, slash);
+}
+
+/** 一个节点一个 ctx：实例节点的事件补上 item=key；调用方自己传了 item 就保留。 */
+function nodeContext(base: RenderContext, itemKey: () => string | undefined): RenderContext {
+  return {
+    event(handler, payload) {
+      const item = itemKey();
+      if (item === undefined || (payload !== undefined && Object.hasOwn(payload, "item"))) {
+        base.event(handler, payload);
+        return;
+      }
+      base.event(handler, payload === undefined ? { item } : { ...payload, item });
+    },
+    loadMedia(media) {
+      return base.loadMedia(media);
+    },
+    cleanup(dispose) {
+      base.cleanup(dispose);
+    },
+  };
+}
+
 /** 一个 V1 节点的渲染器：mount / update / unmount 都用同一个 Kind 实例。 */
 export function createTreeKindRenderer(kind: Kind, context: RenderContext): NodeRenderer {
   let childHost: DomTreeHost | null = null;
   let snapshot: DocumentSnapshot = { data: {}, messages: {}, locale: DEFAULT_LOCALE };
+  let itemKey: string | undefined;
+  const nodeScope = nodeContext(context, () => itemKey);
   return {
     setData(
       data: Record<string, unknown>,
@@ -197,8 +233,9 @@ export function createTreeKindRenderer(kind: Kind, context: RenderContext): Node
       snapshot = { data, messages, locale };
     },
     mount(node: TreeNode): NodeRendererMount {
+      itemKey = instanceItemKey(node.id);
       const legacy = toLegacyNode(node, snapshot);
-      const el = kind.create(legacy, context);
+      const el = kind.create(legacy, nodeScope);
       el.dataset.nodeId = node.id;
       applyA11y(el, node.a11y);
       applyPlacement(el, node.slot);
@@ -207,9 +244,10 @@ export function createTreeKindRenderer(kind: Kind, context: RenderContext): Node
       return { output: el, host: childHost };
     },
     update(node: TreeNode, output: TreeOutput): void {
+      itemKey = instanceItemKey(node.id);
       const el = asElement(output);
       const legacy = toLegacyNode(node, snapshot);
-      kind.update?.(el, legacy, context);
+      kind.update?.(el, legacy, nodeScope);
       el.dataset.nodeId = node.id;
       applyA11y(el, node.a11y);
       applyPlacement(el, node.slot);

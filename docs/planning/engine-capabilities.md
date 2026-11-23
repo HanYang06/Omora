@@ -17,10 +17,10 @@
 
 | 能力                   | 现状                                        | 做法                                               | 轮子                                                                    | 规模 | 里程碑 |
 | ---------------------- | ------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------- | ---- | ------ |
-| 脏节点产线             | 事件后整页重建再差分                        | Python 记录脏节点，只算被改子树并产 ops            | 无（自写）                                                              | L    | M1     |
-| data / collection 产线 | TS 文档层/集合原语已落，Python 不发 data    | Python 发 `data` op；实例化 / bind / changes       | 无（自写）                                                              | L    | M1     |
+| 脏节点产线             | 事件后整页重建再差分（ADR-0005 后置）       | 结构型变更再评估；列表走 collection                | 无（自写）                                                              | L    | M1     |
+| data / collection 产线 | 已落：Python 发 data + 能写 collection      | `changes` 增量                                     | 无（自写）                                                              | L    | M1     |
 | 类型检查后半           | 只查 kind 存在性                            | per-kind settings schema、on/bind 引用、warning 码 | JSON Schema 已有                                                        | M    | M1     |
-| 复杂度护栏             | 未进 CI                                     | 事件 → DOM 工作量不随总节点数增长                  | 自写斜率测试                                                            | M    | M1     |
+| 复杂度护栏             | 已进 CI：棘轮 + ideas 常数断言              | 换页面时照抄同一套断言                             | 自写斜率测试                                                            | M    | M1     |
 | 布局                   | 只有 `slot.size/align`                      | 声明式 flow/grid/stack/scroll/gap → CSS            | CSS 本身；gridstack/muuri 仅按需                                        | S/M  | M2     |
 | 层 / 焦点              | 原生 `<dialog>`                             | popover/menu/tooltip + focus scope + 定位          | `@floating-ui/dom`、`focus-trap`、Zag dialog/menu/popover               | M    | M3     |
 | 组件广度               | 38 kind；tabs/accordion/combobox 手写或缺失 | 统一 adapter，逐个换；先量净行数                   | Zag：tabs / accordion / select / combobox / tooltip / toast / tree-view | L    | M4     |
@@ -37,9 +37,10 @@
 
 ### M1 生产地基（最先）
 
-- 脏节点产线：事件后只算被改子树，发 ops；不再整页重建。
-- `data` op 产线 + collection / bind / changes。
-- 类型检查后半 + 复杂度护栏。
+- 复杂度护栏：计数棘轮 + ideas 页常数断言进 CI。
+- `data` op 产线 + collection 编写端 / bind；ideas rail / feed 用上；`changes` 增量后补。
+- 类型检查后半。
+- 脏节点产线后置（ADR-0005）：列表 O(k) 靠 keyed collection，不靠脏子树。
 - **退出**：ideas 一页捕获/搜索/详情走 O(k)；data op 有跨语言 fixture；斜率测试挡全树重算；全量门禁绿。
 
 ### M2 布局
